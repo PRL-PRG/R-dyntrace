@@ -1,3 +1,186 @@
-R.xcodeproj/project.xcworkspace/xcuserdata/krikava.xcuserdatad/UserInterfaceState.xcuserstate
-R.xcodeproj/project.xcworkspace/xcuserdata/krikava.xcuserdatad/xcdebugger/Expressions.xcexplist
-R.xcodeproj/xcuserdata/krikava.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist
+# http://www.gnu.org/software/automake
+
+Makefile.in
+
+# http://www.gnu.org/software/autoconf
+
+/autom4te.cache
+/autoscan.log
+/autoscan-*.log
+/aclocal.m4
+/compile
+/config.h.in
+/configure
+/configure.scan
+/depcomp
+/install-sh
+/missing
+/stamp-h1
+# Prerequisites
+*.d
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+*.su
+# History files
+.Rhistory
+.Rapp.history
+
+# Session Data files
+.RData
+
+# Example code in package build process
+*-Ex.R
+
+# Output files from R CMD build
+/*.tar.gz
+
+# Output files from R CMD check
+/*.Rcheck/
+
+# RStudio files
+.Rproj.user/
+
+# produced vignettes
+vignettes/*.html
+vignettes/*.pdf
+
+# OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
+.httr-oauth
+
+# knitr and R markdown default cache directories
+/*_cache/
+/cache/
+
+# Temporary files created by R markdown
+*.utf8.md
+*.knit.md
+.idea/
+Makeconf
+Makefile
+Makefrag.cc
+Makefrag.cc_lo
+Makefrag.cxx
+Makefrag.m
+R.xcodeproj/project.xcworkspace/contents.xcworkspacedata
+config.log
+config.status
+doc/Makefile
+doc/html/Makefile
+doc/manual/Makefile
+etc/Makeconf
+etc/Makefile
+etc/Renviron
+etc/javaconf
+etc/ldpaths
+libtool
+m4/Makefile
+po/Makefile
+share/Makefile
+src/Makefile
+src/appl/Makefile
+src/extra/Makefile
+src/extra/blas/Makefile
+src/extra/intl/Makefile
+src/extra/tre/Makefile
+src/extra/tzone/Makefile
+src/extra/xdr/Makefile
+src/include/Makefile
+src/include/R_ext/Makefile
+src/include/Rmath.h0
+src/include/config.h
+src/include/stamp-h
+src/library/Makefile
+src/library/Recommended/Makefile
+src/library/base/DESCRIPTION
+src/library/base/Makefile
+src/library/compiler/DESCRIPTION
+src/library/compiler/Makefile
+src/library/datasets/DESCRIPTION
+src/library/datasets/Makefile
+src/library/grDevices/DESCRIPTION
+src/library/grDevices/Makefile
+src/library/grDevices/src/Makefile
+src/library/grDevices/src/cairo/Makefile
+src/library/graphics/DESCRIPTION
+src/library/graphics/Makefile
+src/library/graphics/src/Makefile
+src/library/grid/DESCRIPTION
+src/library/grid/Makefile
+src/library/grid/src/Makefile
+src/library/methods/DESCRIPTION
+src/library/methods/Makefile
+src/library/methods/src/Makefile
+src/library/parallel/DESCRIPTION
+src/library/parallel/Makefile
+src/library/parallel/src/Makefile
+src/library/profile/Makefile
+src/library/splines/DESCRIPTION
+src/library/splines/Makefile
+src/library/splines/src/Makefile
+src/library/stats/DESCRIPTION
+src/library/stats/Makefile
+src/library/stats/src/Makefile
+src/library/stats4/DESCRIPTION
+src/library/stats4/Makefile
+src/library/tcltk/DESCRIPTION
+src/library/tcltk/Makefile
+src/library/tcltk/src/Makefile
+src/library/tools/DESCRIPTION
+src/library/tools/Makefile
+src/library/tools/src/Makefile
+src/library/translations/DESCRIPTION
+src/library/translations/Makefile
+src/library/utils/DESCRIPTION
+src/library/utils/Makefile
+src/library/utils/src/Makefile
+src/main/Makefile
+src/modules/Makefile
+src/modules/X11/Makefile
+src/modules/internet/Makefile
+src/modules/lapack/Makefile
+src/nmath/Makefile
+src/nmath/standalone/Makefile
+src/scripts/Makefile
+src/scripts/R.sh
+src/scripts/Rcmd
+src/scripts/f77_f2c
+src/scripts/javareconf
+src/scripts/mkinstalldirs
+src/scripts/pager
+src/scripts/rtags
+src/unix/Makefile
+tests/Embedding/Makefile
+tests/Examples/Makefile
+tests/Makefile
+tools/Makefile
