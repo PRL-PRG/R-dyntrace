@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		277799C41D826B230023FA50 /* include */ = {isa = PBXFileReference; lastKnownFileType = folder; path = include; sourceTree = "<group>"; };
+		275E5BF11D84A27D00C05E05 /* include */ = {isa = PBXFileReference; lastKnownFileType = folder; path = include; sourceTree = "<group>"; };
 		277799C51D826B230023FA50 /* src */ = {isa = PBXFileReference; lastKnownFileType = folder; path = src; sourceTree = "<group>"; };
 		277799C61D826C9A0023FA50 /* configure.ac */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = configure.ac; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -16,8 +16,8 @@
 		277799B91D8269240023FA50 = {
 			isa = PBXGroup;
 			children = (
+				275E5BF11D84A27D00C05E05 /* include */,
 				277799C61D826C9A0023FA50 /* configure.ac */,
-				277799C41D826B230023FA50 /* include */,
 				277799C51D826B230023FA50 /* src */,
 			);
 			sourceTree = "<group>";
