@@ -783,3 +783,6 @@ src/nmath/Makedeps
 src/scripts/R.fe
 src/unix/Makedeps
 src/unix/Rscript
+.vscode/.browse.VC.db
+.vscode/.browse.VC.db-shm
+.vscode/.browse.VC.db-wal
