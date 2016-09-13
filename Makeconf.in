@@ -23,6 +23,7 @@ CURL_LIBS = @CURL_LIBS@
 CXX = @CXX@
 DEFS = @DEFS@ @R_DEFS@
 DISTDIR_TAR_EXCLUDE = --exclude=.svn --exclude=Makefile --exclude="*.o" --exclude="*$(SHLIB_EXT)" --exclude="*~"
+DTRACE = @DTRACE@
 DYLIB_EXT = @DYLIB_EXT@
 DYLIB_LD = @DYLIB_LD@
 DYLIB_LDFLAGS = @DYLIB_LDFLAGS@@BUILD_LTO_TRUE@ $(DYLIBS_LTO)

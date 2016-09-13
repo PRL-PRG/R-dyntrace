@@ -704,6 +704,7 @@ custom_JAVA_HOME
 PAPERCONF
 BUILD_TZONE_FALSE
 BUILD_TZONE_TRUE
+DTRACE
 R_PROFILING
 BITMAP_LIBS
 BITMAP_CPPFLAGS
@@ -1034,6 +1035,7 @@ with_system_tre
 with_valgrind_instrumentation
 with_system_valgrind_headers
 with_internal_tzcode
+with_dtrace
 with_recommended_packages
 with_ICU
 enable_byte_compiled_packages
@@ -1806,6 +1808,7 @@ Optional Packages:
   --with-system-valgrind-headers
                           use system valgrind headers (if available) [no]
   --with-internal-tzcode  use internal time-zone code [no]
+  --with-dtrace           DTrace dynamic tracing [no]
   --with-recommended-packages
                           use/install recommended R packages [yes]
   --with-ICU              use ICU library (if available) [yes]
@@ -4183,9 +4186,29 @@ fi
 
 # Check whether --with-internal-tzcode was given.
 if test "${with_internal_tzcode+set}" = set; then :
-  withval=$with_internal_tzcode; use_internal_tzcode=${withval}
+  withval=$with_internal_tzcode; if test "${withval}" = no; then
+  use_dtrace=no
+else
+  use_dtrace=yes
+fi
+
 else
   use_internal_tzcode=default
+fi
+
+
+## DTrace
+
+# Check whether --with-dtrace was given.
+if test "${with_dtrace+set}" = set; then :
+  withval=$with_dtrace; if test "${withval}" = no; then
+  use_dtrace=no
+else
+  use_dtrace=yes
+fi
+
+else
+  use_dtrace=no
 fi
 
 
@@ -25057,7 +25080,7 @@ _ACEOF
 # flags.
 r_save_CFLAGS=$CFLAGS
 CFLAGS="$CFLAGS $r_verb"
-(eval echo $as_me:25060: \"$ac_link\") >&5
+(eval echo $as_me:25083: \"$ac_link\") >&5
 r_c_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$r_c_v_output" >&5
 CFLAGS=$r_save_CFLAGS
@@ -25132,7 +25155,7 @@ _ACEOF
 # flags.
 r_save_CFLAGS=$CFLAGS
 CFLAGS="$CFLAGS $r_cv_prog_c_v"
-(eval echo $as_me:25135: \"$ac_link\") >&5
+(eval echo $as_me:25158: \"$ac_link\") >&5
 r_c_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$r_c_v_output" >&5
 CFLAGS=$r_save_CFLAGS
@@ -37628,6 +37651,14 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
+# DTrace
+if test "${use_dtrace}" = yes; then
+
+$as_echo "#define WITH_DTRACE 1" >>confdefs.h
+
+
+  DTRACE=dtrace
+fi
 
 if test "x${use_internal_tzcode}" = xyes; then
 

@@ -31,6 +31,7 @@ SOURCES_C = \
 	paste.c platform.c plot.c plot3d.c plotmath.c \
 	print.c printarray.c printvector.c printutils.c qsort.c \
 	radixsort.c random.c raw.c registration.c relop.c rlocale.c \
+	rdtrace.c \
 	saveload.c scan.c seq.c serialize.c sort.c source.c split.c \
 	sprintf.c startup.c subassign.c subscript.c subset.c summary.c sysutils.c \
 	times.c \
@@ -58,6 +59,7 @@ HEADERS = \
 	gzio.h \
 	qsort-body.c \
 	rlocale_data.h \
+	rdtrace_probes.h \
 	unzip.h \
 	valid_utf8.h \
 	xspline.c \
@@ -139,6 +141,13 @@ R: Makedeps
 ## is this portable?  Documented as GNU extension.
 ../include/config.h ../include/Rversion.h:
 	(cd $(@D); $(MAKE) $(@F))
+
+## DTrace
+rdtrace_probes.h: rdtrace.probes
+	if test "$(DTRACE)" != ""; then \
+		$(DTRACE) -o $@ -h -s rdtrace.probes ; \
+	else touch $@ ; \
+	fi;
 
 $(R_binary): $(R_bin_OBJECTS) $(R_bin_DEPENDENCIES)
 	$(MAIN_LINK) -o $@ $(R_bin_OBJECTS) $(R_bin_LDADD)

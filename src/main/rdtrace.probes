@@ -1,0 +1,3 @@
+provider R {
+    probe function__entry(const char *name, const char *file_name, int line_no);
+};

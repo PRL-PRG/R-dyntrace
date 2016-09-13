@@ -32,6 +32,12 @@
 #include <Fileio.h>
 #include <R_ext/Print.h>
 
+// TODO: should be part of AC
+#define WITH_DTRACE 1
+
+#ifdef WITH_DTRACE
+#include <rdtrace.h>
+#endif
 
 #define ARGUSED(x) LEVELS(x)
 
@@ -1067,6 +1073,12 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
        or do we always get a sensible value returned?  */
 
     tmp = R_NilValue;
+
+#ifdef WITH_DTRACE
+    if(R_FUNCTION_ENTRY_ENABLED()) {
+	rdtrace_function_entry(call, op, rho);
+    }
+#endif
 
     /* Debugging */
 

@@ -437,6 +437,11 @@ AC_ARG_WITH([internal-tzcode],
 [use_internal_tzcode=${withval}],
 [use_internal_tzcode=default])
 
+## DTrace
+AC_ARG_WITH([dtrace],
+[AS_HELP_STRING([--with-dtrace],[DTrace dynamic tracing @<:@no@:>@])],
+[R_ARG_USE(dtrace)],
+[use_dtrace=no])
 
 ## <FIXME>
 ## Completely disable using libtool for building shlibs until libtool
