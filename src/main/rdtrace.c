@@ -74,7 +74,26 @@ static char *get_location(SEXP srcref) {
 }
 
 static char *to_string(SEXP var) {
-    return strdup("");
+    char *str = NULL;
+
+    switch(TYPEOF(var)) {
+        case NILSXP:
+            str = strdup("null");
+            break;
+        case CHARSXP:
+            str = strdup(CHAR(var));
+            break;
+        case INTSXP:
+            asprintf(&str, "%d", *(INTEGER(var)));
+            break;
+        case REALSXP:
+            asprintf(&str, "%f", *(REAL(var)));
+            break;
+        default:
+            str = strdup("<unsupported>");
+    }
+
+    return str;
 }
 
 static int get_flags(SEXP op) {
@@ -105,7 +124,7 @@ void rdtrace_function_exit(SEXP call, SEXP op, SEXP rho, SEXP rv) {
     char *retval = to_string(rv);
     int flags = get_flags(op);
 
-    R_FUNCTION_EXIT(name, location, flags, TYPEOF(rv), "");
+    R_FUNCTION_EXIT(name, location, flags, TYPEOF(rv), retval);
 
     free(name);
     free(location);
@@ -120,6 +139,9 @@ void rdtrace_force_promise_entry(SEXP symbol) {
 
 void rdtrace_force_promise_exit(SEXP symbol, SEXP val) {
     const char *name = CHAR(PRINTNAME(symbol));
+    char *retval = to_string(val);
 
-    R_FORCE_PROMISE_EXIT(name, TYPEOF(val), "");
+    R_FORCE_PROMISE_EXIT(name, TYPEOF(val), retval);
+
+    free(retval); 
 }
