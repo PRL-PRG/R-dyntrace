@@ -79,7 +79,8 @@ static char *to_string(SEXP var) {
 
 void rdtrace_function_entry(SEXP call, SEXP op, SEXP rho) {
     char *name = get_fun_name(call, op);
-    char *location = get_location(R_Srcref);
+    SEXP srcref = getAttrib(op, R_SrcrefSymbol);
+    char *location = get_location(srcref);
     int flags = FUN_NO_FLAGS;
 
     SEXP body = BODY(op);
@@ -93,12 +94,25 @@ void rdtrace_function_entry(SEXP call, SEXP op, SEXP rho) {
 
 void rdtrace_function_exit(SEXP call, SEXP op, SEXP rho, SEXP rv) {
     char *name = get_fun_name(call, op);
-    char *location = get_location(R_Srcref);
+    SEXP srcref = getAttrib(op, R_SrcrefSymbol);
+    char *location = get_location(srcref);
     char *retval = to_string(rv);
 
-    R_FUNCTION_EXIT(name, location, retval);
+    R_FUNCTION_EXIT(name, location, TYPEOF(rv), "");
 
     free(name);
     free(location);
     free(retval); 
+}
+
+void rdtrace_force_promise_entry(SEXP symbol) {
+    const char *name = CHAR(PRINTNAME(symbol));
+
+    R_FORCE_PROMISE_ENTRY(name);
+}
+
+void rdtrace_force_promise_exit(SEXP symbol, SEXP val) {
+    const char *name = CHAR(PRINTNAME(symbol));
+
+    R_FORCE_PROMISE_EXIT(name, TYPEOF(val), "");
 }

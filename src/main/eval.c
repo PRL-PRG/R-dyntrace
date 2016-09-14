@@ -638,6 +638,12 @@ SEXP eval(SEXP e, SEXP rho)
 	    else error(_("argument is missing, with no default"));
 	}
 	else if (TYPEOF(tmp) == PROMSXP) {
+#ifdef WITH_DTRACE
+		if(R_FORCE_PROMISE_ENTRY_ENABLED()) {
+			rdtrace_force_promise_entry(e);
+		}
+#endif
+		
 	    if (PRVALUE(tmp) == R_UnboundValue) {
 		/* not sure the PROTECT is needed here but keep it to
 		   be on the safe side. */
@@ -647,6 +653,12 @@ SEXP eval(SEXP e, SEXP rho)
 	    }
 	    else tmp = PRVALUE(tmp);
 	    SET_NAMED(tmp, 2);
+
+#ifdef WITH_DTRACE
+		if(R_FORCE_PROMISE_EXIT_ENABLED()) {
+			rdtrace_force_promise_exit(e, tmp);
+		}
+#endif		
 	}
 	else if (!isNull(tmp) && NAMED(tmp) == 0)
 	    SET_NAMED(tmp, 1);
@@ -4313,7 +4325,21 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 	MAYBE_MISSING_ARGUMENT_ERROR(symbol, keepmiss);
     else if (TYPEOF(value) == PROMSXP) {
 	PROTECT(value);
+
+#ifdef WITH_DTRACE
+	if(R_FORCE_PROMISE_ENTRY_ENABLED()) {
+		rdtrace_force_promise_entry(symbol);
+	}
+#endif		
+
 	value = FORCE_PROMISE(value, symbol, rho, keepmiss);
+
+#ifdef WITH_DTRACE
+	if(R_FORCE_PROMISE_EXIT_ENABLED()) {
+		rdtrace_force_promise_exit(symbol, value);
+	}
+#endif		
+
 	UNPROTECT(1);
     } else if (NAMED(value) == 0 && value != R_NilValue)
 	SET_NAMED(value, 1);
