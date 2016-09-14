@@ -54,12 +54,12 @@ R*:::force-promise-exit
    	this->delta = (timestamp - self->last) / 1000;
 	self->depth -= self->depth > 0 ? 1 : 0;
 
-	printf("%10d %5d %-8s %*s   %s (retval: '%s', type: %d)\n", 
+	printf("%10d %5d %-8s %*s   %s = `%s` (type: %d)\n", 
             this->delta, 
             0,
             "promise", 
             self->depth * 2, "",
-	        copyinstr(arg0),
+	    copyinstr(arg0),
             copyinstr(arg2),
             arg1);
 
@@ -71,7 +71,7 @@ R*:::function-exit
    	this->delta = (timestamp - self->last) / 1000;
 	self->depth -= self->depth > 0 ? 1 : 0;
 
-	printf("%10d %5d %-8s %*s<- %s (retval: '%s', type: %d, loc: %s)\n", 
+	printf("%10d %5d %-8s %*s<- %s = `%s` (%d) (loc: %s)\n", 
             this->delta, 
             arg2,
             "function", 
