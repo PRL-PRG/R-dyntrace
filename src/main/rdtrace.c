@@ -42,19 +42,24 @@ static const char *get_filename(SEXP srcref) {
     return NULL;
 }
 
-void rdtrace_function_entry(SEXP call, SEXP op, SEXP rho) {
+static char *get_fun_name(SEXP call, SEXP op) {
     const char *fun_name = CHAR(CAAR(call));
     const char *ns_name = get_ns_name(op);
-    const char *filename = get_filename(R_Srcref);
-    int lineno = get_lineno(R_Srcref);
-
     char *name = NULL;
+    
     asprintf(&name, "%s%s%s", 
         ns_name ? ns_name : "",
         ns_name ? "::" : "",
         fun_name ? fun_name : "<unknown>");
     
+    return name;
+}
+
+static char *get_location(SEXP srcref) {
+    const char *filename = get_filename(srcref);
+    int lineno = get_lineno(srcref);
     char *location = NULL;
+
     if (filename) {
         if (strlen(filename) > 0) {
             asprintf(&location, "%s:%d", filename, lineno);
@@ -64,9 +69,36 @@ void rdtrace_function_entry(SEXP call, SEXP op, SEXP rho) {
     } else {
         location = strdup("<unknown>");
     }
-    
-    R_FUNCTION_ENTRY(name, location);
+
+    return location;
+}
+
+static char *to_string(SEXP var) {
+    return strdup("");
+}
+
+void rdtrace_function_entry(SEXP call, SEXP op, SEXP rho) {
+    char *name = get_fun_name(call, op);
+    char *location = get_location(R_Srcref);
+    int flags = FUN_NO_FLAGS;
+
+    SEXP body = BODY(op);
+    flags = TYPEOF(body) == BCODESXP ? flags | FUN_BC : flags;
+
+    R_FUNCTION_ENTRY(name, location, flags);
 
     free(name);
     free(location);
+}
+
+void rdtrace_function_exit(SEXP call, SEXP op, SEXP rho, SEXP rv) {
+    char *name = get_fun_name(call, op);
+    char *location = get_location(R_Srcref);
+    char *retval = to_string(rv);
+
+    R_FUNCTION_EXIT(name, location, retval);
+
+    free(name);
+    free(location);
+    free(retval); 
 }

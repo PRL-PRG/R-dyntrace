@@ -1149,6 +1149,12 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
     R_Srcref = savesrc;
     endcontext(&cntxt);
 
+#ifdef WITH_DTRACE
+    if(R_FUNCTION_EXIT_ENABLED()) {
+	rdtrace_function_exit(call, op, rho, tmp);
+    }
+#endif
+
     if (RDEBUG(op) && R_current_debug_state()) {
 	Rprintf("exiting from: ");
 	PrintCall(call, rho);
