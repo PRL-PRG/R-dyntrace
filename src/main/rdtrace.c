@@ -1,31 +1,72 @@
 #include "rdtrace.h"
 
-typedef struct {
-    const char *file_name;
-    int line_no;
-} source_code_loc;
+static const char *get_ns_name(SEXP op) {
+    SEXP env = CLOENV(op);
+    SEXP spec = R_NamespaceEnvSpec(env);
 
-static source_code_loc get_loc(SEXP srcref) {
-    source_code_loc loc = { "unknown", 0 };
+    if (spec != R_NilValue) {
+        if (TYPEOF(spec) == STRSXP && LENGTH(spec) > 0) {
+            return CHAR(STRING_ELT(spec, 0));  
+        } else if (TYPEOF(spec) == CHARSXP) {
+            return CHAR(spec);
+        } 
+    }
 
+    return NULL;
+}
+
+static int get_lineno(SEXP srcref) {
+    if (srcref && srcref != R_NilValue) {
+        if (TYPEOF(srcref) == VECSXP) {
+            srcref = VECTOR_ELT(srcref, 0);
+        }
+
+        return asInteger(srcref);
+    } 
+    
+    return -1;               
+}
+
+static const char *get_filename(SEXP srcref) {
     if (srcref && srcref != R_NilValue) {
         if (TYPEOF(srcref) == VECSXP) srcref = VECTOR_ELT(srcref, 0);
         SEXP srcfile = getAttrib(srcref, R_SrcfileSymbol);
         if (TYPEOF(srcfile) == ENVSXP) {
             SEXP filename = findVar(install("filename"), srcfile);
             if (isString(filename) && length(filename)) {
-                loc.file_name = CHAR(STRING_ELT(filename, 0));
-                loc.line_no = asInteger(srcref);               
+                return CHAR(STRING_ELT(filename, 0));
             }
         }
     }
     
-    return loc;
+    return NULL;
 }
 
 void rdtrace_function_entry(SEXP call, SEXP op, SEXP rho) {
-    const char *function_name = CHAR(CAAR(call));
-    const source_code_loc loc = get_loc(R_Srcref);
+    const char *fun_name = CHAR(CAAR(call));
+    const char *ns_name = get_ns_name(op);
+    const char *filename = get_filename(R_Srcref);
+    int lineno = get_lineno(R_Srcref);
 
-    R_FUNCTION_ENTRY(function_name, loc.file_name, loc.line_no);
+    char *name = NULL;
+    asprintf(&name, "%s%s%s", 
+        ns_name ? ns_name : "",
+        ns_name ? "::" : "",
+        fun_name ? fun_name : "<unknown>");
+    
+    char *location = NULL;
+    if (filename) {
+        if (strlen(filename) > 0) {
+            asprintf(&location, "%s:%d", filename, lineno);
+        } else {
+            location = strdup("<console>");
+        }
+    } else {
+        location = strdup("<unknown>");
+    }
+    
+    R_FUNCTION_ENTRY(name, location);
+
+    free(name);
+    free(location);
 }
