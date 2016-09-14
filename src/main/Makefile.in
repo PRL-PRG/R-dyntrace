@@ -143,6 +143,8 @@ R: Makedeps
 	(cd $(@D); $(MAKE) $(@F))
 
 ## DTrace
+rdtrace.c: rdtrace_probes.h
+ 
 rdtrace_probes.h: rdtrace.probes
 	if test "$(DTRACE)" != ""; then \
 		$(DTRACE) -o $@ -h -I ../include -C -s rdtrace.probes ; \
