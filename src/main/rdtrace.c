@@ -77,14 +77,20 @@ static char *to_string(SEXP var) {
     return strdup("");
 }
 
-void rdtrace_function_entry(SEXP call, SEXP op, SEXP rho) {
-    char *name = get_fun_name(call, op);
-    SEXP srcref = getAttrib(op, R_SrcrefSymbol);
-    char *location = get_location(srcref);
+static int get_flags(SEXP op) {
     int flags = FUN_NO_FLAGS;
 
     SEXP body = BODY(op);
     flags = TYPEOF(body) == BCODESXP ? flags | FUN_BC : flags;
+
+    return flags;
+}
+
+void rdtrace_function_entry(SEXP call, SEXP op, SEXP rho) {
+    char *name = get_fun_name(call, op);
+    SEXP srcref = getAttrib(op, R_SrcrefSymbol);
+    char *location = get_location(srcref);
+    int flags = get_flags(op);
 
     R_FUNCTION_ENTRY(name, location, flags);
 
@@ -97,8 +103,9 @@ void rdtrace_function_exit(SEXP call, SEXP op, SEXP rho, SEXP rv) {
     SEXP srcref = getAttrib(op, R_SrcrefSymbol);
     char *location = get_location(srcref);
     char *retval = to_string(rv);
+    int flags = get_flags(op);
 
-    R_FUNCTION_EXIT(name, location, TYPEOF(rv), "");
+    R_FUNCTION_EXIT(name, location, flags, TYPEOF(rv), "");
 
     free(name);
     free(location);
