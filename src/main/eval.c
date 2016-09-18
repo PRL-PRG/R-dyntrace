@@ -637,28 +637,26 @@ SEXP eval(SEXP e, SEXP rho)
 			 CHAR(PRINTNAME(e)));
 	    else error(_("argument is missing, with no default"));
 	}
-	else if (TYPEOF(tmp) == PROMSXP) {
+	else if (TYPEOF(tmp) == PROMSXP) {		
+	    if (PRVALUE(tmp) == R_UnboundValue) {
+		/* not sure the PROTECT is needed here but keep it to
+		   be on the safe side. */
+		PROTECT(tmp);
 #ifdef WITH_DTRACE
 		if(R_FORCE_PROMISE_ENTRY_ENABLED()) {
 			rdtrace_force_promise_entry(e);
 		}
 #endif
-		
-	    if (PRVALUE(tmp) == R_UnboundValue) {
-		/* not sure the PROTECT is needed here but keep it to
-		   be on the safe side. */
-		PROTECT(tmp);
 		tmp = forcePromise(tmp);
-		UNPROTECT(1);
-	    }
-	    else tmp = PRVALUE(tmp);
-	    SET_NAMED(tmp, 2);
-
 #ifdef WITH_DTRACE
 		if(R_FORCE_PROMISE_EXIT_ENABLED()) {
 			rdtrace_force_promise_exit(e, tmp);
 		}
 #endif		
+		UNPROTECT(1);
+	    }
+	    else tmp = PRVALUE(tmp);
+	    SET_NAMED(tmp, 2);
 	}
 	else if (!isNull(tmp) && NAMED(tmp) == 0)
 	    SET_NAMED(tmp, 1);
