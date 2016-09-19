@@ -1,0 +1,6 @@
+#!/usr/bin/env dtrace -Zs 
+
+R*:::function-entry
+{
+    @[copyinstr(arg0)] = count();
+}
