@@ -66,6 +66,22 @@ R*:::force-promise-exit
 	self->last = timestamp;
 }
 
+R*:::promise-lookup
+{ 
+   	this->delta = (timestamp - self->last) / 1000;
+
+	printf("%10d %5d %-8s %*s   %s = `%s` (type: %d)\n", 
+            this->delta, 
+            0,
+            "lookup", 
+            self->depth * 2, "",
+	    copyinstr(arg0),
+            copyinstr(arg2),
+            arg1);
+
+	self->last = timestamp;
+}
+
 R*:::function-exit 
 { 
    	this->delta = (timestamp - self->last) / 1000;

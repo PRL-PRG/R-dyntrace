@@ -145,3 +145,12 @@ void rdtrace_force_promise_exit(SEXP symbol, SEXP val) {
 
     free(retval); 
 }
+
+void rdtrace_promise_lookup(SEXP symbol, SEXP val) {
+    const char *name = CHAR(PRINTNAME(symbol));
+    char *retval = to_string(val);
+
+    R_PROMISE_LOOKUP(name, TYPEOF(val), retval);
+
+    free(retval);     
+}

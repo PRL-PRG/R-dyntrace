@@ -655,7 +655,14 @@ SEXP eval(SEXP e, SEXP rho)
 #endif		
 		UNPROTECT(1);
 	    }
-	    else tmp = PRVALUE(tmp);
+	    else {
+		tmp = PRVALUE(tmp);
+#ifdef WITH_DTRACE
+		if(R_PROMISE_LOOKUP_ENABLED()) {
+			rdtrace_promise_lookup(e, tmp);
+		}
+#endif
+	    }
 	    SET_NAMED(tmp, 2);
 	}
 	else if (!isNull(tmp) && NAMED(tmp) == 0)
