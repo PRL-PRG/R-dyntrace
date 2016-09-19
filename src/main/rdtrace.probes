@@ -9,4 +9,6 @@ provider R {
     probe force__promise__exit(const char *name, int sexptype, const char *strval);
 
     probe promise__lookup(const char *name, int sexptype, const char *strval);
+
+    probe error(const char *call, const char *loc, const char *message);
 };

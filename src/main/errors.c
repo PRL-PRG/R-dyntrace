@@ -32,6 +32,10 @@
 #include <Rmath.h> /* for imax2 */
 #include <R_ext/Print.h>
 
+#ifdef WITH_DTRACE
+#include <rdtrace.h>
+#endif
+
 #ifndef min
 #define min(a, b) (a<b?a:b)
 #endif
@@ -716,6 +720,20 @@ static void NORET errorcall_dflt(SEXP call, const char *format,...)
 void NORET errorcall(SEXP call, const char *format,...)
 {
     va_list(ap);
+
+#ifdef WITH_DTRACE
+    if (R_ERROR_ENABLED()) {
+	char *message = NULL;
+
+	va_start(ap, format);
+	vasprintf(&message, format, ap);
+	va_end(ap);
+
+	rdtrace_error(call, message);
+
+	free(message);
+    }	
+#endif
 
     va_start(ap, format);
     vsignalError(call, format, ap);

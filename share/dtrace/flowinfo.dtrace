@@ -115,3 +115,20 @@ R*:::function-exit
 
 	self->last = timestamp;  
 }
+
+R*:::error
+{
+   	this->delta = (timestamp - self->last) / 1000;
+
+	printf("%12d %5d %-8s %*s   Error in %s : %s (loc: %s)\n", 
+            this->delta, 
+            0,
+            "error", 
+            self->depth * 2, "",
+	        copyinstr(arg0),
+            copyinstr(arg2),
+            copyinstr(arg1));
+
+	self->last = timestamp;  
+	self->depth = 0;      
+}

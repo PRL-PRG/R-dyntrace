@@ -167,3 +167,11 @@ void rdtrace_builtin_exit(SEXP call, SEXP op, SEXP rv) {
     free(retval);
     free(location);     
 }
+
+void rdtrace_error(SEXP call, const char *message) {
+    const char *dcall = CHAR(STRING_ELT(deparse1s(call), 0));
+	// SEXP srcloc = GetSrcLoc(R_GetCurrentSrcref(skip));
+    // const char *location = CHAR(STRING_ELT(srcloc, 0));
+    
+    R_ERROR(dcall, "<unknown>", message);
+}
