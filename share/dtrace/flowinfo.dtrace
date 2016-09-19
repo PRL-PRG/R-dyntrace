@@ -34,6 +34,22 @@ R*:::function-entry
 	self->last = timestamp;
 }
 
+R*:::builtin-entry 
+{ 
+	this->delta = (timestamp - self->last) / 1000;
+
+	printf("%10d %5d %-8s %*s-> %s (loc: %s)\n", 
+            this->delta, 
+            0,
+            "builtin", 
+            self->depth * 2, "",
+            copyinstr(arg0), 
+	    copyinstr(arg1));
+
+	self->depth++;
+	self->last = timestamp;
+}
+
 R*:::force-promise-entry 
 { 
 	this->delta = (timestamp - self->last) / 1000;

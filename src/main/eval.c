@@ -721,6 +721,11 @@ SEXP eval(SEXP e, SEXP rho)
 	    vmaxset(vmax);
 	}
 	else if (TYPEOF(op) == BUILTINSXP) {
+#ifdef WITH_DTRACE
+	    if(R_BUILTIN_ENTRY_ENABLED()) {
+	    	    rdtrace_builtin_entry(e, op);
+	    }
+#endif
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
 	    const void *vmax = vmaxget();
 	    RCNTXT cntxt;
@@ -749,6 +754,11 @@ SEXP eval(SEXP e, SEXP rho)
 	    UNPROTECT(1);
 	    check_stack_balance(op, save);
 	    vmaxset(vmax);
+#ifdef WITH_DTRACE
+	    if(R_BUILTIN_EXIT_ENABLED()) {
+	    	    rdtrace_builtin_exit(e, op, tmp);
+	    }
+#endif
 	}
 	else if (TYPEOF(op) == CLOSXP) {
 	    PROTECT(tmp = promiseArgs(CDR(e), rho));

@@ -1,6 +1,9 @@
 provider R {
     probe function__entry(const char *name, const char *loc, int flags);
     probe function__exit(const char *name, const char *loc, int flags, int sexptype, const char *retval); 
+
+    probe builtin__entry(const char *name, const char *loc);
+    probe builtin__exit(const char *name, const char *loc, int sexptype, const char *retval); 
     
     probe force__promise__entry(const char *name);
     probe force__promise__exit(const char *name, int sexptype, const char *strval);
