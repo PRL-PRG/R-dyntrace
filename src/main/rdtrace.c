@@ -74,23 +74,13 @@ static char *get_location(SEXP srcref) {
 }
 
 static char *to_string(SEXP var) {
+    SEXP src = deparse1s(var);
     char *str = NULL;
 
-    switch(TYPEOF(var)) {
-        case NILSXP:
-            str = strdup("null");
-            break;
-        case CHARSXP:
-            str = strdup(CHAR(var));
-            break;
-        case INTSXP:
-            asprintf(&str, "%d", *(INTEGER(var)));
-            break;
-        case REALSXP:
-            asprintf(&str, "%f", *(REAL(var)));
-            break;
-        default:
-            str = strdup("<unsupported>");
+    if (IS_SCALAR(src, STRSXP)) {
+        str = strdup(CHAR(STRING_ELT(src, 0)));
+    } else {
+        str = strdup("<unsupported>");
     }
 
     return str;
