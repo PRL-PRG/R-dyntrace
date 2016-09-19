@@ -145,27 +145,20 @@ void rdtrace_promise_lookup(SEXP symbol, SEXP val) {
     free(retval);     
 }
 
-void rdtrace_builtin_entry(SEXP call, SEXP op) {
+void rdtrace_builtin_entry(SEXP call) {
     const char *name = CHAR(CAAR(call));
-    SEXP srcref = getAttrib(op, R_SrcrefSymbol);
-    char *location = get_location(srcref);
 
-    R_BUILTIN_ENTRY(name, location);
-
-    free(location);
+    R_BUILTIN_ENTRY(name);
 }
 
-void rdtrace_builtin_exit(SEXP call, SEXP op, SEXP rv) {
+void rdtrace_builtin_exit(SEXP call, SEXP rv) {
     const char *name = CHAR(CAAR(call));
-    SEXP srcref = getAttrib(op, R_SrcrefSymbol);
-    char *location = get_location(srcref);
 
     char *retval = to_string(rv);
 
-    R_BUILTIN_EXIT(name, location, TYPEOF(rv), retval);
+    R_BUILTIN_EXIT(name, TYPEOF(rv), retval);
 
     free(retval);
-    free(location);     
 }
 
 void rdtrace_error(SEXP call, const char *message) {

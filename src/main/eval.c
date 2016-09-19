@@ -32,9 +32,6 @@
 #include <Fileio.h>
 #include <R_ext/Print.h>
 
-// TODO: should be part of AC
-#define WITH_DTRACE 1
-
 #ifdef WITH_DTRACE
 #include <rdtrace.h>
 #endif
@@ -723,7 +720,7 @@ SEXP eval(SEXP e, SEXP rho)
 	else if (TYPEOF(op) == BUILTINSXP) {
 #ifdef WITH_DTRACE
 	    if(R_BUILTIN_ENTRY_ENABLED()) {
-	    	    rdtrace_builtin_entry(e, op);
+	    	    rdtrace_builtin_entry(e);
 	    }
 #endif
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
@@ -756,7 +753,7 @@ SEXP eval(SEXP e, SEXP rho)
 	    vmaxset(vmax);
 #ifdef WITH_DTRACE
 	    if(R_BUILTIN_EXIT_ENABLED()) {
-	    	    rdtrace_builtin_exit(e, op, tmp);
+	    	    rdtrace_builtin_exit(e, tmp);
 	    }
 #endif
 	}
