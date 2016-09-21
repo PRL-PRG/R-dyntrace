@@ -42,8 +42,26 @@ static const char *get_filename(SEXP srcref) {
     return NULL;
 }
 
-static char *get_fun_name(SEXP call, SEXP op) {
-    const char *fun_name = CHAR(CAAR(call));
+static const char *get_fun_name(SEXP call) {
+    const char *s = NULL;
+
+    switch(TYPEOF(call)) {
+        case LANGSXP:
+            s = CHAR(CAAR(call));
+            break;
+        case BUILTINSXP:
+            s = PRIMNAME(call);
+            break;
+        default:
+            s = "<unknown>";
+    }
+
+    return s;
+}
+
+// get a fully qualified function name (<package>::<function>)
+static char *get_fqfn(SEXP call, SEXP op) {
+    const char *fun_name = get_fun_name(call);
     const char *ns_name = get_ns_name(op);
     char *name = NULL;
     
@@ -96,7 +114,7 @@ static int get_flags(SEXP op) {
 }
 
 void rdtrace_function_entry(SEXP call, SEXP op, SEXP rho) {
-    char *name = get_fun_name(call, op);
+    char *name = get_fqfn(call, op);
     SEXP srcref = getAttrib(op, R_SrcrefSymbol);
     char *location = get_location(srcref);
     int flags = get_flags(op);
@@ -108,7 +126,7 @@ void rdtrace_function_entry(SEXP call, SEXP op, SEXP rho) {
 }
 
 void rdtrace_function_exit(SEXP call, SEXP op, SEXP rho, SEXP rv) {
-    char *name = get_fun_name(call, op);
+    char *name = get_fqfn(call, op);
     SEXP srcref = getAttrib(op, R_SrcrefSymbol);
     char *location = get_location(srcref);
     char *retval = to_string(rv);
@@ -146,14 +164,13 @@ void rdtrace_promise_lookup(SEXP symbol, SEXP val) {
 }
 
 void rdtrace_builtin_entry(SEXP call) {
-    const char *name = CHAR(CAAR(call));
+    const char *name = get_fun_name(call);
 
     R_BUILTIN_ENTRY(name);
 }
 
 void rdtrace_builtin_exit(SEXP call, SEXP rv) {
-    const char *name = CHAR(CAAR(call));
-
+    const char *name = get_fun_name(call);
     char *retval = to_string(rv);
 
     R_BUILTIN_EXIT(name, TYPEOF(rv), retval);

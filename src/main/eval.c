@@ -3652,6 +3652,23 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
   NEXT(); \
 } while(0)
 
+#ifdef WITH_DTRACE 
+#define NewBuiltin2(do_fun,opval,opsym,rho) do {	\
+  SEXP call = VECTOR_ELT(constants, GETOP()); \
+  SEXP x = GETSTACK(-2); \
+  SEXP y = GETSTACK(-1); \
+  if(R_BUILTIN_ENTRY_ENABLED()) { \
+      rdtrace_builtin_entry(call); \
+  } \
+  SEXP tmp = do_fun(call, opval, opsym, x, y,rho); \
+  SETSTACK(-2, tmp);	\
+  if(R_BUILTIN_EXIT_ENABLED()) { \
+      rdtrace_builtin_exit(call, tmp); \
+  } \
+  R_BCNodeStackTop--; \
+  NEXT(); \
+} while(0)
+#else
 #define NewBuiltin2(do_fun,opval,opsym,rho) do {	\
   SEXP call = VECTOR_ELT(constants, GETOP()); \
   SEXP x = GETSTACK(-2); \
@@ -3660,6 +3677,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
   R_BCNodeStackTop--; \
   NEXT(); \
 } while(0)
+#endif 
 
 #define Arith1(opsym) do {		\
   SEXP call = VECTOR_ELT(constants, GETOP()); \
@@ -5595,8 +5613,19 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP code = VECTOR_ELT(constants, GETOP());
 	SEXPTYPE ftype = CALL_FRAME_FTYPE();
 	if (ftype != SPECIALSXP) {
-	  if (ftype == BUILTINSXP)
+	  if (ftype == BUILTINSXP) {
+#ifdef WITH_DTRACE
+              if(R_BUILTIN_ENTRY_ENABLED()) {
+                  rdtrace_builtin_entry(CALL_FRAME_FUN());
+              }
+#endif                  
 	      value = bcEval(code, rho, TRUE);
+#ifdef WITH_DTRACE
+	      if(R_BUILTIN_EXIT_ENABLED()) {
+	          rdtrace_builtin_exit(CALL_FRAME_FUN(), value);
+	      }
+#endif                  
+          }
 	  else
 	    value = mkPROMISE(code, rho);
 	  PUSHCALLARG(value);
@@ -5697,11 +5726,31 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    begincontext(&cntxt, CTXT_BUILTIN, call,
 			 R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
 	    R_Srcref = NULL;
+#ifdef WITH_DTRACE
+              if(R_BUILTIN_ENTRY_ENABLED()) {
+                  rdtrace_builtin_entry(call);
+              }
+#endif                  
 	    value = PRIMFUN(fun) (call, fun, args, rho);
+#ifdef WITH_DTRACE
+	      if(R_BUILTIN_EXIT_ENABLED()) {
+	          rdtrace_builtin_exit(call, value);
+	      }
+#endif                  
 	    R_Srcref = oldref;
 	    endcontext(&cntxt);
 	} else {
+#ifdef WITH_DTRACE
+              if(R_BUILTIN_ENTRY_ENABLED()) {
+                  rdtrace_builtin_entry(call);
+              }
+#endif                  
 	    value = PRIMFUN(fun) (call, fun, args, rho);
+#ifdef WITH_DTRACE
+	      if(R_BUILTIN_EXIT_ENABLED()) {
+	          rdtrace_builtin_exit(call, value);
+	      }
+#endif                  
 	}
 	if (flag < 2) R_Visible = flag != 1;
 	vmaxset(vmax);
