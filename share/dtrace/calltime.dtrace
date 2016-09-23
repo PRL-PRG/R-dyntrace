@@ -1,4 +1,4 @@
-#!/usr/bin/env dtrace -Zs
+#!/usr/sbin/dtrace -Zs
 
 #pragma D option quiet
 #pragma D option dynvarsize=2g

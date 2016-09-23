@@ -1,4 +1,11 @@
-#!/usr/bin/env dtrace -Zs 
+#!/usr/sbin/dtrace -Zs 
+
+#pragma D option quiet
+
+dtrace:::BEGIN
+{
+	printf("Tracing R... Hit Ctrl-C to end.\n");
+}
 
 R*:::function-entry
 {
