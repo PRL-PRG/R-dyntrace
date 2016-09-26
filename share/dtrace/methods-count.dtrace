@@ -1,4 +1,4 @@
-#!/usr/bin/env dtrace -Zs 
+#!/usr/sbin/dtrace -Zs 
 
 R*:::function-entry
 {

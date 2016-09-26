@@ -1133,7 +1133,7 @@
 /* Version number of package */
 #undef VERSION
 
-/* Define this to use dtrace. */
+/* DTrace is enabled */
 #undef WITH_DTRACE
 
 /* Define to 1 if your processor stores words with the most significant byte

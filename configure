@@ -704,7 +704,6 @@ custom_JAVA_HOME
 PAPERCONF
 BUILD_TZONE_FALSE
 BUILD_TZONE_TRUE
-DTRACE
 R_PROFILING
 BITMAP_LIBS
 BITMAP_CPPFLAGS
@@ -929,6 +928,11 @@ R_PAPERSIZE
 R_PRINTCMD
 BYTE_COMPILE_PACKAGES_FALSE
 BYTE_COMPILE_PACKAGES_TRUE
+DTRACE_EXTRA_LIBS
+DTRACE_OBJ
+DTRACE_SRC
+DTRACE_HEADER
+DTRACE
 WANT_JAVA_FALSE
 WANT_JAVA_TRUE
 BUILD_LTO_FALSE
@@ -1035,7 +1039,7 @@ with_system_tre
 with_valgrind_instrumentation
 with_system_valgrind_headers
 with_internal_tzcode
-with_dtrace
+enable_dtrace
 with_recommended_packages
 with_ICU
 enable_byte_compiled_packages
@@ -1767,6 +1771,7 @@ Optional Features:
   --enable-prebuilt-html  build static HTML help pages [no]
   --enable-lto            enable link-time optimization [no]
   --enable-java           enable Java [yes]
+  --enable-dtrace         DTrace for tracing inside R [no]
   --enable-byte-compiled-packages
                           byte-compile base and recommended packages [yes]
   --enable-static[=PKGS]  (libtool) build static libraries [default=no]
@@ -1808,7 +1813,6 @@ Optional Packages:
   --with-system-valgrind-headers
                           use system valgrind headers (if available) [no]
   --with-internal-tzcode  use internal time-zone code [no]
-  --with-dtrace           DTrace dynamic tracing [no]
   --with-recommended-packages
                           use/install recommended R packages [yes]
   --with-ICU              use ICU library (if available) [yes]
@@ -4186,32 +4190,102 @@ fi
 
 # Check whether --with-internal-tzcode was given.
 if test "${with_internal_tzcode+set}" = set; then :
-  withval=$with_internal_tzcode; if test "${withval}" = no; then
-  use_dtrace=no
-else
-  use_dtrace=yes
-fi
-
+  withval=$with_internal_tzcode; use_internal_tzcode=${withval}
 else
   use_internal_tzcode=default
 fi
 
 
 ## DTrace
-
-# Check whether --with-dtrace was given.
-if test "${with_dtrace+set}" = set; then :
-  withval=$with_dtrace; if test "${withval}" = no; then
-  use_dtrace=no
+## todo: likely this can be done in a smarter way
+# Extract the first word of "${ac_tool_prefix}dtrace", so it can be a program name with args.
+set dummy ${ac_tool_prefix}dtrace; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_DTRACE+:} false; then :
+  $as_echo_n "(cached) " >&6
 else
-  use_dtrace=yes
+  if test -n "$DTRACE"; then
+  ac_cv_prog_DTRACE="$DTRACE" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_DTRACE="${ac_tool_prefix}dtrace"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+DTRACE=$ac_cv_prog_DTRACE
+if test -n "$DTRACE"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $DTRACE" >&5
+$as_echo "$DTRACE" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 fi
 
+
+
+# Check whether --enable-dtrace was given.
+if test "${enable_dtrace+set}" = set; then :
+  enableval=$enable_dtrace; enable_dtrace=$enableval
 else
-  use_dtrace=no
+  enable_dtrace=no
 fi
 
 
+if test "${enable_dtrace}" = "yes"; then
+  if test -z "$DTRACE"; then
+    as_fn_error $? "dtrace(1) is missing" "$LINENO" 5
+  else
+    DTRACE_HEADER="rdtrace_probes.h"
+    DTRACE_SRC="rdtrace.c"
+    DTRACE_OBJ="rdtrace.o"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether dtrace requires extra post processing" >&5
+$as_echo_n "checking whether dtrace requires extra post processing... " >&6; }
+    case "${host_os}" in #(
+  freebsd*) :
+
+      # FreeBSD's dtrace requires glommed object
+      DTRACE_OBJ="$DTRACE_OBJ rdtrace_probes.o"
+      # FreeBSD's dtrace requires libelf
+      DTRACE_EXTRA_LIBS="-lelf"
+     ;; #(
+  *) :
+     ;;
+esac
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $DTRACE_OBJ $DTRACE_EXTRA_LIBS" >&5
+$as_echo "$DTRACE_OBJ $DTRACE_EXTRA_LIBS" >&6; }
+
+$as_echo "#define WITH_DTRACE 1" >>confdefs.h
+
+  fi
+fi
+
+
+
+
+
+# AC_ARG_WITH([dtrace],
+# [AS_HELP_STRING([--with-dtrace],[DTrace dynamic tracing [no]])],
+# [R_ARG_USE(dtrace)
+# AC_DEFINE(WITH_DTRACE)],
+# [use_dtrace=no])
+# AM_CONDITIONAL(USE_DTRACE, [test "x${use_dtrace}" = xyes])
+# ## todo: I think the same is needed for solaris
+# AM_CONDITIONAL(USE_DTRACE_OBJ, [test "x${use_dtrace}" = xyes && "${host_os:0:7}" = "freebsd"])
+# ## todo: this should be smarter a actually check of dtrace exists and its version
+# AC_SUBST(DTRACE, dtrace)
 
 ## <FIXME>
 ## Completely disable using libtool for building shlibs until libtool
@@ -25080,7 +25154,7 @@ _ACEOF
 # flags.
 r_save_CFLAGS=$CFLAGS
 CFLAGS="$CFLAGS $r_verb"
-(eval echo $as_me:25083: \"$ac_link\") >&5
+(eval echo $as_me:25157: \"$ac_link\") >&5
 r_c_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$r_c_v_output" >&5
 CFLAGS=$r_save_CFLAGS
@@ -25155,7 +25229,7 @@ _ACEOF
 # flags.
 r_save_CFLAGS=$CFLAGS
 CFLAGS="$CFLAGS $r_cv_prog_c_v"
-(eval echo $as_me:25158: \"$ac_link\") >&5
+(eval echo $as_me:25232: \"$ac_link\") >&5
 r_c_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$r_c_v_output" >&5
 CFLAGS=$r_save_CFLAGS
@@ -37651,14 +37725,6 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
-# DTrace
-if test "${use_dtrace}" = yes; then
-
-$as_echo "#define WITH_DTRACE 1" >>confdefs.h
-
-
-  DTRACE=dtrace
-fi
 
 if test "x${use_internal_tzcode}" = xyes; then
 
