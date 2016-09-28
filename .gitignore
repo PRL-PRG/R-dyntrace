@@ -142,3 +142,6 @@ src/scripts/pager
 src/scripts/rtags
 src/unix/Rscript
 stamp-java
+R.xcodeproj/project.xcworkspace/xcuserdata/krikava.xcuserdatad/UserInterfaceState.xcuserstate
+R.xcodeproj/project.xcworkspace/xcuserdata/krikava.xcuserdatad/xcdebugger/Expressions.xcexplist
+R.xcodeproj/xcuserdata/krikava.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist
