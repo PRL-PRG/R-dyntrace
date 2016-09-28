@@ -438,10 +438,35 @@ AC_ARG_WITH([internal-tzcode],
 [use_internal_tzcode=default])
 
 ## DTrace
-AC_ARG_WITH([dtrace],
-[AS_HELP_STRING([--with-dtrace],[DTrace dynamic tracing @<:@no@:>@])],
-[R_ARG_USE(dtrace)],
-[use_dtrace=no])
+## todo: likely this can be done in a smarter way
+AC_CHECK_PROG([DTRACE], [${ac_tool_prefix}dtrace], [${ac_tool_prefix}dtrace])
+
+AC_ARG_ENABLE(dtrace,
+AS_HELP_STRING([--enable-dtrace],[DTrace for tracing inside R @<:@no@:>@]),
+[enable_dtrace=$enableval], [enable_dtrace=no])
+
+if test "${enable_dtrace}" = "yes"; then
+  if test -z "$DTRACE"; then
+    AC_MSG_ERROR([dtrace(1) is missing])
+  else
+    DTRACE_HEADER="rdtrace_probes.h"
+    DTRACE_SRC="rdtrace.c"
+    DTRACE_OBJ="rdtrace.o"
+    AC_MSG_CHECKING([whether dtrace requires extra post processing])
+    AS_CASE("${host_os}", [freebsd*], [
+      # FreeBSD's dtrace requires glommed object
+      DTRACE_OBJ="$DTRACE_OBJ rdtrace_probes.o"
+      # FreeBSD's dtrace requires libelf
+      DTRACE_EXTRA_LIBS="-lelf"
+    ])
+    AC_MSG_RESULT([$DTRACE_OBJ $DTRACE_EXTRA_LIBS])
+    AC_DEFINE(WITH_DTRACE, 1, [DTrace is enabled])
+  fi
+fi
+AC_SUBST(DTRACE_HEADER)
+AC_SUBST(DTRACE_SRC)
+AC_SUBST(DTRACE_OBJ)
+AC_SUBST(DTRACE_EXTRA_LIBS)
 
 ## <FIXME>
 ## Completely disable using libtool for building shlibs until libtool

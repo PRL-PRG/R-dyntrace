@@ -31,7 +31,6 @@ SOURCES_C = \
 	paste.c platform.c plot.c plot3d.c plotmath.c \
 	print.c printarray.c printvector.c printutils.c qsort.c \
 	radixsort.c random.c raw.c registration.c relop.c rlocale.c \
-	rdtrace.c \
 	saveload.c scan.c seq.c serialize.c sort.c source.c split.c \
 	sprintf.c startup.c subassign.c subscript.c subset.c summary.c sysutils.c \
 	times.c \
@@ -44,11 +43,11 @@ SOURCES_F =  xxxpr.f
 ## If the substitutes are needed, the corresponding objects are put by
 ## configure in @LIBOBJS@ @ALLOCA@
 EXTRA_SOURCES_C = \
-	Rmain.c alloca.c mkdtemp.c strdup.c strncasecmp.c
+	Rmain.c alloca.c mkdtemp.c strdup.c strncasecmp.c @DTRACE_SRC@
 
 DEPENDS = $(SOURCES_C:.c=.d) $(EXTRA_SOURCES_C:.c=.d)
 SOURCES = $(SOURCES_C) $(SOURCES_F)
-OBJECTS = $(SOURCES_C:.c=.o) $(SOURCES_F:.f=.o) @LIBOBJS@ @ALLOCA@
+OBJECTS = $(SOURCES_C:.c=.o) $(SOURCES_F:.f=.o) @LIBOBJS@ @ALLOCA@ @DTRACE_OBJ@
 HEADERS = \
 	RBufferUtils.h Rstrptime.h \
 	arithmetic.h \
@@ -59,12 +58,16 @@ HEADERS = \
 	gzio.h \
 	qsort-body.c \
 	rlocale_data.h \
-	rdtrace_probes.h \
 	unzip.h \
 	valid_utf8.h \
 	xspline.c \
+	@DTRACE_HEADER@ \
 	g_cntrlify.h g_control.h g_extern.h g_her_metr.h g_jis.h
 
+DTRACE_OBJ_DEPS = \
+	rdtrace.o \
+	eval.o \
+	errors.o
 
 distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
 DISTFILES = Makefile.in Makefile.win \
@@ -96,7 +99,7 @@ MAIN_OBJS = `ls ../unix/*.o ../appl/*.o ../nmath/*.o`
 EXTRA_STATIC_LIBS = $(R_TRE) $(R_XDR) $(R_LIBINTL) $(R_TZONE)
 STATIC_LIBS = $(MAIN_LIBS) $(EXTRA_STATIC_LIBS)
 
-EXTRA_LIBS = $(BLAS_LIBS) $(FLIBS) $(R_XTRA_LIBS) @LIBINTL@ $(READLINE_LIBS) $(LIBS)
+EXTRA_LIBS = $(BLAS_LIBS) $(FLIBS) $(R_XTRA_LIBS) @LIBINTL@ $(READLINE_LIBS) $(LIBS) @DTRACE_EXTRA_LIBS@
 
 R_binary = R.bin
 R_bin_OBJECTS = Rmain.o @WANT_R_SHLIB_FALSE@$(OBJECTS)
@@ -128,7 +131,7 @@ Makedeps: Makefile $(DEPENDS)
 	@touch $@
 
 ## This target has been changed to ensure that R.bin and libR get
-## installed in the build tree if necessary, even if the corresponding 
+## installed in the build tree if necessary, even if the corresponding
 ## objects are not re-made.
 ## Note that dependencies in the test Makefiles used to depend on these objects,
 ## so copy-if-change is used.
@@ -144,12 +147,12 @@ R: Makedeps
 
 ## DTrace
 rdtrace.c: rdtrace_probes.h
- 
 rdtrace_probes.h: rdtrace.probes
-	if test "$(DTRACE)" != ""; then \
-		$(DTRACE) -o $@ -h -I ../include -C -s rdtrace.probes ; \
-	else touch $@ ; \
-	fi;
+	if test "$(DTRACE)"; then $(DTRACE) -o $@ -h -I ../include -C -s rdtrace.probes; fi
+
+rdtrace_probes.o: $(DTRACE_OBJ_DEPS)
+	@rm -f $@
+	$(DTRACE) -G -s rdtrace.probes -o $@ $(DTRACE_OBJ_DEPS)
 
 $(R_binary): $(R_bin_OBJECTS) $(R_bin_DEPENDENCIES)
 	$(MAIN_LINK) -o $@ $(R_bin_OBJECTS) $(R_bin_LDADD)
@@ -196,7 +199,7 @@ YFLAGS=-l
 $(srcdir)/gram.c: @MAINTAINER_MODE_TRUE@ $(srcdir)/gram.y
 	@$(ECHO) "re-making gram.c"
 	$(YACC) $(YFLAGS) $(srcdir)/gram.y
-	$(SHELL) $(top_srcdir)/tools/move-if-change y.tab.c $(srcdir)/gram.c	
+	$(SHELL) $(top_srcdir)/tools/move-if-change y.tab.c $(srcdir)/gram.c
 
 install: installdirs
 	@$(MAKE) install-bin
@@ -236,6 +239,8 @@ clean:
 	@-rm -rf .libs _libs
 	@-rm -f *core Makedeps *.d *.o *.lo *.la *$(R_DYLIB_EXT) \
 	  $(R_binary) libR.a
+	@-rm -f rdtrace_probes.h
+
 distclean: clean
 	@-rm -f Makefile
 maintainer-clean: distclean
@@ -258,4 +263,3 @@ distdir: $(DISTFILES)
 	done
 
 ## Automagically generated dependencies:
-
