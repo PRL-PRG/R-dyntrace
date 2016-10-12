@@ -1,0 +1,35 @@
+#!/usr/sbin/dtrace -Zs 
+
+#pragma D option quiet
+
+self int depth;
+
+dtrace:::BEGIN
+{
+	printf("%4s %4s %10s %10s %12s\n", 
+            "TYPE", "SEXP", "LENGTH", "SIZE(B)", "TIME(us)");
+}
+
+R*:::alloc-entry,
+R*:::alloc-exit
+/ self->last == 0 /
+{
+	self->last = timestamp;
+}
+
+R*:::alloc-entry
+{
+	printf("%4d %4d %10ld", arg0, arg1, arg2);
+
+	self->last = timestamp;
+}
+
+
+R*:::alloc-exit 
+{ 
+    this->delta = (timestamp - self->last) / 1000;
+
+	printf(" %10ld %12d\n", arg3, this->delta);
+    ustack();
+	self->last = timestamp;
+}

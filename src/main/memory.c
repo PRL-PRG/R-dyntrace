@@ -2407,14 +2407,31 @@ static void custom_node_free(void *ptr) {
 */
 #define intCHARSXP 73
 
+#ifdef WITH_DTRACE
+SEXP rdtrace_allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator);
+
 SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 {
-#ifdef WITH_DTRACE
-    if (rdtrace_in_eval == TRUE && R_ALLOC_ENTRY_ENABLED()) {
-	    rdtrace_alloc_entry(ALLOC_VECTOR, type, length);
-    }
-#endif
+    SEXPTYPE actual_type = type == intCHARSXP ? CHARSXP : type;
 
+    if (R_ALLOC_ENTRY_ENABLED()) {
+	    rdtrace_alloc_entry(ALLOC_VECTOR, actual_type, length);
+    }
+
+    SEXP tmp = rdtrace_allocVector3(type, length, allocator);
+
+    if (R_ALLOC_EXIT_ENABLED()) {
+        rdtrace_alloc_exit(ALLOC_VECTOR, actual_type, length, tmp);
+    }
+
+    return tmp;
+}
+
+SEXP rdtrace_allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
+#else
+SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
+#endif
+{
     SEXP s;     /* For the generational collector it would be safer to
 		   work in terms of a VECSEXP here, but that would
 		   require several casts below... */
@@ -2459,19 +2476,6 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 	    SET_SHORT_VEC_TRUELENGTH(s, 0);
 	    SET_NAMED(s, 0);
 	    INIT_REFCNT(s);
-
-#ifdef WITH_DTRACE
-	    if (rdtrace_in_eval == TRUE && R_ALLOC_EXIT_ENABLED()) {
-		R_size_t actual_size = 0;
-		switch(type) {
-	    		case REALSXP: actual_size = sizeof(double); break;
-	    		case INTSXP: actual_size = sizeof(int); break;
-	    		case LGLSXP: actual_size = sizeof(int); break;
-	    	}		    
-		rdtrace_alloc_exit(ALLOC_VECTOR, type, length, actual_size);
-	    }
-#endif
-
 	    return(s);
 	}
     }
@@ -2485,11 +2489,6 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
     /* number of vector cells to allocate */
     switch (type) {
     case NILSXP:
-#ifdef WITH_DTRACE
-	    if (rdtrace_in_eval == TRUE && R_ALLOC_EXIT_ENABLED()) {
-		rdtrace_alloc_exit(ALLOC_VECTOR, type, length, 0);
-	    }
-#endif
 	return R_NilValue;
     case RAWSXP:
 	size = BYTE2VEC(length);
@@ -2561,33 +2560,16 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 	}
 	break;
     case LANGSXP:
-	if(length == 0) {
-#ifdef WITH_DTRACE
-	    if (rdtrace_in_eval == TRUE && R_ALLOC_EXIT_ENABLED()) {
-		rdtrace_alloc_exit(ALLOC_VECTOR, type, length, 0);
-	    }
-#endif
-            return R_NilValue;
-	}
+	if(length == 0) return R_NilValue;
 #ifdef LONG_VECTOR_SUPPORT
 	if (length > R_SHORT_LEN_MAX) error("invalid length for pairlist");
 #endif
 	s = allocList((int) length);
 	TYPEOF(s) = LANGSXP;
-#ifdef WITH_DTRACE
-        if (rdtrace_in_eval == TRUE && R_ALLOC_EXIT_ENABLED()) {
-		rdtrace_alloc_exit(ALLOC_VECTOR, type, length, length * sizeof(SEXP));
-	}
-#endif
 	return s;
     case LISTSXP:
 #ifdef LONG_VECTOR_SUPPORT
 	if (length > R_SHORT_LEN_MAX) error("invalid length for pairlist");
-#endif
-#ifdef WITH_DTRACE
-        if (rdtrace_in_eval == TRUE && R_ALLOC_EXIT_ENABLED()) {
-		rdtrace_alloc_exit(ALLOC_VECTOR, type, length, length * sizeof(SEXP));
-	}
 #endif
 	return allocList((int) length);
     default:
@@ -2639,11 +2621,6 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 	    SET_NODE_CLASS(s, node_class);
 	    R_SmallVallocSize += alloc_size;
 	    SET_SHORT_VEC_LENGTH(s, (R_len_t) length);
-#ifdef WITH_DTRACE
-	    if (rdtrace_in_eval == TRUE && R_ALLOC_EXIT_ENABLED()) {
-		rdtrace_alloc_exit(ALLOC_VECTOR, type, length, alloc_size);
-	    }
-#endif
 	}
 	else {
 	    Rboolean success = FALSE;
@@ -2688,11 +2665,6 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 #ifdef R_MEMORY_PROFILING
 		R_ReportAllocation(hdrsize + size * sizeof(VECREC));
 #endif
-#ifdef WITH_DTRACE
-		if (rdtrace_in_eval == TRUE && R_ALLOC_EXIT_ENABLED()) {
-			rdtrace_alloc_exit(ALLOC_VECTOR, type, length, hdrsize + size * sizeof(VECREC));
-		}
-#endif
 	    } else s = NULL; /* suppress warning */
 	    if (! success) {
 		double dsize = (double)size * sizeof(VECREC)/1024.0;
@@ -2725,11 +2697,6 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
     else {
 	GC_PROT(s = allocSExpNonCons(type));
 	SET_SHORT_VEC_LENGTH(s, (R_len_t) length);
-#ifdef WITH_DTRACE
-	if (rdtrace_in_eval == TRUE && R_ALLOC_EXIT_ENABLED()) {
-		rdtrace_alloc_exit(ALLOC_VECTOR, type, length, sizeof(SEXP));
-	}
-#endif 
     }
     SET_SHORT_VEC_TRUELENGTH(s, 0);
     SET_NAMED(s, 0);
