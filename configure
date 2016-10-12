@@ -4276,17 +4276,6 @@ fi
 
 
 
-# AC_ARG_WITH([dtrace],
-# [AS_HELP_STRING([--with-dtrace],[DTrace dynamic tracing [no]])],
-# [R_ARG_USE(dtrace)
-# AC_DEFINE(WITH_DTRACE)],
-# [use_dtrace=no])
-# AM_CONDITIONAL(USE_DTRACE, [test "x${use_dtrace}" = xyes])
-# ## todo: I think the same is needed for solaris
-# AM_CONDITIONAL(USE_DTRACE_OBJ, [test "x${use_dtrace}" = xyes && "${host_os:0:7}" = "freebsd"])
-# ## todo: this should be smarter a actually check of dtrace exists and its version
-# AC_SUBST(DTRACE, dtrace)
-
 ## <FIXME>
 ## Completely disable using libtool for building shlibs until libtool
 ## fully supports Fortran and C++.
@@ -25154,7 +25143,7 @@ _ACEOF
 # flags.
 r_save_CFLAGS=$CFLAGS
 CFLAGS="$CFLAGS $r_verb"
-(eval echo $as_me:25157: \"$ac_link\") >&5
+(eval echo $as_me:25146: \"$ac_link\") >&5
 r_c_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$r_c_v_output" >&5
 CFLAGS=$r_save_CFLAGS
@@ -25229,7 +25218,7 @@ _ACEOF
 # flags.
 r_save_CFLAGS=$CFLAGS
 CFLAGS="$CFLAGS $r_cv_prog_c_v"
-(eval echo $as_me:25232: \"$ac_link\") >&5
+(eval echo $as_me:25221: \"$ac_link\") >&5
 r_c_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$r_c_v_output" >&5
 CFLAGS=$r_save_CFLAGS
