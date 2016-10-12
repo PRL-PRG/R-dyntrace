@@ -11,4 +11,7 @@ provider R {
     probe promise__lookup(const char *name, int sexptype, const char *strval);
 
     probe error(const char *call, const char *loc, const char *message);
+
+    probe alloc__entry(int type, int sexptype, long length);
+    probe alloc__exit(int type, int sexptype, long length, long bytes);
 };

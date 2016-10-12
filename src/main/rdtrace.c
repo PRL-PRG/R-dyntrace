@@ -185,3 +185,11 @@ void rdtrace_error(SEXP call, const char *message) {
     
     R_ERROR(dcall, "<unknown>", message);
 }
+
+void rdtrace_alloc_entry(int type, SEXPTYPE sexptype, long length) {
+    R_ALLOC_ENTRY(type, sexptype, length);
+}
+
+void rdtrace_alloc_exit(int type, SEXPTYPE sexptype, long length, long size) {
+    R_ALLOC_EXIT(type, sexptype, length, size);
+}
