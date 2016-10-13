@@ -535,6 +535,14 @@ static SEXP forcePromise(SEXP e)
 /* some places, e.g. deparse2buff, call this with a promise and rho = NULL */
 SEXP eval(SEXP e, SEXP rho)
 {
+#ifdef WITH_DTRACE
+    if(R_EVAL_ENTRY_ENABLED()) {
+	R_EVAL_ENTRY();
+    }
+    if(R_EVAL_EXPRESSION_ENABLED()) {
+	rdtrace_eval_expression(e, rho);
+    }
+#endif
     SEXP op, tmp;
     static int evalcount = 0;
 
@@ -576,6 +584,14 @@ SEXP eval(SEXP e, SEXP rho)
 	   to replacement functions won't modify constants in
 	   expressions.  */
 	if (NAMED(e) <= 1) SET_NAMED(e, 2);
+#ifdef WITH_DTRACE
+    	if(R_EVAL_RETURN_ENABLED()) {
+	    rdtrace_eval_return(e, rho);
+    	}
+    	if(R_EVAL_EXIT_ENABLED()) {
+	    R_EVAL_EXIT();
+    	}
+#endif	
 	return e;
     default: break;
     }
@@ -773,6 +789,14 @@ SEXP eval(SEXP e, SEXP rho)
     }
     R_EvalDepth = depthsave;
     R_Srcref = srcrefsave;
+#ifdef WITH_DTRACE
+    	if(R_EVAL_RETURN_ENABLED()) {
+	    rdtrace_eval_return(tmp, rho);
+    	}
+    	if(R_EVAL_EXIT_ENABLED()) {
+	    R_EVAL_EXIT();
+    	}
+#endif	
     return (tmp);
 }
 

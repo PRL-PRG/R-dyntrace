@@ -13,4 +13,9 @@ provider R {
     probe error(const char *call, const char *loc, const char *message);
 
     probe vector__alloc(int sexptype, long length, long bytes, const char *srcref);
+
+    probe eval__entry();
+    probe eval__expression(int sexptype, const char *expression);
+    probe eval__exit();
+    probe eval__return(int sexptype, const char *retval);
 };

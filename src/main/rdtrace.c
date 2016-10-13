@@ -194,3 +194,14 @@ void rdtrace_vector_alloc(SEXPTYPE sexptype, long length, long bytes) {
     R_VECTOR_ALLOC(sexptype, length, bytes, "");
 }
 
+void rdtrace_eval_expression(SEXP expression, SEXP rho) {
+    const char *s = CHAR(STRING_ELT(deparse1line(expression, FALSE), 0));
+    
+    R_EVAL_EXPRESSION(TYPEOF(expression), s);
+}
+
+void rdtrace_eval_return(SEXP rv, SEXP rho) {
+    const char *s = CHAR(STRING_ELT(deparse1line(rv, FALSE), 0));
+
+    R_EVAL_RETURN(TYPEOF(rv), s);
+}

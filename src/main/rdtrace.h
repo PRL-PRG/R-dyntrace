@@ -20,5 +20,7 @@ void rdtrace_builtin_entry(SEXP call);
 void rdtrace_builtin_exit(SEXP call, SEXP rv);
 void rdtrace_error(SEXP call, const char *message);
 void rdtrace_vector_alloc(SEXPTYPE sexptype, long length, long bytes);
+void rdtrace_eval_expression(SEXP expression, SEXP rho);
+void rdtrace_eval_return(SEXP rv, SEXP rho);
 
 #endif	/* _RDTRACE_H */
