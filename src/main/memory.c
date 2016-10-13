@@ -2407,30 +2407,7 @@ static void custom_node_free(void *ptr) {
 */
 #define intCHARSXP 73
 
-#ifdef WITH_DTRACE
-SEXP rdtrace_allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator);
-
 SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
-{
-    SEXPTYPE actual_type = type == intCHARSXP ? CHARSXP : type;
-
-    if (R_ALLOC_ENTRY_ENABLED()) {
-	    rdtrace_alloc_entry(ALLOC_VECTOR, actual_type, length);
-    }
-
-    SEXP tmp = rdtrace_allocVector3(type, length, allocator);
-
-    if (R_ALLOC_EXIT_ENABLED()) {
-        rdtrace_alloc_exit(ALLOC_VECTOR, actual_type, length, tmp);
-    }
-
-    return tmp;
-}
-
-SEXP rdtrace_allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
-#else
-SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
-#endif
 {
     SEXP s;     /* For the generational collector it would be safer to
 		   work in terms of a VECSEXP here, but that would
@@ -2664,6 +2641,11 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 		else s = NULL;
 #ifdef R_MEMORY_PROFILING
 		R_ReportAllocation(hdrsize + size * sizeof(VECREC));
+#endif
+#ifdef WITH_DTRACE
+    if (R_VECTOR_ALLOC_ENABLED()) {
+        rdtrace_vector_alloc(type, length, hdrsize + size * sizeof(VECREC));
+    }				
 #endif
 	    } else s = NULL; /* suppress warning */
 	    if (! success) {

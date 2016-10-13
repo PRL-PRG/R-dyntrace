@@ -117,96 +117,6 @@ static int get_flags(SEXP op) {
     return flags;
 }
 
-static long v_size(long n, int size) {
-  if (n == 0) return 8;
-
-  double vec_size = max(sizeof(SEXP), sizeof(double));
-  double elements_per_byte = vec_size / size;
-  double n_bytes = ceil(n / elements_per_byte);
-
-  long bytes = 0;
-  // Big vectors always allocated in 8 byte chunks
-  if (n_bytes > 16) bytes = n_bytes * 8;
-  // For small vectors, round to sizes allocated in small vector pool
-  else if (n_bytes > 8)  bytes = 128;
-  else if (n_bytes > 6)  bytes = 64;
-  else if (n_bytes > 4)  bytes = 48;
-  else if (n_bytes > 2)  bytes = 32;
-  else if (n_bytes > 1)  bytes = 16;
-  else if (n_bytes > 0)  bytes = 8;
-
-  return bytes + vec_size; // SEXPREC_ALIGN padding
-}
-
-static long object_size(SEXP x) {
-  if (TYPEOF(x) == NILSXP ||
-      TYPEOF(x) == SPECIALSXP ||
-      TYPEOF(x) == BUILTINSXP) return 0;
-
-  // As of R 3.1.0, all SEXPRECs start with sxpinfo (4 bytes, but aligned),
-  // followed by three pointers: attribute pairlist, next object, prev object
-  // (i.e. doubly linked list of all objects in memory)
-  int ptr_size = sizeof(void*);
-  long size = 4 * ptr_size;
-
-  switch (TYPEOF(x)) {
-    case LGLSXP:
-    case INTSXP:
-      size += v_size(XLENGTH(x), sizeof(int));
-      break;
-    case REALSXP:
-      size += v_size(XLENGTH(x), sizeof(double));
-      break;
-    case CPLXSXP:
-      size += v_size(XLENGTH(x), sizeof(Rcomplex));
-      break;
-    case RAWSXP:
-      size += v_size(XLENGTH(x), 1);
-      break;
-    case STRSXP:
-      size += v_size(XLENGTH(x), ptr_size);
-      break;
-    case CHARSXP:
-      size += v_size(LENGTH(x) + 1, 1);
-      break;
-    case VECSXP:
-    case EXPRSXP:
-    case WEAKREFSXP:
-      size += v_size(XLENGTH(x), sizeof(SEXP));
-      break;
-    case LISTSXP:
-    case LANGSXP:      
-      for(SEXP c = x; c != R_NilValue; c = CDR(c)) size += sizeof(SEXP); 
-    //   size += 3 * sizeof(SEXP); // tag, car, cdr
-      break;
-    // case ENVSXP:
-    //   if (x == R_BaseEnv || x == R_GlobalEnv || x == R_EmptyEnv || x == base_env || is_namespace(x)) 
-    //     size = 0;
-    //   else
-    //     size += 3 * sizeof(SEXP); // frame, enclos, hashtab
-    //   break;
-    // case CLOSXP:
-    //   size += 3 * sizeof(SEXP); // formals, body, env
-    //   break;
-    // case PROMSXP:
-    //   size += 3 * sizeof(SEXP); // value, expr, env
-    // case EXTPTRSXP:
-    //   size += sizeof(void *); // the actual pointer
-    //   break;
-    // case S4SXP:
-    //   break;
-    // case SYMSXP:
-    //   size += 3 * sizeof(SEXP); // pname, value, internal
-    //   break;
-    default:
-        size = -1;
-      break;
-  }
-
-  // Rcout << "type: " << TYPEOF(x) << " size: " << size << "\n";
-  return size;
-}
-
 void rdtrace_function_entry(SEXP call, SEXP op, SEXP rho) {
     char *name = get_fqfn(call, op);
     SEXP srcref = getAttrib(op, R_SrcrefSymbol);
@@ -280,11 +190,7 @@ void rdtrace_error(SEXP call, const char *message) {
     R_ERROR(dcall, "<unknown>", message);
 }
 
-void rdtrace_alloc_entry(int type, SEXPTYPE sexptype, long length) {
-    R_ALLOC_ENTRY(type, sexptype, length);
+void rdtrace_vector_alloc(SEXPTYPE sexptype, long length, long bytes) {
+    R_VECTOR_ALLOC(sexptype, length, bytes, "");
 }
 
-void rdtrace_alloc_exit(int type, SEXPTYPE sexptype, long length, SEXP var) {
-    long size = object_size(var);
-    R_ALLOC_EXIT(type, sexptype, length, size);
-}

@@ -2,34 +2,45 @@
 
 #pragma D option quiet
 
-self int depth;
-
 dtrace:::BEGIN
 {
 	printf("%4s %4s %10s %10s %12s\n", 
-            "TYPE", "SEXP", "LENGTH", "SIZE(B)", "TIME(us)");
+           "TYPE", "SEXP", "LENGTH", "SIZE(B)", "SOURCE");
 }
 
-R*:::alloc-entry,
-R*:::alloc-exit
-/ self->last == 0 /
+/*
+R*:::vector-alloc
 {
-	self->last = timestamp;
+    printf("%4s %4d %10ld %10ld %12s\n",
+        "R", 
+        arg0, 
+        arg1, 
+        arg2,
+        "");
+
+}
+*/
+
+pid$target::Rf_allocVector:entry
+{    
+    printf("%4s %4d %10ld",
+        "C", 
+        arg0, 
+        arg1);
+
+    self->interested = 1;
+    self->size = 0;    
 }
 
-R*:::alloc-entry
+pid$target::Rf_allocVector:return
+{    
+    printf("%10d\n", self->size);
+
+    self->interested = 0;
+}
+
+pid$target::malloc:entry 
+/ self->interested == 1 /
 {
-	printf("%4d %4d %10ld", arg0, arg1, arg2);
-
-	self->last = timestamp;
-}
-
-
-R*:::alloc-exit 
-{ 
-    this->delta = (timestamp - self->last) / 1000;
-
-	printf(" %10ld %12d\n", arg3, this->delta);
-    ustack();
-	self->last = timestamp;
+    self->size = self->size + arg0;
 }
