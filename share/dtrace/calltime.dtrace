@@ -1,16 +1,29 @@
-#!/usr/sbin/dtrace -Zs 
+#!/usr/sbin/dtrace -Zs
 
 #pragma D option quiet
 #pragma D option dynvarsize=2g
 
-
 dtrace:::BEGIN
 {
-	printf("Tracing R... Hit Ctrl-C to end.\n");
+	printf("Tracing R '%s' function...\n", $1);
+}
+
+R*:::function-entry
+/ copyinstr(arg0) == $1 /
+{
+	self->interested = 1;
+}
+
+R*:::function-exit
+/ copyinstr(arg0) == $1 /
+{
+	/*self->interested = 0;*/
+	exit(0);
 }
 
 R*:::function-entry,
 R*:::builtin-entry
+/ self->interested == 1 /
 {
 	self->depth++;
 	self->exclude[self->depth] = 0;
@@ -19,7 +32,7 @@ R*:::builtin-entry
 
 R*:::function-exit,
 R*:::builtin-exit
-/self->function[self->depth]/
+/ self->interested == 1 && self->function[self->depth] /
 {
 	this->elapsed_incl = timestamp - self->function[self->depth];
 	this->elapsed_excl = this->elapsed_incl - self->exclude[self->depth];
