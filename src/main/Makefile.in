@@ -67,6 +67,7 @@ HEADERS = \
 DTRACE_OBJ_DEPS = \
 	rdtrace.o \
 	eval.o \
+	memory.o \
 	errors.o
 
 distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
