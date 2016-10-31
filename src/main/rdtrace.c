@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <rdtrace.h>
 
+#define LOAD_PROBE(name) rdt_##name##_ref = load_rdt_callback(rdt_handler, #name)
+
 //-----------------------------------------------------------------------------
 // probes refererences
 //-----------------------------------------------------------------------------
@@ -21,118 +23,6 @@ void (*rdt_probe_error_ref)(const SEXP call, const char* message);
 void (*rdt_probe_vector_alloc_ref)(int sexptype, long length, long bytes, const char* srcref);
 void (*rdt_probe_eval_entry_ref)(SEXP e, SEXP rho);
 void (*rdt_probe_eval_exit_ref)(SEXP e, SEXP rho, SEXP retval);
-
-//-----------------------------------------------------------------------------
-// probes enables checkers
-//-----------------------------------------------------------------------------
-
-int rdt_probe_begin_enabled() {
-	return rdt_probe_begin_ref != NULL;
-}
-
-int rdt_probe_end_enabled() {
-	return rdt_probe_end_ref != NULL;
-}
-
-int rdt_probe_function_entry_enabled() {
-	return rdt_probe_function_entry_ref != NULL;
-}
-
-int rdt_probe_function_exit_enabled() {
-	return rdt_probe_function_exit_ref != NULL;
-}
-
-int rdt_probe_builtin_entry_enabled() {
-	return rdt_probe_builtin_entry_ref != NULL;
-}
-
-int rdt_probe_builtin_exit_enabled() {
-	return rdt_probe_builtin_exit_ref != NULL;
-}
-
-int rdt_probe_force_promise_entry_enabled() {
-	return rdt_probe_force_promise_entry_ref != NULL;
-}
-
-int rdt_probe_force_promise_exit_enabled() {
-	return rdt_probe_force_promise_exit_ref != NULL;
-}
-
-int rdt_probe_promise_lookup_enabled() {
-	return rdt_probe_promise_lookup_ref != NULL;
-}
-
-int rdt_probe_error_enabled() {
-	return rdt_probe_error_ref != NULL;
-}
-
-int rdt_probe_vector_alloc_enabled() {
-	return rdt_probe_vector_alloc_ref != NULL;
-}
-
-int rdt_probe_eval_entry_enabled() {
-	return rdt_probe_eval_entry_ref != NULL;
-}
-
-int rdt_probe_eval_exit_enabled() {
-	return rdt_probe_eval_exit_ref != NULL;
-}
-
-//-----------------------------------------------------------------------------
-// probes launchers
-//-----------------------------------------------------------------------------
-
-void rdt_probe_begin() {
-	(*rdt_probe_begin_ref)();
-}
-
-void rdt_probe_end() {
-	(*rdt_probe_end_ref)();
-}
-
-void rdt_probe_function_entry(const SEXP call, const SEXP op, const SEXP rho) {
-	(*rdt_probe_function_entry_ref)(call, op, rho);
-}
-
-void rdt_probe_function_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
-	(*rdt_probe_function_exit_ref)(call, op, rho, retval);
-}
-
-void rdt_probe_builtin_entry(const SEXP call) {
-	(*rdt_probe_builtin_entry_ref)(call);
-}
-
-void rdt_probe_builtin_exit(const SEXP call, const SEXP retval) {
-	(*rdt_probe_builtin_exit_ref)(call, retval);
-}
-
-void rdt_probe_force_promise_entry(const SEXP symbol) {
-	(*rdt_probe_force_promise_entry_ref)(symbol);
-}
-
-void rdt_probe_force_promise_exit(const SEXP symbol, const SEXP val) {
-	(*rdt_probe_force_promise_exit_ref)(symbol, val);
-}
-
-void rdt_probe_promise_lookup(const SEXP symbol, const SEXP val) {
-	(*rdt_probe_promise_lookup_ref)(symbol, val);
-}
-
-void rdt_probe_error(const SEXP call, const char* message) {
-	(*rdt_probe_error_ref)(call, message);
-}
-
-void rdt_probe_vector_alloc(int sexptype, long length, long bytes, const char *srcref) {
-	(*rdt_probe_vector_alloc_ref)(sexptype, length, bytes,  srcref);
-}
-
-void rdt_probe_eval_entry(SEXP e, SEXP rho) {
-	(*rdt_probe_eval_entry_ref)(e, rho);
-}
-
-void rdt_probe_eval_exit(SEXP e, SEXP rho, SEXP retval) {
-	(*rdt_probe_eval_exit_ref)(e, rho, retval);
-}
 
 //-----------------------------------------------------------------------------
 // helpers
@@ -278,10 +168,10 @@ static void *load_rdt_callback(void *handle, const char *name) {
 static void *rdt_handler = NULL; 
 
 void rdt_start() {
-    char *rdt_handler_path = getenv(R_DT_HANDLER);
+    char *rdt_handler_path = getenv(RDT_HANDLER_ENV_VAR);
     if (! rdt_handler_path) {
         if(R_Verbose) {
-            Rprintf("Environment variable %s is not defined - RDT is disabled\n", R_DT_HANDLER);
+            Rprintf("Environment variable %s is not defined - RDT is disabled\n", RDT_HANDLER_ENV_VAR);
         }	
         return;
     }
@@ -297,30 +187,28 @@ void rdt_start() {
         return;
     }
         
-#define LOAD_CALLBACK(s) rdt_##s##_ref = load_rdt_callback(rdt_handler, #s)
-    LOAD_CALLBACK(probe_begin);
-    LOAD_CALLBACK(probe_end);
-    LOAD_CALLBACK(probe_function_entry);
-    LOAD_CALLBACK(probe_function_exit);
-    LOAD_CALLBACK(probe_builtin_entry);
-    LOAD_CALLBACK(probe_builtin_exit);
-    LOAD_CALLBACK(probe_force_promise_entry);
-    LOAD_CALLBACK(probe_force_promise_exit);
-    LOAD_CALLBACK(probe_promise_lookup);
-    LOAD_CALLBACK(probe_error);
-    LOAD_CALLBACK(probe_vector_alloc);
-    LOAD_CALLBACK(probe_eval_entry);
-    LOAD_CALLBACK(probe_eval_exit);
-#undef LOAD_CALLBACK
+    LOAD_PROBE(probe_begin);
+    LOAD_PROBE(probe_end);
+    LOAD_PROBE(probe_function_entry);
+    LOAD_PROBE(probe_function_exit);
+    LOAD_PROBE(probe_builtin_entry);
+    LOAD_PROBE(probe_builtin_exit);
+    LOAD_PROBE(probe_force_promise_entry);
+    LOAD_PROBE(probe_force_promise_exit);
+    LOAD_PROBE(probe_promise_lookup);
+    LOAD_PROBE(probe_error);
+    LOAD_PROBE(probe_vector_alloc);
+    LOAD_PROBE(probe_eval_entry);
+    LOAD_PROBE(probe_eval_exit);
 
-    if (rdt_probe_begin_enabled()) {
-        rdt_probe_begin();
+    if (RDT_IS_ENABLED(probe_begin)) {
+        RDT_FIRE_PROBE(probe_begin);
     }     
 }
 
 void rdt_stop() {
-    if (rdt_probe_end_enabled()) {
-        rdt_probe_end();
+    if (RDT_IS_ENABLED(probe_end)) {
+        RDT_FIRE_PROBE(probe_end);
     }     
 
     if (rdt_handler) {

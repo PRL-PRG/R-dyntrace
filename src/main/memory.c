@@ -2643,9 +2643,9 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 		R_ReportAllocation(hdrsize + size * sizeof(VECREC));
 #endif
 #ifdef ENABLE_RDT
-    if (rdt_probe_vector_alloc_enabled()) {
+    if (RDT_IS_ENABLED(probe_vector_alloc)) {
         // TODO: can I get the source location?
-        rdt_probe_vector_alloc(type, length, hdrsize + size * sizeof(VECREC), "");
+        RDT_FIRE_PROBE(probe_vector_alloc, type, length, (hdrsize + size * sizeof(VECREC)), "");
     }				
 #endif
 	    } else s = NULL; /* suppress warning */

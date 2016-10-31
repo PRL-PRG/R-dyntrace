@@ -3,7 +3,7 @@
 #include <string.h>
 #include <rdtrace_probes.h>
 
-#define OUT_FILENAME_VAR "R_DT_ECHO_HANDLER_OUT"
+#define OUT_FILENAME_VAR "R_RDT_ECHO_HANDLER_OUT"
 
 static FILE *output = NULL;
 

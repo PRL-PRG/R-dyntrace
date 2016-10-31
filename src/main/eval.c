@@ -536,8 +536,8 @@ static SEXP forcePromise(SEXP e)
 SEXP eval(SEXP e, SEXP rho)
 {
 #ifdef ENABLE_RDT
-    if(rdt_probe_eval_entry_enabled()) {
-		rdt_probe_eval_entry_enabled(e, rho);
+    if(RDT_IS_ENABLED(probe_eval_entry)) {
+		RDT_FIRE_PROBE(probe_eval_entry, e, rho);
     }
 #endif
     SEXP op, tmp;
@@ -582,8 +582,8 @@ SEXP eval(SEXP e, SEXP rho)
 	   expressions.  */
 	if (NAMED(e) <= 1) SET_NAMED(e, 2);
 #ifdef ENABLE_RDT
-    	if(rdt_probe_eval_exit_enabled()) {
-	    	rdt_probe_eval_exit(e, rho, e);
+    	if(RDT_IS_ENABLED(probe_eval_exit)) {
+	    	RDT_FIRE_PROBE(probe_eval_exit, e, rho, e);
     	}    	
 #endif	
 	return e;
@@ -650,14 +650,14 @@ SEXP eval(SEXP e, SEXP rho)
 		   be on the safe side. */
 		PROTECT(tmp);
 #ifdef ENABLE_RDT
-		if(rdt_probe_force_promise_entry_enabled()) {
-			rdt_probe_force_promise_entry(e);
+		if(RDT_IS_ENABLED(probe_force_promise_entry)) {
+			RDT_FIRE_PROBE(probe_force_promise_entry, e);
 		}
 #endif
 		tmp = forcePromise(tmp);
 #ifdef ENABLE_RDT
-		if(rdt_probe_force_promise_exit_enabled()) {
-			rdt_probe_force_promise_exit(e, tmp);
+		if(RDT_IS_ENABLED(probe_force_promise_exit)) {
+			RDT_FIRE_PROBE(probe_force_promise_exit, e, tmp);
 		}
 #endif		
 		UNPROTECT(1);
@@ -665,8 +665,8 @@ SEXP eval(SEXP e, SEXP rho)
 	    else {
 		tmp = PRVALUE(tmp);
 #ifdef ENABLE_RDT
-		if(rdt_probe_promise_lookup_enabled()) {
-			rdt_probe_promise_lookup(e, tmp);
+		if(RDT_IS_ENABLED(probe_promise_lookup)) {
+			RDT_FIRE_PROBE(probe_promise_lookup, e, tmp);
 		}
 #endif
 	    }
@@ -729,8 +729,8 @@ SEXP eval(SEXP e, SEXP rho)
 	}
 	else if (TYPEOF(op) == BUILTINSXP) {
 #ifdef ENABLE_RDT
-              if(rdt_probe_builtin_entry_enabled()) {
-                  rdt_probe_builtin_entry(e);
+              if(RDT_IS_ENABLED(probe_builtin_entry)) {
+                  RDT_FIRE_PROBE(probe_builtin_entry, e);
               }
 #endif                  
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
@@ -762,8 +762,8 @@ SEXP eval(SEXP e, SEXP rho)
 	    check_stack_balance(op, save);
 	    vmaxset(vmax);
 #ifdef ENABLE_RDT
-	      if(rdt_probe_builtin_exit_enabled()) {
-	          rdt_probe_builtin_exit(e, tmp);
+	      if(RDT_IS_ENABLED(probe_builtin_exit)) {
+	          RDT_FIRE_PROBE(probe_builtin_exit, e, tmp);
 	      }
 #endif                  
 	}
@@ -784,8 +784,8 @@ SEXP eval(SEXP e, SEXP rho)
     R_EvalDepth = depthsave;
     R_Srcref = srcrefsave;
 #ifdef ENABLE_RDT
-    	if(rdt_probe_eval_exit_enabled()) {
-		    rdt_probe_eval_exit(e, rho, tmp);
+    	if(RDT_IS_ENABLED(probe_eval_exit)) {
+		    RDT_FIRE_PROBE(probe_eval_exit, e, rho, tmp);
     	}
 #endif	
     return (tmp);
@@ -1114,8 +1114,8 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
     tmp = R_NilValue;
 
 #ifdef ENABLE_RDT
-    if(rdt_probe_function_entry_enabled()) {
-		rdt_probe_function_entry(call, op, rho);
+    if(RDT_IS_ENABLED(probe_function_entry)) {
+		RDT_FIRE_PROBE(probe_function_entry, call, op, rho);
     }
 #endif
 
@@ -1189,8 +1189,8 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
     endcontext(&cntxt);
 
 #ifdef ENABLE_RDT
-    if(rdt_probe_function_exit_enabled()) {
-		rdt_probe_function_exit(call, op, rho, tmp);
+    if(RDT_IS_ENABLED(probe_function_exit)) {
+		RDT_FIRE_PROBE(probe_function_exit, call, op, rho, tmp);
     }
 #endif
 
@@ -3672,13 +3672,13 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
   SEXP call = VECTOR_ELT(constants, GETOP()); \
   SEXP x = GETSTACK(-2); \
   SEXP y = GETSTACK(-1); \
-  if(rdt_probe_builtin_entry_enabled()) { \
-      rdt_probe_builtin_entry(call); \
+  if(RDT_IS_ENABLED(probe_builtin_entry)) { \
+      RDT_FIRE_PROBE(probe_builtin_entry, call); \
   } \
   SEXP tmp = do_fun(call, opval, opsym, x, y,rho); \
   SETSTACK(-2, tmp);	\
-  if(rdt_probe_builtin_exit_enabled()) { \
-      rdt_probe_builtin_exit(call, tmp); \
+  if(RDT_IS_ENABLED(probe_builtin_exit)) { \
+      RDT_FIRE_PROBE(probe_builtin_exit, call, tmp); \
   } \
   R_BCNodeStackTop--; \
   NEXT(); \
@@ -4372,16 +4372,16 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 	PROTECT(value);
 
 #ifdef ENABLE_RDT
-	if(rdt_probe_force_promise_entry_enabled()) {
-		rdt_probe_force_promise_entry(symbol);
+	if(RDT_IS_ENABLED(probe_force_promise_entry)) {
+		RDT_FIRE_PROBE(probe_force_promise_entry, symbol);
 	}
 #endif		
 
 	value = FORCE_PROMISE(value, symbol, rho, keepmiss);
 
 #ifdef ENABLE_RDT
-	if(rdt_probe_force_promise_exit_enabled()) {
-		rdt_probe_force_promise_exit(symbol, value);
+	if(RDT_IS_ENABLED(probe_force_promise_exit)) {
+		RDT_FIRE_PROBE(probe_force_promise_exit, symbol, value);
 	}
 #endif		
 
@@ -5630,14 +5630,14 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	if (ftype != SPECIALSXP) {
 	  if (ftype == BUILTINSXP) {
 #ifdef ENABLE_RDT
-              if(rdt_probe_builtin_entry_enabled()) {
-                  rdt_probe_builtin_entry(CALL_FRAME_FUN());
+              if(RDT_IS_ENABLED(probe_builtin_entry)) {
+                  RDT_FIRE_PROBE(probe_builtin_entry, CALL_FRAME_FUN());
               }
 #endif                  
 	      value = bcEval(code, rho, TRUE);
 #ifdef ENABLE_RDT
-	      if(rdt_probe_builtin_exit_enabled()) {
-	          rdt_probe_builtin_exit(CALL_FRAME_FUN(), value);
+	      if(RDT_IS_ENABLED(probe_builtin_exit)) {
+	          RDT_FIRE_PROBE(probe_builtin_exit, CALL_FRAME_FUN(), value);
 	      }
 #endif                  
           }
@@ -5742,28 +5742,28 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 			 R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
 	    R_Srcref = NULL;
 #ifdef ENABLE_RDT
-              if(rdt_probe_builtin_entry_enabled()) {
-                  rdt_probe_builtin_entry(call);
+              if(RDT_IS_ENABLED(probe_builtin_entry)) {
+                  RDT_FIRE_PROBE(probe_builtin_entry, call);
               }
 #endif                  
 	    value = PRIMFUN(fun) (call, fun, args, rho);
 #ifdef ENABLE_RDT
-	      if(rdt_probe_builtin_exit_enabled()) {
-	          rdt_probe_builtin_exit(call, value);
+	      if(RDT_IS_ENABLED(probe_builtin_exit)) {
+	          RDT_FIRE_PROBE(probe_builtin_exit, call, value);
 	      }
 #endif                  
 	    R_Srcref = oldref;
 	    endcontext(&cntxt);
 	} else {
 #ifdef ENABLE_RDT
-              if(rdt_probe_builtin_entry_enabled()) {
-                  rdt_probe_builtin_entry(call);
+              if(RDT_IS_ENABLED(probe_builtin_entry)) {
+                  RDT_FIRE_PROBE(probe_builtin_entry, call);
               }
 #endif                  
 	    value = PRIMFUN(fun) (call, fun, args, rho);
 #ifdef ENABLE_RDT
-	      if(rdt_probe_builtin_exit_enabled()) {
-	          rdt_probe_builtin_exit(call, value);
+	      if(RDT_IS_ENABLED(probe_builtin_exit)) {
+	          RDT_FIRE_PROBE(probe_builtin_exit, call, value);
 	      }
 #endif                  
 	}

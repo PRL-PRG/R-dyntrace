@@ -722,14 +722,14 @@ void NORET errorcall(SEXP call, const char *format,...)
     va_list(ap);
 
 #ifdef ENABLE_RDT
-    if (rdt_probe_error_enabled()) {
+    if (RDT_IS_ENABLED(probe_error)) {
 	char *message = NULL;
 
 	va_start(ap, format);
 	vasprintf(&message, format, ap);
 	va_end(ap);
 
-	rdt_probe_error(call, message);
+	RDT_FIRE_PROBE(probe_error, call, message);
 
 	free(message);
     }	
