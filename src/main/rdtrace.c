@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <rdtrace.h>
+#include <time.h>
 
 #define LOAD_PROBE(name) rdt_##name##_ref = load_rdt_callback(rdt_handler, #name)
 
@@ -165,6 +166,20 @@ static void *load_rdt_callback(void *handle, const char *name) {
     return callback;
 }
 
+// returns a monotonic timestamp in microseconds
+uint64_t timestamp() {
+    uint64_t t;
+#ifdef __MACH__
+    t = clock_gettime_nsec_np(CLOCK_MONOTONIC);
+#else
+    struct timespec ts;
+    uint64_t
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    t = ts.tv_sec * 1e9 + ts.tv_nsec;
+#endif
+    return t;
+}
+
 static void *rdt_handler = NULL; 
 
 void rdt_start() {
@@ -216,15 +231,3 @@ void rdt_stop() {
         rdt_handler = NULL;
     }
 }
-
-// void rdtrace_eval_expression(SEXP expression, SEXP rho) {
-//     // const char *s = 
-    
-//     // R_EVAL_EXPRESSION(TYPEOF(expression), s);
-// }
-
-// void rdtrace_eval_return(SEXP rv, SEXP rho) {
-//     // const char *s = CHAR(STRING_ELT(deparse1line(rv, FALSE), 0));
-
-//     // R_EVAL_RETURN(TYPEOF(rv), s);
-// }
