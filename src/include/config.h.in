@@ -15,6 +15,9 @@
    language is requested. */
 #undef ENABLE_NLS
 
+/* RDT is enabled */
+#undef ENABLE_RDT
+
 /* Define to dummy `main' function (if any) required to link to the Fortran
    libraries. */
 #undef F77_DUMMY_MAIN
@@ -1132,9 +1135,6 @@
 
 /* Version number of package */
 #undef VERSION
-
-/* DTrace is enabled */
-#undef WITH_DTRACE
 
 /* Define to 1 if your processor stores words with the most significant byte
    first (like Motorola and SPARC, unlike Intel and VAX). */

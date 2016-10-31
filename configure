@@ -928,11 +928,9 @@ R_PAPERSIZE
 R_PRINTCMD
 BYTE_COMPILE_PACKAGES_FALSE
 BYTE_COMPILE_PACKAGES_TRUE
-DTRACE_EXTRA_LIBS
-DTRACE_OBJ
-DTRACE_SRC
-DTRACE_HEADER
-DTRACE
+RDT_OBJ
+RDT_SRC
+RDT_HANDLERS_OBJECTS
 WANT_JAVA_FALSE
 WANT_JAVA_TRUE
 BUILD_LTO_FALSE
@@ -1039,7 +1037,7 @@ with_system_tre
 with_valgrind_instrumentation
 with_system_valgrind_headers
 with_internal_tzcode
-enable_dtrace
+enable_rdt
 with_recommended_packages
 with_ICU
 enable_byte_compiled_packages
@@ -1771,7 +1769,7 @@ Optional Features:
   --enable-prebuilt-html  build static HTML help pages [no]
   --enable-lto            enable link-time optimization [no]
   --enable-java           enable Java [yes]
-  --enable-dtrace         DTrace for tracing inside R [no]
+  --enable-rdt            Dynamic tracing for R [yes]
   --enable-byte-compiled-packages
                           byte-compile base and recommended packages [yes]
   --enable-static[=PKGS]  (libtool) build static libraries [default=no]
@@ -4196,82 +4194,22 @@ else
 fi
 
 
-## DTrace
-## todo: likely this can be done in a smarter way
-# Extract the first word of "${ac_tool_prefix}dtrace", so it can be a program name with args.
-set dummy ${ac_tool_prefix}dtrace; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_prog_DTRACE+:} false; then :
-  $as_echo_n "(cached) " >&6
+# Check whether --enable-rdt was given.
+if test "${enable_rdt+set}" = set; then :
+  enableval=$enable_rdt; enable_dtrace=$enableval
 else
-  if test -n "$DTRACE"; then
-  ac_cv_prog_DTRACE="$DTRACE" # Let the user override the test.
-else
-as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_prog_DTRACE="${ac_tool_prefix}dtrace"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-fi
-fi
-DTRACE=$ac_cv_prog_DTRACE
-if test -n "$DTRACE"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $DTRACE" >&5
-$as_echo "$DTRACE" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-
-# Check whether --enable-dtrace was given.
-if test "${enable_dtrace+set}" = set; then :
-  enableval=$enable_dtrace; enable_dtrace=$enableval
-else
-  enable_dtrace=no
+  enable_dtrace=yes
 fi
 
 
 if test "${enable_dtrace}" = "yes"; then
-  if test -z "$DTRACE"; then
-    as_fn_error $? "dtrace(1) is missing" "$LINENO" 5
-  else
-    DTRACE_HEADER="rdtrace_probes.h"
-    DTRACE_SRC="rdtrace.c"
-    DTRACE_OBJ="rdtrace.o"
-    { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether dtrace requires extra post processing" >&5
-$as_echo_n "checking whether dtrace requires extra post processing... " >&6; }
-    case "${host_os}" in #(
-  freebsd*) :
+  RDT_HANDLERS_OBJECTS="rdt_handler_echo.o"
+  RDT_SRC="rdtrace.c"
+  RDT_OBJ="rdtrace.o"
 
-      # FreeBSD's dtrace requires glommed object
-      DTRACE_OBJ="$DTRACE_OBJ rdtrace_probes.o"
-      # FreeBSD's dtrace requires libelf
-      DTRACE_EXTRA_LIBS="-lelf"
-     ;; #(
-  *) :
-     ;;
-esac
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $DTRACE_OBJ $DTRACE_EXTRA_LIBS" >&5
-$as_echo "$DTRACE_OBJ $DTRACE_EXTRA_LIBS" >&6; }
+$as_echo "#define ENABLE_RDT 1" >>confdefs.h
 
-$as_echo "#define WITH_DTRACE 1" >>confdefs.h
-
-  fi
 fi
-
 
 
 
@@ -25143,7 +25081,7 @@ _ACEOF
 # flags.
 r_save_CFLAGS=$CFLAGS
 CFLAGS="$CFLAGS $r_verb"
-(eval echo $as_me:25146: \"$ac_link\") >&5
+(eval echo $as_me:25084: \"$ac_link\") >&5
 r_c_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$r_c_v_output" >&5
 CFLAGS=$r_save_CFLAGS
@@ -25218,7 +25156,7 @@ _ACEOF
 # flags.
 r_save_CFLAGS=$CFLAGS
 CFLAGS="$CFLAGS $r_cv_prog_c_v"
-(eval echo $as_me:25221: \"$ac_link\") >&5
+(eval echo $as_me:25159: \"$ac_link\") >&5
 r_c_v_output=`eval $ac_link 5>&1 2>&1 | grep -v 'Driving:'`
 echo "$r_c_v_output" >&5
 CFLAGS=$r_save_CFLAGS

@@ -101,7 +101,7 @@ extern void *Rm_realloc(void * p, size_t n);
 #define free Rm_free
 #endif
 
-#ifdef WITH_DTRACE
+#ifdef ENABLE_RDT
 #include <rdtrace.h>
 #endif
 
@@ -2642,9 +2642,10 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 #ifdef R_MEMORY_PROFILING
 		R_ReportAllocation(hdrsize + size * sizeof(VECREC));
 #endif
-#ifdef WITH_DTRACE
-    if (R_VECTOR_ALLOC_ENABLED()) {
-        rdtrace_vector_alloc(type, length, hdrsize + size * sizeof(VECREC));
+#ifdef ENABLE_RDT
+    if (rdt_probe_vector_alloc_enabled()) {
+        // TODO: can I get the source location?
+        rdt_probe_vector_alloc(type, length, hdrsize + size * sizeof(VECREC), "");
     }				
 #endif
 	    } else s = NULL; /* suppress warning */

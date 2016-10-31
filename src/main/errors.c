@@ -32,7 +32,7 @@
 #include <Rmath.h> /* for imax2 */
 #include <R_ext/Print.h>
 
-#ifdef WITH_DTRACE
+#ifdef ENABLE_RDT
 #include <rdtrace.h>
 #endif
 
@@ -721,15 +721,15 @@ void NORET errorcall(SEXP call, const char *format,...)
 {
     va_list(ap);
 
-#ifdef WITH_DTRACE
-    if (R_ERROR_ENABLED()) {
+#ifdef ENABLE_RDT
+    if (rdt_probe_error_enabled()) {
 	char *message = NULL;
 
 	va_start(ap, format);
 	vasprintf(&message, format, ap);
 	va_end(ap);
 
-	rdtrace_error(call, message);
+	rdt_probe_error(call, message);
 
 	free(message);
     }	

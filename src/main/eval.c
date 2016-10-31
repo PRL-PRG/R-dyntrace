@@ -32,7 +32,7 @@
 #include <Fileio.h>
 #include <R_ext/Print.h>
 
-#ifdef WITH_DTRACE
+#ifdef ENABLE_RDT
 #include <rdtrace.h>
 #endif
 
@@ -535,12 +535,9 @@ static SEXP forcePromise(SEXP e)
 /* some places, e.g. deparse2buff, call this with a promise and rho = NULL */
 SEXP eval(SEXP e, SEXP rho)
 {
-#ifdef WITH_DTRACE
-    if(R_EVAL_ENTRY_ENABLED()) {
-	R_EVAL_ENTRY();
-    }
-    if(R_EVAL_EXPRESSION_ENABLED()) {
-	rdtrace_eval_expression(e, rho);
+#ifdef ENABLE_RDT
+    if(rdt_probe_eval_entry_enabled()) {
+		rdt_probe_eval_entry_enabled(e, rho);
     }
 #endif
     SEXP op, tmp;
@@ -584,13 +581,10 @@ SEXP eval(SEXP e, SEXP rho)
 	   to replacement functions won't modify constants in
 	   expressions.  */
 	if (NAMED(e) <= 1) SET_NAMED(e, 2);
-#ifdef WITH_DTRACE
-    	if(R_EVAL_RETURN_ENABLED()) {
-	    rdtrace_eval_return(e, rho);
-    	}
-    	if(R_EVAL_EXIT_ENABLED()) {
-	    R_EVAL_EXIT();
-    	}
+#ifdef ENABLE_RDT
+    	if(rdt_probe_eval_exit_enabled()) {
+	    	rdt_probe_eval_exit(e, rho, e);
+    	}    	
 #endif	
 	return e;
     default: break;
@@ -655,24 +649,24 @@ SEXP eval(SEXP e, SEXP rho)
 		/* not sure the PROTECT is needed here but keep it to
 		   be on the safe side. */
 		PROTECT(tmp);
-#ifdef WITH_DTRACE
-		if(R_FORCE_PROMISE_ENTRY_ENABLED()) {
-			rdtrace_force_promise_entry(e);
+#ifdef ENABLE_RDT
+		if(rdt_probe_force_promise_entry_enabled()) {
+			rdt_probe_force_promise_entry(e);
 		}
 #endif
 		tmp = forcePromise(tmp);
-#ifdef WITH_DTRACE
-		if(R_FORCE_PROMISE_EXIT_ENABLED()) {
-			rdtrace_force_promise_exit(e, tmp);
+#ifdef ENABLE_RDT
+		if(rdt_probe_force_promise_exit_enabled()) {
+			rdt_probe_force_promise_exit(e, tmp);
 		}
 #endif		
 		UNPROTECT(1);
 	    }
 	    else {
 		tmp = PRVALUE(tmp);
-#ifdef WITH_DTRACE
-		if(R_PROMISE_LOOKUP_ENABLED()) {
-			rdtrace_promise_lookup(e, tmp);
+#ifdef ENABLE_RDT
+		if(rdt_probe_promise_lookup_enabled()) {
+			rdt_probe_promise_lookup(e, tmp);
 		}
 #endif
 	    }
@@ -734,11 +728,11 @@ SEXP eval(SEXP e, SEXP rho)
 	    vmaxset(vmax);
 	}
 	else if (TYPEOF(op) == BUILTINSXP) {
-#ifdef WITH_DTRACE
-	    if(R_BUILTIN_ENTRY_ENABLED()) {
-	    	    rdtrace_builtin_entry(e);
-	    }
-#endif
+#ifdef ENABLE_RDT
+              if(rdt_probe_builtin_entry_enabled()) {
+                  rdt_probe_builtin_entry(e);
+              }
+#endif                  
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
 	    const void *vmax = vmaxget();
 	    RCNTXT cntxt;
@@ -767,11 +761,11 @@ SEXP eval(SEXP e, SEXP rho)
 	    UNPROTECT(1);
 	    check_stack_balance(op, save);
 	    vmaxset(vmax);
-#ifdef WITH_DTRACE
-	    if(R_BUILTIN_EXIT_ENABLED()) {
-	    	    rdtrace_builtin_exit(e, tmp);
-	    }
-#endif
+#ifdef ENABLE_RDT
+	      if(rdt_probe_builtin_exit_enabled()) {
+	          rdt_probe_builtin_exit(e, tmp);
+	      }
+#endif                  
 	}
 	else if (TYPEOF(op) == CLOSXP) {
 	    PROTECT(tmp = promiseArgs(CDR(e), rho));
@@ -789,12 +783,9 @@ SEXP eval(SEXP e, SEXP rho)
     }
     R_EvalDepth = depthsave;
     R_Srcref = srcrefsave;
-#ifdef WITH_DTRACE
-    	if(R_EVAL_RETURN_ENABLED()) {
-	    rdtrace_eval_return(tmp, rho);
-    	}
-    	if(R_EVAL_EXIT_ENABLED()) {
-	    R_EVAL_EXIT();
+#ifdef ENABLE_RDT
+    	if(rdt_probe_eval_exit_enabled()) {
+		    rdt_probe_eval_exit(e, rho, tmp);
     	}
 #endif	
     return (tmp);
@@ -1122,9 +1113,9 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 
     tmp = R_NilValue;
 
-#ifdef WITH_DTRACE
-    if(R_FUNCTION_ENTRY_ENABLED()) {
-	rdtrace_function_entry(call, op, rho);
+#ifdef ENABLE_RDT
+    if(rdt_probe_function_entry_enabled()) {
+		rdt_probe_function_entry(call, op, rho);
     }
 #endif
 
@@ -1197,9 +1188,9 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
     R_Srcref = savesrc;
     endcontext(&cntxt);
 
-#ifdef WITH_DTRACE
-    if(R_FUNCTION_EXIT_ENABLED()) {
-	rdtrace_function_exit(call, op, rho, tmp);
+#ifdef ENABLE_RDT
+    if(rdt_probe_function_exit_enabled()) {
+		rdt_probe_function_exit(call, op, rho, tmp);
     }
 #endif
 
@@ -3676,18 +3667,18 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
   NEXT(); \
 } while(0)
 
-#ifdef WITH_DTRACE 
+#ifdef ENABLE_RDT 
 #define NewBuiltin2(do_fun,opval,opsym,rho) do {	\
   SEXP call = VECTOR_ELT(constants, GETOP()); \
   SEXP x = GETSTACK(-2); \
   SEXP y = GETSTACK(-1); \
-  if(R_BUILTIN_ENTRY_ENABLED()) { \
-      rdtrace_builtin_entry(call); \
+  if(rdt_probe_builtin_entry_enabled()) { \
+      rdt_probe_builtin_entry(call); \
   } \
   SEXP tmp = do_fun(call, opval, opsym, x, y,rho); \
   SETSTACK(-2, tmp);	\
-  if(R_BUILTIN_EXIT_ENABLED()) { \
-      rdtrace_builtin_exit(call, tmp); \
+  if(rdt_probe_builtin_exit_enabled()) { \
+      rdt_probe_builtin_exit(call, tmp); \
   } \
   R_BCNodeStackTop--; \
   NEXT(); \
@@ -4380,17 +4371,17 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
     else if (TYPEOF(value) == PROMSXP) {
 	PROTECT(value);
 
-#ifdef WITH_DTRACE
-	if(R_FORCE_PROMISE_ENTRY_ENABLED()) {
-		rdtrace_force_promise_entry(symbol);
+#ifdef ENABLE_RDT
+	if(rdt_probe_force_promise_entry_enabled()) {
+		rdt_probe_force_promise_entry(symbol);
 	}
 #endif		
 
 	value = FORCE_PROMISE(value, symbol, rho, keepmiss);
 
-#ifdef WITH_DTRACE
-	if(R_FORCE_PROMISE_EXIT_ENABLED()) {
-		rdtrace_force_promise_exit(symbol, value);
+#ifdef ENABLE_RDT
+	if(rdt_probe_force_promise_exit_enabled()) {
+		rdt_probe_force_promise_exit(symbol, value);
 	}
 #endif		
 
@@ -5638,15 +5629,15 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXPTYPE ftype = CALL_FRAME_FTYPE();
 	if (ftype != SPECIALSXP) {
 	  if (ftype == BUILTINSXP) {
-#ifdef WITH_DTRACE
-              if(R_BUILTIN_ENTRY_ENABLED()) {
-                  rdtrace_builtin_entry(CALL_FRAME_FUN());
+#ifdef ENABLE_RDT
+              if(rdt_probe_builtin_entry_enabled()) {
+                  rdt_probe_builtin_entry(CALL_FRAME_FUN());
               }
 #endif                  
 	      value = bcEval(code, rho, TRUE);
-#ifdef WITH_DTRACE
-	      if(R_BUILTIN_EXIT_ENABLED()) {
-	          rdtrace_builtin_exit(CALL_FRAME_FUN(), value);
+#ifdef ENABLE_RDT
+	      if(rdt_probe_builtin_exit_enabled()) {
+	          rdt_probe_builtin_exit(CALL_FRAME_FUN(), value);
 	      }
 #endif                  
           }
@@ -5750,29 +5741,29 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    begincontext(&cntxt, CTXT_BUILTIN, call,
 			 R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
 	    R_Srcref = NULL;
-#ifdef WITH_DTRACE
-              if(R_BUILTIN_ENTRY_ENABLED()) {
-                  rdtrace_builtin_entry(call);
+#ifdef ENABLE_RDT
+              if(rdt_probe_builtin_entry_enabled()) {
+                  rdt_probe_builtin_entry(call);
               }
 #endif                  
 	    value = PRIMFUN(fun) (call, fun, args, rho);
-#ifdef WITH_DTRACE
-	      if(R_BUILTIN_EXIT_ENABLED()) {
-	          rdtrace_builtin_exit(call, value);
+#ifdef ENABLE_RDT
+	      if(rdt_probe_builtin_exit_enabled()) {
+	          rdt_probe_builtin_exit(call, value);
 	      }
 #endif                  
 	    R_Srcref = oldref;
 	    endcontext(&cntxt);
 	} else {
-#ifdef WITH_DTRACE
-              if(R_BUILTIN_ENTRY_ENABLED()) {
-                  rdtrace_builtin_entry(call);
+#ifdef ENABLE_RDT
+              if(rdt_probe_builtin_entry_enabled()) {
+                  rdt_probe_builtin_entry(call);
               }
 #endif                  
 	    value = PRIMFUN(fun) (call, fun, args, rho);
-#ifdef WITH_DTRACE
-	      if(R_BUILTIN_EXIT_ENABLED()) {
-	          rdtrace_builtin_exit(call, value);
+#ifdef ENABLE_RDT
+	      if(rdt_probe_builtin_exit_enabled()) {
+	          rdt_probe_builtin_exit(call, value);
 	      }
 #endif                  
 	}

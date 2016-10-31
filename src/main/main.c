@@ -42,6 +42,10 @@
 #include <locale.h>
 #include <R_ext/Print.h>
 
+#ifdef ENABLE_RDT
+#include <rdtrace.h>
+#endif
+
 #ifdef ENABLE_NLS
 void attribute_hidden nl_Rdummy(void)
 {
@@ -1051,12 +1055,18 @@ static void end_Rmainloop(void)
 
 void run_Rmainloop(void)
 {
+#ifdef ENABLE_RDT
+    rdt_start();
+#endif
     /* Here is the real R read-eval-loop. */
     /* We handle the console until end-of-file. */
     if (SETJMP(R_Toplevel.cjmpbuf))
 	check_session_exit();
     R_GlobalContext = R_ToplevelContext = R_SessionContext = &R_Toplevel;
     R_ReplConsole(R_GlobalEnv, 0, 0);
+#ifdef ENABLE_RDT
+    rdt_stop();
+#endif
     end_Rmainloop(); /* must go here */
 }
 

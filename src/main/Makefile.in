@@ -43,11 +43,11 @@ SOURCES_F =  xxxpr.f
 ## If the substitutes are needed, the corresponding objects are put by
 ## configure in @LIBOBJS@ @ALLOCA@
 EXTRA_SOURCES_C = \
-	Rmain.c alloca.c mkdtemp.c strdup.c strncasecmp.c @DTRACE_SRC@
+	Rmain.c alloca.c mkdtemp.c strdup.c strncasecmp.c
 
 DEPENDS = $(SOURCES_C:.c=.d) $(EXTRA_SOURCES_C:.c=.d)
 SOURCES = $(SOURCES_C) $(SOURCES_F)
-OBJECTS = $(SOURCES_C:.c=.o) $(SOURCES_F:.f=.o) @LIBOBJS@ @ALLOCA@ @DTRACE_OBJ@
+OBJECTS = $(SOURCES_C:.c=.o) $(SOURCES_F:.f=.o) @LIBOBJS@ @ALLOCA@ @RDT_OBJ@
 HEADERS = \
 	RBufferUtils.h Rstrptime.h \
 	arithmetic.h \
@@ -61,14 +61,7 @@ HEADERS = \
 	unzip.h \
 	valid_utf8.h \
 	xspline.c \
-	@DTRACE_HEADER@ \
 	g_cntrlify.h g_control.h g_extern.h g_her_metr.h g_jis.h
-
-DTRACE_OBJ_DEPS = \
-	rdtrace.o \
-	eval.o \
-	memory.o \
-	errors.o
 
 distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
 DISTFILES = Makefile.in Makefile.win \
@@ -100,7 +93,7 @@ MAIN_OBJS = `ls ../unix/*.o ../appl/*.o ../nmath/*.o`
 EXTRA_STATIC_LIBS = $(R_TRE) $(R_XDR) $(R_LIBINTL) $(R_TZONE)
 STATIC_LIBS = $(MAIN_LIBS) $(EXTRA_STATIC_LIBS)
 
-EXTRA_LIBS = $(BLAS_LIBS) $(FLIBS) $(R_XTRA_LIBS) @LIBINTL@ $(READLINE_LIBS) $(LIBS) @DTRACE_EXTRA_LIBS@
+EXTRA_LIBS = $(BLAS_LIBS) $(FLIBS) $(R_XTRA_LIBS) @LIBINTL@ $(READLINE_LIBS) $(LIBS)
 
 R_binary = R.bin
 R_bin_OBJECTS = Rmain.o @WANT_R_SHLIB_FALSE@$(OBJECTS)
@@ -117,8 +110,14 @@ libR_la_DEPENDENCIES = $(STATIC_LIBS) $(R_TZONE) @WANT_R_SHLIB_TRUE@ @USE_EXPORT
 ## The next is needed for OS X only at present
 LIBR_LDFLAGS = @LIBR_LDFLAGS@
 
+RDT_HANDLERS_OBJECTS = @RDT_HANDLERS_OBJECTS@ 
 
-all: R
+RDT_HANDLERS = $(RDT_HANDLERS_OBJECTS:.o=.so)
+
+all: R ${RDT_HANDLERS}
+
+${RDT_HANDLERS}: %.so : %.o
+	$(DYLIB_LINK) $(LIBR_LDFLAGS) -o $@ $<	
 
 Makefile: $(srcdir)/Makefile.in \
   $(top_builddir)/config.status \
@@ -145,15 +144,6 @@ R: Makedeps
 ## is this portable?  Documented as GNU extension.
 ../include/config.h ../include/Rversion.h:
 	(cd $(@D); $(MAKE) $(@F))
-
-## DTrace
-rdtrace.c: rdtrace_probes.h
-rdtrace_probes.h: rdtrace.probes
-	if test "$(DTRACE)"; then $(DTRACE) -o $@ -h -I ../include -C -s rdtrace.probes; fi
-
-rdtrace_probes.o: $(DTRACE_OBJ_DEPS)
-	@rm -f $@
-	$(DTRACE) -G -s rdtrace.probes -o $@ $(DTRACE_OBJ_DEPS)
 
 $(R_binary): $(R_bin_OBJECTS) $(R_bin_DEPENDENCIES)
 	$(MAIN_LINK) -o $@ $(R_bin_OBJECTS) $(R_bin_LDADD)
@@ -240,7 +230,6 @@ clean:
 	@-rm -rf .libs _libs
 	@-rm -f *core Makedeps *.d *.o *.lo *.la *$(R_DYLIB_EXT) \
 	  $(R_binary) libR.a
-	@-rm -f rdtrace_probes.h
 
 distclean: clean
 	@-rm -f Makefile
