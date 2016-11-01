@@ -49,55 +49,58 @@ void probe_end() {
 }
 
 void probe_function_entry(const SEXP call, const SEXP op, const SEXP rho) {
-    char *name = get_fun_fq_name(call, op);
+    const char *name = get_name(call);
     char *loc = get_location(op);
 
-    echo("function-entry(%s, %s, %d)", name, loc, is_byte_compiled(op));
+    echo("function-entry(%s, %s, %d)", CHKSTR(name), CHKSTR(loc), is_byte_compiled(op));
 
-    free(name);
-    free(loc);
+    if (loc) free(loc);
 }
 
 void probe_function_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
-    char *name = get_fun_fq_name(call, op);
+    const char *name = get_name(call);
     char *loc = get_location(op);
     char *result = to_string(retval);
      
-    echo("function-exit(%s, %s, %d, `%s`)", name, loc, is_byte_compiled(op), result);
+    echo("function-exit(%s, %s, %d, `%s`)", CHKSTR(name), CHKSTR(loc), is_byte_compiled(op), result);
 
-    free(name);
-    free(loc);
+    if (loc) free(loc);
     free(result);
 } 
 
 void probe_builtin_entry(const SEXP call) {
-    echo("builtin-entry(%s)", get_fun_name(call));
+    const char *name = get_name(call);
+    echo("builtin-entry(%s)", CHKSTR(name));
 }
 
 void probe_builtin_exit(const SEXP call, const SEXP retval) {
+    const char *name = get_name(call);
     char *result = to_string(retval);
 
-    echo("builtin-exit(%s, %s)", get_fun_name(call), result);
+    echo("builtin-exit(%s, %s)", CHKSTR(name), result);
 
     free(result);
 }
 
 void probe_force_promise_entry(const SEXP symbol) {
-        echo("force-promise-entry(%s)", get_symbol_name(symbol));
+    const char *name = get_name(symbol);
+    echo("force-promise-entry(%s)", CHKSTR(name));
 }
 
 void probe_force_promise_exit(const SEXP symbol, const SEXP val) {
+    const char *name = get_name(symbol);
     char *result = to_string(val);
 
-    echo("force-promise-exit(%s, `%s`)", get_symbol_name(symbol), result);
+    echo("force-promise-exit(%s, `%s`)", CHKSTR(name), result);
 
     free(result);
 }
 
 void probe_promise_lookup(const SEXP symbol, const SEXP val) {
+    const char *name = get_name(symbol);
     char *result = to_string(val);
 
-    echo("promise-lookup(%s, `%s`)", get_symbol_name(symbol), result);
+    echo("promise-lookup(%s, `%s`)", CHKSTR(name), result);
 
     free(result);
 }
@@ -105,9 +108,9 @@ void probe_promise_lookup(const SEXP symbol, const SEXP val) {
 void probe_error(const SEXP call, const char* message) {
     char *loc = get_location(call);
 
-    echo("error(%s, %s, %s)", get_call(call), loc, message);
+    echo("error(%s, %s, %s)", get_call(call), CHKSTR(loc), message);
 
-    free(loc);    
+    if (loc) free(loc);    
 } 
 
 void probe_vector_alloc(int sexptype, long length, long bytes, const char* srcref) {

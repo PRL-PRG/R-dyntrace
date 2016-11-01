@@ -44,38 +44,22 @@ const char *get_ns_name(SEXP op) {
     return NULL;
 }
 
-const char *get_fun_name(SEXP call) {
+const char *get_name(SEXP sexp) {
     const char *s = NULL;
 
-    switch(TYPEOF(call)) {
+    switch(TYPEOF(sexp)) {
         case LANGSXP:
-            s = CHAR(CAAR(call));
+            s = CHAR(CAAR(sexp));
             break;
         case BUILTINSXP:
-            s = PRIMNAME(call);
+            s = CHAR(PRIMNAME(sexp));
             break;
-        default:
-            s = "<unknown>";
+        case SYMSXP:
+            s = CHAR(PRINTNAME(sexp));
+            break;
     }
 
     return s;
-}
-
-char *get_fun_fq_name(SEXP call, SEXP op) {
-    const char *ns_name = get_ns_name(op);
-    const char *fun_name = get_fun_name(call);
-    char *name = NULL;
-    
-    asprintf(&name, "%s%s%s", 
-        ns_name ? ns_name : "",
-        ns_name ? "::" : "",
-        fun_name ? fun_name : "<unknown>");
-    
-    return name;
-}
-
-const char *get_symbol_name(SEXP symbol) {
-    return CHAR(PRINTNAME(symbol));
 }
 
 static int get_lineno(SEXP srcref) {
@@ -117,8 +101,6 @@ char *get_location(SEXP op) {
         } else {
             location = strdup("<console>");
         }
-    } else {
-        location = strdup("<unknown>");
     }
 
     return location;

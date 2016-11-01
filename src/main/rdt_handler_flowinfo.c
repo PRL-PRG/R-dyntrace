@@ -5,7 +5,6 @@
 
 #define OUT_FILENAME "flowinfo.out"
 #define INDENT_LEVEL 2
-#define ENTRY "->"
 
 static FILE *output = NULL;
 static uint64_t last = 0;
@@ -56,14 +55,14 @@ void probe_end() {
 void probe_function_entry(const SEXP call, const SEXP op, const SEXP rho) {
     compute_delta();
 
-    char *name = get_fun_fq_name(call, op);
+    const char *type = is_byte_compiled(call) ? "bc-function" : "function";
+    const char *name = get_name(call);
+    const char *ns = get_ns_name(op);
     char *loc = get_location(op);
-    char *type = is_byte_compiled(call) ? "bc-function" : "function";
 
-    print(type, "-> %s (loc: %s)", name, loc);
+    print(type, "-> %s::%s (loc: %s)", CHKSTR(ns), CHKSTR(name), CHKSTR(loc));
 
-    free(name);
-    free(loc);
+    if (loc) free(loc);
 	
     depth++;
     last = timestamp();
@@ -73,15 +72,15 @@ void probe_function_exit(const SEXP call, const SEXP op, const SEXP rho, const S
     compute_delta();
     depth -= depth > 0 ? 1 : 0;
     
-    char *name = get_fun_fq_name(call, op);
+    const char *type = is_byte_compiled(call) ? "bc-function" : "function";
+    const char *name = get_name(call);
+    const char *ns = get_ns_name(op);
     char *loc = get_location(op);
     char *result = to_string(retval);
-    char *type = is_byte_compiled(call) ? "bc-function" : "function";
     
-    print(type, "<- %s = `%s` (%d) (loc: %s)", name, result, TYPEOF(retval), loc);
+    print(type, "<- %s::%s = `%s` (%d) (loc: %s)", CHKSTR(ns), CHKSTR(name), result, TYPEOF(retval), CHKSTR(loc));
 
-    free(name);
-    free(loc);
+    if (loc) free(loc);
     free(result);
 
     last = timestamp();
@@ -90,7 +89,7 @@ void probe_function_exit(const SEXP call, const SEXP op, const SEXP rho, const S
 void probe_builtin_entry(const SEXP call) {
     compute_delta();
 
-    const char *name = get_fun_name(call);
+    const char *name = get_name(call);
 
     print("builtin", "-> %s", name);
 
@@ -102,10 +101,10 @@ void probe_builtin_exit(const SEXP call, const SEXP retval) {
     compute_delta();
     depth -= depth > 0 ? 1 : 0;
 
-    const char *name = get_fun_name(call);
+    const char *name = get_name(call);
     char *result = to_string(retval);
     
-    print("builtin", "<- %s = `%s` (%d)", name, result, TYPEOF(retval));
+    print("builtin", "<- %s = `%s` (%d)", CHKSTR(name), result, TYPEOF(retval));
 
     free(result);
 
@@ -115,9 +114,9 @@ void probe_builtin_exit(const SEXP call, const SEXP retval) {
 void probe_force_promise_entry(const SEXP symbol) {
     compute_delta();
 
-    const char *name = get_symbol_name(symbol);
+    const char *name = get_name(symbol);
     
-    print("promise", "-> %s", name);
+    print("promise", "-> %s", CHKSTR(name));
 
 	depth++;
     last = timestamp();
@@ -127,10 +126,10 @@ void probe_force_promise_exit(const SEXP symbol, const SEXP val) {
     compute_delta();
     depth -= depth > 0 ? 1 : 0;
 
-    const char *name = get_symbol_name(symbol);
+    const char *name = get_name(symbol);
     char *result = to_string(val);
     
-    print("promise", "<- %s = `%s` (%d)", name, result, TYPEOF(val));
+    print("promise", "<- %s = `%s` (%d)", CHKSTR(name), result, TYPEOF(val));
 
     free(result);
 
@@ -140,10 +139,10 @@ void probe_force_promise_exit(const SEXP symbol, const SEXP val) {
 void probe_promise_lookup(const SEXP symbol, const SEXP val) {
     compute_delta();
 
-    const char *name = get_symbol_name(symbol);
+    const char *name = get_name(symbol);
     char *result = to_string(val);
     
-    print("lookup", "-- %s = `%s` (%d)", name, result, TYPEOF(val));
+    print("lookup", "-- %s = `%s` (%d)", CHKSTR(name), result, TYPEOF(val));
 
     free(result);
     
@@ -156,9 +155,9 @@ void probe_error(const SEXP call, const char* message) {
     const char *name = get_call(call);
     char *loc = get_location(call);
     
-    print("lookup", "-- error in %s : %s (loc: %s)", name, message, loc);
+    print("lookup", "-- error in %s : %s (loc: %s)", CHKSTR(name), message, CHKSTR(loc));
 
-    free(loc);
+    if (loc) free(loc);
     
     delta = 0;
     last = timestamp();
