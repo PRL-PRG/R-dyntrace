@@ -3,7 +3,6 @@
 #include <string.h>
 #include <rdtrace_probes.h>
 
-#define OUT_FILENAME "flowinfo.out"
 #define INDENT_LEVEL 2
 
 static FILE *output = NULL;
@@ -36,8 +35,16 @@ static void compute_delta() {
     delta = (timestamp() - last) / 1000;
 }
 
-void probe_begin() {
-    output = fopen(OUT_FILENAME, "wt");
+void flowinfo_begin(const SEXP options) {
+    SEXP filename_sexp = get_named_list_element(options, "filename");
+    if (filename_sexp == R_NilValue || TYPEOF(filename_sexp) != STRSXP) {
+        error("Required argument `filename` is missing or is not string (%d)", TYPEOF(filename_sexp));
+        return; 
+    }
+
+    const char *filename = CHAR(asChar(filename_sexp));
+
+    output = fopen(filename, "wt");
     if (!output) {
         perror("fopen()");
     }
@@ -46,13 +53,13 @@ void probe_begin() {
     last = timestamp();
 }
 
-void probe_end() {
+void flowinfo_end() {
     if (output) {
         fclose(output);
     }
 }
 
-void probe_function_entry(const SEXP call, const SEXP op, const SEXP rho) {
+void flowinfo_function_entry(const SEXP call, const SEXP op, const SEXP rho) {
     compute_delta();
 
     const char *type = is_byte_compiled(call) ? "bc-function" : "function";
@@ -68,7 +75,7 @@ void probe_function_entry(const SEXP call, const SEXP op, const SEXP rho) {
     last = timestamp();
 }
 
-void probe_function_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
+void flowinfo_function_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
     compute_delta();
     depth -= depth > 0 ? 1 : 0;
     
@@ -86,7 +93,7 @@ void probe_function_exit(const SEXP call, const SEXP op, const SEXP rho, const S
     last = timestamp();
 }
 
-void probe_builtin_entry(const SEXP call) {
+void flowinfo_builtin_entry(const SEXP call) {
     compute_delta();
 
     const char *name = get_name(call);
@@ -97,7 +104,7 @@ void probe_builtin_entry(const SEXP call) {
     last = timestamp();
 }
 
-void probe_builtin_exit(const SEXP call, const SEXP retval) {
+void flowinfo_builtin_exit(const SEXP call, const SEXP retval) {
     compute_delta();
     depth -= depth > 0 ? 1 : 0;
 
@@ -111,7 +118,7 @@ void probe_builtin_exit(const SEXP call, const SEXP retval) {
     last = timestamp();
 }
 
-void probe_force_promise_entry(const SEXP symbol) {
+void flowinfo_force_promise_entry(const SEXP symbol) {
     compute_delta();
 
     const char *name = get_name(symbol);
@@ -122,7 +129,7 @@ void probe_force_promise_entry(const SEXP symbol) {
     last = timestamp();
 }
 
-void probe_force_promise_exit(const SEXP symbol, const SEXP val) {
+void flowinfo_force_promise_exit(const SEXP symbol, const SEXP val) {
     compute_delta();
     depth -= depth > 0 ? 1 : 0;
 
@@ -136,7 +143,7 @@ void probe_force_promise_exit(const SEXP symbol, const SEXP val) {
     last = timestamp();
 }
 
-void probe_promise_lookup(const SEXP symbol, const SEXP val) {
+void flowinfo_promise_lookup(const SEXP symbol, const SEXP val) {
     compute_delta();
 
     const char *name = get_name(symbol);
@@ -149,7 +156,7 @@ void probe_promise_lookup(const SEXP symbol, const SEXP val) {
     last = timestamp();
 }
 
-void probe_error(const SEXP call, const char* message) {
+void flowinfo_error(const SEXP call, const char* message) {
     compute_delta();
 
     const char *name = get_call(call);
@@ -161,4 +168,27 @@ void probe_error(const SEXP call, const char* message) {
     
     delta = 0;
     last = timestamp();
+}
+
+static const rdt_handler rdt_flowinfo_handler = {
+    &flowinfo_begin,
+    &flowinfo_end,
+    &flowinfo_function_entry,
+    &flowinfo_function_exit,
+    &flowinfo_builtin_entry,
+    &flowinfo_builtin_exit,
+    &flowinfo_force_promise_entry,
+    &flowinfo_force_promise_exit,
+    &flowinfo_promise_lookup,
+    &flowinfo_error,
+    NULL, // probe_vector_alloc
+    NULL, // probe_eval_entry
+    NULL  // probe_eval_exit        
+};
+
+// TODO: to a header
+void rdt_start(const rdt_handler *handler, const SEXP options);
+SEXP RdtFlowInfo(SEXP options) {
+    rdt_start(&rdt_flowinfo_handler, options);
+    return R_NilValue;
 }

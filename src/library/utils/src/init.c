@@ -30,6 +30,8 @@
 
 #define CALLDEF(name, n)  {#name, (DL_FUNC) &name, n}
 
+SEXP RdtFlowInfo(SEXP options);
+
 static const R_CallMethodDef CallEntries[] = {
     CALLDEF(crc64, 1),
     CALLDEF(flushconsole, 0),
@@ -46,6 +48,10 @@ static const R_CallMethodDef CallEntries[] = {
     CALLDEF(sockopen, 1),
     CALLDEF(socklisten, 1),
     CALLDEF(sockwrite, 2),
+
+// #ifdef ENABLE_RDT
+    CALLDEF(RdtFlowInfo, 1),
+// #endif
 
 #ifdef Win32
     CALLDEF(winver, 0),

@@ -5,25 +5,9 @@
 #include <rdtrace.h>
 #include <time.h>
 
-#define LOAD_PROBE(name) rdt_##name##_ref = load_rdt_callback(rdt_handler, #name)
+static const rdt_handler rdt_null_handler;
 
-//-----------------------------------------------------------------------------
-// probes refererences
-//-----------------------------------------------------------------------------
-
-void (*rdt_probe_begin_ref)();
-void (*rdt_probe_end_ref)();
-void (*rdt_probe_function_entry_ref)(const SEXP call, const SEXP op, const SEXP rho);
-void (*rdt_probe_function_exit_ref)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval);
-void (*rdt_probe_builtin_entry_ref)(const SEXP call);
-void (*rdt_probe_builtin_exit_ref)(const SEXP call, const SEXP retval);
-void (*rdt_probe_force_promise_entry_ref)(const SEXP symbol);
-void (*rdt_probe_force_promise_exit_ref)(const SEXP symbol, const SEXP val);
-void (*rdt_probe_promise_lookup_ref)(const SEXP symbol, const SEXP val);
-void (*rdt_probe_error_ref)(const SEXP call, const char* message);
-void (*rdt_probe_vector_alloc_ref)(int sexptype, long length, long bytes, const char* srcref);
-void (*rdt_probe_eval_entry_ref)(SEXP e, SEXP rho);
-void (*rdt_probe_eval_exit_ref)(SEXP e, SEXP rho, SEXP retval);
+const rdt_handler *rdt_curr_handler = &rdt_null_handler;
 
 //-----------------------------------------------------------------------------
 // helpers
@@ -132,22 +116,6 @@ const char *get_expression(SEXP e) {
     return CHAR(STRING_ELT(deparse1line(e, FALSE), 0));
 }
 
-static void *load_rdt_callback(void *handle, const char *name) {
-    dlerror();
-
-    void *callback = dlsym(handle, name);
-
-    if(R_Verbose) {	
-        if (callback == NULL) {
-            Rprintf("Probe `%s` not loaded: %s\n", name, dlerror());
-        } else {
-            Rprintf("Probe `%s` loaded\n", name);
-        }
-    }
-
-    return callback;
-}
-
 // returns a monotonic timestamp in microseconds
 uint64_t timestamp() {
     uint64_t t;
@@ -162,44 +130,29 @@ uint64_t timestamp() {
     return t;
 }
 
-static void *rdt_handler = NULL; 
-
-void rdt_start() {
-    char *rdt_handler_path = getenv(RDT_HANDLER_ENV_VAR);
-    if (! rdt_handler_path) {
-        if(R_Verbose) {
-            Rprintf("Environment variable %s is not defined - RDT is disabled\n", RDT_HANDLER_ENV_VAR);
-        }	
-        return;
+SEXP get_named_list_element(const SEXP list, const char *name) {
+    if (TYPEOF(list) != VECSXP) {
+        error("Not a list");
     }
 
-    if(R_Verbose) {
-        Rprintf("RDT handler: %s\n", rdt_handler_path);
-    }	
+    SEXP e = R_NilValue;
+    SEXP names = getAttrib(list, R_NamesSymbol);
 
-    // load the handler with all the costs at startup
-    rdt_handler = dlopen(rdt_handler_path, RTLD_LOCAL | RTLD_NOW);
-    if (!rdt_handler) {
-        REprintf("RDT: Unable to open R DT handler `%s`: %s\n", rdt_handler_path, dlerror());
-        return;
+    for (int i = 0; i < length(list); i++) {
+        if (strcmp(CHAR(STRING_ELT(names, i)), name) == 0) { 
+            e = VECTOR_ELT(list, i); 
+            break; 
+        }
     }
-        
-    LOAD_PROBE(probe_begin);
-    LOAD_PROBE(probe_end);
-    LOAD_PROBE(probe_function_entry);
-    LOAD_PROBE(probe_function_exit);
-    LOAD_PROBE(probe_builtin_entry);
-    LOAD_PROBE(probe_builtin_exit);
-    LOAD_PROBE(probe_force_promise_entry);
-    LOAD_PROBE(probe_force_promise_exit);
-    LOAD_PROBE(probe_promise_lookup);
-    LOAD_PROBE(probe_error);
-    LOAD_PROBE(probe_vector_alloc);
-    LOAD_PROBE(probe_eval_entry);
-    LOAD_PROBE(probe_eval_exit);
+
+    return e;
+}
+
+void rdt_start(const rdt_handler *handler, const SEXP options) {
+    rdt_curr_handler = handler;
 
     if (RDT_IS_ENABLED(probe_begin)) {
-        RDT_FIRE_PROBE(probe_begin);
+        RDT_FIRE_PROBE(probe_begin, options);
     }     
 }
 
@@ -208,8 +161,5 @@ void rdt_stop() {
         RDT_FIRE_PROBE(probe_end);
     }     
 
-    if (rdt_handler) {
-        dlclose(rdt_handler);
-        rdt_handler = NULL;
-    }
+    rdt_curr_handler = &rdt_null_handler;
 }

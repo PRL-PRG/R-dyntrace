@@ -110,14 +110,7 @@ libR_la_DEPENDENCIES = $(STATIC_LIBS) $(R_TZONE) @WANT_R_SHLIB_TRUE@ @USE_EXPORT
 ## The next is needed for OS X only at present
 LIBR_LDFLAGS = @LIBR_LDFLAGS@
 
-RDT_HANDLERS_OBJECTS = @RDT_HANDLERS_OBJECTS@ 
-
-RDT_HANDLERS = $(RDT_HANDLERS_OBJECTS:.o=.so)
-
-all: R ${RDT_HANDLERS}
-
-${RDT_HANDLERS}: %.so : %.o
-	$(DYLIB_LINK) $(LIBR_LDFLAGS) -o $@ $<	
+all: R
 
 Makefile: $(srcdir)/Makefile.in \
   $(top_builddir)/config.status \
