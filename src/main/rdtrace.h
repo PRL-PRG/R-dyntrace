@@ -14,7 +14,7 @@
 // probes
 // ----------------------------------------------------------------------------
 typedef struct rdt_handler {
-    void (*probe_begin)(const SEXP options);
+    void (*probe_begin)();
     void (*probe_end)();
     void (*probe_function_entry)(const SEXP call, const SEXP op, const SEXP rho);
     void (*probe_function_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval);
@@ -29,7 +29,7 @@ typedef struct rdt_handler {
     void (*probe_eval_exit)(SEXP e, SEXP rho, SEXP retval);    
 } rdt_handler;
 
-void rdt_start(const rdt_handler *handler, const SEXP options);
+void rdt_start(const rdt_handler *handler);
 void rdt_stop(const rdt_handler *handler);
 
 // the current handler

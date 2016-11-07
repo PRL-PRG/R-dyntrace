@@ -148,7 +148,7 @@ SEXP get_named_list_element(const SEXP list, const char *name) {
     return e;
 }
 
-void rdt_start(const rdt_handler *handler, const SEXP options) {
+void rdt_start(const rdt_handler *handler) {
     if (handler == NULL) {
         REprintf("RDT: rdt_start() called with NULL handler\n");
         return;
@@ -161,7 +161,7 @@ void rdt_start(const rdt_handler *handler, const SEXP options) {
     rdt_curr_handler = handler;
 
     if (RDT_IS_ENABLED(probe_begin)) {
-        RDT_FIRE_PROBE(probe_begin, options);
+        RDT_FIRE_PROBE(probe_begin);
     }     
 }
 

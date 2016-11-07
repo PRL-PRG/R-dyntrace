@@ -930,7 +930,7 @@ BYTE_COMPILE_PACKAGES_FALSE
 BYTE_COMPILE_PACKAGES_TRUE
 RDT_OBJ
 RDT_SRC
-RDT_HANDLERS_OBJECTS
+RDT_HANDLERS
 WANT_JAVA_FALSE
 WANT_JAVA_TRUE
 BUILD_LTO_FALSE
@@ -4196,14 +4196,14 @@ fi
 
 # Check whether --enable-rdt was given.
 if test "${enable_rdt+set}" = set; then :
-  enableval=$enable_rdt; enable_dtrace=$enableval
+  enableval=$enable_rdt; enable_rdt=$enableval
 else
-  enable_dtrace=yes
+  enable_rdt=yes
 fi
 
 
-if test "${enable_dtrace}" = "yes"; then
-  RDT_HANDLERS_OBJECTS="rdt_handler_echo.o"
+if test "${enable_rdt}" = "yes"; then
+  RDT_HANDLERS="rdt_echo.c rdt_flowinfo.c"
   RDT_SRC="rdtrace.c"
   RDT_OBJ="rdtrace.o"
 

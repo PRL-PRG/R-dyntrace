@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
@@ -37,20 +38,7 @@ static void compute_delta() {
     delta = (timestamp() - last) / 1000;
 }
 
-void flowinfo_begin(const SEXP options) {
-    SEXP filename_sexp = get_named_list_element(options, "filename");
-    if (filename_sexp == R_NilValue || TYPEOF(filename_sexp) != STRSXP) {
-        error("Required argument `filename` is missing or is not string (%d)", TYPEOF(filename_sexp));
-        return; 
-    }
-
-    const char *filename = CHAR(asChar(filename_sexp));
-
-    output = fopen(filename, "wt");
-    if (!output) {
-        perror("fopen()");
-    }
-
+void flowinfo_begin() {
     fprintf(output, "%12s %-11s -- %s\n", "DELTA(us)", "TYPE", "NAME");
     fflush(output);
 
@@ -174,7 +162,7 @@ void flowinfo_error(const SEXP call, const char* message) {
     last = timestamp();
 }
 
-static const rdt_handler rdt_flowinfo_handler = {
+static const rdt_handler flowinfo_rdt_handler = {
     &flowinfo_begin,
     &flowinfo_end,
     &flowinfo_function_entry,
@@ -190,15 +178,41 @@ static const rdt_handler rdt_flowinfo_handler = {
     NULL  // probe_eval_exit        
 };
 
+static int flowinfo_setup_tracing(SEXP options) {
+    SEXP fname_sexp = get_named_list_element(options, "filename");
+    if (fname_sexp == R_NilValue || TYPEOF(fname_sexp) != STRSXP) {
+        error("Required argument `filename` is missing or is not string (%d)", TYPEOF(fname_sexp));
+        return 0; 
+    }
+
+    const char *fname = CHAR(asChar(fname_sexp));
+    output = fopen(fname, "wt");
+    if (!output) {
+        error("Unable to open %s: %s\n", fname, strerror(errno));
+        return 0;
+    }
+
+    return 1; 
+}
+
+static void flowinfo_teardown_tracing() {
+    fclose(output);
+}
+
 static int running = 0;
 
 SEXP RdtFlowInfo(SEXP options) {
-    running = !running;
-
     if (running) {
-        rdt_start(&rdt_flowinfo_handler, options);
+        flowinfo_teardown_tracing();
+        rdt_stop(&flowinfo_rdt_handler);
+        running = 0;
     } else {
-        rdt_stop(&rdt_flowinfo_handler);
+        if (flowinfo_setup_tracing(options)) { 
+            rdt_start(&flowinfo_rdt_handler);
+            running = 1;
+        } else {
+            error("Unable to initialize flowinfo tracing");
+        }
     }
 
     return ScalarLogical(running);
