@@ -25,12 +25,11 @@
 #include <Rinternals.h>
 
 #include "utils.h"
+#include "rdt_flowinfo.h"
 #include <R_ext/Rdynload.h>
 
 
 #define CALLDEF(name, n)  {#name, (DL_FUNC) &name, n}
-
-SEXP RdtFlowInfo(SEXP options);
 
 static const R_CallMethodDef CallEntries[] = {
     CALLDEF(crc64, 1),

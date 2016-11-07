@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
-#include <rdtrace_probes.h>
+#include <rdtrace.h>
+
+#include "rdt_flowinfo.h"
 
 #define INDENT_LEVEL 2
 
@@ -50,6 +52,8 @@ void flowinfo_begin(const SEXP options) {
     }
 
     fprintf(output, "%12s %-11s -- %s\n", "DELTA(us)", "TYPE", "NAME");
+    fflush(output);
+
     last = timestamp();
 }
 
@@ -186,9 +190,16 @@ static const rdt_handler rdt_flowinfo_handler = {
     NULL  // probe_eval_exit        
 };
 
-// TODO: to a header
-void rdt_start(const rdt_handler *handler, const SEXP options);
+static int running = 0;
+
 SEXP RdtFlowInfo(SEXP options) {
-    rdt_start(&rdt_flowinfo_handler, options);
-    return R_NilValue;
+    running = !running;
+
+    if (running) {
+        rdt_start(&rdt_flowinfo_handler, options);
+    } else {
+        rdt_stop(&rdt_flowinfo_handler);
+    }
+
+    return ScalarLogical(running);
 }

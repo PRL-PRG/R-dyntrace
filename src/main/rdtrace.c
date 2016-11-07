@@ -149,6 +149,15 @@ SEXP get_named_list_element(const SEXP list, const char *name) {
 }
 
 void rdt_start(const rdt_handler *handler, const SEXP options) {
+    if (handler == NULL) {
+        REprintf("RDT: rdt_start() called with NULL handler\n");
+        return;
+    }
+
+    if (R_Verbose) {	
+        REprintf("RDT: rdt_start(%p, ...)\n", handler);
+    }
+
     rdt_curr_handler = handler;
 
     if (RDT_IS_ENABLED(probe_begin)) {
@@ -156,7 +165,11 @@ void rdt_start(const rdt_handler *handler, const SEXP options) {
     }     
 }
 
-void rdt_stop() {
+void rdt_stop(const rdt_handler *handler) {
+    if (R_Verbose) {	
+        REprintf("RDT: rdt_stop()\n");
+    }
+
     if (RDT_IS_ENABLED(probe_end)) {
         RDT_FIRE_PROBE(probe_end);
     }     
