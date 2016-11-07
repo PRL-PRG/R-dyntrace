@@ -45,12 +45,6 @@ void flowinfo_begin() {
     last = timestamp();
 }
 
-void flowinfo_end() {
-    if (output) {
-        fclose(output);
-    }
-}
-
 void flowinfo_function_entry(const SEXP call, const SEXP op, const SEXP rho) {
     compute_delta();
 
@@ -158,13 +152,13 @@ void flowinfo_error(const SEXP call, const char* message) {
 
     if (loc) free(loc);
     
-    delta = 0;
+    depth = 0;
     last = timestamp();
 }
 
 static const rdt_handler flowinfo_rdt_handler = {
     &flowinfo_begin,
-    &flowinfo_end,
+    NULL,
     &flowinfo_function_entry,
     &flowinfo_function_exit,
     &flowinfo_builtin_entry,
