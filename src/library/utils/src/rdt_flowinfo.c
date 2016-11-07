@@ -3,7 +3,7 @@
 #include <string.h>
 #include <rdtrace.h>
 
-#include "rdt_flowinfo.h"
+#include "rdt_utils.h"
 
 #define INDENT_LEVEL 2
 

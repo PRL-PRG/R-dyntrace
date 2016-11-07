@@ -25,7 +25,7 @@
 #include <Rinternals.h>
 
 #include "utils.h"
-#include "rdt_flowinfo.h"
+#include "rdt_utils.h"
 #include <R_ext/Rdynload.h>
 
 
@@ -48,9 +48,10 @@ static const R_CallMethodDef CallEntries[] = {
     CALLDEF(socklisten, 1),
     CALLDEF(sockwrite, 2),
 
-// #ifdef ENABLE_RDT
+#ifdef ENABLE_RDT
     CALLDEF(RdtFlowInfo, 1),
-// #endif
+    CALLDEF(RdtEcho, 1),
+#endif
 
 #ifdef Win32
     CALLDEF(winver, 0),
