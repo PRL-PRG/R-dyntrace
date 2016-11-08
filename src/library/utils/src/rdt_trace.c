@@ -4,7 +4,7 @@
 #include <string.h>
 #include <rdtrace.h>
 
-#include "rdt_utils.h"
+#include "rdt_trace.h"
 
 static FILE *output = NULL;
 static uint64_t last = 0;
@@ -21,7 +21,7 @@ static inline void print(const char *type, const char *loc, const char *name) {
             CHKSTR(name));
 }
 
-static void compute_delta() {
+static inline void compute_delta() {
     delta = (timestamp() - last) / 1000;
 }
 
@@ -154,43 +154,45 @@ static const rdt_handler trace_rdt_handler = {
     NULL  // probe_eval_exit        
 };
 
-static int trace_setup_tracing(SEXP options) {
-    SEXP fname_sexp = get_named_list_element(options, "filename");
-    if (fname_sexp == R_NilValue || TYPEOF(fname_sexp) != STRSXP) {
-        error("Required argument `filename` is missing or is not string (%d)", TYPEOF(fname_sexp));
-        return 0; 
-    }
-
-    const char *fname = CHAR(asChar(fname_sexp));
-    output = fopen(fname, "wt");
+static int setup_tracing(const char *filename) {
+    output = fopen(filename, "wt");
     if (!output) {
-        error("Unable to open %s: %s\n", fname, strerror(errno));
+        error("Unable to open %s: %s\n", filename, strerror(errno));
         return 0;
     }
 
     return 1; 
 }
 
-static void trace_teardown_tracing() {
-    fclose(output);
-}
-
-// TODO: refactor
 static int running = 0;
 
-SEXP RdtTrace(SEXP options) {
+SEXP RdtTrace(SEXP s_filename) {
+    const char *filename = CHAR(STRING_ELT(s_filename, 0));
+
     if (running) {
-        trace_teardown_tracing();
-        rdt_stop(&trace_rdt_handler);
-        running = 0;
+        error("RDT is already running");
+        return R_TrueValue;
     } else {
-        if (trace_setup_tracing(options)) { 
+        if (setup_tracing(filename)) { 
             rdt_start(&trace_rdt_handler);
             running = 1;
+            return R_TrueValue;
         } else {
             error("Unable to initialize dynamic tracing");
+            return R_FalseValue;
         }
     }
+}
 
-    return ScalarLogical(running);
+SEXP RdtStop() {
+    if (!running) {
+        warning("RDT is not running\n");
+    } else {
+        fclose(output);
+
+        rdt_stop(&trace_rdt_handler);
+        running = 0;
+    }
+    
+    return R_FalseValue;
 }

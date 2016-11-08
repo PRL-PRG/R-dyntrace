@@ -1,7 +1,14 @@
-RdtFlowInfo <- function(filename="flowinfo.out", ...) {
-    .Call(C_RdtFlowInfo, list(filename=filename, ...))
+RdtTrace <- function(block=NULL, filename="trace.out") {
+    stopifnot(is.character(filename) && length(filename) == 1 && nchar(filename) > 0)
+
+    .Call(C_RdtTrace, filename)
+
+    if (!is.null(block)) {
+        block
+        .Call(C_RdtStop)
+    } 
 }
 
-RdtTrace <- function(filename="trace.out",...) {
-    .Call(C_RdtTrace, list(filename=filename, ...))
+RdtStop <- function() {
+    .Call(C_RdtStop)    
 }
