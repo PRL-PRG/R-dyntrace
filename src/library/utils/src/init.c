@@ -50,7 +50,6 @@ static const R_CallMethodDef CallEntries[] = {
 
 #ifdef ENABLE_RDT
     CALLDEF(RdtFlowInfo, 1),
-    CALLDEF(RdtEcho, 1),
     CALLDEF(RdtTrace, 1),
 #endif
 

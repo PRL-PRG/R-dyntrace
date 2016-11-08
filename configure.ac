@@ -442,7 +442,7 @@ AS_HELP_STRING([--enable-rdt],[Dynamic tracing for R @<:@yes@:>@]),
 [enable_rdt=$enableval], [enable_rdt=yes])
 
 if test "${enable_rdt}" = "yes"; then
-  RDT_HANDLERS="rdt_echo.c rdt_flowinfo.c rdt_trace.c"
+  RDT_HANDLERS="rdt_flowinfo.c rdt_trace.c"
   RDT_SRC="rdtrace.c"
   RDT_OBJ="rdtrace.o"
   AC_DEFINE(ENABLE_RDT, 1, [RDT is enabled])
