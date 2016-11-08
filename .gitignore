@@ -113,11 +113,10 @@ doc/manual/version.texi
 etc/Renviron
 etc/javaconf
 etc/ldpaths
-include
-include
-lib
+/include
+/lib
+/library
 libconftest.dSYM
-library
 libtool
 modules
 rdtrace_probes.h
@@ -145,3 +144,12 @@ stamp-java
 R.xcodeproj/project.xcworkspace/xcuserdata/krikava.xcuserdatad/UserInterfaceState.xcuserstate
 R.xcodeproj/project.xcworkspace/xcuserdata/krikava.xcuserdatad/xcdebugger/Expressions.xcexplist
 R.xcodeproj/xcuserdata/krikava.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist
+src/include/R_ext
+Rconfig.h
+*.tsa
+*.ts
+Rversion.h
+stamp-R
+*.inn
+stamp-docs
+/src/**/all.R
