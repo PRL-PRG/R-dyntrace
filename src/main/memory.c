@@ -2869,6 +2869,11 @@ static void gc_end_timing(void)
 
 static void R_gc_internal(R_size_t size_needed)
 {
+#ifdef ENABLE_RDT
+    if(RDT_IS_ENABLED(probe_gc_entry)) {
+        RDT_FIRE_PROBE(probe_gc_entry, size_needed);
+    }
+#endif
     if (!R_GCEnabled) {
       if (NO_FREE_NODES())
 	R_NSize = R_NodesInUse + 1;
@@ -2982,6 +2987,12 @@ static void R_gc_internal(R_size_t size_needed)
 	LOGICAL(R_LogicalNAValue)[0] = NA_LOGICAL;
 	error("internal logical NA value has been modified");
     }
+
+#ifdef ENABLE_RDT
+    if(RDT_IS_ENABLED(probe_gc_exit)) {
+        RDT_FIRE_PROBE(probe_gc_exit, gc_count, vcells, ncells);
+    }
+#endif    
 }
 
 SEXP attribute_hidden do_memlimits(SEXP call, SEXP op, SEXP args, SEXP env)

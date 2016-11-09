@@ -154,6 +154,18 @@ void trace_vector_alloc(int sexptype, long length, long bytes, const char* srcre
     last = timestamp();
 }
 
+void trace_gc_entry(R_size_t size_needed) {
+    compute_delta();
+    print("builtin-entry", NULL, "gc_internal");
+    last = timestamp();
+}   
+
+void trace_gc_exit(int gc_count, double vcells, double ncells) {
+    compute_delta();
+    print("builtin-exit", NULL, "gc_internal");
+    last = timestamp();
+}    
+
 static const rdt_handler trace_rdt_handler = {
     &trace_begin,
     NULL,
@@ -167,7 +179,9 @@ static const rdt_handler trace_rdt_handler = {
     &trace_error,
     &trace_vector_alloc,
     NULL, // probe_eval_entry
-    NULL  // probe_eval_exit        
+    NULL,  // probe_eval_exit
+    &trace_gc_entry,        
+    &trace_gc_exit        
 };
 
 static int setup_tracing(const char *filename) {

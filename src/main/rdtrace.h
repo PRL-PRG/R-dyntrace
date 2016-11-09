@@ -27,6 +27,8 @@ typedef struct rdt_handler {
     void (*probe_vector_alloc)(int sexptype, long length, long bytes, const char* srcref);
     void (*probe_eval_entry)(SEXP e, SEXP rho);
     void (*probe_eval_exit)(SEXP e, SEXP rho, SEXP retval);    
+    void (*probe_gc_entry)(R_size_t size_needed);
+    void (*probe_gc_exit)(int gc_count, double vcells, double ncells);    
 } rdt_handler;
 
 void rdt_start(const rdt_handler *handler);
