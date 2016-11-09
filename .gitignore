@@ -153,3 +153,5 @@ stamp-R
 *.inn
 stamp-docs
 /src/**/all.R
+.Rproj.user
+src/library/rdt/..Rcheck

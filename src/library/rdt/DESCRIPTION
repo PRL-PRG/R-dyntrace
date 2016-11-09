@@ -1,0 +1,10 @@
+Package: rdt
+Title: RDT utilities
+Version: 0.0.0.9000
+Author: person("Filip", "Krikava", email = "krikava@gmail.com", role = c("aut", "cre"))
+Description: A set of utilities that help to analyze traces from RDT
+Depends: R (>= 3.3.1)
+License: MIT
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 5.0.1.9000
