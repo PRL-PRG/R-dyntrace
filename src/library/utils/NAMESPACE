@@ -2,7 +2,7 @@
 useDynLib(utils, .registration = TRUE, .fixes = "C_")
 
 export("?", .DollarNames, .S3methods, .romans,
-       CRAN.packages, Rprof, Rprofmem, RShowDoc, RdtTrace, RdtStop,
+       CRAN.packages, Rprof, Rprofmem, RShowDoc, 
        RSiteSearch, URLdecode, URLencode, View, adist, alarm, apropos,
        aregexec, argsAnywhere, assignInMyNamespace, assignInNamespace,
        as.roman, as.person, as.personList, as.relistable, aspell,

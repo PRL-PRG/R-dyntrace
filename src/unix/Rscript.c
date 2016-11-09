@@ -236,7 +236,7 @@ int main(int argc, char *argv[])
     av[ac] = (char *) NULL;
 #ifdef HAVE_PUTENV
     if(!set_dp && !getenv("R_DEFAULT_PACKAGES"))
-	putenv("R_DEFAULT_PACKAGES=datasets,utils,grDevices,graphics,stats");
+	putenv("R_DEFAULT_PACKAGES=datasets,utils,grDevices,graphics,stats,rdt");
 
 #ifndef _WIN32
     /* pass on r_arch from this binary to R as a default */

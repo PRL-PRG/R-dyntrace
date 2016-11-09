@@ -1,5 +1,5 @@
-RdtTrace <- function(block=NULL, filename="trace.out") {
-    stopifnot(is.character(filename) && length(filename) == 1 && nchar(filename) > 0)
+RdtTrace <- function(block=NULL, filename=NULL) {
+    if (!is.null(filename)) stopifnot(is.character(filename) && length(filename) == 1 && nchar(filename) > 0)
 
     .Call(C_RdtTrace, filename)
 

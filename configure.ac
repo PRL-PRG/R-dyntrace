@@ -442,7 +442,6 @@ AS_HELP_STRING([--enable-rdt],[Dynamic tracing for R @<:@yes@:>@]),
 [enable_rdt=$enableval], [enable_rdt=yes])
 
 if test "${enable_rdt}" = "yes"; then
-  RDT_HANDLERS="rdt_trace.c"
   RDT_SRC="rdtrace.c"
   RDT_OBJ="rdtrace.o"
   AC_DEFINE(ENABLE_RDT, 1, [RDT is enabled])
@@ -2750,6 +2749,8 @@ AC_CONFIG_FILES(
   src/library/parallel/Makefile
   src/library/parallel/src/Makefile
   src/library/profile/Makefile
+  src/library/rdt/src/Makefile
+  src/library/rdt/Makefile
   src/library/stats/DESCRIPTION
   src/library/stats/Makefile
   src/library/stats/src/Makefile

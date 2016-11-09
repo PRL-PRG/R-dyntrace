@@ -184,8 +184,8 @@ static const rdt_handler trace_rdt_handler = {
     &trace_gc_exit        
 };
 
-static int setup_tracing(const char *filename) {
-    output = fopen(filename, "wt");
+static int setup_tracing(const char *filename) {    
+    output = filename != NULL ? fopen(filename, "wt") : stderr;
     if (!output) {
         error("Unable to open %s: %s\n", filename, strerror(errno));
         return 0;
@@ -196,8 +196,8 @@ static int setup_tracing(const char *filename) {
 
 static int running = 0;
 
-SEXP RdtTrace(SEXP s_filename) {
-    const char *filename = CHAR(STRING_ELT(s_filename, 0));
+SEXP RdtTrace(SEXP s_filename) {    
+    const char *filename = s_filename != R_NilValue ? CHAR(STRING_ELT(s_filename, 0)) : NULL;
 
     if (running) {
         error("RDT is already running");

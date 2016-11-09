@@ -1,4 +1,4 @@
-calltimes <- function(filename="trace.out") {
+RdtCalltimes <- function(filename="trace.out") {
   data <- read.csv(filename)
 
   ctx <- new.env()
