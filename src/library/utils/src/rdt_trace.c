@@ -39,10 +39,18 @@ void trace_function_entry(const SEXP call, const SEXP op, const SEXP rho) {
     const char *name = get_name(call);
     const char *ns = get_ns_name(op);
     char *loc = get_location(op);
+    char *fqfn = NULL;
 
-    print(type, loc, name);
+    if (ns) {
+        asprintf(&fqfn, "%s::%s", ns, name);
+    } else {
+        fqfn = strdup(name);
+    }
+
+    print(type, loc, fqfn);
 
     if (loc) free(loc);
+    if (fqfn) free(fqfn);
 	
     depth++;
     last = timestamp();
@@ -56,10 +64,18 @@ void trace_function_exit(const SEXP call, const SEXP op, const SEXP rho, const S
     const char *name = get_name(call);
     const char *ns = get_ns_name(op);
     char *loc = get_location(op);
-    
-    print(type, loc, name);
+    char *fqfn = NULL;
+
+    if (ns) {
+        asprintf(&fqfn, "%s::%s", ns, name);
+    } else {
+        fqfn = strdup(name);
+    }
+
+    print(type, loc, fqfn);
 
     if (loc) free(loc);
+    if (fqfn) free(fqfn);
 
     last = timestamp();
 }
