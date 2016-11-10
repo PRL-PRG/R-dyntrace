@@ -166,6 +166,43 @@ void trace_gc_exit(int gc_count, double vcells, double ncells) {
     last = timestamp();
 }    
 
+void trace_S3_generic_entry(const char *generic, const SEXP object) {
+    compute_delta();
+    
+    print("s3-generic-entry", NULL, generic);
+    
+    depth++;
+    last = timestamp();
+}   
+
+void trace_S3_generic_exit(const char *generic, const SEXP object, const SEXP retval) {
+    compute_delta();
+    depth -= depth > 0 ? 1 : 0;
+
+    print("s3-generic-exit", NULL, generic);
+
+    last = timestamp();
+}
+
+void trace_S3_dispatch_entry(const char *generic, const char *clazz, const SEXP method, const SEXP object) {
+    compute_delta();
+    
+    print("s3-dispatch-entry", NULL, get_name(method));
+    
+    depth++;
+    last = timestamp();
+}
+
+void trace_S3_dispatch_exit(const char *generic, const char *clazz, const SEXP method, const SEXP object, const SEXP retval) {
+    compute_delta();
+    
+    depth -= depth > 0 ? 1 : 0;
+
+    print("s3-dispatch-exit", NULL, get_name(method));
+    
+    last = timestamp();
+}
+
 static const rdt_handler trace_rdt_handler = {
     &trace_begin,
     NULL,
@@ -181,7 +218,11 @@ static const rdt_handler trace_rdt_handler = {
     NULL, // probe_eval_entry
     NULL,  // probe_eval_exit
     &trace_gc_entry,        
-    &trace_gc_exit        
+    &trace_gc_exit,
+    &trace_S3_generic_entry,
+    &trace_S3_generic_exit,
+    &trace_S3_dispatch_entry,        
+    &trace_S3_dispatch_exit       
 };
 
 static int setup_tracing(const char *filename) {    
@@ -200,29 +241,32 @@ SEXP RdtTrace(SEXP s_filename) {
     const char *filename = s_filename != R_NilValue ? CHAR(STRING_ELT(s_filename, 0)) : NULL;
 
     if (running) {
-        error("RDT is already running");
+        warning("RDT is already running");
+        return R_TrueValue;
+    }
+    
+    if (setup_tracing(filename)) { 
+        rdt_start(&trace_rdt_handler);
+        running = 1;
         return R_TrueValue;
     } else {
-        if (setup_tracing(filename)) { 
-            rdt_start(&trace_rdt_handler);
-            running = 1;
-            return R_TrueValue;
-        } else {
-            error("Unable to initialize dynamic tracing");
-            return R_FalseValue;
-        }
+        error("Unable to initialize dynamic tracing");
+        return R_FalseValue;
     }
 }
 
 SEXP RdtStop() {
     if (!running) {
         warning("RDT is not running\n");
-    } else {
-        fclose(output);
-
-        rdt_stop(&trace_rdt_handler);
-        running = 0;
+        return R_FalseValue;
     }
+
+    if(output != stderr) {
+        fclose(output);
+    }
+
+    rdt_stop(&trace_rdt_handler);
+    running = 0;
     
-    return R_FalseValue;
+    return R_TrueValue;
 }
