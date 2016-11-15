@@ -48,9 +48,9 @@ void trace_function_entry(const SEXP call, const SEXP op, const SEXP rho) {
     char *fqfn = NULL;
 
     if (ns) {
-        asprintf(&fqfn, "%s::%s", ns, name);
+        asprintf(&fqfn, "%s::%s", ns, CHKSTR(name));
     } else {
-        fqfn = strdup(name);
+        fqfn = name != NULL ? strdup(name) : NULL;
     }
 
     print(type, loc, fqfn);
@@ -73,9 +73,9 @@ void trace_function_exit(const SEXP call, const SEXP op, const SEXP rho, const S
     char *fqfn = NULL;
 
     if (ns) {
-        asprintf(&fqfn, "%s::%s", ns, name);
+        asprintf(&fqfn, "%s::%s", ns, CHKSTR(name));
     } else {
-        fqfn = strdup(name);
+        fqfn = name != NULL ? strdup(name) : NULL;
     }
 
     print(type, loc, fqfn);
