@@ -11,6 +11,12 @@ static uint64_t last = 0;
 static uint64_t delta = 0;
 static unsigned int depth = 0;
 
+static inline void reset() {
+    last = 0;
+    delta = 0;
+    depth = 0;
+}
+
 static inline void print(const char *type, const char *loc, const char *name) {
 	fprintf(output, 
             "%"PRId64",%d,%s,%s,%s\n", 
@@ -137,12 +143,15 @@ void trace_promise_lookup(const SEXP symbol, const SEXP val) {
 void trace_error(const SEXP call, const char* message) {
     compute_delta();
 
-    const char *name = get_call(call);
+    char *call_str = NULL;
     char *loc = get_location(call);
     
-    print("error", NULL, name);
+    asprintf(&call_str, "\"%s\"", get_call(call));
+    
+    print("error", NULL, call_str);
 
     if (loc) free(loc);
+    if (call_str) free(call_str);
     
     depth = 0;
     last = timestamp();
@@ -245,7 +254,8 @@ SEXP RdtTrace(SEXP s_filename) {
         return R_TrueValue;
     }
     
-    if (setup_tracing(filename)) { 
+    if (setup_tracing(filename)) {
+        reset(); 
         rdt_start(&trace_rdt_handler);
         running = 1;
         return R_TrueValue;
