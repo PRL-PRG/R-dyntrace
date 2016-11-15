@@ -32,8 +32,11 @@ const char *get_name(SEXP sexp) {
     const char *s = NULL;
 
     switch(TYPEOF(sexp)) {
+        case CHARSXP:
+            s = CHAR(sexp);
+            break;
         case LANGSXP:
-            s = CHAR(CAAR(sexp));
+            s = get_name(CAR(sexp));
             break;
         case BUILTINSXP:
             s = CHAR(PRIMNAME(sexp));
