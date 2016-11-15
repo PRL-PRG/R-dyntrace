@@ -1,5 +1,33 @@
-RdtCalltimes <- function(filename="trace.out") {
-  data <- read.csv(filename)
+RdtFlow <- function(trace, output) {
+  data <- read.csv(trace)
+  flow <- apply(data, 1, function(x) {
+    delta <- x[1]
+    type <- strsplit(x[3],"-")[[1]]
+    sup_probe <- if (length(type) > 1) paste(type[-length(type)], collapse = "-") else type
+    type <- type[length(type)]
+    depth <- as.numeric(x[2])*2
+    name <- x[5]
+    arrow <- "--"
+    if (endsWith(type, "exit")) {
+      arrow <- "<-"
+    } else if (endsWith(type, "entry")) {
+      arrow <- "->"
+    }
+
+    sprintf("%9s %11s %s%s %s", delta, sup_probe, paste(rep(" ", depth), collapse = ""), arrow, name)
+  })
+
+  conn <- if(!missing(output)) file(output) else stdout()
+
+  writeLines(flow, conn)
+
+  if(!missing(output)) {
+    close(conn)
+  }
+}
+
+RdtCalltimes <- function(trace) {
+  data <- read.csv(trace)
 
   ctx <- new.env()
   ctx$timestamp=0

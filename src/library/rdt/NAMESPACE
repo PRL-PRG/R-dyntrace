@@ -3,4 +3,4 @@ useDynLib(rdt, .registration = TRUE, .fixes = "C_")
 
 export(RdtTrace, RdtStop)
 
-export(RdtCalltimes)
+export(RdtCalltimes, RdtFlow)
