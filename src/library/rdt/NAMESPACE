@@ -1,6 +1,6 @@
 # Refer to all C routines by their name prefixed by C_
 useDynLib(rdt, .registration = TRUE, .fixes = "C_")
 
-export(RdtTrace, RdtStop)
+export(RdtTrace, RdtNoop)
 
 export(RdtCalltimes, RdtFlow)

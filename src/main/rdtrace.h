@@ -36,7 +36,8 @@ typedef struct rdt_handler {
 } rdt_handler;
 
 void rdt_start(const rdt_handler *handler);
-void rdt_stop(const rdt_handler *handler);
+void rdt_stop();
+int rdt_is_running();
 
 // the current handler
 extern const rdt_handler *rdt_curr_handler;

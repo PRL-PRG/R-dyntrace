@@ -676,11 +676,22 @@ SEXP eval(SEXP e, SEXP rho)
 	    SET_NAMED(tmp, 1);
 	break;
     case PROMSXP:
-	if (PRVALUE(e) == R_UnboundValue)
+	if (PRVALUE(e) == R_UnboundValue) {
 	    /* We could just unconditionally use the return value from
 	       forcePromise; the test avoids the function call if the
 	       promise is already evaluated. */
-	    forcePromise(e);
+#ifdef ENABLE_RDT
+		if(RDT_IS_ENABLED(probe_force_promise_entry)) {
+			RDT_FIRE_PROBE(probe_force_promise_entry, e);
+		}
+#endif
+		forcePromise(e);
+#ifdef ENABLE_RDT
+		if(RDT_IS_ENABLED(probe_force_promise_exit)) {
+			RDT_FIRE_PROBE(probe_force_promise_exit, e, PRVALUE(e));
+		}
+#endif		
+	}
 	tmp = PRVALUE(e);
 	/* This does _not_ change the value of NAMED on the value tmp,
 	   in contrast to the handling of promises bound to symbols in
@@ -708,6 +719,11 @@ SEXP eval(SEXP e, SEXP rho)
 	    PrintValue(e);
 	}
 	if (TYPEOF(op) == SPECIALSXP) {
+#ifdef ENABLE_RDT
+              if(RDT_IS_ENABLED(probe_builtin_entry)) {
+                  RDT_FIRE_PROBE(probe_builtin_entry, e);
+              }
+#endif                  
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
 	    const void *vmax = vmaxget();
 	    PROTECT(CDR(e));
@@ -726,6 +742,11 @@ SEXP eval(SEXP e, SEXP rho)
 	    UNPROTECT(1);
 	    check_stack_balance(op, save);
 	    vmaxset(vmax);
+#ifdef ENABLE_RDT
+	      if(RDT_IS_ENABLED(probe_builtin_exit)) {
+	          RDT_FIRE_PROBE(probe_builtin_exit, e, tmp);
+	      }
+#endif  
 	}
 	else if (TYPEOF(op) == BUILTINSXP) {
 #ifdef ENABLE_RDT

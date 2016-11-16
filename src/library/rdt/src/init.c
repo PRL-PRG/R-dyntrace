@@ -5,15 +5,16 @@
 #include <R.h>
 #include <Rinternals.h>
 
-#include "rdt_trace.h"
+#include "rdt.h"
 #include <R_ext/Rdynload.h>
 
 
 #define CALLDEF(name, n)  {#name, (DL_FUNC) &name, n}
 
 static const R_CallMethodDef CallEntries[] = {
-    CALLDEF(RdtTrace, 1),
-    CALLDEF(RdtStop, 0)
+    CALLDEF(RdtTrace, 2),
+    CALLDEF(RdtTraceBlock, 3),
+    CALLDEF(RdtNoop, 0)
 };
 
 void R_init_rdt(DllInfo *dll) {

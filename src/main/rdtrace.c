@@ -168,7 +168,7 @@ void rdt_start(const rdt_handler *handler) {
     }     
 }
 
-void rdt_stop(const rdt_handler *handler) {
+void rdt_stop() {
     if (R_Verbose) {	
         REprintf("RDT: rdt_stop()\n");
     }
@@ -178,4 +178,8 @@ void rdt_stop(const rdt_handler *handler) {
     }     
 
     rdt_curr_handler = &rdt_null_handler;
+}
+
+int rdt_is_running() {
+    return rdt_curr_handler != &rdt_null_handler;
 }
