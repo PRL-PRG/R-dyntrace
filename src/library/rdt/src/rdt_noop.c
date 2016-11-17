@@ -1,5 +1,4 @@
-#include <rdtrace.h>
-
+#include <stdlib.h>
 #include "rdt.h"
 
 static void noop_begin() {
@@ -87,12 +86,9 @@ static const rdt_handler noop_rdt_handler = {
     &noop_S3_dispatch_exit       
 };
 
-SEXP RdtNoop() {
-    if (rdt_is_running()) {
-        rdt_stop();    
-    } else {
-        rdt_start(&noop_rdt_handler);
-    }
-    
-    return R_TrueValue; 
+rdt_handler *setup_noop_tracing(SEXP options) {
+    rdt_handler *h = (rdt_handler *)  malloc(sizeof(rdt_handler));
+    memcpy(h, &noop_rdt_handler, sizeof(rdt_handler));
+
+    return h;
 }

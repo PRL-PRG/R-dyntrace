@@ -13,7 +13,7 @@ R_HOME = $(top_builddir)
 R_SHARE_DIR = $(R_HOME)/share
 R_INCLUDE_DIR = $(R_HOME)/include
 
-SOURCES_C = init.c rdt_trace.c rdt_noop.c
+SOURCES_C = init.c rdt.c rdt_trace.c rdt_noop.c
 
 DEPENDS = $(SOURCES_C:.c=.d)
 OBJECTS = $(SOURCES_C:.c=.o)

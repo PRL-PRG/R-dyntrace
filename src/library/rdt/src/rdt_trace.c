@@ -2,27 +2,17 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
-#include <rdtrace.h>
 
 #include "rdt.h"
 
 static FILE *output = NULL;
 static uint64_t last = 0;
 static uint64_t delta = 0;
-static unsigned int depth = 0;
-static rdt_handler *handler = NULL;
-
-static inline void reset() {
-    last = 0;
-    delta = 0;
-    depth = 0;
-}
 
 static inline void print(const char *type, const char *loc, const char *name) {
 	fprintf(output, 
-            "%"PRId64",%d,%s,%s,%s\n", 
+            "%"PRId64",%s,%s,%s\n", 
             delta,
-            depth,
             type, 
             CHKSTR(loc),
             CHKSTR(name));
@@ -33,16 +23,10 @@ static inline void compute_delta() {
 }
 
 static void trace_begin() {
-    fprintf(output, "DELTA,DEPTH,TYPE,LOCATION,NAME\n");
+    fprintf(output, "DELTA,TYPE,LOCATION,NAME\n");
     fflush(output);
 
     last = timestamp();
-}
-
-static void trace_end() {
-    if (handler) {
-        free(handler);
-    }
 }
 
 static void trace_function_entry(const SEXP call, const SEXP op, const SEXP rho) {
@@ -65,13 +49,11 @@ static void trace_function_entry(const SEXP call, const SEXP op, const SEXP rho)
     if (loc) free(loc);
     if (fqfn) free(fqfn);
 	
-    depth++;
     last = timestamp();
 }
 
 static void trace_function_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
     compute_delta();
-    depth -= depth > 0 ? 1 : 0;
     
     const char *type = is_byte_compiled(call) ? "bc-function-exit" : "function-exit";
     const char *name = get_name(call);
@@ -100,13 +82,11 @@ static void trace_builtin_entry(const SEXP call) {
 
     print("builtin-entry", NULL, name);
 
-	depth++;
     last = timestamp();
 }
 
 static void trace_builtin_exit(const SEXP call, const SEXP retval) {
     compute_delta();
-    depth -= depth > 0 ? 1 : 0;
 
     const char *name = get_name(call);
     
@@ -122,13 +102,11 @@ static void trace_force_promise_entry(const SEXP symbol) {
     
     print("promise-entry", NULL, name);
 
-	depth++;
     last = timestamp();
 }
 
 static void trace_force_promise_exit(const SEXP symbol, const SEXP val) {
     compute_delta();
-    depth -= depth > 0 ? 1 : 0;
 
     const char *name = get_name(symbol);
 
@@ -160,7 +138,6 @@ static void trace_error(const SEXP call, const char* message) {
     if (loc) free(loc);
     if (call_str) free(call_str);
     
-    depth = 0;
     last = timestamp();
 }
 
@@ -200,13 +177,11 @@ static void trace_S3_generic_entry(const char *generic, const SEXP object) {
     
     print("s3-generic-entry", NULL, generic);
     
-    depth++;
     last = timestamp();
 }   
 
 static void trace_S3_generic_exit(const char *generic, const SEXP object, const SEXP retval) {
     compute_delta();
-    depth -= depth > 0 ? 1 : 0;
 
     print("s3-generic-exit", NULL, generic);
 
@@ -218,15 +193,12 @@ static void trace_S3_dispatch_entry(const char *generic, const char *clazz, cons
     
     print("s3-dispatch-entry", NULL, get_name(method));
     
-    depth++;
     last = timestamp();
 }
 
 static void trace_S3_dispatch_exit(const char *generic, const char *clazz, const SEXP method, const SEXP object, const SEXP retval) {
     compute_delta();
     
-    depth -= depth > 0 ? 1 : 0;
-
     print("s3-dispatch-exit", NULL, get_name(method));
     
     last = timestamp();
@@ -234,7 +206,7 @@ static void trace_S3_dispatch_exit(const char *generic, const char *clazz, const
 
 static const rdt_handler trace_rdt_handler = {
     &trace_begin,
-    &trace_end,
+    NULL,
     &trace_function_entry,
     &trace_function_exit,
     &trace_builtin_entry,
@@ -254,28 +226,19 @@ static const rdt_handler trace_rdt_handler = {
     &trace_S3_dispatch_exit       
 };
 
-static inline int setup_tracing(const char *filename) {    
+rdt_handler *setup_default_tracing(SEXP options) {
+    const char *filename = get_string(get_named_list_element(options, "filename"));
     output = filename != NULL ? fopen(filename, "wt") : stderr;
+
     if (!output) {
         error("Unable to open %s: %s\n", filename, strerror(errno));
-        return 0;
-    }
-
-    return 1; 
-}
-
-static inline const char *get_string(SEXP sexp) {
-    if (sexp == R_NilValue || TYPEOF(sexp) != STRSXP) {
         return NULL;
     }
 
-    return CHAR(STRING_ELT(sexp, 0));
-}
-
-static inline rdt_handler *create_handler(SEXP disabled_probes) {
     rdt_handler *h = (rdt_handler *)  malloc(sizeof(rdt_handler));
     memcpy(h, &trace_rdt_handler, sizeof(rdt_handler));
     
+    SEXP disabled_probes = get_named_list_element(options, "disabled.probes");
     if (disabled_probes != R_NilValue && TYPEOF(disabled_probes) == STRSXP) {
         for (int i=0; i<LENGTH(disabled_probes); i++) {
             const char *probe = CHAR(STRING_ELT(disabled_probes, i));
@@ -306,55 +269,8 @@ static inline rdt_handler *create_handler(SEXP disabled_probes) {
         }
     }
 
+    last = 0;
+    delta = 0;
+
     return h;
-}
-
-SEXP RdtTrace(SEXP s_filename, SEXP disabled_probes) {
-    if (rdt_is_running()) {
-        error("RDT is already running"); 
-        return R_FalseValue;
-    }
-
-    const char *filename = get_string(s_filename);
-    if (setup_tracing(filename)) {
-        reset();
-        handler = create_handler(disabled_probes); 
-        rdt_start(handler);
-        return R_TrueValue;
-    } else {
-        error("Unable to initialize dynamic tracing");
-        return R_FalseValue;
-    }
-}
-
-void internal_eval(void *data) {
-    void **args = data;
-    SEXP block = (SEXP) args[0];
-    SEXP rho = (SEXP) args[1];
-
-    eval(block, rho);
-}
-
-SEXP RdtTraceBlock(SEXP rho, SEXP s_filename, SEXP disabled_probes) {
-    if (!isEnvironment(rho)) {
-	    error("'rho' must be an environment not %s", type2char(TYPEOF(rho)));
-        return R_FalseValue;
-    }
-
-    if (RdtTrace(s_filename, disabled_probes) == R_TrueValue) {        
-        SEXP block = findVar(install("block"), rho);
-        
-        if (block != NULL && block != R_NilValue) {
-            // this is to prevent long jumps return earlier than needed
-            void *data[2] = {block, rho};
-            R_ToplevelExec(&internal_eval, (void *)data);
-            rdt_stop();
-            return R_TrueValue;
-        } else {
-            error("Unable to find 'block' variable");
-            return R_FalseValue;
-        }
-    } else {
-        return R_FalseValue;
-    }
 }

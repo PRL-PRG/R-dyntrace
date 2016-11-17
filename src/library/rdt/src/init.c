@@ -12,9 +12,7 @@
 #define CALLDEF(name, n)  {#name, (DL_FUNC) &name, n}
 
 static const R_CallMethodDef CallEntries[] = {
-    CALLDEF(RdtTrace, 2),
-    CALLDEF(RdtTraceBlock, 3),
-    CALLDEF(RdtNoop, 0)
+    CALLDEF(Rdt, 3)
 };
 
 void R_init_rdt(DllInfo *dll) {
