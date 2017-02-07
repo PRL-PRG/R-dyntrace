@@ -125,8 +125,7 @@ uint64_t timestamp() {
 #ifdef __MACH__
     t = clock_gettime_nsec_np(CLOCK_MONOTONIC);
 #else
-    struct timespec ts;
-    uint64_t
+    struct timespec ts;    
     clock_gettime(CLOCK_MONOTONIC, &ts);
     t = ts.tv_sec * 1e9 + ts.tv_nsec;
 #endif
