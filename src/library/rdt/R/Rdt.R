@@ -4,3 +4,9 @@ Rdt <- function(block, tracer="default", ...) {
     
     .Call(C_Rdt, tracer, environment(), list(...))
 }
+
+Rdt_deparse <- function(expression) {
+    if (missing(expression)) stop("expression is required")
+    .Call(C_Rdt_deparse, expression)
+}
+

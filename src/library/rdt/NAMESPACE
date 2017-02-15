@@ -2,5 +2,6 @@
 useDynLib(rdt, .registration = TRUE, .fixes = "C_")
 
 export(Rdt)
+export(Rdt_deparse)
 
 export(RdtCalltimes, RdtFlow)

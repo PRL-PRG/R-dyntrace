@@ -13,6 +13,7 @@
 
 static const R_CallMethodDef CallEntries[] = {
     CALLDEF(Rdt, 3),
+    CALLDEF(Rdt_deparse, 1),
     {NULL, NULL, 0}
 };
 
