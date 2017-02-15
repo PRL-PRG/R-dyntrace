@@ -268,7 +268,7 @@ SEXP attribute_hidden do_refcnt(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 /* the following functions can be use internally and for debugging purposes -
    so far they are not used in any actual code */
-SEXP attribute_hidden R_inspect(SEXP x) {
+SEXP /*attribute_hidden*/ R_inspect(SEXP x) {
     inspect_tree(0, x, -1, 5);
     return x;
 }

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include "../../../main/inspect.h"
 
 #include "rdt.h"
 
@@ -29,6 +30,10 @@ static void trace_promises_begin() {
     last = timestamp();
 }
 
+// Triggggerrredd when entering function evaluation.
+// TODO: function name, unique function identifier, arguments and their order, promises
+// ??? where are promises created? and do we care?
+// ??? will address of funciton change? garbage collector?
 static void trace_promises_function_entry(const SEXP call, const SEXP op, const SEXP rho) {
     compute_delta();
 
@@ -45,7 +50,15 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
     }
 
     p_print(type, loc, fqfn);
-    Rprintf("<promise: %p>\n", call);
+
+    R_inspect(call);
+    printf("\n");
+
+    R_inspect(op);
+    printf("\n");
+
+    R_inspect(rho);
+    printf("\n");
 
     if (loc) free(loc);
     if (fqfn) free(fqfn);
@@ -76,6 +89,7 @@ static void trace_promises_function_exit(const SEXP call, const SEXP op, const S
     last = timestamp();
 }
 
+// XXX Probably don't need this?
 static void trace_promises_builtin_entry(const SEXP call) {
     compute_delta();
 
@@ -96,12 +110,25 @@ static void trace_promises_builtin_exit(const SEXP call, const SEXP retval) {
     last = timestamp();
 }
 
+// Promise is being used inside a function body for the first time.
+// TODO name of promise, expression inside promise, value evaluated if available, (in the long term) connected to a function
+// TODO get more info to hook from eval (eval.c::4401 and at least 1 more line)
 static void trace_promises_force_promise_entry(const SEXP symbol) {
     compute_delta();
 
     const char *name = get_name(symbol);
 
     p_print("promise-entry", NULL, name);
+
+
+    R_inspect(symbol);
+    printf("\n");
+
+    //R_inspect(SYMVALUE(symbol));
+    //printf("\n");
+
+//    R_inspect(INTERNAL(symbol));
+//    printf("\n");
 
     last = timestamp();
 }
@@ -113,6 +140,12 @@ static void trace_promises_force_promise_exit(const SEXP symbol, const SEXP val)
 
     p_print("promise-exit", NULL, name);
 
+    R_inspect(symbol);
+    printf("\n");
+
+    R_inspect(val);
+    printf("\n");
+
     last = timestamp();
 }
 
@@ -122,6 +155,12 @@ static void trace_promises_promise_lookup(const SEXP symbol, const SEXP val) {
     const char *name = get_name(symbol);
 
     p_print("promise-lookup", NULL, name);
+
+    R_inspect(symbol);
+    printf("\n");
+
+    R_inspect(val);
+    printf("\n");
 
     last = timestamp();
 }
@@ -173,6 +212,7 @@ static void trace_promises_gc_exit(int gc_count, double vcells, double ncells) {
     last = timestamp();
 }
 
+// TODO what's this?! if method call, then pertinent, otherwise maybe not?
 static void trace_promises_S3_generic_entry(const char *generic, const SEXP object) {
     compute_delta();
 

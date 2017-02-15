@@ -1,4 +1,4 @@
-Rdt <- function(block, tracer="default", ...) {
+Rdt <- function(block, tracer="promises", ...) {
     stopifnot(is.character(tracer) && length(tracer) == 1 && nchar(tracer) > 0)
     if (missing(block)) stop("block is required")
     
