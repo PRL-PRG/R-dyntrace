@@ -51,14 +51,29 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
 
     p_print(type, loc, fqfn);
 
-    R_inspect(call);
+//    printf("INSPECT CALL:\n");
+//    R_inspect(call);
+//    printf("\n");
+
+//    R_inspect(op);
+//    printf("\n");
+
+    printf("INSPECT ARGS:\n");
+    SEXP lc = FORMALS(op);
+    while (lc != R_NilValue) {
+        if (TAG(lc) && TAG(lc) != R_NilValue) {
+            R_inspect(TAG(lc));
+            // the call SEXP only contains AST
+            // to find the actual argument value, we need to search the environment
+            SEXP value = findVar(TAG(lc), rho); // TODO handle default argument values
+            R_inspect(value);
+        }
+        lc = CDR(lc);
+    }
     printf("\n");
 
-    R_inspect(op);
-    printf("\n");
-
-    R_inspect(rho);
-    printf("\n");
+//    R_inspect(rho);
+//    printf("\n");
 
     if (loc) free(loc);
     if (fqfn) free(fqfn);
@@ -113,22 +128,20 @@ static void trace_promises_builtin_exit(const SEXP call, const SEXP retval) {
 // Promise is being used inside a function body for the first time.
 // TODO name of promise, expression inside promise, value evaluated if available, (in the long term) connected to a function
 // TODO get more info to hook from eval (eval.c::4401 and at least 1 more line)
-static void trace_promises_force_promise_entry(const SEXP symbol) {
+static void trace_promises_force_promise_entry(const SEXP symbol, const SEXP rho) {
     compute_delta();
 
     const char *name = get_name(symbol);
 
     p_print("promise-entry", NULL, name);
 
-
-    R_inspect(symbol);
-    printf("\n");
-
-    //R_inspect(SYMVALUE(symbol));
-    //printf("\n");
-
-//    R_inspect(INTERNAL(symbol));
-//    printf("\n");
+    if (TYPEOF(symbol) == PROMSXP) {
+        R_inspect(symbol);
+    }
+    else if (TYPEOF(symbol) == SYMSXP) {
+        SEXP value = findVar(symbol, rho);
+        R_inspect(value);
+    }
 
     last = timestamp();
 }
@@ -143,8 +156,8 @@ static void trace_promises_force_promise_exit(const SEXP symbol, const SEXP val)
     R_inspect(symbol);
     printf("\n");
 
-    R_inspect(val);
-    printf("\n");
+    //R_inspect(val);
+    //printf("\n");
 
     last = timestamp();
 }

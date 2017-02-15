@@ -651,7 +651,7 @@ SEXP eval(SEXP e, SEXP rho)
 		PROTECT(tmp);
 #ifdef ENABLE_RDT
 		if(RDT_IS_ENABLED(probe_force_promise_entry)) {
-			RDT_FIRE_PROBE(probe_force_promise_entry, e);
+			RDT_FIRE_PROBE(probe_force_promise_entry, e, rho);
 		}
 #endif
 		tmp = forcePromise(tmp);
@@ -682,7 +682,7 @@ SEXP eval(SEXP e, SEXP rho)
 	       promise is already evaluated. */
 #ifdef ENABLE_RDT
 		if(RDT_IS_ENABLED(probe_force_promise_entry)) {
-			RDT_FIRE_PROBE(probe_force_promise_entry, e);
+			RDT_FIRE_PROBE(probe_force_promise_entry, e, rho);
 		}
 #endif
 		forcePromise(e);
@@ -1136,7 +1136,10 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 
 #ifdef ENABLE_RDT
     if(RDT_IS_ENABLED(probe_function_entry)) {
-		RDT_FIRE_PROBE(probe_function_entry, call, op, rho);
+        // Are we really supposed to pass the caller environment?
+		// RDT_FIRE_PROBE(probe_function_entry, call, op, rho);
+		// TODO: maybe pass both rho and newrho?
+		RDT_FIRE_PROBE(probe_function_entry, call, op, newrho);
     }
 #endif
 
@@ -4394,7 +4397,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 
 #ifdef ENABLE_RDT
 	if(RDT_IS_ENABLED(probe_force_promise_entry)) {
-		RDT_FIRE_PROBE(probe_force_promise_entry, symbol);
+		RDT_FIRE_PROBE(probe_force_promise_entry, symbol, rho);
 	}
 #endif		
 
