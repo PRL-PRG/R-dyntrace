@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <ctype.h>
 //#include <Defn.h>
 #include "../../../main/inspect.h"
 
@@ -52,15 +53,23 @@ static inline void p_print(const char *type, const char *loc, const char *name) 
 
 static inline char *concat_arguments(const char *arguments[], const int arguments_length, const char* separator) {
     int characters = 0;
-    for (int i = 0; i<arguments_length; i++)
-        characters += strlen(arguments[i]);
+    for (int i = 0; i<arguments_length; i++) {
+        characters += strlen(arguments[i]); /* for the argument name */
+        //if (default_values[i] != NULL)
+        //    characters += strlen(default_values[i]) /* for the expression */ + 1 /* for "=" */;
+    }
 
-    char *argument_string = calloc(1, sizeof(char) * (characters + arguments_length /* commas */ + 1 /* terminator */));
+    char *argument_string = calloc(1, sizeof(char) * (characters + strlen(separator) * (arguments_length - 1)/* commas */ + 1 /* terminator */));
 
     for (int i=0; i<arguments_length; i++) {
         if (i)
             argument_string = strcat(argument_string, separator);
         argument_string = strcat(argument_string, arguments[i]);
+
+        //if (default_values[i] != NULL) {
+        //  argument_string = strcat(argument_string, "=");
+        //  argument_string = strcat(argument_string, default_values[i]);
+        //}
     }
 
     return argument_string;
@@ -70,7 +79,7 @@ static inline char *concat_arguments(const char *arguments[], const int argument
 static inline void print_function(const char *type, const char *loc, const char *name, const char **arguments, const char **default_values, const int arguments_num) {
 
     char *indent_string = mk_indent();
-    char *argument_string = concat_arguments(arguments, arguments_num, /*separator*/ ",");
+    char *argument_string = concat_arguments(arguments, arguments_num, /*separator=*/ ",");
 
     fprintf(output,
         "%s%s @%s %s(%s)\n",
@@ -111,42 +120,40 @@ static inline int count_elements(SEXP list) {
 }
 
 static inline char *trim_string(char *str) {
+    if (str == NULL)
+        return str;
+
     int offset_bow = 0, offset_aft = 0;
     char *aft = str + strlen(str) - 1;
 
     for (; isspace((unsigned char) *(str + offset_bow)); offset_bow++);
     for (; isspace((unsigned char) *(aft + offset_aft)); offset_aft--);
 
-    char *ret = malloc();
+    char *ret = malloc(sizeof(char *) * offset_aft - offset_bow + 1);
+    for (int si = offset_bow, ri = 0; si < offset_aft; si++, ri++)
+        ret[ri] = str[si];
 
-
-    if (*str == NULL)
-        return str;
-
-    char *end = str + strlen(str) - 1;
-    while (isspace((unsigned char) *end))
-        end--;
-
-
+    return ret;
 }
 
-static inline char *strings_of_STRSXP(SEXP str, flatten) {
+static inline char **strings_of_STRSXP(SEXP str, Rboolean flatten) {
+    // Currently I just want to handle a specific case here, so I'll return NULL for everything else.
     if (TYPEOF(str) != STRSXP)
         return NULL;
 
     int size = count_elements(str);
 
-    char **string = malloc((sizeof(char *) * size));
-    for (; str != R_NilValue; str = CDR(str)) {
-        Rprintf(">-----------------------");
+    char **strings = malloc((sizeof(char *) * size));
+    for (int i = 0; i < size; str=CDR(str), i++) {
+        Rprintf(">-----------------------[%d]", i);
 
+        strings[i] = strdup(CHAR(str));
 
-
-        Rprintf("<-----------------------");
+        Rprintf("<-----------------------[%d] %s", i, strings[i]);
     }
 }
 
-static inline int get_arguments(SEXP op, char ***return_arguments, char ***return_default_values) {
+static inline int get_arguments(SEXP op, SEXP rho, char ***return_arguments, char ***return_default_values) {
     SEXP formals = FORMALS(op);
 
     int argument_count = count_elements(formals);
@@ -163,11 +170,15 @@ static inline int get_arguments(SEXP op, char ***return_arguments, char ***retur
             argument_default_values[i] = NULL;
 
             SEXP deparse = deparse1(car, FALSE, 0);
-            argument_default_values = strdup();
-
             R_inspect(deparse);
+
+            //argument_default_values[i] = strdup();
         } else
             argument_default_values[i] = NULL;
+
+        // The call SEXP only contains AST to find the actual argument value, we need to search the environment
+        SEXP value = findVar(TAG(formals), rho);
+        R_inspect(value);
 
         formals = CDR(formals);
     }
@@ -190,56 +201,22 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
     char *loc = get_location(op);
     char *fqfn = NULL;
 
-
-    char **arguments;
-    char **default_values;
-    int argument_count;
-
-    argument_count = get_arguments(op, &arguments, &default_values);
-    //const char *arguments[] = args;
-
-    //for (int i = 0; i < argument_count; i++)
-    //    Rprintf(arguments[i]);
-
-
     if (ns) {
         asprintf(&fqfn, "%s::%s", ns, CHKSTR(name));
     } else {
         fqfn = name != NULL ? strdup(name) : NULL;
     }
 
+    char **arguments;
+    char **default_values;
+    int argument_count;
 
-<<<<<<< HEAD
-//    printf("INSPECT CALL:\n");
-//    R_inspect(call);
-//    printf("\n");
+    argument_count = get_arguments(op, rho, &arguments, &default_values);
 
-//    R_inspect(op);
-//    printf("\n");
+    //printf("INSPECT ARGS:\n");
 
-    printf("INSPECT ARGS:\n");
-    SEXP lc = FORMALS(op);
-    while (lc != R_NilValue) {
-        if (TAG(lc) && TAG(lc) != R_NilValue) {
-            R_inspect(TAG(lc));
-            // the call SEXP only contains AST
-            // to find the actual argument value, we need to search the environment
-            SEXP value = findVar(TAG(lc), rho); // TODO handle default argument values
-            R_inspect(value);
-        }
-        lc = CDR(lc);
-    }
-    printf("\n");
 
-//    R_inspect(rho);
-//    printf("\n");
-
-    if (loc) free(loc);
-    if (fqfn) free(fqfn);
-=======
-    //p_print(type, loc, fqfn);
     print_function(type, loc, name, arguments, default_values, argument_count);
-
 
     printf("-------------------------\n");
     //R_inspect(call);
@@ -247,12 +224,6 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
     //R_inspect(op);
     printf("-------------------------\n");
 
-    //R_inspect(rho);
-    //printf("\n");
-
-    //if (loc) free(loc);
-    //if (fqfn) free(fqfn);
-    //if (indent_string) free(indent_string);
 
     #ifdef RDT_PROMISES_INDENT
     indent++;
@@ -260,7 +231,7 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
 
     if (arguments) free(arguments);
     if (default_values) free(default_values);
->>>>>>> function-trace
+
 
     last = timestamp();
 }
@@ -323,7 +294,6 @@ static void trace_promises_force_promise_entry(const SEXP symbol, const SEXP rho
 
     p_print("promise-entry", NULL, name);
 
-<<<<<<< HEAD
     if (TYPEOF(symbol) == PROMSXP) {
         R_inspect(symbol);
     }
@@ -331,7 +301,7 @@ static void trace_promises_force_promise_entry(const SEXP symbol, const SEXP rho
         SEXP value = findVar(symbol, rho);
         R_inspect(value);
     }
-=======
+
 
     //R_inspect(symbol);
     //printf("\n");
@@ -341,7 +311,7 @@ static void trace_promises_force_promise_entry(const SEXP symbol, const SEXP rho
 
 //    R_inspect(INTERNAL(symbol));
 //    printf("\n");
->>>>>>> function-trace
+
 
     last = timestamp();
 }
