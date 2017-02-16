@@ -95,7 +95,7 @@ static void trace_builtin_exit(const SEXP call, const SEXP retval) {
     last = timestamp();
 }
 
-static void trace_force_promise_entry(const SEXP symbol) {
+static void trace_force_promise_entry(const SEXP symbol, const SEXP rho) {
     compute_delta();
 
     const char *name = get_name(symbol);
