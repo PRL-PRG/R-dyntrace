@@ -52,7 +52,6 @@ static void debug_function_entry(const SEXP call, const SEXP op, const SEXP rho)
     R_inspect(op);
     Rprintf("rho:");
     R_inspect(rho);
-    Rprintf("-------------------------------------------------------------------------------\n");
 
     if (loc) free(loc);
     if (fqfn) free(fqfn);
@@ -83,7 +82,6 @@ static void debug_function_exit(const SEXP call, const SEXP op, const SEXP rho, 
     R_inspect(op);
     Rprintf("rho:");
     R_inspect(rho);
-    Rprintf("-------------------------------------------------------------------------------\n");
 
     if (loc) free(loc);
     if (fqfn) free(fqfn);
@@ -100,7 +98,6 @@ static void debug_builtin_entry(const SEXP call) {
     print("builtin-entry", NULL, name);
     Rprintf("call:\n");
     R_inspect(call);
-    Rprintf("-------------------------------------------------------------------------------\n");
 
     last = timestamp();
 }
@@ -116,7 +113,6 @@ static void debug_builtin_exit(const SEXP call, const SEXP retval) {
     R_inspect(call);
     Rprintf("retval:\n");
     R_inspect(retval);
-    Rprintf("-------------------------------------------------------------------------------\n");
 
     last = timestamp();
 }
@@ -132,7 +128,6 @@ static void debug_force_promise_entry(const SEXP symbol, const SEXP rho) {
     R_inspect(symbol);
     Rprintf("rho:");
     R_inspect(rho);
-    Rprintf("-------------------------------------------------------------------------------\n");
 
     last = timestamp();
 }
@@ -148,7 +143,6 @@ static void debug_force_promise_exit(const SEXP symbol, const SEXP val) {
     R_inspect(symbol);
     Rprintf("val:\n");
     R_inspect(val);
-    Rprintf("-------------------------------------------------------------------------------\n");
 
     last = timestamp();
 }
@@ -164,8 +158,7 @@ static void debug_promise_lookup(const SEXP symbol, const SEXP val) {
     R_inspect(symbol);
     Rprintf("val:\n");
     R_inspect(val);
-    Rprintf("-------------------------------------------------------------------------------\n");
-    
+
     last = timestamp();
 }
 
