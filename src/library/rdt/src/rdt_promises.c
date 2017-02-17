@@ -43,7 +43,7 @@ static inline void p_print(const char *type, const char *loc, const char *name) 
         free(indent_string);
     #else
     printf(output,
-            "%s%s@%s %s\n",
+            "%s%s@%s %s\n",i
             indent_string,
             type,
             CHKSTR(loc),
@@ -182,8 +182,6 @@ static inline int count_elements(SEXP list) {
 //
 //        Rprintf("<-----------------------[%d] %s\n", i, strings[i]);
 //    }
-//
-//
 //}
 
 static inline char *flatten(char *str) {
