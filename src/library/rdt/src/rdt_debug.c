@@ -50,7 +50,7 @@ static void debug_function_entry(const SEXP call, const SEXP op, const SEXP rho)
     R_inspect(call);
     Rprintf("op:\n");
     R_inspect(op);
-    Rprintf("rho:");
+    Rprintf("rho:\n");
     R_inspect(rho);
 
     if (loc) free(loc);
@@ -80,7 +80,7 @@ static void debug_function_exit(const SEXP call, const SEXP op, const SEXP rho, 
     R_inspect(call);
     Rprintf("op:\n");
     R_inspect(op);
-    Rprintf("rho:");
+    Rprintf("rho:\n");
     R_inspect(rho);
 
     if (loc) free(loc);
@@ -126,7 +126,7 @@ static void debug_force_promise_entry(const SEXP symbol, const SEXP rho) {
     print("promise-force-entry", NULL, name);
     Rprintf("call:\n");
     R_inspect(symbol);
-    Rprintf("rho:");
+    Rprintf("rho:\n");
     R_inspect(rho);
 
     last = timestamp();
