@@ -721,7 +721,7 @@ SEXP eval(SEXP e, SEXP rho)
 	if (TYPEOF(op) == SPECIALSXP) {
 #ifdef ENABLE_RDT
               if(RDT_IS_ENABLED(probe_builtin_entry)) {
-                  RDT_FIRE_PROBE(probe_builtin_entry, e);
+                  RDT_FIRE_PROBE(probe_builtin_entry, e, op, rho); // XXX
               }
 #endif                  
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
@@ -744,14 +744,14 @@ SEXP eval(SEXP e, SEXP rho)
 	    vmaxset(vmax);
 #ifdef ENABLE_RDT
 	      if(RDT_IS_ENABLED(probe_builtin_exit)) {
-	          RDT_FIRE_PROBE(probe_builtin_exit, e, tmp);
+	          RDT_FIRE_PROBE(probe_builtin_exit, e, op, rho, tmp); // XXX
 	      }
 #endif  
 	}
 	else if (TYPEOF(op) == BUILTINSXP) {
 #ifdef ENABLE_RDT
               if(RDT_IS_ENABLED(probe_builtin_entry)) {
-                  RDT_FIRE_PROBE(probe_builtin_entry, e);
+                  RDT_FIRE_PROBE(probe_builtin_entry, e, op, rho); // XXX
               }
 #endif                  
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
@@ -784,7 +784,7 @@ SEXP eval(SEXP e, SEXP rho)
 	    vmaxset(vmax);
 #ifdef ENABLE_RDT
 	      if(RDT_IS_ENABLED(probe_builtin_exit)) {
-	          RDT_FIRE_PROBE(probe_builtin_exit, e, tmp);
+	          RDT_FIRE_PROBE(probe_builtin_exit, e, op, rho, tmp); // XXX
 	      }
 #endif                  
 	}
@@ -3697,12 +3697,12 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
   SEXP x = GETSTACK(-2); \
   SEXP y = GETSTACK(-1); \
   if(RDT_IS_ENABLED(probe_builtin_entry)) { \
-      RDT_FIRE_PROBE(probe_builtin_entry, call); \
+      RDT_FIRE_PROBE(probe_builtin_entry, opsym, call, rho); \
   } \
   SEXP tmp = do_fun(call, opval, opsym, x, y,rho); \
   SETSTACK(-2, tmp);	\
   if(RDT_IS_ENABLED(probe_builtin_exit)) { \
-      RDT_FIRE_PROBE(probe_builtin_exit, call, tmp); \
+      RDT_FIRE_PROBE(probe_builtin_exit, opsym, call, rho, tmp); \
   } \
   R_BCNodeStackTop--; \
   NEXT(); \
@@ -3712,7 +3712,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
   SEXP call = VECTOR_ELT(constants, GETOP()); \
   SEXP x = GETSTACK(-2); \
   SEXP y = GETSTACK(-1); \
-  SETSTACK(-2, do_fun(call, opval, opsym, x, y,rho));	\
+  SETSTACK(-2, do_fun(call, opval, opsym, x, y, rho));	\
   R_BCNodeStackTop--; \
   NEXT(); \
 } while(0)
@@ -5655,13 +5655,13 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  if (ftype == BUILTINSXP) {
 #ifdef ENABLE_RDT
               if(RDT_IS_ENABLED(probe_builtin_entry)) {
-                  RDT_FIRE_PROBE(probe_builtin_entry, CALL_FRAME_FUN());
+                  RDT_FIRE_PROBE(probe_builtin_entry, CALL_FRAME_FUN(), code, rho); // XXX
               }
 #endif                  
 	      value = bcEval(code, rho, TRUE);
 #ifdef ENABLE_RDT
 	      if(RDT_IS_ENABLED(probe_builtin_exit)) {
-	          RDT_FIRE_PROBE(probe_builtin_exit, CALL_FRAME_FUN(), value);
+	          RDT_FIRE_PROBE(probe_builtin_exit, CALL_FRAME_FUN(), code, rho, value); // XXX
 	      }
 #endif                  
           }
@@ -5767,13 +5767,13 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    R_Srcref = NULL;
 #ifdef ENABLE_RDT
               if(RDT_IS_ENABLED(probe_builtin_entry)) {
-                  RDT_FIRE_PROBE(probe_builtin_entry, call);
+                  RDT_FIRE_PROBE(probe_builtin_entry, call, fun, rho); // XXX
               }
 #endif                  
 	    value = PRIMFUN(fun) (call, fun, args, rho);
 #ifdef ENABLE_RDT
 	      if(RDT_IS_ENABLED(probe_builtin_exit)) {
-	          RDT_FIRE_PROBE(probe_builtin_exit, call, value);
+	          RDT_FIRE_PROBE(probe_builtin_exit, call, fun, rho, value); // XXX
 	      }
 #endif                  
 	    R_Srcref = oldref;
@@ -5781,13 +5781,13 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	} else {
 #ifdef ENABLE_RDT
               if(RDT_IS_ENABLED(probe_builtin_entry)) {
-                  RDT_FIRE_PROBE(probe_builtin_entry, call);
+                  RDT_FIRE_PROBE(probe_builtin_entry, call, fun, rho); // XXX
               }
 #endif                  
 	    value = PRIMFUN(fun) (call, fun, args, rho);
 #ifdef ENABLE_RDT
 	      if(RDT_IS_ENABLED(probe_builtin_exit)) {
-	          RDT_FIRE_PROBE(probe_builtin_exit, call, value);
+	          RDT_FIRE_PROBE(probe_builtin_exit, call, fun, rho, value); // XXX
 	      }
 #endif                  
 	}

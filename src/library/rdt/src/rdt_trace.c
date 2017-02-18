@@ -75,7 +75,7 @@ static void trace_function_exit(const SEXP call, const SEXP op, const SEXP rho, 
     last = timestamp();
 }
 
-static void trace_builtin_entry(const SEXP call) {
+static void trace_builtin_entry(const SEXP call, const SEXP op, const SEXP rho) {
     compute_delta();
 
     const char *name = get_name(call);
@@ -85,7 +85,7 @@ static void trace_builtin_entry(const SEXP call) {
     last = timestamp();
 }
 
-static void trace_builtin_exit(const SEXP call, const SEXP retval) {
+static void trace_builtin_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
     compute_delta();
 
     const char *name = get_name(call);

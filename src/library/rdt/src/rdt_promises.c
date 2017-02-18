@@ -340,22 +340,24 @@ static void trace_promises_function_exit(const SEXP call, const SEXP op, const S
 }
 
 // XXX Probably don't need this?
-static void trace_promises_builtin_entry(const SEXP call) {
+static void trace_promises_builtin_entry(const SEXP call, const SEXP op, const SEXP rho) {
     compute_delta();
 
     const char *name = get_name(call);
 
-    //p_print("builtin-entry", NULL, name);
+    p_print("bin", NULL, name);
+
+    R_inspect(call);
 
     last = timestamp();
 }
 
-static void trace_promises_builtin_exit(const SEXP call, const SEXP retval) {
+static void trace_promises_builtin_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
     compute_delta();
 
     const char *name = get_name(call);
 
-    //p_print("builtin-exit", NULL, name);
+    p_print("bin", NULL, name);
 
     last = timestamp();
 }

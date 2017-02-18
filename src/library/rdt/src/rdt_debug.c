@@ -89,7 +89,7 @@ static void debug_function_exit(const SEXP call, const SEXP op, const SEXP rho, 
     last = timestamp();
 }
 
-static void debug_builtin_entry(const SEXP call) {
+static void debug_builtin_entry(const SEXP call, const SEXP op, const SEXP rho) {
     compute_delta();
 
     const char *name = get_name(call);
@@ -98,11 +98,15 @@ static void debug_builtin_entry(const SEXP call) {
     print("builtin-entry", NULL, name);
     Rprintf("call:\n");
     R_inspect(call);
+    Rprintf("op:\n");
+    R_inspect(op);
+    Rprintf("rho:\n");
+    R_inspect(rho);
 
     last = timestamp();
 }
 
-static void debug_builtin_exit(const SEXP call, const SEXP retval) {
+static void debug_builtin_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
     compute_delta();
 
     const char *name = get_name(call);
@@ -111,6 +115,10 @@ static void debug_builtin_exit(const SEXP call, const SEXP retval) {
     print("builtin-exit", NULL, name);
     Rprintf("call:\n");
     R_inspect(call);
+    Rprintf("op:\n");
+    R_inspect(op);
+    Rprintf("rho:\n");
+    R_inspect(rho);
     Rprintf("retval:\n");
     R_inspect(retval);
 
@@ -121,10 +129,10 @@ static void debug_force_promise_entry(const SEXP symbol, const SEXP rho) {
     compute_delta();
 
     const char *name = get_name(symbol);
-    
+
     Rprintf("-------------------------------------------------------------------------------\n");
     print("promise-force-entry", NULL, name);
-    Rprintf("call:\n");
+    Rprintf("symbol:\n");
     R_inspect(symbol);
     Rprintf("rho:\n");
     R_inspect(rho);
