@@ -10,19 +10,19 @@ static void noop_function_entry(const SEXP call, const SEXP op, const SEXP rho) 
 static void noop_function_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
 }
 
-static void noop_builtin_entry(const SEXP call) {
+static void noop_builtin_entry(const SEXP call, const SEXP op, const SEXP rho) {
 }
 
-static void noop_builtin_exit(const SEXP call, const SEXP retval) {
+static void noop_builtin_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
 }
 
 static void noop_force_promise_entry(const SEXP symbol, const SEXP rho) {
 }
 
-static void noop_force_promise_exit(const SEXP symbol, const SEXP val) {
+static void noop_force_promise_exit(const SEXP symbol, const SEXP rho, const SEXP val) {
 }
 
-static void noop_promise_lookup(const SEXP symbol, const SEXP val) {
+static void noop_promise_lookup(const SEXP symbol, const SEXP rho, const SEXP val) {
 }
 
 static void noop_error(const SEXP call, const char* message) {

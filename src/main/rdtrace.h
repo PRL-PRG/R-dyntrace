@@ -21,8 +21,8 @@ typedef struct rdt_handler {
     void (*probe_builtin_entry)(const SEXP call);
     void (*probe_builtin_exit)(const SEXP call, const SEXP retval);
     void (*probe_force_promise_entry)(const SEXP symbol, const SEXP rho);
-    void (*probe_force_promise_exit)(const SEXP symbol, const SEXP val);
-    void (*probe_promise_lookup)(const SEXP symbol, const SEXP val);
+    void (*probe_force_promise_exit)(const SEXP symbol, const SEXP rho, const SEXP val);
+    void (*probe_promise_lookup)(const SEXP symbol, const SEXP rho, const SEXP val);
     void (*probe_error)(const SEXP call, const char* message);
     void (*probe_vector_alloc)(int sexptype, long length, long bytes, const char* srcref);
     void (*probe_eval_entry)(SEXP e, SEXP rho);

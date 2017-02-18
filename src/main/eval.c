@@ -657,7 +657,7 @@ SEXP eval(SEXP e, SEXP rho)
 		tmp = forcePromise(tmp);
 #ifdef ENABLE_RDT
 		if(RDT_IS_ENABLED(probe_force_promise_exit)) {
-			RDT_FIRE_PROBE(probe_force_promise_exit, e, tmp);
+			RDT_FIRE_PROBE(probe_force_promise_exit, e, rho, tmp);
 		}
 #endif		
 		UNPROTECT(1);
@@ -666,7 +666,7 @@ SEXP eval(SEXP e, SEXP rho)
 		tmp = PRVALUE(tmp);
 #ifdef ENABLE_RDT
 		if(RDT_IS_ENABLED(probe_promise_lookup)) {
-			RDT_FIRE_PROBE(probe_promise_lookup, e, tmp);
+			RDT_FIRE_PROBE(probe_promise_lookup, e, rho, tmp);
 		}
 #endif
 	    }
@@ -688,7 +688,7 @@ SEXP eval(SEXP e, SEXP rho)
 		forcePromise(e);
 #ifdef ENABLE_RDT
 		if(RDT_IS_ENABLED(probe_force_promise_exit)) {
-			RDT_FIRE_PROBE(probe_force_promise_exit, e, PRVALUE(e));
+			RDT_FIRE_PROBE(probe_force_promise_exit, e, rho, PRVALUE(e));
 		}
 #endif		
 	}
@@ -4405,7 +4405,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 
 #ifdef ENABLE_RDT
 	if(RDT_IS_ENABLED(probe_force_promise_exit)) {
-		RDT_FIRE_PROBE(probe_force_promise_exit, symbol, value);
+		RDT_FIRE_PROBE(probe_force_promise_exit, symbol, rho, value);
 	}
 #endif		
 
