@@ -187,38 +187,38 @@ static inline void print_function(const char *type, const char *loc, const char 
         free(promises_string);
 }
 
-static inline void print_function_bare(const char *type, const char *loc, const char *name, const char *function_id, const char **arguments, int arguments_num) {
-#ifdef RDT_PROMISES_INDENT
-    char *indent_string = mk_indent();
-#endif
-
-    char *argument_string = concat_arguments(arguments, /* default_values, promises, */ arguments_num);
-    //char *promises_string = concat_promises(arguments, /* default_values,*/ promises, arguments_num);
-
-    fprintf(output,
-#ifdef RDT_PROMISES_INDENT
-            "%s%s loc(%s) function(%s=%s) params(%s)\n",
-            indent_string,
-#else
-            "%s loc(%s) function(%s=%s) params(%s)\n",
-#endif
-            type,
-            CHKSTR(loc),
-            CHKSTR(name),
-            CHKSTR(function_id),
-            argument_string
-            //promises_string
-    );
-
-#ifdef RDT_PROMISES_INDENT
-    if (indent_string)
-        free(indent_string);
-#endif
-    if (argument_string)
-        free(argument_string);
-    //if (promises_string)
-    //    free(promises_string);
-}
+//static inline void print_function_bare(const char *type, const char *loc, const char *name, const char *function_id, const char **arguments, int arguments_num) {
+//#ifdef RDT_PROMISES_INDENT
+//    char *indent_string = mk_indent();
+//#endif
+//
+//    char *argument_string = concat_arguments(arguments, /* default_values, promises, */ arguments_num);
+//    //char *promises_string = concat_promises(arguments, /* default_values,*/ promises, arguments_num);
+//
+//    fprintf(output,
+//#ifdef RDT_PROMISES_INDENT
+//            "%s%s loc(%s) function(%s=%s) params(%s)\n",
+//            indent_string,
+//#else
+//            "%s loc(%s) function(%s=%s) params(%s)\n",
+//#endif
+//            type,
+//            CHKSTR(loc),
+//            CHKSTR(name),
+//            CHKSTR(function_id),
+//            argument_string
+//            //promises_string
+//    );
+//
+//#ifdef RDT_PROMISES_INDENT
+//    if (indent_string)
+//        free(indent_string);
+//#endif
+//    if (argument_string)
+//        free(argument_string);
+//    //if (promises_string)
+//    //    free(promises_string);
+//}
 
 // TODO remove
 static inline void compute_delta() {
@@ -337,7 +337,7 @@ static inline int get_arguments(SEXP op, SEXP rho, char ***return_arguments, /*c
 
     char **arguments = malloc((sizeof(char *) * argument_count));
     //char **default_values = malloc ((sizeof(char *) * argument_count));
-    char **promises = malloc ((sizeof(char *) * argument_count));
+    char **promises = malloc((sizeof(char *) * argument_count));
 
     for (int i=0; i<argument_count; i++, formals = CDR(formals)) {
         // Retrieve the argument name.
@@ -509,13 +509,9 @@ static void trace_promises_force_promise_entry(const SEXP symbol, const SEXP rho
     const char *id;
 
     if (TYPEOF(symbol) == PROMSXP) {
-        //R_inspect(symbol);
-        //asprintf(&symbol_id, "[%p]", symbol);
         id = make_promise_id(symbol);
     } else if (TYPEOF(symbol) == SYMSXP) {
         SEXP promise_expression = findVar(symbol, rho);
-        //R_inspect(promise_expression);
-        //asprintf(&promise_id, "[%p]", promise_expression);
         id = make_promise_id(symbol);
     }
 
@@ -530,6 +526,13 @@ static void trace_promises_force_promise_exit(const SEXP symbol, const SEXP rho,
     const char *name = get_name(symbol);
     const char *id = NULL;
 
+    if (TYPEOF(symbol) == PROMSXP) {
+        id = make_promise_id(symbol);
+    } else if (TYPEOF(symbol) == SYMSXP) {
+        SEXP promise_expression = findVar(symbol, rho);
+        id = make_promise_id(symbol);
+    }
+
     print_promise("<= prom", NULL, name, id);
 
     last = timestamp();
@@ -540,6 +543,13 @@ static void trace_promises_promise_lookup(const SEXP symbol, const SEXP rho, con
 
     const char *name = get_name(symbol);
     const char *id = NULL;
+
+    if (TYPEOF(symbol) == PROMSXP) {
+        id = make_promise_id(symbol);
+    } else if (TYPEOF(symbol) == SYMSXP) {
+        SEXP promise_expression = findVar(symbol, rho);
+        id = make_promise_id(symbol);
+    }
 
     print_promise("<> lkup", NULL, name, id);
 
