@@ -140,7 +140,7 @@ static void debug_force_promise_entry(const SEXP symbol, const SEXP rho) {
     last = timestamp();
 }
 
-static void debug_force_promise_exit(const SEXP symbol, const SEXP val) {
+static void debug_force_promise_exit(const SEXP symbol, const SEXP rho, const SEXP val) {
     compute_delta();
 
     const char *name = get_name(symbol);
@@ -149,13 +149,15 @@ static void debug_force_promise_exit(const SEXP symbol, const SEXP val) {
     print("promise-force-exit", NULL, name);
     Rprintf("symbol:\n");
     R_inspect(symbol);
+    Rprintf("rho:\n");
+    R_inspect(rho);
     Rprintf("val:\n");
     R_inspect(val);
 
     last = timestamp();
 }
 
-static void debug_promise_lookup(const SEXP symbol, const SEXP val) {
+static void debug_promise_lookup(const SEXP symbol, const SEXP rho, const SEXP val) {
     compute_delta();
 
     const char *name = get_name(symbol);
@@ -164,6 +166,8 @@ static void debug_promise_lookup(const SEXP symbol, const SEXP val) {
     print("promise-lookup", NULL, name);
     Rprintf("symbol:\n");
     R_inspect(symbol);
+    Rprintf("rho:\n");
+    R_inspect(rho);
     Rprintf("val:\n");
     R_inspect(val);
 

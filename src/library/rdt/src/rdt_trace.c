@@ -105,7 +105,7 @@ static void trace_force_promise_entry(const SEXP symbol, const SEXP rho) {
     last = timestamp();
 }
 
-static void trace_force_promise_exit(const SEXP symbol, const SEXP val) {
+static void trace_force_promise_exit(const SEXP symbol, const SEXP rho, const SEXP val) {
     compute_delta();
 
     const char *name = get_name(symbol);
@@ -115,7 +115,7 @@ static void trace_force_promise_exit(const SEXP symbol, const SEXP val) {
     last = timestamp();
 }
 
-static void trace_promise_lookup(const SEXP symbol, const SEXP val) {
+static void trace_promise_lookup(const SEXP symbol, const SEXP rho, const SEXP val) {
     compute_delta();
 
     const char *name = get_name(symbol);
