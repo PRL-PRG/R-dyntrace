@@ -129,10 +129,9 @@ static inline char *concat_arguments(const char **arguments, /*const char **defa
 static inline char *concat_promises(const char **arguments, /*const char **default_values,*/ const char **promises, int arguments_length) {
     int characters = 0;
     for (int i = 0; i<arguments_length; i++) {
-        characters += strlen(arguments[i]); /* for the argument name */
         //if (default_values[i] != NULL)
         //    characters += strlen(default_values[i]) /* for the expression */ + 1 /* for "=" */;
-        characters += strlen(promises[i]) + 1; /* 1 is for "=" */
+        characters += strlen(arguments[i]) + 1 + strlen(promises[i]); /* 1 is for "=" */
     }
 
     char *promises_string = calloc(1, sizeof(char) * (characters + 1 * (arguments_length - 1)/* commas */ + 1 /* terminator */));
@@ -150,6 +149,8 @@ static inline char *concat_promises(const char **arguments, /*const char **defau
         //  promises_string = strcat(promises_string, default_values[i]);
         //}
     }
+
+    //Rprintf("String %s (%i vs %i)", promises_string, strlen(promises_string), (sizeof(char) * (characters + 1 * (arguments_length - 1) + 1)));
 
     return promises_string;
 }
@@ -398,7 +399,7 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
     int argument_count;
 
     argument_count = get_arguments(op, rho, &arguments, /*&default_values,*/ &promises);
-    print_function(type, loc, name, id, (const char **)arguments, /*default_values,*/ (const char **)promises, argument_count);
+    print_function(type, loc, name, id, /*(const char **)*/arguments, /*default_values,*/ /*(const char **)*/ promises, argument_count);
 
     #ifdef RDT_PROMISES_INDENT
     indent++;
@@ -512,7 +513,7 @@ static void trace_promises_force_promise_entry(const SEXP symbol, const SEXP rho
         id = make_promise_id(symbol);
     } else if (TYPEOF(symbol) == SYMSXP) {
         SEXP promise_expression = findVar(symbol, rho);
-        id = make_promise_id(symbol);
+        id = make_promise_id(promise_expression);
     }
 
     print_promise("=> prom", NULL, name, id);
@@ -530,7 +531,7 @@ static void trace_promises_force_promise_exit(const SEXP symbol, const SEXP rho,
         id = make_promise_id(symbol);
     } else if (TYPEOF(symbol) == SYMSXP) {
         SEXP promise_expression = findVar(symbol, rho);
-        id = make_promise_id(symbol);
+        id = make_promise_id(promise_expression);
     }
 
     print_promise("<= prom", NULL, name, id);
@@ -548,7 +549,7 @@ static void trace_promises_promise_lookup(const SEXP symbol, const SEXP rho, con
         id = make_promise_id(symbol);
     } else if (TYPEOF(symbol) == SYMSXP) {
         SEXP promise_expression = findVar(symbol, rho);
-        id = make_promise_id(symbol);
+        id = make_promise_id(promise_expression);
     }
 
     print_promise("<> lkup", NULL, name, id);
