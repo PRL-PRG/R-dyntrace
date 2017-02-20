@@ -320,12 +320,18 @@ static inline int count_elements(SEXP list) {
 // TODO proper SEXP hashmap
 
 static inline char *make_promise_id(SEXP promise) {
+    if (promise == R_NilValue)
+        return "<unknown>";
+    if (TYPEOF(promise) != PROMSXP)
+        return "<unavailable>";
     char *promise_id = NULL;
     asprintf(&promise_id, "<P%p>", promise);
     return promise_id;
 }
 
 static inline char *make_function_id(SEXP function) {
+    if (function == R_NilValue)
+        return "<unknown>";
     char *function_id = NULL;
     asprintf(&function_id, "<F%p>", function);
     return function_id;
