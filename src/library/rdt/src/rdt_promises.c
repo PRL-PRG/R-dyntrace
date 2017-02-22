@@ -337,6 +337,19 @@ static inline char *make_function_id(SEXP function) {
     return function_id;
 }
 
+// Wraper for findVar. Does not look up the value if it already is PROMSXP.
+static SEXP get_promise(SEXP var, SEXP rho) {
+    SEXP prom = R_NilValue;
+
+    if (TYPEOF(var) == PROMSXP) {
+        prom = var;
+    } else if (TYPEOF(var) == SYMSXP) {
+        prom = findVar(var, rho);
+    }
+
+    return prom;
+}
+
 static inline int get_arguments(SEXP op, SEXP rho, char ***return_arguments, /*char ***return_default_values,*/ char ***return_promises) {
     SEXP formals = FORMALS(op);
 
@@ -367,7 +380,7 @@ static inline int get_arguments(SEXP op, SEXP rho, char ***return_arguments, /*c
 
         // Retrieve the promise for the argument.
         // The call SEXP only contains AST to find the actual argument value, we need to search the environment.
-        SEXP promise_expression = findVar(argument_expression, rho);
+        SEXP promise_expression = get_promise(argument_expression, rho);
         //asprintf(&promises[i], "[%p]", promise_expression);
         promises[i] = make_promise_id(promise_expression);
         //Rprintf("promise=%s\n",promises[i]);
@@ -515,12 +528,8 @@ static void trace_promises_force_promise_entry(const SEXP symbol, const SEXP rho
     const char *name = get_name(symbol);
     const char *id;
 
-    if (TYPEOF(symbol) == PROMSXP) {
-        id = make_promise_id(symbol);
-    } else if (TYPEOF(symbol) == SYMSXP) {
-        SEXP promise_expression = findVar(symbol, rho);
-        id = make_promise_id(promise_expression);
-    }
+    SEXP promise_expression = get_promise(symbol, rho);
+    id = make_promise_id(promise_expression);
 
     print_promise("=> prom", NULL, name, id);
 
@@ -536,7 +545,7 @@ static void trace_promises_force_promise_exit(const SEXP symbol, const SEXP rho,
     if (TYPEOF(symbol) == PROMSXP) {
         id = make_promise_id(symbol);
     } else if (TYPEOF(symbol) == SYMSXP) {
-        SEXP promise_expression = findVar(symbol, rho);
+        SEXP promise_expression = get_promise(symbol, rho);
         id = make_promise_id(promise_expression);
     }
 
@@ -554,7 +563,7 @@ static void trace_promises_promise_lookup(const SEXP symbol, const SEXP rho, con
     if (TYPEOF(symbol) == PROMSXP) {
         id = make_promise_id(symbol);
     } else if (TYPEOF(symbol) == SYMSXP) {
-        SEXP promise_expression = findVar(symbol, rho);
+        SEXP promise_expression = get_promise(symbol, rho);
         id = make_promise_id(promise_expression);
     }
 
