@@ -19,7 +19,7 @@ static int indent;
 
 static inline char *mk_indent() {
     int indent_length = indent * 4;
-    char *indent_string = malloc(sizeof(char) * (indent_length + 1));
+    char *indent_string = (char*) malloc(sizeof(char) * (indent_length + 1));
     for (int i = 0; i<indent_length; i++)
         indent_string[i] = ' ';
     indent_string[indent_length] = '\0';
@@ -99,7 +99,7 @@ static inline void print_promise(const char *type, const char *loc, const char *
 #endif
 }
 
-static inline char *concat_arguments(const char **arguments, /*const char **default_values, const char **promises,*/ int arguments_length) {
+static inline char *concat_arguments(const char *const*arguments, /*const char **default_values, const char **promises,*/ int arguments_length) {
     int characters = 0;
     for (int i = 0; i<arguments_length; i++) {
         characters += strlen(arguments[i]); /* for the argument name */
@@ -108,7 +108,7 @@ static inline char *concat_arguments(const char **arguments, /*const char **defa
         //characters += strlen(promises[i]);
     }
 
-    char *argument_string = calloc(1, sizeof(char) * (characters + 1 * (arguments_length - 1)/* commas */ + 1 /* terminator */));
+    char *argument_string = (char*) calloc(1, sizeof(char) * (characters + 1 * (arguments_length - 1)/* commas */ + 1 /* terminator */));
 
     for (int i=0; i<arguments_length; i++) {
         if (i)
@@ -126,7 +126,7 @@ static inline char *concat_arguments(const char **arguments, /*const char **defa
     return argument_string;
 }
 
-static inline char *concat_promises(const char **arguments, /*const char **default_values,*/ const char **promises, int arguments_length) {
+static inline char *concat_promises(const char *const*arguments, /*const char **default_values,*/ const char *const*promises, int arguments_length) {
     int characters = 0;
     for (int i = 0; i<arguments_length; i++) {
         //if (default_values[i] != NULL)
@@ -134,7 +134,7 @@ static inline char *concat_promises(const char **arguments, /*const char **defau
         characters += strlen(arguments[i]) + 1 + strlen(promises[i]); /* 1 is for "=" */
     }
 
-    char *promises_string = calloc(1, sizeof(char) * (characters + 1 * (arguments_length - 1)/* commas */ + 1 /* terminator */));
+    char *promises_string = (char*) calloc(1, sizeof(char) * (characters + 1 * (arguments_length - 1)/* commas */ + 1 /* terminator */));
 
     for (int i=0; i<arguments_length; i++) {
         if (i)
@@ -155,7 +155,7 @@ static inline char *concat_promises(const char **arguments, /*const char **defau
     return promises_string;
 }
 
-static inline void print_function(const char *type, const char *loc, const char *name, const char *function_id, const char **arguments, /*const char **default_values,*/ const char **promises, const int arguments_num) {
+static inline void print_function(const char *type, const char *loc, const char *name, const char *function_id, const char *const*arguments, /*const char **default_values,*/ const char *const*promises, const int arguments_num) {
 #ifdef RDT_PROMISES_INDENT
     char *indent_string = mk_indent();
 #endif
@@ -321,9 +321,9 @@ static inline int count_elements(SEXP list) {
 
 static inline char *make_promise_id(SEXP promise) {
     if (promise == R_NilValue)
-        return "<unknown>";
+        return strdup("<unknown>");
     if (TYPEOF(promise) != PROMSXP)
-        return "<unavailable>";
+        return strdup("<unavailable>");
     char *promise_id = NULL;
     asprintf(&promise_id, "<P%p>", promise);
     return promise_id;
@@ -331,7 +331,7 @@ static inline char *make_promise_id(SEXP promise) {
 
 static inline char *make_function_id(SEXP function) {
     if (function == R_NilValue)
-        return "<unknown>";
+        return strdup("<unknown>");
     char *function_id = NULL;
     asprintf(&function_id, "<F%p>", function);
     return function_id;
@@ -355,9 +355,9 @@ static inline int get_arguments(SEXP op, SEXP rho, char ***return_arguments, /*c
 
     int argument_count = count_elements(formals);
 
-    char **arguments = malloc((sizeof(char *) * argument_count));
+    char **arguments = (char**) malloc((sizeof(char *) * argument_count));
     //char **default_values = malloc ((sizeof(char *) * argument_count));
-    char **promises = malloc((sizeof(char *) * argument_count));
+    char **promises = (char**) malloc((sizeof(char *) * argument_count));
 
     for (int i=0; i<argument_count; i++, formals = CDR(formals)) {
         // Retrieve the argument name.
@@ -391,6 +391,8 @@ static inline int get_arguments(SEXP op, SEXP rho, char ***return_arguments, /*c
     (*return_promises) = promises;
     return argument_count;
 }
+
+
 
 // Triggggerrredd when entering function evaluation.
 // TODO: function name, unique function identifier, arguments and their order, promises
@@ -430,16 +432,25 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
     if (fqfn)
         free(fqfn);
 
-    if (arguments)
+    if (arguments) {
+        for (int i = 0; i < argument_count; i++) {
+            free(arguments[i]);
+        }
         free(arguments);
+    }
+
     //Rprintf("<o.o<\n");
 
     //if (default_values)
     //    free(default_values);
     //Rprintf("^o.o^\n");
 
-    if (promises)
+    if (promises) {
+        for (int i = 0; i < argument_count; i++) {
+            free(promises[i]);
+        }
         free(promises);
+    }
     //Rprintf(">o.o>\n");
 
     last = timestamp();

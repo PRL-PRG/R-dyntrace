@@ -48,6 +48,10 @@ extern const rdt_handler *rdt_curr_handler;
 
 #define CHKSTR(s) ((s) == NULL ? "<unknown>" : (s))
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 const char *get_ns_name(SEXP op);
 const char *get_name(SEXP call);
 char *get_location(SEXP op);
@@ -60,5 +64,8 @@ SEXP get_named_list_element(const SEXP list, const char *name);
 // Returns a monotonic timestamp in nanoseconds.
 uint64_t timestamp();
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif	/* _RDTRACE_H */
