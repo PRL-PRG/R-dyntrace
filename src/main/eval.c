@@ -1214,7 +1214,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 
 #ifdef ENABLE_RDT
     if(RDT_IS_ENABLED(probe_function_exit)) {
-		RDT_FIRE_PROBE(probe_function_exit, call, op, rho, tmp);
+		RDT_FIRE_PROBE(probe_function_exit, call, op, newrho, tmp);
     }
 #endif
 
