@@ -50,6 +50,8 @@ include $(R_HOME)/etc${R_ARCH}/Makeconf
 include $(top_srcdir)/share/make/shlib.mk
 LTO = @LTO@
 
+SHLIB_LD = $(CXX)
+
 mostlyclean: clean
 clean:
 	@-rm -rf .libs _libs
