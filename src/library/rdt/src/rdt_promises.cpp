@@ -400,7 +400,7 @@ static void trace_promises_function_exit(const SEXP call, const SEXP op, const S
     compute_delta();
 
     #ifdef RDT_PROMISES_INDENT
-    indent--;
+    indent -= TAB_WIDTH;
     #endif
 
     const char *type = is_byte_compiled(call) ? "<= bcod" : "<= func";
