@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
 //#include <Defn.h>
 
 extern "C" {
@@ -35,7 +36,7 @@ static int indent;
 
 // Function call stack (may be useful)
 // Whenever R makes a function call, we generate a function ID and store that ID on top of the stack
-// so that we know where we are (e.g. when printing function ID at function_exit hook
+// so that we know where we are (e.g. when printing function ID at function_exit hook)
 
 static stack<rid_t, vector<rid_t>> fun_stack;
 
@@ -133,20 +134,21 @@ static string concat_promises(vector<string> const& arguments, /*const char **de
     return promises_string;
 }
 
-static inline void print_function(const char *type, const char *loc, const char *name, rid_t function_id, vector<string> const& arguments, /*const char **default_values,*/ vector<rid_t> const& promises, const int arguments_num) {
+static inline void print_function(const char *type, const char *loc, const char *name, rid_t function_id, rid_t call_id, vector<string> const& arguments, /*const char **default_values,*/ vector<rid_t> const& promises, const int arguments_num) {
     string argument_string = concat_arguments(arguments, /* default_values, promises, */ arguments_num);
     string promises_string = concat_promises(arguments, /* default_values,*/ promises, arguments_num);
 
     fprintf(output,
 #ifdef RDT_PROMISES_INDENT
-        "%*s%s loc(%s) function(%s=%d) params(%s) promises(%s)\n",
+        "%*s%s loc(%s) call(%d) function(%s=%#x) params(%s) promises(%s)\n",
         indent, // http://stackoverflow.com/a/9448093/6846474
         "",
 #else
-        "%s loc(%s) function(%s=%s) params(%s) promises(%s)\n",
+        "%s loc(%s) call(%d) function(%s=%#x) params(%s) promises(%s)\n",
 #endif
         type,
         CHKSTR(loc),
+        call_id,
         CHKSTR(name),
         function_id,
         argument_string.c_str(),
@@ -285,9 +287,11 @@ static inline int count_elements(SEXP list) {
 
 // TODO proper SEXP hashmap
 
-static inline rid_t get_promise_id(SEXP promise) {
-    static rid_t id = 0;
+static inline rid_t get_sexp_address(SEXP e) {
+    return (rid_t)e;
+}
 
+static inline rid_t get_promise_id(SEXP promise) {
     if (promise == R_NilValue)
         return RID_INVALID;
     if (TYPEOF(promise) != PROMSXP)
@@ -295,7 +299,12 @@ static inline rid_t get_promise_id(SEXP promise) {
 
     // A new promise is always created for each argument.
     // Even if the argument is already a promise passed from the caller, it gets re-wrapped.
-    return (rid_t)promise;
+    return get_sexp_address(promise);
+}
+
+static inline rid_t get_function_id(SEXP func) {
+    assert(TYPEOF(func) == CLOSXP);
+    return get_sexp_address(func);
 }
 
 static inline rid_t make_funcall_id(SEXP function) {
@@ -366,7 +375,8 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
     const char *type = is_byte_compiled(call) ? "=> bcod" : "=> func";
     const char *name = get_name(call);
     const char *ns = get_ns_name(op);
-    rid_t id = make_funcall_id(op);
+    rid_t fn_id = get_function_id(op);
+    rid_t call_id = make_funcall_id(op);
     char *loc = get_location(op);
     char *fqfn = NULL;
 
@@ -377,7 +387,7 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
     }
 
     // Push function ID on function stack
-    fun_stack.push(id);
+    fun_stack.push(call_id);
 
     vector<string> arguments;
     //char **default_values;
@@ -385,7 +395,7 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
     int argument_count;
 
     argument_count = get_arguments(op, rho, arguments, /*&default_values,*/ promises);
-    print_function(type, loc, fqfn, id, /*(const char **)*/arguments, /*default_values,*/ /*(const char **)*/ promises, argument_count);
+    print_function(type, loc, fqfn, fn_id, call_id, /*(const char **)*/arguments, /*default_values,*/ /*(const char **)*/ promises, argument_count);
 
     #ifdef RDT_PROMISES_INDENT
     indent += TAB_WIDTH;
@@ -417,7 +427,8 @@ static void trace_promises_function_exit(const SEXP call, const SEXP op, const S
     const char *type = is_byte_compiled(call) ? "<= bcod" : "<= func";
     const char *name = get_name(call);
     const char *ns = get_ns_name(op);
-    rid_t id = fun_stack.top();
+    rid_t fn_id = get_function_id(op);
+    rid_t call_id = fun_stack.top();
     char *loc = get_location(op);
     char *fqfn = NULL;
 
@@ -433,7 +444,7 @@ static void trace_promises_function_exit(const SEXP call, const SEXP op, const S
     int argument_count;
 
     argument_count = get_arguments(op, rho, arguments, /*&default_values,*/ promises);
-    print_function(type, loc, name, id, arguments, /*default_values,*/ promises, argument_count);
+    print_function(type, loc, name, fn_id, call_id, arguments, /*default_values,*/ promises, argument_count);
 
     // Pop current function ID
     fun_stack.pop();
@@ -459,7 +470,7 @@ static void trace_promises_builtin_entry(const SEXP call, const SEXP op, const S
     compute_delta();
 
     const char *name = get_name(call);
-    rid_t id = make_funcall_id(op);
+    rid_t id = get_function_id(op);
 
     print_builtin("=> b-in", NULL, name, id);
 
@@ -472,7 +483,7 @@ static void trace_promises_builtin_exit(const SEXP call, const SEXP op, const SE
     compute_delta();
 
     const char *name = get_name(call);
-    rid_t id = make_funcall_id(op);
+    rid_t id = get_function_id(op);
 
     print_builtin("<= b-in", NULL, name, id);
 
