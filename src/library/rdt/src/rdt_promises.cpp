@@ -1,5 +1,6 @@
 #include <vector>
 #include <string>
+#include <stack>
 #include <unordered_map>
 
 #include <errno.h>
@@ -31,6 +32,13 @@ static uint64_t last = 0;
 static uint64_t delta = 0;
 
 static int indent;
+
+// Function call stack (may be useful)
+// Whenever R makes a function call, we generate a function ID and store that ID on top of the stack
+// so that we know where we are (e.g. when printing function ID at function_exit hook
+
+static stack<rid_t, vector<rid_t>> fun_stack;
+
 
 // XXX probably remove
 static inline void p_print(const char *type, const char *loc, const char *name) {
@@ -277,7 +285,7 @@ static inline int count_elements(SEXP list) {
 
 // TODO proper SEXP hashmap
 
-static inline rid_t make_promise_id(SEXP promise) {
+static inline rid_t get_promise_id(SEXP promise) {
     static rid_t id = 0;
 
     if (promise == R_NilValue)
@@ -339,7 +347,7 @@ static inline int get_arguments(SEXP op, SEXP rho, vector<string> & arguments, /
         // The call SEXP only contains AST to find the actual argument value, we need to search the environment.
         SEXP promise_expression = get_promise(argument_expression, rho);
         //asprintf(&promises[i], "[%p]", promise_expression);
-        promises.push_back(make_promise_id(promise_expression));
+        promises.push_back(get_promise_id(promise_expression));
         //Rprintf("promise=%s\n",promises[i]);
     }
 
@@ -367,6 +375,9 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
     } else {
         fqfn = name != NULL ? strdup(name) : NULL;
     }
+
+    // Push function ID on function stack
+    fun_stack.push(id);
 
     vector<string> arguments;
     //char **default_values;
@@ -406,7 +417,7 @@ static void trace_promises_function_exit(const SEXP call, const SEXP op, const S
     const char *type = is_byte_compiled(call) ? "<= bcod" : "<= func";
     const char *name = get_name(call);
     const char *ns = get_ns_name(op);
-    rid_t id = make_funcall_id(op);
+    rid_t id = fun_stack.top();
     char *loc = get_location(op);
     char *fqfn = NULL;
 
@@ -423,6 +434,9 @@ static void trace_promises_function_exit(const SEXP call, const SEXP op, const S
 
     argument_count = get_arguments(op, rho, arguments, /*&default_values,*/ promises);
     print_function(type, loc, name, id, arguments, /*default_values,*/ promises, argument_count);
+
+    // Pop current function ID
+    fun_stack.pop();
 
     if (loc)
         free(loc);
@@ -474,7 +488,7 @@ static void trace_promises_force_promise_entry(const SEXP symbol, const SEXP rho
     const char *name = get_name(symbol);
 
     SEXP promise_expression = get_promise(symbol, rho);
-    rid_t id = make_promise_id(promise_expression);
+    rid_t id = get_promise_id(promise_expression);
 
     print_promise("=> prom", NULL, name, id);
 
@@ -487,7 +501,7 @@ static void trace_promises_force_promise_exit(const SEXP symbol, const SEXP rho,
     const char *name = get_name(symbol);
 
     SEXP promise_expression = get_promise(symbol, rho);
-    rid_t id = make_promise_id(promise_expression);
+    rid_t id = get_promise_id(promise_expression);
 
     print_promise("<= prom", NULL, name, id);
 
@@ -500,7 +514,7 @@ static void trace_promises_promise_lookup(const SEXP symbol, const SEXP rho, con
     const char *name = get_name(symbol);
 
     SEXP promise_expression = get_promise(symbol, rho);
-    rid_t id = make_promise_id(promise_expression);
+    rid_t id = get_promise_id(promise_expression);
 
     print_promise("<> lkup", NULL, name, id);
 
