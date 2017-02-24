@@ -220,6 +220,7 @@ static const rdt_handler trace_rdt_handler = {
     NULL, // &trace_eval_exit,
     &trace_gc_entry,        
     &trace_gc_exit,
+    NULL,
     &trace_S3_generic_entry,
     &trace_S3_generic_exit,
     &trace_S3_dispatch_entry,        

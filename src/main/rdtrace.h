@@ -29,6 +29,7 @@ typedef struct rdt_handler {
     void (*probe_eval_exit)(SEXP e, SEXP rho, SEXP retval);    
     void (*probe_gc_entry)(R_size_t size_needed);
     void (*probe_gc_exit)(int gc_count, double vcells, double ncells);
+    void (*probe_gc_promise_unmarked)(const SEXP promise);
     void (*probe_S3_generic_entry)(const char *generic, const SEXP object);    
     void (*probe_S3_generic_exit)(const char *generic, const SEXP object, const SEXP retval);
     void (*probe_S3_dispatch_entry)(const char *generic, const char *clazz, const SEXP method, const SEXP object);

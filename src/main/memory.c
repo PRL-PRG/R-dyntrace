@@ -947,8 +947,19 @@ static void TryToReleasePages(void)
 		    s = (SEXP) data;
 		    if (NODE_IS_MARKED(s)) {
 			in_use = 1;
+#ifndef ENABLE_RDT
 			break;
+#endif
 		    }
+#ifdef ENABLE_RDT
+            else {
+                if (TYPEOF(s) == PROMSXP) {
+                    if (RDT_IS_ENABLED(probe_gc_promise_unmarked)) {
+                        RDT_FIRE_PROBE(probe_gc_promise_unmarked, s);
+                    }
+                }
+            }
+#endif
 		}
 		if (! in_use) {
 		    ReleasePage(page, i);

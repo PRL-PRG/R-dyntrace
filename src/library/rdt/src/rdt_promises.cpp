@@ -33,6 +33,7 @@ static uint64_t last = 0;
 static uint64_t delta = 0;
 
 static int indent;
+static int call_id_counter;
 
 // Function call stack (may be useful)
 // Whenever R makes a function call, we generate a function ID and store that ID on top of the stack
@@ -63,11 +64,11 @@ static inline void p_print(const char *type, const char *loc, const char *name) 
 static inline void print_builtin(const char *type, const char *loc, const char *name, rid_t id) {
     fprintf(output,
 #ifdef RDT_PROMISES_INDENT
-            "%*s%s loc(%s) function(%s=%d)\n",
+            "%*s%s loc(%s) function(%s=%#x)\n",
             indent,
             "",
 #else
-            "%s loc(%s) function(%s=%d)\n",
+            "%s loc(%s) function(%s=%#x)\n",
 #endif
             //delta,
             type,
@@ -200,11 +201,15 @@ static inline void compute_delta() {
 // ??? can we get metadata about the program we're analysing in here?
 static void trace_promises_begin() {
     indent = 0;
+    call_id_counter = 0;
 
     //fprintf(output, "TYPE,LOCATION,NAME\n");
     //fflush(output);
 
     last = timestamp();
+}
+static void trace_promises_end() {
+    promise_origin.clear();
 }
 
 static inline int count_elements(SEXP list) {
@@ -311,11 +316,10 @@ static inline rid_t get_function_id(SEXP func) {
 }
 
 static inline rid_t make_funcall_id(SEXP function) {
-    static rid_t id = 1;
     if (function == R_NilValue)
         return RID_INVALID;
 
-    return id++;
+    return ++call_id_counter;
 }
 
 // Wraper for findVar. Does not look up the value if it already is PROMSXP.
@@ -576,6 +580,18 @@ static void trace_promises_vector_alloc(int sexptype, long length, long bytes, c
 //     printf("");
 // }
 
+static void trace_promises_gc_promise_unmarked(const SEXP promise) {
+    rid_t id = (rid_t)promise;
+
+    auto iter = promise_origin.find(id);
+    if (iter != promise_origin.end()) {
+        // If this is one of our traced promises,
+        // delete it from origin map because it is ready to be GCed
+        promise_origin.erase(iter);
+        //Rprintf("Promise %#x deleted.\n", id);
+    }
+}
+
 static void trace_promises_gc_entry(R_size_t size_needed) {
     compute_delta();
     //p_print("builtin-entry", NULL, "gc_internal");
@@ -624,7 +640,7 @@ static void trace_promises_S3_dispatch_exit(const char *generic, const char *cla
 // TODO properly turn off probes we don't use
 static const rdt_handler trace_promises_rdt_handler = {
         &trace_promises_begin,
-        NULL, // ?
+        &trace_promises_end,
         &trace_promises_function_entry,
         &trace_promises_function_exit,
         &trace_promises_builtin_entry,
@@ -638,6 +654,7 @@ static const rdt_handler trace_promises_rdt_handler = {
         NULL, // &trace_eval_exit,
         &trace_promises_gc_entry,
         &trace_promises_gc_exit,
+        &trace_promises_gc_promise_unmarked,
         &trace_promises_S3_generic_entry,
         &trace_promises_S3_generic_exit,
         &trace_promises_S3_dispatch_entry,
