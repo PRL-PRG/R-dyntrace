@@ -40,6 +40,8 @@ static int indent;
 
 static stack<rid_t, vector<rid_t>> fun_stack;
 
+// Map from promise IDs to call IDs
+static unordered_map<rid_t, rid_t> promise_origin;
 
 // XXX probably remove
 static inline void p_print(const char *type, const char *loc, const char *name) {
@@ -49,7 +51,7 @@ static inline void p_print(const char *type, const char *loc, const char *name) 
             indent,
             "",
 #else
-            "%s%s loc(%s) %s\n",
+            "%s loc(%s) %s\n",
 #endif
 
             //delta,
@@ -74,20 +76,21 @@ static inline void print_builtin(const char *type, const char *loc, const char *
             id);
 }
 
-static inline void print_promise(const char *type, const char *loc, const char *name, rid_t id) {
+static inline void print_promise(const char *type, const char *loc, const char *name, rid_t id, rid_t call_id) {
     fprintf(output,
 #ifdef RDT_PROMISES_INDENT
-            "%*s%s loc(%s) promise(%s=%#x)\n",
+            "%*s%s loc(%s) promise(%s=%#x) from_call(%d)\n",
             indent,
             "",
 #else
-            "%s loc(%s) promise(%s=%d)\n",
+            "%s loc(%s) promise(%s=%#x) from_call(%d)\n",
 #endif
             //delta,
             type,
             CHKSTR(loc),
             CHKSTR(name),
-            id);
+            id,
+            call_id);
 }
 
 static string concat_arguments(vector<string> const& arguments, /*const char **default_values, const char **promises,*/ int arguments_length) {
@@ -308,7 +311,7 @@ static inline rid_t get_function_id(SEXP func) {
 }
 
 static inline rid_t make_funcall_id(SEXP function) {
-    static rid_t id = 0;
+    static rid_t id = 1;
     if (function == R_NilValue)
         return RID_INVALID;
 
@@ -401,6 +404,10 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
     indent += TAB_WIDTH;
     #endif
 
+    // Associate promises with call ID
+    for (auto p : promises) {
+        promise_origin[p] = call_id;
+    }
 
     if (loc)
         free(loc);
@@ -492,7 +499,6 @@ static void trace_promises_builtin_exit(const SEXP call, const SEXP op, const SE
 
 // Promise is being used inside a function body for the first time.
 // TODO name of promise, expression inside promise, value evaluated if available, (in the long term) connected to a function
-// TODO get more info to hook from eval (eval.c::4401 and at least 1 more line)
 static void trace_promises_force_promise_entry(const SEXP symbol, const SEXP rho) {
     compute_delta();
 
@@ -500,8 +506,9 @@ static void trace_promises_force_promise_entry(const SEXP symbol, const SEXP rho
 
     SEXP promise_expression = get_promise(symbol, rho);
     rid_t id = get_promise_id(promise_expression);
+    rid_t call_id = promise_origin[id];
 
-    print_promise("=> prom", NULL, name, id);
+    print_promise("=> prom", NULL, name, id, call_id);
 
     last = timestamp();
 }
@@ -513,8 +520,9 @@ static void trace_promises_force_promise_exit(const SEXP symbol, const SEXP rho,
 
     SEXP promise_expression = get_promise(symbol, rho);
     rid_t id = get_promise_id(promise_expression);
+    rid_t call_id = promise_origin[id];
 
-    print_promise("<= prom", NULL, name, id);
+    print_promise("<= prom", NULL, name, id, call_id);
 
     last = timestamp();
 }
@@ -526,8 +534,9 @@ static void trace_promises_promise_lookup(const SEXP symbol, const SEXP rho, con
 
     SEXP promise_expression = get_promise(symbol, rho);
     rid_t id = get_promise_id(promise_expression);
+    rid_t call_id = promise_origin[id];
 
-    print_promise("<> lkup", NULL, name, id);
+    print_promise("<> lkup", NULL, name, id, call_id);
 
     last = timestamp();
 }
