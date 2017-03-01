@@ -111,6 +111,10 @@
 #include <Defn.h>
 #include <Internal.h>
 
+#ifdef ENABLE_RDT
+#include <rdtrace.h>
+#endif
+
 /* R_run_onexits - runs the conexit/cend code for all contexts from
    R_GlobalContext down to but not including the argument context.
    This routine does not stop at a CTXT_TOPLEVEL--the code that
@@ -319,8 +323,14 @@ void attribute_hidden NORET findcontext(int mask, SEXP env, SEXP val)
 	for (cptr = R_GlobalContext;
 	     cptr != NULL && cptr->callflag != CTXT_TOPLEVEL;
 	     cptr = cptr->nextcontext)
-	    if ((cptr->callflag & mask) && cptr->cloenv == env)
-		R_jumpctxt(cptr, mask, val);
+	    if ((cptr->callflag & mask) && cptr->cloenv == env) {
+#ifdef ENABLE_RDT
+			if(RDT_IS_ENABLED(probe_jump_ctxt)) {
+				RDT_FIRE_PROBE(probe_jump_ctxt, env, val);
+			}
+#endif
+			R_jumpctxt(cptr, mask, val);
+		}
 	error(_("no function to return from, jumping to top level"));
     }
 }

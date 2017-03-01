@@ -292,6 +292,7 @@ static const rdt_handler debug_rdt_handler = {
     &debug_gc_entry,
     &debug_gc_exit,
     NULL,
+    NULL,
     &debug_S3_generic_entry,
     &debug_S3_generic_exit,
     &debug_S3_dispatch_entry,

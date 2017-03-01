@@ -18,11 +18,14 @@ extern "C" {
 
 #include "rdt.h"
 
+using namespace std;
+
 // If defined printout will include increasing indents showing function calls.
 #define RDT_PROMISES_INDENT
 #define TAB_WIDTH 4
 
-using namespace std;
+// Use generated call IDs instead of function env addresses
+#define RDT_CALL_ID
 
 typedef uintptr_t rid_t;
 
@@ -40,6 +43,13 @@ static int call_id_counter;
 // so that we know where we are (e.g. when printing function ID at function_exit hook)
 
 static stack<rid_t, vector<rid_t>> fun_stack;
+
+#ifdef RDT_CALL_ID
+#define CALL_ID_FMT "%d"
+static stack<rid_t, vector<rid_t>> curr_env_stack;
+#else
+#define CALL_ID_FMT "%#x"
+#endif
 
 // Map from promise IDs to call IDs
 static unordered_map<rid_t, rid_t> promise_origin;
@@ -80,11 +90,11 @@ static inline void print_builtin(const char *type, const char *loc, const char *
 static inline void print_promise(const char *type, const char *loc, const char *name, rid_t id, rid_t call_id) {
     fprintf(output,
 #ifdef RDT_PROMISES_INDENT
-            "%*s%s loc(%s) promise(%s=%#x) from_call(%d)\n",
+            "%*s%s loc(%s) promise(%s=%#x) from_call(" CALL_ID_FMT ")\n",
             indent,
             "",
 #else
-            "%s loc(%s) promise(%s=%#x) from_call(%d)\n",
+            "%s loc(%s) promise(%s=%#x) from_call(" CALL_ID_FMT ")\n",
 #endif
             //delta,
             type,
@@ -144,11 +154,11 @@ static inline void print_function(const char *type, const char *loc, const char 
 
     fprintf(output,
 #ifdef RDT_PROMISES_INDENT
-        "%*s%s loc(%s) call(%d) function(%s=%#x) params(%s) promises(%s)\n",
+        "%*s%s loc(%s) call(" CALL_ID_FMT ") function(%s=%#x) params(%s) promises(%s)\n",
         indent, // http://stackoverflow.com/a/9448093/6846474
         "",
 #else
-        "%s loc(%s) call(%d) function(%s=%#x) params(%s) promises(%s)\n",
+        "%s loc(%s) call(" CALL_ID_FMT ") function(%s=%#x) params(%s) promises(%s)\n",
 #endif
         type,
         CHKSTR(loc),
@@ -157,6 +167,20 @@ static inline void print_function(const char *type, const char *loc, const char 
         function_id,
         argument_string.c_str(),
         promises_string.c_str()
+    );
+}
+
+static inline void print_unwind(const char *type, rid_t call_id) {
+    fprintf(output,
+#ifdef RDT_PROMISES_INDENT
+            "%*s%s unwind call(" CALL_ID_FMT ")\n",
+            indent,
+            "",
+#else
+            "%s unwind call(" CALL_ID_FMT ")\n",
+#endif
+            type,
+            call_id
     );
 }
 
@@ -203,6 +227,8 @@ static void trace_promises_begin() {
     indent = 0;
     call_id_counter = 0;
 
+    output = fopen("trace.txt", "w");
+
     //fprintf(output, "TYPE,LOCATION,NAME\n");
     //fflush(output);
 
@@ -210,6 +236,7 @@ static void trace_promises_begin() {
 }
 static void trace_promises_end() {
     promise_origin.clear();
+    fclose(output);
 }
 
 static inline int count_elements(SEXP list) {
@@ -315,11 +342,42 @@ static inline rid_t get_function_id(SEXP func) {
     return get_sexp_address(func);
 }
 
+#ifdef RDT_CALL_ID
 static inline rid_t make_funcall_id(SEXP function) {
     if (function == R_NilValue)
         return RID_INVALID;
 
     return ++call_id_counter;
+}
+#else
+static inline rid_t make_funcall_id(SEXP fn_env) {
+    assert(fn_env != NULL);
+    return get_sexp_address(fn_env);
+}
+#endif
+
+// When doing longjump (exception thrown, etc.) this function gets the target environment
+// and unwinds function call stack until that environment is on top. It also fixes indentation.
+static inline void adjust_fun_stack(SEXP rho) {
+    rid_t call_id, call_addr;
+
+    while (!fun_stack.empty() &&
+#ifdef RDT_CALL_ID
+            (call_addr = curr_env_stack.top()) && get_sexp_address(rho) != call_addr
+#else
+            (call_id = fun_stack.top()) && get_sexp_address(rho) != call_id
+#endif
+            ) {
+#ifdef RDT_CALL_ID
+        call_id = fun_stack.top();
+        curr_env_stack.pop();
+#endif
+        fun_stack.pop();
+#ifdef RDT_PROMISES_INDENT
+        indent -= TAB_WIDTH;
+#endif
+        print_unwind("<=", call_id);
+    }
 }
 
 // Wraper for findVar. Does not look up the value if it already is PROMSXP.
@@ -383,7 +441,11 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
     const char *name = get_name(call);
     const char *ns = get_ns_name(op);
     rid_t fn_id = get_function_id(op);
+#ifdef RDT_CALL_ID
     rid_t call_id = make_funcall_id(op);
+#else
+    rid_t call_id = make_funcall_id(rho);
+#endif
     char *loc = get_location(op);
     char *fqfn = NULL;
 
@@ -395,6 +457,9 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
 
     // Push function ID on function stack
     fun_stack.push(call_id);
+#ifdef RDT_CALL_ID
+    curr_env_stack.push(get_sexp_address(rho));
+#endif
 
     vector<string> arguments;
     //char **default_values;
@@ -459,6 +524,9 @@ static void trace_promises_function_exit(const SEXP call, const SEXP op, const S
 
     // Pop current function ID
     fun_stack.pop();
+#ifdef RDT_CALL_ID
+    curr_env_stack.pop();
+#endif
 
     if (loc)
         free(loc);
@@ -592,6 +660,10 @@ static void trace_promises_gc_promise_unmarked(const SEXP promise) {
     }
 }
 
+static void trace_promises_jump_ctxt(const SEXP rho, const SEXP val) {
+    adjust_fun_stack(rho);
+}
+
 static void trace_promises_gc_entry(R_size_t size_needed) {
     compute_delta();
     //p_print("builtin-entry", NULL, "gc_internal");
@@ -655,6 +727,7 @@ static const rdt_handler trace_promises_rdt_handler = {
         &trace_promises_gc_entry,
         &trace_promises_gc_exit,
         &trace_promises_gc_promise_unmarked,
+        &trace_promises_jump_ctxt,
         &trace_promises_S3_generic_entry,
         &trace_promises_S3_generic_exit,
         &trace_promises_S3_dispatch_entry,

@@ -81,6 +81,7 @@ static const rdt_handler noop_rdt_handler = {
     &noop_gc_entry,        
     &noop_gc_exit,
     NULL,
+    NULL,
     &noop_S3_generic_entry,
     &noop_S3_generic_exit,
     &noop_S3_dispatch_entry,        
