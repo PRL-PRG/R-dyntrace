@@ -87,21 +87,22 @@ static inline void print_builtin(const char *type, const char *loc, const char *
             id);
 }
 
-static inline void print_promise(const char *type, const char *loc, const char *name, rid_t id, rid_t call_id) {
+static inline void print_promise(const char *type, const char *loc, const char *name, rid_t id, rid_t in_call_id, rid_t from_call_id) {
     fprintf(output,
 #ifdef RDT_PROMISES_INDENT
-            "%*s%s loc(%s) promise(%s=%#x) from_call(" CALL_ID_FMT ")\n",
+            "%*s%s loc(%s) promise(%s=%#x) in_call(" CALL_ID_FMT ") from_call(" CALL_ID_FMT ")\n",
             indent,
             "",
 #else
-            "%s loc(%s) promise(%s=%#x) from_call(" CALL_ID_FMT ")\n",
+            "%s loc(%s) promise(%s=%#x) in_call(" CALL_ID_FMT ") from_call(" CALL_ID_FMT ")\n",
 #endif
             //delta,
             type,
             CHKSTR(loc),
             CHKSTR(name),
             id,
-            call_id);
+            in_call_id,
+            from_call_id);
 }
 
 static string concat_arguments(vector<string> const& arguments, /*const char **default_values, const char **promises,*/ int arguments_length) {
@@ -232,9 +233,22 @@ static void trace_promises_begin() {
     //fprintf(output, "TYPE,LOCATION,NAME\n");
     //fflush(output);
 
+    // We have to make sure the stack is not empty
+    // when referring to the promise created by call to Rdt.
+    // This is just a dummy call and environment.
+    fun_stack.push(0);
+#ifdef RDT_CALL_ID
+    curr_env_stack.push(0);
+#endif
+
     last = timestamp();
 }
 static void trace_promises_end() {
+    fun_stack.pop();
+#ifdef RDT_CALL_ID
+    curr_env_stack.pop();
+#endif
+
     promise_origin.clear();
     fclose(output);
 }
@@ -578,9 +592,10 @@ static void trace_promises_force_promise_entry(const SEXP symbol, const SEXP rho
 
     SEXP promise_expression = get_promise(symbol, rho);
     rid_t id = get_promise_id(promise_expression);
-    rid_t call_id = promise_origin[id];
+    rid_t in_call_id = fun_stack.top();
+    rid_t from_call_id = promise_origin[id];
 
-    print_promise("=> prom", NULL, name, id, call_id);
+    print_promise("=> prom", NULL, name, id, in_call_id, from_call_id);
 
     last = timestamp();
 }
@@ -592,9 +607,10 @@ static void trace_promises_force_promise_exit(const SEXP symbol, const SEXP rho,
 
     SEXP promise_expression = get_promise(symbol, rho);
     rid_t id = get_promise_id(promise_expression);
-    rid_t call_id = promise_origin[id];
+    rid_t in_call_id = fun_stack.top();
+    rid_t from_call_id = promise_origin[id];
 
-    print_promise("<= prom", NULL, name, id, call_id);
+    print_promise("<= prom", NULL, name, id, in_call_id, from_call_id);
 
     last = timestamp();
 }
@@ -606,9 +622,10 @@ static void trace_promises_promise_lookup(const SEXP symbol, const SEXP rho, con
 
     SEXP promise_expression = get_promise(symbol, rho);
     rid_t id = get_promise_id(promise_expression);
-    rid_t call_id = promise_origin[id];
+    rid_t in_call_id = fun_stack.top();
+    rid_t from_call_id = promise_origin[id];
 
-    print_promise("<> lkup", NULL, name, id, call_id);
+    print_promise("<> lkup", NULL, name, id, in_call_id, from_call_id);
 
     last = timestamp();
 }
