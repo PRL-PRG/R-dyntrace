@@ -2,6 +2,7 @@
 #include <string>
 #include <stack>
 #include <unordered_map>
+#include <utility>
 
 #include <errno.h>
 #include <stdio.h>
@@ -54,6 +55,9 @@ static stack<rid_t, vector<rid_t>> curr_env_stack;
 // Map from promise IDs to call IDs
 static unordered_map<rid_t, rid_t> promise_origin;
 
+typedef vector<rid_t> prom_vec_t;
+typedef pair<string, prom_vec_t> arg_t;
+
 // XXX probably remove
 static inline void p_print(const char *type, const char *loc, const char *name) {
     fprintf(output,
@@ -105,70 +109,39 @@ static inline void print_promise(const char *type, const char *loc, const char *
             from_call_id);
 }
 
-static string concat_arguments(vector<string> const& arguments, /*const char **default_values, const char **promises,*/ int arguments_length) {
-    string argument_string = "";
-
-    for (int i=0; i<arguments_length; i++) {
-        if (i)
-            argument_string += ", ";
-
-        argument_string += arguments[i];
-//        argument_string = strcat(argument_string, promises[i]);
-//
-//        if (default_values[i] != NULL) {
-//            argument_string = strcat(argument_string, "=");
-//            argument_string = strcat(argument_string, default_values[i]);
-//        }
-    }
-
-    return argument_string;
-}
-
-static string concat_promises(vector<string> const& arguments, /*const char **default_values,*/ vector<rid_t> const& promises, int arguments_length) {
-    string promises_string = "";
-
-    for (int i=0; i<arguments_length; i++) {
-        if (i)
-            promises_string += ", ";
-
-        promises_string += arguments[i];
-        promises_string += " = ";
-        char * prom_id_str;
-        asprintf(&prom_id_str, "%#x", promises[i]);
-        promises_string += prom_id_str;
-        free(prom_id_str);
-
-        //if (default_values[i] != NULL) {
-        //  promises_string = strcat(promises_string, "=");
-        //  promises_string = strcat(promises_string, default_values[i]);
-        //}
-    }
-
-    //Rprintf("String %s (%i vs %i)", promises_string, strlen(promises_string), (sizeof(char) * (characters + 1 * (arguments_length - 1) + 1)));
-
-    return promises_string;
-}
-
-static inline void print_function(const char *type, const char *loc, const char *name, rid_t function_id, rid_t call_id, vector<string> const& arguments, /*const char **default_values,*/ vector<rid_t> const& promises, const int arguments_num) {
-    string argument_string = concat_arguments(arguments, /* default_values, promises, */ arguments_num);
-    string promises_string = concat_promises(arguments, /* default_values,*/ promises, arguments_num);
-
+static inline void print_function(const char *type, const char *loc, const char *name, rid_t function_id, rid_t call_id, vector<arg_t> const& arguments, const int arguments_num) {
     fprintf(output,
 #ifdef RDT_PROMISES_INDENT
-        "%*s%s loc(%s) call(" CALL_ID_FMT ") function(%s=%#x) params(%s) promises(%s)\n",
+        "%*s%s loc(%s) call(" CALL_ID_FMT ") function(%s=%#x) ",
         indent, // http://stackoverflow.com/a/9448093/6846474
         "",
 #else
-        "%s loc(%s) call(" CALL_ID_FMT ") function(%s=%#x) params(%s) promises(%s)\n",
+        "%s loc(%s) call(" CALL_ID_FMT ") function(%s=%#x) ",
 #endif
         type,
         CHKSTR(loc),
         call_id,
         CHKSTR(name),
-        function_id,
-        argument_string.c_str(),
-        promises_string.c_str()
+        function_id
     );
+
+    // print argument names and the promises bound to them
+    int i = 0;
+    fprintf(output, "arguments(");
+    for (auto & a : arguments) {
+        const prom_vec_t & p = a.second;
+        fprintf(output, "%s=%#x", a.first.c_str(), p[0]);
+
+        // iterate from second bound value if there is any
+        // and produce comma separated list of promises
+        for (auto it = ++p.begin(); it != p.end(); it++) {
+            fprintf(output, ",%#x", *it);
+        }
+        if (i < arguments_num - 1) fprintf(output, ";"); // semicolon separates individual args
+        ++i;
+    }
+
+    fprintf(output, ")\n");
 }
 
 static inline void print_unwind(const char *type, rid_t call_id) {
@@ -407,7 +380,7 @@ static SEXP get_promise(SEXP var, SEXP rho) {
     return prom;
 }
 
-static inline int get_arguments(SEXP op, SEXP rho, vector<string> & arguments, /*char ***return_default_values,*/ vector<rid_t> & promises) {
+static inline int get_arguments(SEXP op, SEXP rho, vector<arg_t> & arguments) {
     SEXP formals = FORMALS(op);
 
     int argument_count = count_elements(formals);
@@ -415,28 +388,26 @@ static inline int get_arguments(SEXP op, SEXP rho, vector<string> & arguments, /
     for (int i=0; i<argument_count; i++, formals = CDR(formals)) {
         // Retrieve the argument name.
         SEXP argument_expression = TAG(formals);
-        arguments.push_back(get_name(argument_expression));
+        //arguments.push_back(get_name(argument_expression));
+        arg_t arg;
+        string & arg_name = arg.first;
+        prom_vec_t & arg_prom_vec = arg.second;
 
-        // FIXME dot-dot-dot
-
-        // Retrieve the default expression for the argument.
-        // SEXP default_value_expression = CAR(formals);
-        // if (default_value_expression != R_MissingArg) {
-        //     SEXP deparsed_expression = deparse1line(default_value_expression, FALSE);
-        //     // deparsed_expression has everything we need, but is formatted for display on console, so we de-prettify
-        //     // it.
-        //     char *flat_code = flatten(strdup(CHAR(STRING_ELT(deparsed_expression, 0))));
-        //     default_values[i] = remove_redundant_spaces(flat_code);
-        //     free(flat_code);
-        // } else
-        //     default_values[i] = NULL;
+        arg_name = get_name(argument_expression);
 
         // Retrieve the promise for the argument.
         // The call SEXP only contains AST to find the actual argument value, we need to search the environment.
         SEXP promise_expression = get_promise(argument_expression, rho);
-        //asprintf(&promises[i], "[%p]", promise_expression);
-        promises.push_back(get_promise_id(promise_expression));
-        //Rprintf("promise=%s\n",promises[i]);
+
+        if (TYPEOF(promise_expression) == DOTSXP) {
+            for(SEXP dots = promise_expression; dots != R_NilValue; dots = CDR(dots)) {
+                arg_prom_vec.push_back(get_promise_id(CAR(dots)));
+            }
+        }
+        else {
+            arg_prom_vec.push_back(get_promise_id(promise_expression));
+        }
+        arguments.push_back(arg);
     }
 
     return argument_count;
@@ -475,21 +446,22 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
     curr_env_stack.push(get_sexp_address(rho));
 #endif
 
-    vector<string> arguments;
-    //char **default_values;
-    vector<rid_t> promises;
+    vector<arg_t> arguments;
     int argument_count;
 
-    argument_count = get_arguments(op, rho, arguments, /*&default_values,*/ promises);
-    print_function(type, loc, fqfn, fn_id, call_id, /*(const char **)*/arguments, /*default_values,*/ /*(const char **)*/ promises, argument_count);
+    argument_count = get_arguments(op, rho, arguments);
+    print_function(type, loc, fqfn, fn_id, call_id, arguments, argument_count);
 
     #ifdef RDT_PROMISES_INDENT
     indent += TAB_WIDTH;
     #endif
 
     // Associate promises with call ID
-    for (auto p : promises) {
-        promise_origin[p] = call_id;
+    for (auto & a : arguments) {
+        auto & promises = a.second;
+        for (auto p : promises) {
+            promise_origin[p] = call_id;
+        }
     }
 
     if (loc)
@@ -528,13 +500,11 @@ static void trace_promises_function_exit(const SEXP call, const SEXP op, const S
         fqfn = name != NULL ? strdup(name) : NULL;
     }
 
-    vector<string> arguments;
-    //char **default_values;
-    vector<rid_t> promises;
+    vector<arg_t> arguments;
     int argument_count;
 
-    argument_count = get_arguments(op, rho, arguments, /*&default_values,*/ promises);
-    print_function(type, loc, name, fn_id, call_id, arguments, /*default_values,*/ promises, argument_count);
+    argument_count = get_arguments(op, rho, arguments);
+    print_function(type, loc, name, fn_id, call_id, arguments, argument_count);
 
     // Pop current function ID
     fun_stack.pop();
