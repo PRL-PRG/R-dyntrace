@@ -10,7 +10,17 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+
+// SQL specific
+#include <unordered_set>
+
 //#include <Defn.h>
+
+//#define RDT_PROMSES_SQL_SUPPORT
+//#ifdef RDT_PROMSES_SQL_SUPPORT
+//#include <sqlite3.h>
+//sqlite3 *db;
+//#endif
 
 extern "C" {
 #include "../../../main/inspect.h"
@@ -41,6 +51,7 @@ static int call_id_counter;
 // Function call stack (may be useful)
 // Whenever R makes a function call, we generate a function ID and store that ID on top of the stack
 // so that we know where we are (e.g. when printing function ID at function_exit hook)
+
 
 static stack<rid_t, vector<rid_t>> fun_stack;
 
@@ -102,6 +113,42 @@ static inline void print_promise(const char *type, const char *loc, const char *
             CHKSTR(name),
             id,
             call_id);
+}
+
+static inline void mk_sql_promise() {
+
+}
+
+static inline void mk_sql_builtin() {
+
+}
+
+static inline string wrap_nullable_string(const char* s) {
+    return s == NULL ? "NULL" : "'" + string(s) + "'";
+}
+
+static unordered_set<rid_t> already_inserted_functions;
+static inline void mk_sql_function(rid_t function_id, vector<string> const& arguments, const char* location, const char* definition) {
+    // Don't generate anything if one was previously generated.
+    if(!already_inserted_functions.count(function_id)) {
+        // Generate `functions' update containing function definition.
+        Rprintf("insert into functions values (%#x,%s,%s);\n", function_id,
+                wrap_nullable_string(location).c_str(),
+                wrap_nullable_string(definition).c_str());
+
+        // Generate `arguments' update wrt function above.
+        if (arguments.size() > 0) {
+            Rprintf("insert into arguments select");
+            int index = 0;
+            for (auto argument : arguments) {
+                if (index)
+                    Rprintf(" union all select");
+                Rprintf(" ('%s',%i,%#x)", argument.c_str(), index++, function_id);
+            }
+            Rprintf(";\n");
+        }
+        already_inserted_functions.insert(function_id);
+    }
 }
 
 static string concat_arguments(vector<string> const& arguments, /*const char **default_values, const char **promises,*/ int arguments_length) {
@@ -468,6 +515,8 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
 
     argument_count = get_arguments(op, rho, arguments, /*&default_values,*/ promises);
     print_function(type, loc, fqfn, fn_id, call_id, /*(const char **)*/arguments, /*default_values,*/ /*(const char **)*/ promises, argument_count);
+
+    mk_sql_function(fn_id, arguments, loc, NULL);
 
     #ifdef RDT_PROMISES_INDENT
     indent += TAB_WIDTH;
