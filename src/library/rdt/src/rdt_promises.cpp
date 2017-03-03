@@ -38,6 +38,7 @@ using namespace std;
 #define RDT_CALL_ID
 
 typedef uintptr_t rid_t;
+typedef int sid_t;
 
 #define RID_INVALID -1
 
@@ -69,11 +70,11 @@ static unordered_map<rid_t, rid_t> promise_origin;
 static inline void p_print(const char *type, const char *loc, const char *name) {
     fprintf(output,
 #ifdef RDT_PROMISES_INDENT
-            "%*s%s loc(%s) %s\n",
+            "--%*s%s loc(%s) %s\n",
             indent,
             "",
 #else
-            "%s loc(%s) %s\n",
+            "--%s loc(%s) %s\n",
 #endif
 
             //delta,
@@ -85,7 +86,7 @@ static inline void p_print(const char *type, const char *loc, const char *name) 
 static inline void print_builtin(const char *type, const char *loc, const char *name, rid_t id) {
     fprintf(output,
 #ifdef RDT_PROMISES_INDENT
-            "%*s%s loc(%s) function(%s=%#x)\n",
+            "--%*s%s loc(%s) function(%s=%#x)\n",
             indent,
             "",
 #else
@@ -101,7 +102,7 @@ static inline void print_builtin(const char *type, const char *loc, const char *
 static inline void print_promise(const char *type, const char *loc, const char *name, rid_t id, rid_t call_id) {
     fprintf(output,
 #ifdef RDT_PROMISES_INDENT
-            "%*s%s loc(%s) promise(%s=%#x) from_call(" CALL_ID_FMT ")\n",
+            "--%*s%s loc(%s) promise(%s=%#x) from_call(" CALL_ID_FMT ")\n",
             indent,
             "",
 #else
@@ -127,28 +128,71 @@ static inline string wrap_nullable_string(const char* s) {
     return s == NULL ? "NULL" : "'" + string(s) + "'";
 }
 
+static inline string wrap_string(string s) {
+    return "'" + string(s) + "'";
+}
+
 static unordered_set<rid_t> already_inserted_functions;
-static inline void mk_sql_function(rid_t function_id, vector<string> const& arguments, const char* location, const char* definition) {
+static sid_t argument_id_sequence = 0;
+static inline void mk_sql_function(rid_t function_id, vector<string> const& arguments, vector<sid_t> const& argument_ids, const char* location, const char* definition) {
     // Don't generate anything if one was previously generated.
     if(!already_inserted_functions.count(function_id)) {
         // Generate `functions' update containing function definition.
-        Rprintf("insert into functions values (%#x,%s,%s);\n", function_id,
+        Rprintf("insert into functions values (%#x,%s,%s);\n",
+                function_id,
                 wrap_nullable_string(location).c_str(),
                 wrap_nullable_string(definition).c_str());
 
         // Generate `arguments' update wrt function above.
         if (arguments.size() > 0) {
             Rprintf("insert into arguments select");
+
             int index = 0;
             for (auto argument : arguments) {
                 if (index)
-                    Rprintf(" union all select");
-                Rprintf(" ('%s',%i,%#x)", argument.c_str(), index++, function_id);
+                    Rprintf("\n            union all select");
+                    //Rprintf(" union all select");
+                Rprintf(" %i,%s,%i,%#x", argument_ids[index], wrap_string(argument).c_str(), index, function_id);
+                index++;
             }
             Rprintf(";\n");
         }
         already_inserted_functions.insert(function_id);
     }
+}
+
+static inline void mk_sql_function_call(rid_t call_id, rid_t call_ptr, const char *name, const char* location, int call_type, rid_t function_id) {
+    Rprintf("insert into calls values (%i,%#x,%s,%s,%i,%#x);\n",
+            call_id,
+            call_ptr,
+            wrap_nullable_string(name).c_str(),
+            wrap_nullable_string(location).c_str(),
+            call_type,
+            function_id
+    );
+}
+
+static inline void mk_sql_promises(vector<rid_t> promises, rid_t call_id, vector<sid_t> argument_ids) {
+    if (promises.size() > 0) {
+        Rprintf("insert into promises  select");
+        int index = 0;
+        for (auto promise : promises) {
+            if (index)
+                Rprintf("\n            union all select");
+                //Rprintf(" union all select");
+            Rprintf(" %#x,%i,%i", promise, call_id, argument_ids[index]);
+            index++;
+        }
+        Rprintf(";\n");
+    }
+}
+
+static inline void mk_sql_promise_evaluation(int event_type, rid_t promise_id, rid_t call_id) {
+    Rprintf("insert into promise_evaluations values ($next_id,%#x,%#x,%i);\n",
+        event_type,
+        promise_id,
+        call_id
+    );
 }
 
 static string concat_arguments(vector<string> const& arguments, /*const char **default_values, const char **promises,*/ int arguments_length) {
@@ -201,11 +245,11 @@ static inline void print_function(const char *type, const char *loc, const char 
 
     fprintf(output,
 #ifdef RDT_PROMISES_INDENT
-        "%*s%s loc(%s) call(" CALL_ID_FMT ") function(%s=%#x) params(%s) promises(%s)\n",
+        "--%*s%s loc(%s) call(" CALL_ID_FMT ") function(%s=%#x) params(%s) promises(%s)\n",
         indent, // http://stackoverflow.com/a/9448093/6846474
         "",
 #else
-        "%s loc(%s) call(" CALL_ID_FMT ") function(%s=%#x) params(%s) promises(%s)\n",
+        "--%s loc(%s) call(" CALL_ID_FMT ") function(%s=%#x) params(%s) promises(%s)\n",
 #endif
         type,
         CHKSTR(loc),
@@ -220,11 +264,11 @@ static inline void print_function(const char *type, const char *loc, const char 
 static inline void print_unwind(const char *type, rid_t call_id) {
     fprintf(output,
 #ifdef RDT_PROMISES_INDENT
-            "%*s%s unwind call(" CALL_ID_FMT ")\n",
+            "--%*s%s unwind call(" CALL_ID_FMT ")\n",
             indent,
             "",
 #else
-            "%s unwind call(" CALL_ID_FMT ")\n",
+            "--%s unwind call(" CALL_ID_FMT ")\n",
 #endif
             type,
             call_id
@@ -274,7 +318,7 @@ static void trace_promises_begin() {
     indent = 0;
     call_id_counter = 0;
 
-    output = fopen("trace.txt", "w");
+    output = fopen("trace.sql", "w");
 
     //fprintf(output, "TYPE,LOCATION,NAME\n");
     //fflush(output);
@@ -440,7 +484,7 @@ static SEXP get_promise(SEXP var, SEXP rho) {
     return prom;
 }
 
-static inline int get_arguments(SEXP op, SEXP rho, vector<string> & arguments, /*char ***return_default_values,*/ vector<rid_t> & promises) {
+static inline int get_arguments(SEXP op, SEXP rho, vector<string> & arguments, vector<sid_t> & argument_ids, /*char ***return_default_values,*/ vector<rid_t> & promises) {
     SEXP formals = FORMALS(op);
 
     int argument_count = count_elements(formals);
@@ -449,6 +493,7 @@ static inline int get_arguments(SEXP op, SEXP rho, vector<string> & arguments, /
         // Retrieve the argument name.
         SEXP argument_expression = TAG(formals);
         arguments.push_back(get_name(argument_expression));
+        argument_ids.push_back(++argument_id_sequence);
 
         // FIXME dot-dot-dot
 
@@ -485,9 +530,11 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
     compute_delta();
 
     const char *type = is_byte_compiled(call) ? "=> bcod" : "=> func";
+    int call_type = is_byte_compiled(call) ? 1 : 0;
     const char *name = get_name(call);
     const char *ns = get_ns_name(op);
     rid_t fn_id = get_function_id(op);
+    rid_t call_ptr = get_sexp_address(op);
 #ifdef RDT_CALL_ID
     rid_t call_id = make_funcall_id(op);
 #else
@@ -509,14 +556,17 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
 #endif
 
     vector<string> arguments;
+    vector<sid_t> argument_ids;
     //char **default_values;
     vector<rid_t> promises;
     int argument_count;
 
-    argument_count = get_arguments(op, rho, arguments, /*&default_values,*/ promises);
+    argument_count = get_arguments(op, rho, arguments, argument_ids,/*&default_values,*/ promises);
     print_function(type, loc, fqfn, fn_id, call_id, /*(const char **)*/arguments, /*default_values,*/ /*(const char **)*/ promises, argument_count);
 
-    mk_sql_function(fn_id, arguments, loc, NULL);
+    mk_sql_function(fn_id, arguments, argument_ids, loc, NULL);
+    mk_sql_function_call(call_id, call_ptr, name, loc, call_type, fn_id);
+    mk_sql_promises(promises, call_id, argument_ids);
 
     #ifdef RDT_PROMISES_INDENT
     indent += TAB_WIDTH;
@@ -564,11 +614,12 @@ static void trace_promises_function_exit(const SEXP call, const SEXP op, const S
     }
 
     vector<string> arguments;
+    vector<sid_t> argument_ids;
     //char **default_values;
     vector<rid_t> promises;
     int argument_count;
 
-    argument_count = get_arguments(op, rho, arguments, /*&default_values,*/ promises);
+    argument_count = get_arguments(op, rho, arguments, argument_ids, /*&default_values,*/ promises);
     print_function(type, loc, name, fn_id, call_id, arguments, /*default_values,*/ promises, argument_count);
 
     // Pop current function ID
@@ -598,9 +649,22 @@ static void trace_promises_builtin_entry(const SEXP call, const SEXP op, const S
     compute_delta();
 
     const char *name = get_name(call);
-    rid_t id = get_function_id(op);
+    rid_t fn_id = get_function_id(op);
 
-    print_builtin("=> b-in", NULL, name, id);
+    rid_t call_ptr = get_sexp_address(call);
+#ifdef RDT_CALL_ID
+    rid_t call_id = make_funcall_id(call);
+#endif
+
+    print_builtin("=> b-in", NULL, name, fn_id);
+
+    vector<string> arguments;
+    vector<sid_t> argument_ids;
+    //vector<rid_t> promises;
+
+    mk_sql_function(fn_id, arguments, argument_ids, NULL, NULL);
+    mk_sql_function_call(call_id, call_ptr, name, NULL, 1, fn_id);
+    //mk_sql_promises(promises, call_id, argument_ids);
 
     //R_inspect(call);
 
@@ -631,6 +695,8 @@ static void trace_promises_force_promise_entry(const SEXP symbol, const SEXP rho
 
     print_promise("=> prom", NULL, name, id, call_id);
 
+    mk_sql_promise_evaluation(0xf, id, call_id);
+
     last = timestamp();
 }
 
@@ -658,6 +724,8 @@ static void trace_promises_promise_lookup(const SEXP symbol, const SEXP rho, con
     rid_t call_id = promise_origin[id];
 
     print_promise("<> lkup", NULL, name, id, call_id);
+
+    mk_sql_promise_evaluation(0x0, id, call_id);
 
     last = timestamp();
 }
