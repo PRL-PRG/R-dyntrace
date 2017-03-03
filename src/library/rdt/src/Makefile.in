@@ -29,6 +29,7 @@ SHLIB = $(pkg)@SHLIB_EXT@
 PKG_CPPFLAGS =-I../../../include -I$(top_srcdir)/src/include -DHAVE_CONFIG_H \
   -I$(top_srcdir)/src/main
 
+PKG_CXXFLAGS =-std=c++11
 
 all: Makedeps
 	@$(MAKE) shlib
