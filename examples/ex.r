@@ -28,6 +28,11 @@ dddFun <- function(x, ...) {
 	print(dots)
 }
 
+dddOnlyFun <- function(...) {
+	dots <- list(...)
+	print(dots)
+}
+
 testDdd <- function() {
 	dddFun(1, 2, 3, 4)
 }

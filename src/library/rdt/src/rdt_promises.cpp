@@ -58,22 +58,6 @@ static unordered_map<rid_t, rid_t> promise_origin;
 typedef vector<rid_t> prom_vec_t;
 typedef pair<string, prom_vec_t> arg_t;
 
-// XXX probably remove
-static inline void p_print(const char *type, const char *loc, const char *name) {
-    fprintf(output,
-#ifdef RDT_PROMISES_INDENT
-            "%*s%s loc(%s) %s\n",
-            indent,
-            "",
-#else
-            "%s loc(%s) %s\n",
-#endif
-
-            //delta,
-            type,
-            CHKSTR(loc),
-            CHKSTR(name));
-}
 
 static inline void print_builtin(const char *type, const char *loc, const char *name, rid_t id) {
     fprintf(output,
@@ -158,39 +142,6 @@ static inline void print_unwind(const char *type, rid_t call_id) {
     );
 }
 
-//static inline void print_function_bare(const char *type, const char *loc, const char *name, const char *function_id, const char **arguments, int arguments_num) {
-//#ifdef RDT_PROMISES_INDENT
-//    char *indent_string = mk_indent();
-//#endif
-//
-//    char *argument_string = concat_arguments(arguments, /* default_values, promises, */ arguments_num);
-//    //char *promises_string = concat_promises(arguments, /* default_values,*/ promises, arguments_num);
-//
-//    fprintf(output,
-//#ifdef RDT_PROMISES_INDENT
-//            "%s%s loc(%s) function(%s=%s) params(%s)\n",
-//            indent_string,
-//#else
-//            "%s loc(%s) function(%s=%s) params(%s)\n",
-//#endif
-//            type,
-//            CHKSTR(loc),
-//            CHKSTR(name),
-//            CHKSTR(function_id),
-//            argument_string
-//            //promises_string
-//    );
-//
-//#ifdef RDT_PROMISES_INDENT
-//    if (indent_string)
-//        free(indent_string);
-//#endif
-//    if (argument_string)
-//        free(argument_string);
-//    //if (promises_string)
-//    //    free(promises_string);
-//}
-
 // TODO remove
 static inline void compute_delta() {
     delta = (timestamp() - last) / 1000;
@@ -233,81 +184,6 @@ static inline int count_elements(SEXP list) {
         tmp = CDR(tmp);
     return counter;
 }
-
-//static inline char *trim_string(char *str) {
-//    if (str == NULL)
-//        return str;
-//
-//    int offset_bow = 0, offset_aft = 0;
-//    char *aft = str + strlen(str) - 1;
-//
-//    for (; isspace((unsigned char) *(str + offset_bow)); offset_bow++);
-//    for (; isspace((unsigned char) *(aft + offset_aft)); offset_aft--);
-//
-//    char *ret = malloc(sizeof(char *) * offset_aft - offset_bow + 1);
-//    int ri = 0;
-//    for (int si = offset_bow; si < offset_aft; si++, ri++)
-//        ret[ri] = str[si];
-//    ret[ri] = '\0';
-//
-//    return ret;
-//}
-
-//static inline char **strings_of_STRSXP(SEXP str, Rboolean flatten) {
-//    // Currently I just want to handle a specific case here, so I'll return NULL for everything else.
-//    if (TYPEOF(str) != STRSXP)
-//        return NULL;
-//
-//    int size = XLENGTH(str); //count_elements(str);
-//
-//    char **strings = malloc((sizeof(char *) * size));
-//    for (int i = 0; i < size; i++) {
-//        Rprintf(">-----------------------[%d]\n", i);
-//
-//        strings[i] = strdup(CHAR(STRING_ELT(str, i)));
-//
-//        Rprintf("<-----------------------[%d] %s\n", i, strings[i]);
-//    }
-//}
-
-//static inline char *flatten(char *str) {
-//    int size = strlen(str);
-//    for (int i = 0; i < size; i++)
-//        if (str[i] == '\n') {
-//            if (i)
-//                if (str[i-1] == '{') {
-//                    str[i] = ' ';
-//                    continue;
-//                }
-//            if (i < size - 1)
-//                if (str[i+1] == '}') {
-//                    str[i] = ' ';
-//                    continue;
-//                }
-//            str[i] = ';';
-//        }
-//    return str;
-//}
-//
-//static inline char *remove_redundant_spaces(char *str) {
-//    char *ret = malloc(sizeof(char) * (strlen(str) + 1));
-//    int ret_size = 0;
-//    int prec_is_space = 0;
-//    for (int i = 0; str[i] != '\0'; i++)
-//        if (str[i] == ' ' || str[i] == '\t') {
-//            if (prec_is_space)
-//                continue;
-//            prec_is_space = 1;
-//            ret[ret_size++] = ' ';
-//        } else {
-//            prec_is_space = 0;
-//            ret[ret_size++] = str[i];
-//        }
-//    ret[ret_size] = '\0';
-//    return ret;
-//}
-
-// TODO proper SEXP hashmap
 
 static inline rid_t get_sexp_address(SEXP e) {
     return (rid_t)e;
@@ -388,7 +264,7 @@ static inline int get_arguments(SEXP op, SEXP rho, vector<arg_t> & arguments) {
     for (int i=0; i<argument_count; i++, formals = CDR(formals)) {
         // Retrieve the argument name.
         SEXP argument_expression = TAG(formals);
-        //arguments.push_back(get_name(argument_expression));
+
         arg_t arg;
         string & arg_name = arg.first;
         prom_vec_t & arg_prom_vec = arg.second;
@@ -414,11 +290,7 @@ static inline int get_arguments(SEXP op, SEXP rho, vector<arg_t> & arguments) {
 }
 
 
-
-// Triggggerrredd when entering function evaluation.
-// TODO: function name, unique function identifier, arguments and their order, promises
-// ??? where are promises created? and do we care?
-// ??? will address of funciton change? garbage collector?
+// Triggered when entering function evaluation.
 static void trace_promises_function_entry(const SEXP call, const SEXP op, const SEXP rho) {
     compute_delta();
 
@@ -469,13 +341,6 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
     if (fqfn)
         free(fqfn);
 
-    //Rprintf("<o.o<\n");
-
-    //if (default_values)
-    //    free(default_values);
-    //Rprintf("^o.o^\n");
-    //Rprintf(">o.o>\n");
-
     last = timestamp();
 }
 
@@ -517,14 +382,6 @@ static void trace_promises_function_exit(const SEXP call, const SEXP op, const S
     if (fqfn)
         free(fqfn);
 
-    //Rprintf("<o.o<\n");
-
-    //if (default_values)
-    //    free(default_values);
-    //Rprintf("^o.o^\n");
-
-    //Rprintf(">o.o>\n");
-
     last = timestamp();
 }
 
@@ -536,8 +393,6 @@ static void trace_promises_builtin_entry(const SEXP call, const SEXP op, const S
     rid_t id = get_function_id(op);
 
     print_builtin("=> b-in", NULL, name, id);
-
-    //R_inspect(call);
 
     last = timestamp();
 }
@@ -554,7 +409,6 @@ static void trace_promises_builtin_exit(const SEXP call, const SEXP op, const SE
 }
 
 // Promise is being used inside a function body for the first time.
-// TODO name of promise, expression inside promise, value evaluated if available, (in the long term) connected to a function
 static void trace_promises_force_promise_entry(const SEXP symbol, const SEXP rho) {
     compute_delta();
 
@@ -608,8 +462,6 @@ static void trace_promises_error(const SEXP call, const char* message) {
 
     asprintf(&call_str, "\"%s\"", get_call(call));
 
-    //p_print("error", NULL, call_str);
-
     if (loc) free(loc);
     if (call_str) free(call_str);
 
@@ -618,7 +470,7 @@ static void trace_promises_error(const SEXP call, const char* message) {
 
 static void trace_promises_vector_alloc(int sexptype, long length, long bytes, const char* srcref) {
     compute_delta();
-    //p_print("vector-alloc", NULL, NULL);
+
     last = timestamp();
 }
 
@@ -653,20 +505,18 @@ static void trace_promises_jump_ctxt(const SEXP rho, const SEXP val) {
 
 static void trace_promises_gc_entry(R_size_t size_needed) {
     compute_delta();
-    //p_print("builtin-entry", NULL, "gc_internal");
+
     last = timestamp();
 }
 
 static void trace_promises_gc_exit(int gc_count, double vcells, double ncells) {
     compute_delta();
-    //p_print("builtin-exit", NULL, "gc_internal");
+
     last = timestamp();
 }
 
 static void trace_promises_S3_generic_entry(const char *generic, const SEXP object) {
     compute_delta();
-
-    //p_print("s3-generic-entry", NULL, generic);
 
     last = timestamp();
 }
@@ -674,23 +524,17 @@ static void trace_promises_S3_generic_entry(const char *generic, const SEXP obje
 static void trace_promises_S3_generic_exit(const char *generic, const SEXP object, const SEXP retval) {
     compute_delta();
 
-    //p_print("s3-generic-exit", NULL, generic);
-
     last = timestamp();
 }
 
 static void trace_promises_S3_dispatch_entry(const char *generic, const char *clazz, const SEXP method, const SEXP object) {
     compute_delta();
 
-    //p_print("s3-dispatch-entry", NULL, get_name(method));
-
     last = timestamp();
 }
 
 static void trace_promises_S3_dispatch_exit(const char *generic, const char *clazz, const SEXP method, const SEXP object, const SEXP retval) {
     compute_delta();
-
-    //p_print("s3-dispatch-exit", NULL, get_name(method));
 
     last = timestamp();
 }
