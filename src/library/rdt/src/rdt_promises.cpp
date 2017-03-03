@@ -33,8 +33,6 @@ typedef uintptr_t rid_t;
 #define RID_INVALID -1
 
 static FILE *output = NULL;
-static uint64_t last = 0;
-static uint64_t delta = 0;
 
 static int indent;
 static int call_id_counter;
@@ -68,7 +66,6 @@ static inline void print_builtin(const char *type, const char *loc, const char *
 #else
             "%s loc(%s) function(%s=%#x)\n",
 #endif
-            //delta,
             type,
             CHKSTR(loc),
             CHKSTR(name),
@@ -84,7 +81,6 @@ static inline void print_promise(const char *type, const char *loc, const char *
 #else
             "%s loc(%s) promise(%s=%#x) in_call(" CALL_ID_FMT ") from_call(" CALL_ID_FMT ")\n",
 #endif
-            //delta,
             type,
             CHKSTR(loc),
             CHKSTR(name),
@@ -142,11 +138,6 @@ static inline void print_unwind(const char *type, rid_t call_id) {
     );
 }
 
-// TODO remove
-static inline void compute_delta() {
-    delta = (timestamp() - last) / 1000;
-}
-
 // ??? can we get metadata about the program we're analysing in here?
 static void trace_promises_begin() {
     indent = 0;
@@ -164,8 +155,6 @@ static void trace_promises_begin() {
 #ifdef RDT_CALL_ID
     curr_env_stack.push(0);
 #endif
-
-    last = timestamp();
 }
 static void trace_promises_end() {
     fun_stack.pop();
@@ -292,8 +281,6 @@ static inline int get_arguments(SEXP op, SEXP rho, vector<arg_t> & arguments) {
 
 // Triggered when entering function evaluation.
 static void trace_promises_function_entry(const SEXP call, const SEXP op, const SEXP rho) {
-    compute_delta();
-
     const char *type = is_byte_compiled(call) ? "=> bcod" : "=> func";
     const char *name = get_name(call);
     const char *ns = get_ns_name(op);
@@ -340,13 +327,9 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
         free(loc);
     if (fqfn)
         free(fqfn);
-
-    last = timestamp();
 }
 
 static void trace_promises_function_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
-    compute_delta();
-
     #ifdef RDT_PROMISES_INDENT
     indent -= TAB_WIDTH;
     #endif
@@ -381,37 +364,25 @@ static void trace_promises_function_exit(const SEXP call, const SEXP op, const S
         free(loc);
     if (fqfn)
         free(fqfn);
-
-    last = timestamp();
 }
 
 // XXX Probably don't need this?
 static void trace_promises_builtin_entry(const SEXP call, const SEXP op, const SEXP rho) {
-    compute_delta();
-
     const char *name = get_name(call);
     rid_t id = get_function_id(op);
 
     print_builtin("=> b-in", NULL, name, id);
-
-    last = timestamp();
 }
 
 static void trace_promises_builtin_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
-    compute_delta();
-
     const char *name = get_name(call);
     rid_t id = get_function_id(op);
 
     print_builtin("<= b-in", NULL, name, id);
-
-    last = timestamp();
 }
 
 // Promise is being used inside a function body for the first time.
 static void trace_promises_force_promise_entry(const SEXP symbol, const SEXP rho) {
-    compute_delta();
-
     const char *name = get_name(symbol);
 
     SEXP promise_expression = get_promise(symbol, rho);
@@ -420,13 +391,9 @@ static void trace_promises_force_promise_entry(const SEXP symbol, const SEXP rho
     rid_t from_call_id = promise_origin[id];
 
     print_promise("=> prom", NULL, name, id, in_call_id, from_call_id);
-
-    last = timestamp();
 }
 
 static void trace_promises_force_promise_exit(const SEXP symbol, const SEXP rho, const SEXP val) {
-    compute_delta();
-
     const char *name = get_name(symbol);
 
     SEXP promise_expression = get_promise(symbol, rho);
@@ -435,13 +402,9 @@ static void trace_promises_force_promise_exit(const SEXP symbol, const SEXP rho,
     rid_t from_call_id = promise_origin[id];
 
     print_promise("<= prom", NULL, name, id, in_call_id, from_call_id);
-
-    last = timestamp();
 }
 
 static void trace_promises_promise_lookup(const SEXP symbol, const SEXP rho, const SEXP val) {
-    compute_delta();
-
     const char *name = get_name(symbol);
 
     SEXP promise_expression = get_promise(symbol, rho);
@@ -450,13 +413,9 @@ static void trace_promises_promise_lookup(const SEXP symbol, const SEXP rho, con
     rid_t from_call_id = promise_origin[id];
 
     print_promise("<> lkup", NULL, name, id, in_call_id, from_call_id);
-
-    last = timestamp();
 }
 
 static void trace_promises_error(const SEXP call, const char* message) {
-    compute_delta();
-
     char *call_str = NULL;
     char *loc = get_location(call);
 
@@ -464,14 +423,9 @@ static void trace_promises_error(const SEXP call, const char* message) {
 
     if (loc) free(loc);
     if (call_str) free(call_str);
-
-    last = timestamp();
 }
 
 static void trace_promises_vector_alloc(int sexptype, long length, long bytes, const char* srcref) {
-    compute_delta();
-
-    last = timestamp();
 }
 
 // static void trace_eval_entry(SEXP e, SEXP rho) {
@@ -504,39 +458,21 @@ static void trace_promises_jump_ctxt(const SEXP rho, const SEXP val) {
 }
 
 static void trace_promises_gc_entry(R_size_t size_needed) {
-    compute_delta();
-
-    last = timestamp();
 }
 
 static void trace_promises_gc_exit(int gc_count, double vcells, double ncells) {
-    compute_delta();
-
-    last = timestamp();
 }
 
 static void trace_promises_S3_generic_entry(const char *generic, const SEXP object) {
-    compute_delta();
-
-    last = timestamp();
 }
 
 static void trace_promises_S3_generic_exit(const char *generic, const SEXP object, const SEXP retval) {
-    compute_delta();
-
-    last = timestamp();
 }
 
 static void trace_promises_S3_dispatch_entry(const char *generic, const char *clazz, const SEXP method, const SEXP object) {
-    compute_delta();
-
-    last = timestamp();
 }
 
 static void trace_promises_S3_dispatch_exit(const char *generic, const char *clazz, const SEXP method, const SEXP object, const SEXP retval) {
-    compute_delta();
-
-    last = timestamp();
 }
 
 
@@ -607,9 +543,6 @@ rdt_handler *setup_promise_tracing(SEXP options) {
             }
         }
     }
-
-    last = 0;
-    delta = 0;
 
     return h;
 }
