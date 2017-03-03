@@ -3,7 +3,8 @@
 #include <stack>
 #include <sstream>
 #include <initializer_list>
-
+#include <unordered_map>
+#include <tuple>
 #include <unordered_map>
 #include <errno.h>
 #include <stdio.h>
@@ -48,8 +49,6 @@ typedef int sid_t;
 #define RID_INVALID -1
 
 static FILE *output = NULL;
-static uint64_t last = 0;
-static uint64_t delta = 0;
 
 static int indent;
 static int call_id_counter;
@@ -84,22 +83,9 @@ static stack<rid_t, vector<rid_t>> curr_env_stack;
 // Map from promise IDs to call IDs
 static unordered_map<rid_t, rid_t> promise_origin;
 
-// XXX probably remove
-static inline void p_print(const char *type, const char *loc, const char *name) {
-    fprintf(output,
-#ifdef RDT_PROMISES_INDENT
-            "-- %*s%s loc(%s) %s\n",
-            indent,
-            "",
-#else
-            "-- %s loc(%s) %s\n",
-#endif
+typedef vector<rid_t> prom_vec_t;
+typedef tuple<string, sid_t, prom_vec_t> arg_t;
 
-            //delta,
-            type,
-            CHKSTR(loc),
-            CHKSTR(name));
-}
 
 static inline void print_builtin(const char *type, const char *loc, const char *name, rid_t id) {
     fprintf(output,
@@ -110,28 +96,27 @@ static inline void print_builtin(const char *type, const char *loc, const char *
 #else
             "-- %s loc(%s) function(%s=%#x)\n",
 #endif
-            //delta,
             type,
             CHKSTR(loc),
             CHKSTR(name),
             id);
 }
 
-static inline void print_promise(const char *type, const char *loc, const char *name, rid_t id, rid_t call_id) {
+static inline void print_promise(const char *type, const char *loc, const char *name, rid_t id, rid_t in_call_id, rid_t from_call_id) {
     fprintf(output,
 #ifdef RDT_PROMISES_INDENT
-            "-- %*s%s loc(%s) promise(%s=%#x) from_call(" CALL_ID_FMT ")\n",
+            "-- %*s%s loc(%s) promise(%s=%#x) in_call(" CALL_ID_FMT ") from_call(" CALL_ID_FMT ")\n",
             indent,
             "",
 #else
-            "-- %s loc(%s) promise(%s=%#x) from_call(" CALL_ID_FMT ")\n",
+            "-- %s loc(%s) promise(%s=%#x) in_call(" CALL_ID_FMT ") from_call(" CALL_ID_FMT ")\n",
 #endif
-            //delta,
             type,
             CHKSTR(loc),
             CHKSTR(name),
             id,
-            call_id);
+            in_call_id,
+            from_call_id);
 }
 
 static inline string wrap_nullable_string(const char* s) {
@@ -144,7 +129,7 @@ static inline string wrap_string(string s) {
 
 static unordered_set<rid_t> already_inserted_functions;
 static sid_t argument_id_sequence = 0;
-static inline string mk_sql_function(rid_t function_id, vector<string> const& arguments, vector<sid_t> const& argument_ids, const char* location, const char* definition) {
+static inline string mk_sql_function(rid_t function_id, vector<arg_t> const& arguments, const char* location, const char* definition) {
     std::stringstream stream;
     // Don't generate anything if one was previously generated.
     if(!already_inserted_functions.count(function_id)) {
@@ -165,8 +150,8 @@ static inline string mk_sql_function(rid_t function_id, vector<string> const& ar
                     stream << "\n            union all select";
 
                 stream << " "
-                       << dec << argument_ids[index] << ","
-                       << wrap_string(argument) << ","
+                       << dec << get<1>(argument) << ","
+                       << wrap_string(get<0>(argument)) << ","
                        << dec << index << ","
                        << "0x" << hex << function_id;
                 index++;
@@ -191,20 +176,23 @@ static inline string mk_sql_function_call(rid_t call_id, rid_t call_ptr, const c
     return stream.str();
 }
 
-static inline string mk_sql_promises(vector<rid_t> promises, rid_t call_id, vector<sid_t> argument_ids) {
+static inline string mk_sql_promises(vector<arg_t> arguments, rid_t call_id) {
     std::stringstream stream;
-    if (promises.size() > 0) {
+    if (arguments.size() > 0) {
         stream << "insert into promises  select";
         int index = 0;
-        for (auto promise : promises) {
-            if (index)
-                stream << "\n            union all select";
+        for (auto & argument : arguments) {
+            sid_t arg_id = get<1>(argument);
+            for (auto promise : get<2>(argument)) {
+                if (index)
+                    stream << "\n            union all select";
 
-            stream << " "
-                   << "0x" << hex << promise << ","
-                   << dec << call_id << ","
-                   << argument_ids[index];
-            index++;
+                stream << " "
+                       << "0x" << hex << promise << ","
+                       << dec << call_id << ","
+                       << arg_id;
+                index++;
+            }
         }
         stream << ";\n";
     }
@@ -222,70 +210,40 @@ static inline string mk_sql_promise_evaluation(int event_type, rid_t promise_id,
     return stream.str();
 }
 
-static string concat_arguments(vector<string> const& arguments, /*const char **default_values, const char **promises,*/ int arguments_length) {
-    string argument_string = "";
 
-    for (int i=0; i<arguments_length; i++) {
-        if (i)
-            argument_string += ", ";
-
-        argument_string += arguments[i];
-//        argument_string = strcat(argument_string, promises[i]);
-//
-//        if (default_values[i] != NULL) {
-//            argument_string = strcat(argument_string, "=");
-//            argument_string = strcat(argument_string, default_values[i]);
-//        }
-    }
-
-    return argument_string;
-}
-
-static string concat_promises(vector<string> const& arguments, /*const char **default_values,*/ vector<rid_t> const& promises, int arguments_length) {
-    string promises_string = "";
-
-    for (int i=0; i<arguments_length; i++) {
-        if (i)
-            promises_string += ", ";
-
-        promises_string += arguments[i];
-        promises_string += " = ";
-        char * prom_id_str;
-        asprintf(&prom_id_str, "%#x", promises[i]);
-        promises_string += prom_id_str;
-        free(prom_id_str);
-
-        //if (default_values[i] != NULL) {
-        //  promises_string = strcat(promises_string, "=");
-        //  promises_string = strcat(promises_string, default_values[i]);
-        //}
-    }
-
-    //Rprintf("String %s (%i vs %i)", promises_string, strlen(promises_string), (sizeof(char) * (characters + 1 * (arguments_length - 1) + 1)));
-
-    return promises_string;
-}
-
-static inline void print_function(const char *type, const char *loc, const char *name, rid_t function_id, rid_t call_id, vector<string> const& arguments, /*const char **default_values,*/ vector<rid_t> const& promises, const int arguments_num) {
-    string argument_string = concat_arguments(arguments, /* default_values, promises, */ arguments_num);
-    string promises_string = concat_promises(arguments, /* default_values,*/ promises, arguments_num);
-
+static inline void print_function(const char *type, const char *loc, const char *name, rid_t function_id, rid_t call_id, vector<arg_t> const& arguments, const int arguments_num) {
     fprintf(output,
 #ifdef RDT_PROMISES_INDENT
-        "-- %*s%s loc(%s) call(" CALL_ID_FMT ") function(%s=%#x) params(%s) promises(%s)\n",
+        "-- %*s%s loc(%s) call(" CALL_ID_FMT ") function(%s=%#x) ",
         indent, // http://stackoverflow.com/a/9448093/6846474
         "",
 #else
-        "-- %s loc(%s) call(" CALL_ID_FMT ") function(%s=%#x) params(%s) promises(%s)\n",
+        "-- %s loc(%s) call(" CALL_ID_FMT ") function(%s=%#x) ",
 #endif
         type,
         CHKSTR(loc),
         call_id,
         CHKSTR(name),
-        function_id,
-        argument_string.c_str(),
-        promises_string.c_str()
+        function_id
     );
+
+    // print argument names and the promises bound to them
+    int i = 0;
+    fprintf(output, "arguments(");
+    for (auto & a : arguments) {
+        const prom_vec_t & p = get<2>(a);
+        fprintf(output, "%s=%#x", get<0>(a).c_str(), p[0]);
+
+        // iterate from second bound value if there is any
+        // and produce comma separated list of promises
+        for (auto it = ++p.begin(); it != p.end(); it++) {
+            fprintf(output, ",%#x", *it);
+        }
+        if (i < arguments_num - 1) fprintf(output, ";"); // semicolon separates individual args
+        ++i;
+    }
+
+    fprintf(output, ")\n");
 }
 
 static inline void print_unwind(const char *type, rid_t call_id) {
@@ -302,44 +260,6 @@ static inline void print_unwind(const char *type, rid_t call_id) {
     );
 }
 
-//static inline void print_function_bare(const char *type, const char *loc, const char *name, const char *function_id, const char **arguments, int arguments_num) {
-//#ifdef RDT_PROMISES_INDENT
-//    char *indent_string = mk_indent();
-//#endif
-//
-//    char *argument_string = concat_arguments(arguments, /* default_values, promises, */ arguments_num);
-//    //char *promises_string = concat_promises(arguments, /* default_values,*/ promises, arguments_num);
-//
-//    fprintf(output,
-//#ifdef RDT_PROMISES_INDENT
-//            "%s%s loc(%s) function(%s=%s) params(%s)\n",
-//            indent_string,
-//#else
-//            "%s loc(%s) function(%s=%s) params(%s)\n",
-//#endif
-//            type,
-//            CHKSTR(loc),
-//            CHKSTR(name),
-//            CHKSTR(function_id),
-//            argument_string
-//            //promises_string
-//    );
-//
-//#ifdef RDT_PROMISES_INDENT
-//    if (indent_string)
-//        free(indent_string);
-//#endif
-//    if (argument_string)
-//        free(argument_string);
-//    //if (promises_string)
-//    //    free(promises_string);
-//}
-
-// TODO remove
-static inline void compute_delta() {
-    delta = (timestamp() - last) / 1000;
-}
-
 // ??? can we get metadata about the program we're analysing in here?
 static void trace_promises_begin() {
     indent = 0;
@@ -350,9 +270,20 @@ static void trace_promises_begin() {
     //fprintf(output, "TYPE,LOCATION,NAME\n");
     //fflush(output);
 
-    last = timestamp();
+    // We have to make sure the stack is not empty
+    // when referring to the promise created by call to Rdt.
+    // This is just a dummy call and environment.
+    fun_stack.push(0);
+#ifdef RDT_CALL_ID
+    curr_env_stack.push(0);
+#endif
 }
 static void trace_promises_end() {
+    fun_stack.pop();
+#ifdef RDT_CALL_ID
+    curr_env_stack.pop();
+#endif
+
     promise_origin.clear();
     fclose(output);
 }
@@ -364,81 +295,6 @@ static inline int count_elements(SEXP list) {
         tmp = CDR(tmp);
     return counter;
 }
-
-//static inline char *trim_string(char *str) {
-//    if (str == NULL)
-//        return str;
-//
-//    int offset_bow = 0, offset_aft = 0;
-//    char *aft = str + strlen(str) - 1;
-//
-//    for (; isspace((unsigned char) *(str + offset_bow)); offset_bow++);
-//    for (; isspace((unsigned char) *(aft + offset_aft)); offset_aft--);
-//
-//    char *ret = malloc(sizeof(char *) * offset_aft - offset_bow + 1);
-//    int ri = 0;
-//    for (int si = offset_bow; si < offset_aft; si++, ri++)
-//        ret[ri] = str[si];
-//    ret[ri] = '\0';
-//
-//    return ret;
-//}
-
-//static inline char **strings_of_STRSXP(SEXP str, Rboolean flatten) {
-//    // Currently I just want to handle a specific case here, so I'll return NULL for everything else.
-//    if (TYPEOF(str) != STRSXP)
-//        return NULL;
-//
-//    int size = XLENGTH(str); //count_elements(str);
-//
-//    char **strings = malloc((sizeof(char *) * size));
-//    for (int i = 0; i < size; i++) {
-//        Rprintf(">-----------------------[%d]\n", i);
-//
-//        strings[i] = strdup(CHAR(STRING_ELT(str, i)));
-//
-//        Rprintf("<-----------------------[%d] %s\n", i, strings[i]);
-//    }
-//}
-
-//static inline char *flatten(char *str) {
-//    int size = strlen(str);
-//    for (int i = 0; i < size; i++)
-//        if (str[i] == '\n') {
-//            if (i)
-//                if (str[i-1] == '{') {
-//                    str[i] = ' ';
-//                    continue;
-//                }
-//            if (i < size - 1)
-//                if (str[i+1] == '}') {
-//                    str[i] = ' ';
-//                    continue;
-//                }
-//            str[i] = ';';
-//        }
-//    return str;
-//}
-//
-//static inline char *remove_redundant_spaces(char *str) {
-//    char *ret = malloc(sizeof(char) * (strlen(str) + 1));
-//    int ret_size = 0;
-//    int prec_is_space = 0;
-//    for (int i = 0; str[i] != '\0'; i++)
-//        if (str[i] == ' ' || str[i] == '\t') {
-//            if (prec_is_space)
-//                continue;
-//            prec_is_space = 1;
-//            ret[ret_size++] = ' ';
-//        } else {
-//            prec_is_space = 0;
-//            ret[ret_size++] = str[i];
-//        }
-//    ret[ret_size] = '\0';
-//    return ret;
-//}
-
-// TODO proper SEXP hashmap
 
 static inline rid_t get_sexp_address(SEXP e) {
     return (rid_t)e;
@@ -511,7 +367,7 @@ static SEXP get_promise(SEXP var, SEXP rho) {
     return prom;
 }
 
-static inline int get_arguments(SEXP op, SEXP rho, vector<string> & arguments, vector<sid_t> & argument_ids, /*char ***return_default_values,*/ vector<rid_t> & promises) {
+static inline int get_arguments(SEXP op, SEXP rho, vector<arg_t> & arguments) {
     SEXP formals = FORMALS(op);
 
     int argument_count = count_elements(formals);
@@ -519,49 +375,42 @@ static inline int get_arguments(SEXP op, SEXP rho, vector<string> & arguments, v
     for (int i=0; i<argument_count; i++, formals = CDR(formals)) {
         // Retrieve the argument name.
         SEXP argument_expression = TAG(formals);
-        arguments.push_back(get_name(argument_expression));
-        argument_ids.push_back(++argument_id_sequence);
 
-        // FIXME dot-dot-dot
+        arg_t arg;
+        string & arg_name = get<0>(arg);
+        sid_t & arg_id = get<1>(arg);
+        prom_vec_t & arg_prom_vec = get<2>(arg);
 
-        // Retrieve the default expression for the argument.
-        // SEXP default_value_expression = CAR(formals);
-        // if (default_value_expression != R_MissingArg) {
-        //     SEXP deparsed_expression = deparse1line(default_value_expression, FALSE);
-        //     // deparsed_expression has everything we need, but is formatted for display on console, so we de-prettify
-        //     // it.
-        //     char *flat_code = flatten(strdup(CHAR(STRING_ELT(deparsed_expression, 0))));
-        //     default_values[i] = remove_redundant_spaces(flat_code);
-        //     free(flat_code);
-        // } else
-        //     default_values[i] = NULL;
+        arg_name = get_name(argument_expression);
+        arg_id = ++argument_id_sequence;
 
         // Retrieve the promise for the argument.
         // The call SEXP only contains AST to find the actual argument value, we need to search the environment.
         SEXP promise_expression = get_promise(argument_expression, rho);
-        //asprintf(&promises[i], "[%p]", promise_expression);
-        promises.push_back(get_promise_id(promise_expression));
-        //Rprintf("promise=%s\n",promises[i]);
+
+        if (TYPEOF(promise_expression) == DOTSXP) {
+            for(SEXP dots = promise_expression; dots != R_NilValue; dots = CDR(dots)) {
+                arg_prom_vec.push_back(get_promise_id(CAR(dots)));
+            }
+        }
+        else {
+            arg_prom_vec.push_back(get_promise_id(promise_expression));
+        }
+        arguments.push_back(arg);
     }
 
     return argument_count;
 }
 
 
-
-// Triggggerrredd when entering function evaluation.
-// TODO: function name, unique function identifier, arguments and their order, promises
-// ??? where are promises created? and do we care?
-// ??? will address of funciton change? garbage collector?
+// Triggered when entering function evaluation.
 static void trace_promises_function_entry(const SEXP call, const SEXP op, const SEXP rho) {
-    compute_delta();
-
     const char *type = is_byte_compiled(call) ? "=> bcod" : "=> func";
     int call_type = is_byte_compiled(call) ? 1 : 0;
     const char *name = get_name(call);
     const char *ns = get_ns_name(op);
     rid_t fn_id = get_function_id(op);
-    rid_t call_ptr = get_sexp_address(op);
+    rid_t call_ptr = get_sexp_address(rho);
 #ifdef RDT_CALL_ID
     rid_t call_id = make_funcall_id(op);
 #else
@@ -582,46 +431,35 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
     curr_env_stack.push(get_sexp_address(rho));
 #endif
 
-    vector<string> arguments;
-    vector<sid_t> argument_ids;
-    //char **default_values;
-    vector<rid_t> promises;
+    vector<arg_t> arguments;
     int argument_count;
 
-    argument_count = get_arguments(op, rho, arguments, argument_ids,/*&default_values,*/ promises);
-    print_function(type, loc, fqfn, fn_id, call_id, /*(const char **)*/arguments, /*default_values,*/ /*(const char **)*/ promises, argument_count);
+    argument_count = get_arguments(op, rho, arguments);
+    print_function(type, loc, fqfn, fn_id, call_id, arguments, argument_count);
 
-    rdt_print({mk_sql_function(fn_id, arguments, argument_ids, loc, NULL),
+    rdt_print({mk_sql_function(fn_id, arguments, loc, NULL),
                mk_sql_function_call(call_id, call_ptr, name, loc, call_type, fn_id),
-               mk_sql_promises(promises, call_id, argument_ids)});
+               mk_sql_promises(arguments, call_id)});
 
     #ifdef RDT_PROMISES_INDENT
     indent += TAB_WIDTH;
     #endif
 
     // Associate promises with call ID
-    for (auto p : promises) {
-        promise_origin[p] = call_id;
+    for (auto & a : arguments) {
+        auto & promises = get<2>(a);
+        for (auto p : promises) {
+            promise_origin[p] = call_id;
+        }
     }
 
     if (loc)
         free(loc);
     if (fqfn)
         free(fqfn);
-
-    //Rprintf("<o.o<\n");
-
-    //if (default_values)
-    //    free(default_values);
-    //Rprintf("^o.o^\n");
-    //Rprintf(">o.o>\n");
-
-    last = timestamp();
 }
 
 static void trace_promises_function_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
-    compute_delta();
-
     #ifdef RDT_PROMISES_INDENT
     indent -= TAB_WIDTH;
     #endif
@@ -640,14 +478,11 @@ static void trace_promises_function_exit(const SEXP call, const SEXP op, const S
         fqfn = name != NULL ? strdup(name) : NULL;
     }
 
-    vector<string> arguments;
-    vector<sid_t> argument_ids;
-    //char **default_values;
-    vector<rid_t> promises;
+    vector<arg_t> arguments;
     int argument_count;
 
-    argument_count = get_arguments(op, rho, arguments, argument_ids, /*&default_values,*/ promises);
-    print_function(type, loc, name, fn_id, call_id, arguments, /*default_values,*/ promises, argument_count);
+    argument_count = get_arguments(op, rho, arguments);
+    print_function(type, loc, name, fn_id, call_id, arguments, argument_count);
 
     // Pop current function ID
     fun_stack.pop();
@@ -659,124 +494,90 @@ static void trace_promises_function_exit(const SEXP call, const SEXP op, const S
         free(loc);
     if (fqfn)
         free(fqfn);
-
-    //Rprintf("<o.o<\n");
-
-    //if (default_values)
-    //    free(default_values);
-    //Rprintf("^o.o^\n");
-
-    //Rprintf(">o.o>\n");
-
-    last = timestamp();
 }
 
-// XXX Probably don't need this?
+// TODO retrieve arguments
 static void trace_promises_builtin_entry(const SEXP call, const SEXP op, const SEXP rho) {
-    compute_delta();
-
     const char *name = get_name(call);
     rid_t fn_id = get_function_id(op);
 
-    rid_t call_ptr = get_sexp_address(call);
+    rid_t call_ptr = get_sexp_address(rho);
 #ifdef RDT_CALL_ID
-    rid_t call_id = make_funcall_id(call);
+    rid_t call_id = make_funcall_id(op);
+#else
+    rid_t call_id = make_funcall_id(rho);
 #endif
 
     print_builtin("=> b-in", NULL, name, fn_id);
 
-    vector<string> arguments;
-    vector<sid_t> argument_ids;
-    //vector<rid_t> promises;
+    vector<arg_t> arguments;
 
-    rdt_print({mk_sql_function(fn_id, arguments, argument_ids, NULL, NULL),
+    rdt_print({mk_sql_function(fn_id, arguments, NULL, NULL),
                mk_sql_function_call(call_id, call_ptr, name, NULL, 1, fn_id)});
             // mk_sql_promises(promises, call_id, argument_ids)
 
     //R_inspect(call);
-
-    last = timestamp();
 }
 
 static void trace_promises_builtin_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
-    compute_delta();
-
     const char *name = get_name(call);
     rid_t id = get_function_id(op);
 
     print_builtin("<= b-in", NULL, name, id);
-
-    last = timestamp();
 }
 
 // Promise is being used inside a function body for the first time.
-// TODO name of promise, expression inside promise, value evaluated if available, (in the long term) connected to a function
 static void trace_promises_force_promise_entry(const SEXP symbol, const SEXP rho) {
-    compute_delta();
-
     const char *name = get_name(symbol);
 
     SEXP promise_expression = get_promise(symbol, rho);
     rid_t id = get_promise_id(promise_expression);
-    rid_t call_id = promise_origin[id];
+    rid_t in_call_id = fun_stack.top();
+    rid_t from_call_id = promise_origin[id];
 
-    print_promise("=> prom", NULL, name, id, call_id);
+    // TODO: save in_call_id to db
+    // in_call_id = current call
+    rdt_print({mk_sql_promise_evaluation(RDT_FORCE_PROMISE, id, from_call_id)});
 
-    rdt_print({mk_sql_promise_evaluation(RDT_FORCE_PROMISE, id, call_id)});
-
-    last = timestamp();
+    print_promise("=> prom", NULL, name, id, in_call_id, from_call_id);
 }
 
 static void trace_promises_force_promise_exit(const SEXP symbol, const SEXP rho, const SEXP val) {
-    compute_delta();
-
     const char *name = get_name(symbol);
 
     SEXP promise_expression = get_promise(symbol, rho);
     rid_t id = get_promise_id(promise_expression);
-    rid_t call_id = promise_origin[id];
+    rid_t in_call_id = fun_stack.top();
+    rid_t from_call_id = promise_origin[id];
 
-    print_promise("<= prom", NULL, name, id, call_id);
-
-    last = timestamp();
+    print_promise("<= prom", NULL, name, id, in_call_id, from_call_id);
 }
 
 static void trace_promises_promise_lookup(const SEXP symbol, const SEXP rho, const SEXP val) {
-    compute_delta();
-
     const char *name = get_name(symbol);
 
     SEXP promise_expression = get_promise(symbol, rho);
     rid_t id = get_promise_id(promise_expression);
-    rid_t call_id = promise_origin[id];
+    rid_t in_call_id = fun_stack.top();
+    rid_t from_call_id = promise_origin[id];
 
-    print_promise("<> lkup", NULL, name, id, call_id);
+    // TODO
+    rdt_print({mk_sql_promise_evaluation(RDT_LOOKUP_PROMISE, id, from_call_id)});
 
-    rdt_print({mk_sql_promise_evaluation(RDT_LOOKUP_PROMISE, id, call_id)});
-
-    last = timestamp();
+    print_promise("<> lkup", NULL, name, id, in_call_id, from_call_id);
 }
 
 static void trace_promises_error(const SEXP call, const char* message) {
-    compute_delta();
-
     char *call_str = NULL;
     char *loc = get_location(call);
 
     asprintf(&call_str, "\"%s\"", get_call(call));
 
-    //p_print("error", NULL, call_str);
-
     if (loc) free(loc);
     if (call_str) free(call_str);
-
-    last = timestamp();
 }
 
 static void trace_promises_vector_alloc(int sexptype, long length, long bytes, const char* srcref) {
-    compute_delta();
-    //p_print("vector-alloc", NULL, NULL);
-    last = timestamp();
 }
 
 // static void trace_eval_entry(SEXP e, SEXP rho) {
@@ -809,47 +610,21 @@ static void trace_promises_jump_ctxt(const SEXP rho, const SEXP val) {
 }
 
 static void trace_promises_gc_entry(R_size_t size_needed) {
-    compute_delta();
-    //p_print("builtin-entry", NULL, "gc_internal");
-    last = timestamp();
 }
 
 static void trace_promises_gc_exit(int gc_count, double vcells, double ncells) {
-    compute_delta();
-    //p_print("builtin-exit", NULL, "gc_internal");
-    last = timestamp();
 }
 
 static void trace_promises_S3_generic_entry(const char *generic, const SEXP object) {
-    compute_delta();
-
-    //p_print("s3-generic-entry", NULL, generic);
-
-    last = timestamp();
 }
 
 static void trace_promises_S3_generic_exit(const char *generic, const SEXP object, const SEXP retval) {
-    compute_delta();
-
-    //p_print("s3-generic-exit", NULL, generic);
-
-    last = timestamp();
 }
 
 static void trace_promises_S3_dispatch_entry(const char *generic, const char *clazz, const SEXP method, const SEXP object) {
-    compute_delta();
-
-    //p_print("s3-dispatch-entry", NULL, get_name(method));
-
-    last = timestamp();
 }
 
 static void trace_promises_S3_dispatch_exit(const char *generic, const char *clazz, const SEXP method, const SEXP object, const SEXP retval) {
-    compute_delta();
-
-    //p_print("s3-dispatch-exit", NULL, get_name(method));
-
-    last = timestamp();
 }
 
 
@@ -920,9 +695,6 @@ rdt_handler *setup_promise_tracing(SEXP options) {
             }
         }
     }
-
-    last = 0;
-    delta = 0;
 
     return h;
 }
