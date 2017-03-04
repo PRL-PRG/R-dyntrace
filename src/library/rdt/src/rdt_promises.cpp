@@ -41,8 +41,8 @@ extern "C" {
 using namespace std;
 
 // If defined printout will include increasing indents showing function calls.
-//#define RDT_PROMISES_INDENT
-#define TAB_WIDTH 4
+#define RDT_PROMISES_INDENT
+static int TAB_WIDTH = 4; // TODO config
 
 // Use generated call IDs instead of function env addresses
 #define RDT_CALL_ID
@@ -69,8 +69,10 @@ static stack<rid_t, vector<rid_t>> fun_stack;
 #ifdef RDT_CALL_ID
 #define CALL_ID_FMT "%d"
 static stack<rid_t, vector<rid_t>> curr_env_stack;
+static bool call_id_use_ptr_fmt = false;
 #else
 #define CALL_ID_FMT "%#x"
+static bool call_id_use_ptr_fmt = true;
 #endif
 
 // Map from promise IDs to call IDs
@@ -83,13 +85,12 @@ enum OutputFormat: char {RDT_OUTPUT_TRACE, RDT_OUTPUT_SQL, RDT_OUTPUT_BOTH};
 enum Output: char {RDT_R_PRINT, RDT_FILE, RDT_SQLITE};
 
 // TODO make these settable from Rdt(...)
-static int output_type = RDT_SQLITE;
+static int output_type = RDT_R_PRINT;
 static int output_format = RDT_OUTPUT_BOTH;
 static bool pretty_print = true;
 
 static inline void rdt_print(std::initializer_list<string> strings) {
     switch (output_type) {
-
         case RDT_FILE:
             for (auto string : strings)
                 fprintf(output, "%s", string.c_str());
@@ -124,7 +125,7 @@ static inline void rdt_print(std::initializer_list<string> strings) {
 static inline void rdt_init_sqlite(const char *filename) {
 #ifdef RDT_SQLITE_SUPPORT
     int outcome;
-    char *zErrMsg = NULL;
+    char *error_msq = NULL;
     outcome = sqlite3_open(filename, &sqlite_database);
 
     if (outcome) {
@@ -132,11 +133,11 @@ static inline void rdt_init_sqlite(const char *filename) {
         return;
     }
 
-    outcome = sqlite3_exec(sqlite_database, (".read " + RDT_SQLITE_SCHEMA).c_str(), NULL, 0, &zErrMsg);
+    outcome = sqlite3_exec(sqlite_database, (".read " + RDT_SQLITE_SCHEMA).c_str(), NULL, 0, &error_msq);
 
     if( outcome != SQLITE_OK ) {
-        fprintf(stderr, "SQLite error: %s\n", zErrMsg);
-        sqlite3_free(zErrMsg);
+        fprintf(stderr, "SQLite error: %s\n", error_msq);
+        sqlite3_free(error_msq);
     }
 #else
     Rprintf("-- SQLite support is missing...? Ganbatte!\n");
@@ -149,36 +150,65 @@ static inline void rdt_close_sqlite() {
 #endif
 }
 
-static inline void print_builtin(const char *type, const char *loc, const char *name, rid_t id) {
-    fprintf(output,
-#ifdef RDT_PROMISES_INDENT
-            "-- %*s%s loc(%s) function(%s=%#x)\n",
-            indent,
-            "",
-#else
-            "-- %s loc(%s) function(%s=%#x)\n",
-#endif
-            type,
-            CHKSTR(loc),
-            CHKSTR(name),
-            id);
+static inline string print_builtin(const char *type, const char *loc, const char *name, rid_t id) {
+    stringstream stream;
+    stream << "-- ";
+
+    if (pretty_print)
+        stream << string(indent, ' ');
+
+    stream << type << " "
+           << "loc(" << CHKSTR(loc) << ") "
+           << "fun(" << CHKSTR(name) << "=" << hex << id << ")\n";
+
+
+//    fprintf(output,
+// TODO get rid of RDT_PROMISES_INDENT in favor of runtime options
+//#ifdef RDT_PROMISES_INDENT
+//            "-- %*s%s loc(%s) function(%s=%#x)\n",
+//            indent,
+//            "",
+//#else
+//            "-- %s loc(%s) function(%s=%#x)\n",
+//#endif
+//            type,
+//            CHKSTR(loc),
+//            CHKSTR(name),
+//            id);
+
+    return stream.str();
 }
 
-static inline void print_promise(const char *type, const char *loc, const char *name, rid_t id, rid_t in_call_id, rid_t from_call_id) {
-    fprintf(output,
-#ifdef RDT_PROMISES_INDENT
-            "-- %*s%s loc(%s) promise(%s=%#x) in_call(" CALL_ID_FMT ") from_call(" CALL_ID_FMT ")\n",
-            indent,
-            "",
-#else
-            "-- %s loc(%s) promise(%s=%#x) in_call(" CALL_ID_FMT ") from_call(" CALL_ID_FMT ")\n",
-#endif
-            type,
-            CHKSTR(loc),
-            CHKSTR(name),
-            id,
-            in_call_id,
-            from_call_id);
+static inline string print_promise(const char *type, const char *loc, const char *name, rid_t id, rid_t in_call_id, rid_t from_call_id) {
+    stringstream stream;
+    stream << "-- ";
+
+    if (pretty_print)
+        stream << string(indent, ' ');
+
+    stream << type << " "
+           << "loc(" << CHKSTR(loc) << ") "
+           << "prom(" << CHKSTR(name) << "=" << hex << id << ") ";
+    stream << "in(" << (call_id_use_ptr_fmt ? hex : dec) << in_call_id << ") ";
+    stream << "from(" << (call_id_use_ptr_fmt ? hex : dec) << from_call_id << ")\n";
+
+//    fprintf(output,
+//// TODO get rid of RDT_PROMISES_INDENT in favor of runtime options
+//#ifdef RDT_PROMISES_INDENT
+//            "-- %*s%s loc(%s) promise(%s=%#x) in_call(" CALL_ID_FMT ") from_call(" CALL_ID_FMT ")\n",
+//            indent,
+//            "",
+//#else
+//            "-- %s loc(%s) promise(%s=%#x) in_call(" CALL_ID_FMT ") from_call(" CALL_ID_FMT ")\n",
+//#endif
+//            type,
+//            CHKSTR(loc),
+//            CHKSTR(name),
+//            id,
+//            in_call_id,
+//            from_call_id);
+
+    return stream.str();
 }
 
 static inline string wrap_nullable_string(const char* s) {
@@ -192,7 +222,7 @@ static inline string wrap_string(string s) {
 static unordered_set<rid_t> already_inserted_functions;
 static sid_t argument_id_sequence = 0;
 static inline string mk_sql_function(rid_t function_id, vector<arg_t> const& arguments, const char* location, const char* definition) {
-    std::stringstream stream;
+    stringstream stream;
     // Don't generate anything if one was previously generated.
     if(!already_inserted_functions.count(function_id)) {
         // Generate `functions' update containing function definition.
@@ -242,7 +272,7 @@ static inline string mk_sql_function_call(rid_t call_id, rid_t call_ptr, const c
 static inline string mk_sql_promises(vector<arg_t> arguments, rid_t call_id) {
     std::stringstream stream;
     if (arguments.size() > 0) {
-        stream << pretty_print ? "insert into promises  select" : "insert into promises select";
+        stream << (pretty_print ? "insert into promises  select" : "insert into promises select");
         int index = 0;
         for (auto & argument : arguments) {
             sid_t arg_id = get<1>(argument);
@@ -253,7 +283,7 @@ static inline string mk_sql_promises(vector<arg_t> arguments, rid_t call_id) {
                 stream << " "
                        << "0x" << hex << promise << ",";
                 stream << call_id << ","
-                       << arg_id;
+                       << dec << arg_id;
                 index++;
             }
         }
@@ -274,53 +304,82 @@ static inline string mk_sql_promise_evaluation(int event_type, rid_t promise_id,
 }
 
 
-static inline void print_function(const char *type, const char *loc, const char *name, rid_t function_id, rid_t call_id, vector<arg_t> const& arguments, const int arguments_num) {
-    fprintf(output,
-#ifdef RDT_PROMISES_INDENT
-        "-- %*s%s loc(%s) call(" CALL_ID_FMT ") function(%s=%#x) ",
-        indent, // http://stackoverflow.com/a/9448093/6846474
-        "",
-#else
-        "-- %s loc(%s) call(" CALL_ID_FMT ") function(%s=%#x) ",
-#endif
-        type,
-        CHKSTR(loc),
-        call_id,
-        CHKSTR(name),
-        function_id
-    );
+static inline string print_function(const char *type, const char *loc, const char *name, rid_t function_id, rid_t call_id, vector<arg_t> const& arguments, const int arguments_num) {
+    stringstream stream;
+    // TODO only if SQL-type output
+    stream << "-- ";
+
+    if (pretty_print)
+        stream << string(indent, ' ');
+
+    stream << type << " "
+           << "loc(" << CHKSTR(loc) << ") "
+           << "call(" << (call_id_use_ptr_fmt ? hex : dec) << call_id << ") ";
+    stream << "fun(" << CHKSTR(name) << "=" << hex << function_id << ") ";
+
+//    fprintf(output,
+//#ifdef RDT_PROMISES_INDENT
+//        "-- %*s%s loc(%s) call(" CALL_ID_FMT ") function(%s=%#x) ",
+//        indent, // http://stackoverflow.com/a/9448093/6846474
+//        "",
+//#else
+//        "-- %s loc(%s) call(" CALL_ID_FMT ") function(%s=%#x) ",
+//#endif
+//        type,
+//        CHKSTR(loc),
+//        call_id,
+//        CHKSTR(name),
+//        function_id
+//    );
 
     // print argument names and the promises bound to them
+    stream << "arguments(";
     int i = 0;
-    fprintf(output, "arguments(");
     for (auto & a : arguments) {
         const prom_vec_t & p = get<2>(a);
         fprintf(output, "%s=%#x", get<0>(a).c_str(), p[0]);
+        stream << get<0>(a).c_str() << "=" << p[0];
 
         // iterate from second bound value if there is any
         // and produce comma separated list of promises
-        for (auto it = ++p.begin(); it != p.end(); it++) {
-            fprintf(output, ",%#x", *it);
-        }
-        if (i < arguments_num - 1) fprintf(output, ";"); // semicolon separates individual args
+        for (auto it = ++p.begin(); it != p.end(); it++)
+//            fprintf(output, ",%#x", *it);
+            stream << "," << *it;
+        if (i < arguments_num - 1)
+            stream << ";";
+            //fprintf(output, ";"); // semicolon separates individual args
         ++i;
     }
 
-    fprintf(output, ")\n");
+    stream << ")\n";
+    //fprintf(output, ")\n");
+
+    return stream.str();
 }
 
-static inline void print_unwind(const char *type, rid_t call_id) {
-    fprintf(output,
-#ifdef RDT_PROMISES_INDENT
-            "-- %*s%s unwind call(" CALL_ID_FMT ")\n",
-            indent,
-            "",
-#else
-            "-- %s unwind call(" CALL_ID_FMT ")\n",
-#endif
-            type,
-            call_id
-    );
+static inline string print_unwind(const char *type, rid_t call_id) {
+    stringstream stream;
+    // TODO only if SQL-type output
+    stream << "-- ";
+
+    if (pretty_print)
+        stream << string(indent, ' ');
+
+    stream << type << " "
+           << "unwind(" << (call_id_use_ptr_fmt ? hex : dec) << call_id << ")\n";
+
+//    fprintf(output,
+//#ifdef RDT_PROMISES_INDENT
+//            "-- %*s%s unwind call(" CALL_ID_FMT ")\n",
+//            indent,
+//            "",
+//#else
+//            "-- %s unwind call(" CALL_ID_FMT ")\n",
+//#endif
+//            type,
+//            call_id
+//    );
+    return stream.str();
 }
 
 // ??? can we get metadata about the program we're analysing in here?
@@ -413,7 +472,7 @@ static inline void adjust_fun_stack(SEXP rho) {
 #ifdef RDT_PROMISES_INDENT
         indent -= TAB_WIDTH;
 #endif
-        print_unwind("<=", call_id);
+        rdt_print({print_unwind("<=", call_id)});
     }
 }
 
@@ -498,7 +557,9 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
     int argument_count;
 
     argument_count = get_arguments(op, rho, arguments);
-    print_function(type, loc, fqfn, fn_id, call_id, arguments, argument_count);
+    // TODO link with mk_sql
+    // TODO rename to reflect non-printing nature
+    rdt_print({print_function(type, loc, fqfn, fn_id, call_id, arguments, argument_count)});
 
     rdt_print({mk_sql_function(fn_id, arguments, loc, NULL),
                mk_sql_function_call(call_id, call_ptr, name, loc, call_type, fn_id),
@@ -545,7 +606,7 @@ static void trace_promises_function_exit(const SEXP call, const SEXP op, const S
     int argument_count;
 
     argument_count = get_arguments(op, rho, arguments);
-    print_function(type, loc, name, fn_id, call_id, arguments, argument_count);
+    rdt_print({print_function(type, loc, name, fn_id, call_id, arguments, argument_count)});
 
     // Pop current function ID
     fun_stack.pop();
@@ -571,7 +632,8 @@ static void trace_promises_builtin_entry(const SEXP call, const SEXP op, const S
     rid_t call_id = make_funcall_id(rho);
 #endif
 
-    print_builtin("=> b-in", NULL, name, fn_id);
+    // TODO merge rdt_print_calls
+    rdt_print({print_builtin("=> b-in", NULL, name, fn_id)});
 
     vector<arg_t> arguments;
 
@@ -586,7 +648,7 @@ static void trace_promises_builtin_exit(const SEXP call, const SEXP op, const SE
     const char *name = get_name(call);
     rid_t id = get_function_id(op);
 
-    print_builtin("<= b-in", NULL, name, id);
+    rdt_print({print_builtin("<= b-in", NULL, name, id)});
 }
 
 // Promise is being used inside a function body for the first time.
@@ -600,9 +662,9 @@ static void trace_promises_force_promise_entry(const SEXP symbol, const SEXP rho
 
     // TODO: save in_call_id to db
     // in_call_id = current call
+    rdt_print({print_promise("=> prom", NULL, name, id, in_call_id, from_call_id)});
     rdt_print({mk_sql_promise_evaluation(RDT_FORCE_PROMISE, id, from_call_id)});
 
-    print_promise("=> prom", NULL, name, id, in_call_id, from_call_id);
 }
 
 static void trace_promises_force_promise_exit(const SEXP symbol, const SEXP rho, const SEXP val) {
@@ -613,7 +675,7 @@ static void trace_promises_force_promise_exit(const SEXP symbol, const SEXP rho,
     rid_t in_call_id = fun_stack.top();
     rid_t from_call_id = promise_origin[id];
 
-    print_promise("<= prom", NULL, name, id, in_call_id, from_call_id);
+    rdt_print({print_promise("<= prom", NULL, name, id, in_call_id, from_call_id)});
 }
 
 static void trace_promises_promise_lookup(const SEXP symbol, const SEXP rho, const SEXP val) {
@@ -625,9 +687,9 @@ static void trace_promises_promise_lookup(const SEXP symbol, const SEXP rho, con
     rid_t from_call_id = promise_origin[id];
 
     // TODO
+    rdt_print({print_promise("<> lkup", NULL, name, id, in_call_id, from_call_id)});
     rdt_print({mk_sql_promise_evaluation(RDT_LOOKUP_PROMISE, id, from_call_id)});
 
-    print_promise("<> lkup", NULL, name, id, in_call_id, from_call_id);
 }
 
 static void trace_promises_error(const SEXP call, const char* message) {
