@@ -13,8 +13,14 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+#include <string>
+#include <fstream>
+#include <streambuf>
 
-//#define RDT_SQLITE_SUPPORT
+//#ifdef SQLITE3_H
+#define RDT_SQLITE_SUPPORT
+//#endif
+
 #ifdef RDT_SQLITE_SUPPORT
 #include <sqlite3.h>
 static std::string RDT_SQLITE_SCHEMA = "src/library/rdt/sql/schema.sql";
@@ -82,10 +88,10 @@ typedef vector<rid_t> prom_vec_t;
 typedef tuple<string, sid_t, prom_vec_t> arg_t;
 
 enum OutputFormat: char {RDT_OUTPUT_TRACE, RDT_OUTPUT_SQL, RDT_OUTPUT_BOTH};
-enum Output: char {RDT_R_PRINT, RDT_FILE, RDT_SQLITE};
+enum Output: char {RDT_R_PRINT, RDT_FILE, RDT_SQLITE, RDT_R_PRINT_AND_SQLITE};
 
 // TODO make these settable from Rdt(...)
-static int output_type = RDT_R_PRINT;
+static int output_type = RDT_R_PRINT_AND_SQLITE;
 static int output_format = RDT_OUTPUT_BOTH;
 static bool pretty_print = true;
 
@@ -95,6 +101,7 @@ static inline void rdt_print(std::initializer_list<string> strings) {
             for (auto string : strings)
                 fprintf(output, "%s", string.c_str());
             break;
+        case RDT_R_PRINT_AND_SQLITE:
         case RDT_SQLITE: {
             // If R is compiled without RDT_SQLITE_SUPPORT then this will print a warning and print out SQL to
             // Rprintf instead.
@@ -104,16 +111,21 @@ static inline void rdt_print(std::initializer_list<string> strings) {
             for (auto string : strings)
                 sql << string;
 
-            int outcome = sqlite3_exec(sqlite_database, sql.str().c_str(), NULL, 0, &error_msg);
+            string sql_string = sql.str();
+
+            if (output_type == RDT_R_PRINT_AND_SQLITE)
+                Rprintf("%s", sql_string.c_str());
+
+            int outcome = sqlite3_exec(sqlite_database, sql_string.c_str(), NULL, 0, &error_msg);
 
             if (outcome != SQLITE_OK) {
-                fprintf(stderr, "SQLite error: %s\n", error_msg);
+                fprintf(stderr, "SQLite: [%i] %s/%s in: \"%s\"\n", outcome, error_msg, sqlite3_errmsg(sqlite_database), sql_string.c_str());
                 sqlite3_free(error_msg);
             }
 
             break;
 #else
-            Rprintf("-- SQLite support is missing, printing SQL to console:\n");
+            fprintf(stderr, "-- SQLite support is missing, printing SQL to console:\n");
 #endif
         } case RDT_R_PRINT:
             for (auto string : strings)
@@ -125,22 +137,35 @@ static inline void rdt_print(std::initializer_list<string> strings) {
 static inline void rdt_init_sqlite(const char *filename) {
 #ifdef RDT_SQLITE_SUPPORT
     int outcome;
-    char *error_msq = NULL;
+    char *error_msg = NULL;
     outcome = sqlite3_open(filename, &sqlite_database);
 
     if (outcome) {
         fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(sqlite_database));
         return;
+    } else {
+        fprintf(stderr, "Opening database: %s\n", filename);
     }
 
-    outcome = sqlite3_exec(sqlite_database, (".read " + RDT_SQLITE_SCHEMA).c_str(), NULL, 0, &error_msq);
+    ifstream schema_file(RDT_SQLITE_SCHEMA);
+    string schema_string;
 
-    if( outcome != SQLITE_OK ) {
-        fprintf(stderr, "SQLite error: %s\n", error_msq);
-        sqlite3_free(error_msq);
+    schema_file.seekg(0, ios::end);
+    schema_string.reserve(schema_file.tellg());
+    schema_file.seekg(0, ios::beg);
+    schema_string.assign((istreambuf_iterator<char>(schema_file)), istreambuf_iterator<char>());
+
+    //if (output_type == RDT_R_PRINT_AND_SQLITE || output_type == RDT_R)
+    //Rprintf("%s\n", schema_string.c_str());
+
+    outcome = sqlite3_exec(sqlite_database, schema_string.c_str(), NULL, 0, &error_msg);
+
+    if (outcome != SQLITE_OK) {
+        fprintf(stderr, "SQLite: [%i] %s/%s in: \"%s\"\n", outcome, error_msg, sqlite3_errmsg(sqlite_database), schema_string.c_str());
+        sqlite3_free(error_msg);
     }
 #else
-    Rprintf("-- SQLite support is missing...? Ganbatte!\n");
+    fprintf(stderr, "-- SQLite support is missing...?\n");
 #endif
 }
 
@@ -242,10 +267,10 @@ static inline string mk_sql_function(rid_t function_id, vector<arg_t> const& arg
                     stream << (pretty_print ? "\n            " : " ") << "union all select";
 
                 stream << " "
-                       << get<1>(argument) << ","
+                       << dec << get<1>(argument) << ","
                        << wrap_string(get<0>(argument)) << ","
-                       << index << ",";
-                stream << "0x" << hex << function_id;
+                       << index << ","
+                       << "0x" << hex << function_id;
 
                 index++;
             }
@@ -259,11 +284,11 @@ static inline string mk_sql_function(rid_t function_id, vector<arg_t> const& arg
 static inline string mk_sql_function_call(rid_t call_id, rid_t call_ptr, const char *name, const char* location, int call_type, rid_t function_id) {
     std::stringstream stream;
     stream << "insert into calls values ("
-           << call_id << ","
-           << "0x" << hex << call_ptr << ",";
-    stream << wrap_nullable_string(name) << ","
+           << dec << call_id << ","
+           << "0x" << hex << call_ptr << ","
+           << wrap_nullable_string(name) << ","
            << wrap_nullable_string(location) << ","
-           << call_type << ","
+           << dec << call_type << ","
            << "0x" << hex << function_id
            << ");\n";
     return stream.str();
@@ -281,8 +306,8 @@ static inline string mk_sql_promises(vector<arg_t> arguments, rid_t call_id) {
                     stream << (pretty_print ? "\n            " : " ") << "union all select";
 
                 stream << " "
-                       << "0x" << hex << promise << ",";
-                stream << call_id << ","
+                       << "0x" << hex << promise << ","
+                       << dec << call_id << ","
                        << dec << arg_id;
                 index++;
             }
@@ -298,7 +323,7 @@ static inline string mk_sql_promise_evaluation(int event_type, rid_t promise_id,
            << "$next_id,"
            << "0x" << hex << event_type << ",";
     stream << "0x" << hex << promise_id << ",";
-    stream << call_id
+    stream << dec << call_id
            << ");\n";
     return stream.str();
 }
@@ -337,7 +362,7 @@ static inline string print_function(const char *type, const char *loc, const cha
     int i = 0;
     for (auto & a : arguments) {
         const prom_vec_t & p = get<2>(a);
-        fprintf(output, "%s=%#x", get<0>(a).c_str(), p[0]);
+        //fprintf(output, "%s=%#x", get<0>(a).c_str(), p[0]);
         stream << get<0>(a).c_str() << "=" << p[0];
 
         // iterate from second bound value if there is any
@@ -387,7 +412,7 @@ static void trace_promises_begin() {
     indent = 0;
     call_id_counter = 0;
 
-    output = fopen("trace.db", "w");
+    //output = fopen("trace.db", "w");
 
     //fprintf(output, "TYPE,LOCATION,NAME\n");
     //fflush(output);
@@ -780,6 +805,8 @@ static const rdt_handler trace_promises_rdt_handler = {
 
 rdt_handler *setup_promise_tracing(SEXP options) {
     const char *filename = get_string(get_named_list_element(options, "filename"));
+    if (filename == NULL)
+        filename = "trace.db";
     output = filename != NULL ? fopen(filename, "wt") : stderr;
 
     // TODO to ifdef or not to ifdef
@@ -824,6 +851,10 @@ rdt_handler *setup_promise_tracing(SEXP options) {
         }
     }
 
-    rdt_close_sqlite();
+    //rdt_close_sqlite();
     return h;
+}
+
+void cleanup_promise_tracing(/*rdt_handler *h,*/ SEXP options) {
+    rdt_close_sqlite();
 }

@@ -36,3 +36,18 @@ dddOnlyFun <- function(...) {
 testDdd <- function() {
 	dddFun(1, 2, 3, 4)
 }
+
+curry <-
+	function(x1)
+		function(x2)
+			function(x3)
+				function(x4)
+					function(x5)
+						function(x6)
+							function(x7)
+								function(x8)
+									function(x9)
+										function(x10)
+											x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10
+
+curry_eval <- function() curry(1)(2)(3)(4)(5)(6)(7)(8)(9)(10)

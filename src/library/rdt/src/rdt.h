@@ -15,6 +15,8 @@ rdt_handler *setup_noop_tracing(SEXP options);
 rdt_handler *setup_promise_tracing(SEXP options);
 rdt_handler *setup_debug_tracing(SEXP options);
 
+void cleanup_promise_tracing(/* rdt_handler *handler */ SEXP options);
+
 const char *get_string(SEXP sexp);
 
 #ifdef __cplusplus

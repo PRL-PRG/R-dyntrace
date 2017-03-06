@@ -57,6 +57,11 @@ SEXP Rdt(SEXP tracer, SEXP rho, SEXP options) {
     // this is to prevent long jumps return earlier than needed
     void *data[2] = {block, rho};
     R_ToplevelExec(&internal_eval, (void *)data);
+
+    if (!strcmp("promises", sys)) {
+        cleanup_promise_tracing(options);
+    }
+
     rdt_stop();
     return R_TrueValue; // TODO Why does this return TRUE and not the return value of the expression anyway?
 }
