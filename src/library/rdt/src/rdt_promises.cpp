@@ -94,8 +94,21 @@ enum Output: char {RDT_R_PRINT, RDT_FILE, RDT_SQLITE, RDT_R_PRINT_AND_SQLITE};
 static int output_type = RDT_R_PRINT_AND_SQLITE;
 static int output_format = RDT_OUTPUT_BOTH;
 static bool pretty_print = true;
+static bool overwrite = false;
+//static bool synthetic_call_id = true;
 
-static inline void rdt_print(std::initializer_list<string> strings) {
+static inline void prepend_prefix(stringstream *stream) {
+    if (output_format == RDT_OUTPUT_TRACE) {
+        if (pretty_print)
+            (*stream) << string(indent, ' ');
+    } else
+        (*stream) << "-- ";
+}
+
+static inline void rdt_print(OutputFormat string_format, std::initializer_list<string> strings) {
+    if (output_format != RDT_OUTPUT_BOTH && string_format != output_format)
+        return;
+
     switch (output_type) {
         case RDT_FILE:
             for (auto string : strings)
@@ -119,7 +132,7 @@ static inline void rdt_print(std::initializer_list<string> strings) {
             int outcome = sqlite3_exec(sqlite_database, sql_string.c_str(), NULL, 0, &error_msg);
 
             if (outcome != SQLITE_OK) {
-                fprintf(stderr, "SQLite: [%i] %s/%s in: \"%s\"\n", outcome, error_msg, sqlite3_errmsg(sqlite_database), sql_string.c_str());
+                fprintf(stderr, "SQLite: [%i] %s/%s in: %s\n", outcome, error_msg, sqlite3_errmsg(sqlite_database), sql_string.c_str());
                 sqlite3_free(error_msg);
             }
 
@@ -177,9 +190,9 @@ static inline void rdt_close_sqlite() {
 
 static inline string print_builtin(const char *type, const char *loc, const char *name, rid_t id) {
     stringstream stream;
-    stream << "-- ";
+    prepend_prefix(&stream);
 
-    if (pretty_print)
+    if (pretty_print && (output_format == RDT_OUTPUT_TRACE))
         stream << string(indent, ' ');
 
     stream << type << " "
@@ -206,9 +219,9 @@ static inline string print_builtin(const char *type, const char *loc, const char
 
 static inline string print_promise(const char *type, const char *loc, const char *name, rid_t id, rid_t in_call_id, rid_t from_call_id) {
     stringstream stream;
-    stream << "-- ";
+    prepend_prefix(&stream);
 
-    if (pretty_print)
+    if (pretty_print && (output_format == RDT_OUTPUT_TRACE))
         stream << string(indent, ' ');
 
     stream << type << " "
@@ -331,10 +344,9 @@ static inline string mk_sql_promise_evaluation(int event_type, rid_t promise_id,
 
 static inline string print_function(const char *type, const char *loc, const char *name, rid_t function_id, rid_t call_id, vector<arg_t> const& arguments, const int arguments_num) {
     stringstream stream;
-    // TODO only if SQL-type output
-    stream << "-- ";
+    prepend_prefix(&stream);
 
-    if (pretty_print)
+    if (pretty_print && (output_format == RDT_OUTPUT_TRACE))
         stream << string(indent, ' ');
 
     stream << type << " "
@@ -384,11 +396,12 @@ static inline string print_function(const char *type, const char *loc, const cha
 
 static inline string print_unwind(const char *type, rid_t call_id) {
     stringstream stream;
-    // TODO only if SQL-type output
-    stream << "-- ";
-
-    if (pretty_print)
-        stream << string(indent, ' ');
+    prepend_prefix(&stream);
+//    if (output_format == RDT_OUTPUT_TRACE) {
+//        if (pretty_print)
+//            stream << string(indent, ' ');
+//    } else
+//        stream << "-- ";
 
     stream << type << " "
            << "unwind(" << (call_id_use_ptr_fmt ? hex : dec) << call_id << ")\n";
@@ -432,7 +445,9 @@ static void trace_promises_end() {
 #endif
 
     promise_origin.clear();
-    fclose(output);
+
+    if (output)
+        fclose(output);
 }
 
 static inline int count_elements(SEXP list) {
@@ -497,7 +512,7 @@ static inline void adjust_fun_stack(SEXP rho) {
 #ifdef RDT_PROMISES_INDENT
         indent -= TAB_WIDTH;
 #endif
-        rdt_print({print_unwind("<=", call_id)});
+        rdt_print(RDT_OUTPUT_TRACE, {print_unwind("<=", call_id)});
     }
 }
 
@@ -584,9 +599,9 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
     argument_count = get_arguments(op, rho, arguments);
     // TODO link with mk_sql
     // TODO rename to reflect non-printing nature
-    rdt_print({print_function(type, loc, fqfn, fn_id, call_id, arguments, argument_count)});
+    rdt_print(RDT_OUTPUT_TRACE, {print_function(type, loc, fqfn, fn_id, call_id, arguments, argument_count)});
 
-    rdt_print({mk_sql_function(fn_id, arguments, loc, NULL),
+    rdt_print(RDT_OUTPUT_SQL, {mk_sql_function(fn_id, arguments, loc, NULL),
                mk_sql_function_call(call_id, call_ptr, name, loc, call_type, fn_id),
                mk_sql_promises(arguments, call_id)});
 
@@ -631,7 +646,7 @@ static void trace_promises_function_exit(const SEXP call, const SEXP op, const S
     int argument_count;
 
     argument_count = get_arguments(op, rho, arguments);
-    rdt_print({print_function(type, loc, name, fn_id, call_id, arguments, argument_count)});
+    rdt_print(RDT_OUTPUT_TRACE, {print_function(type, loc, name, fn_id, call_id, arguments, argument_count)});
 
     // Pop current function ID
     fun_stack.pop();
@@ -658,11 +673,11 @@ static void trace_promises_builtin_entry(const SEXP call, const SEXP op, const S
 #endif
 
     // TODO merge rdt_print_calls
-    rdt_print({print_builtin("=> b-in", NULL, name, fn_id)});
+    rdt_print(RDT_OUTPUT_TRACE, {print_builtin("=> b-in", NULL, name, fn_id)});
 
     vector<arg_t> arguments;
 
-    rdt_print({mk_sql_function(fn_id, arguments, NULL, NULL),
+    rdt_print(RDT_OUTPUT_SQL, {mk_sql_function(fn_id, arguments, NULL, NULL),
                mk_sql_function_call(call_id, call_ptr, name, NULL, 1, fn_id)});
             // mk_sql_promises(promises, call_id, argument_ids)
 
@@ -673,7 +688,7 @@ static void trace_promises_builtin_exit(const SEXP call, const SEXP op, const SE
     const char *name = get_name(call);
     rid_t id = get_function_id(op);
 
-    rdt_print({print_builtin("<= b-in", NULL, name, id)});
+    rdt_print(RDT_OUTPUT_TRACE, {print_builtin("<= b-in", NULL, name, id)});
 }
 
 // Promise is being used inside a function body for the first time.
@@ -687,8 +702,8 @@ static void trace_promises_force_promise_entry(const SEXP symbol, const SEXP rho
 
     // TODO: save in_call_id to db
     // in_call_id = current call
-    rdt_print({print_promise("=> prom", NULL, name, id, in_call_id, from_call_id)});
-    rdt_print({mk_sql_promise_evaluation(RDT_FORCE_PROMISE, id, from_call_id)});
+    rdt_print(RDT_OUTPUT_TRACE, {print_promise("=> prom", NULL, name, id, in_call_id, from_call_id)});
+    rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise_evaluation(RDT_FORCE_PROMISE, id, from_call_id)});
 
 }
 
@@ -700,7 +715,7 @@ static void trace_promises_force_promise_exit(const SEXP symbol, const SEXP rho,
     rid_t in_call_id = fun_stack.top();
     rid_t from_call_id = promise_origin[id];
 
-    rdt_print({print_promise("<= prom", NULL, name, id, in_call_id, from_call_id)});
+    rdt_print(RDT_OUTPUT_TRACE, {print_promise("<= prom", NULL, name, id, in_call_id, from_call_id)});
 }
 
 static void trace_promises_promise_lookup(const SEXP symbol, const SEXP rho, const SEXP val) {
@@ -712,8 +727,8 @@ static void trace_promises_promise_lookup(const SEXP symbol, const SEXP rho, con
     rid_t from_call_id = promise_origin[id];
 
     // TODO
-    rdt_print({print_promise("<> lkup", NULL, name, id, in_call_id, from_call_id)});
-    rdt_print({mk_sql_promise_evaluation(RDT_LOOKUP_PROMISE, id, from_call_id)});
+    rdt_print(RDT_OUTPUT_TRACE, {print_promise("<> lkup", NULL, name, id, in_call_id, from_call_id)});
+    rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise_evaluation(RDT_LOOKUP_PROMISE, id, from_call_id)});
 
 }
 
@@ -777,7 +792,6 @@ static void trace_promises_S3_dispatch_entry(const char *generic, const char *cl
 static void trace_promises_S3_dispatch_exit(const char *generic, const char *clazz, const SEXP method, const SEXP object, const SEXP retval) {
 }
 
-
 // TODO properly turn off probes we don't use
 static const rdt_handler trace_promises_rdt_handler = {
         &trace_promises_begin,
@@ -804,18 +818,71 @@ static const rdt_handler trace_promises_rdt_handler = {
 };
 
 rdt_handler *setup_promise_tracing(SEXP options) {
-    const char *filename = get_string(get_named_list_element(options, "filename"));
+    const char *filename = get_string(get_named_list_element(options, "path"));
     if (filename == NULL)
         filename = "trace.db";
-    output = filename != NULL ? fopen(filename, "wt") : stderr;
 
-    // TODO to ifdef or not to ifdef
-    rdt_init_sqlite(filename);
+    const char *output_format_option = get_string(get_named_list_element(options, "format"));
+    if (output_format_option == NULL || !strcmp(output_format_option, "trace"))
+        output_format = RDT_OUTPUT_TRACE;
+    else if (!strcmp(output_format_option, "SQL") || !strcmp(output_format_option, "sql"))
+        output_format = RDT_OUTPUT_SQL;
+    else if (!strcmp(output_format_option, "both"))
+        output_format = RDT_OUTPUT_BOTH;
+    else
+        error("Unknown format type: \"%s\"\n", output_format_option);
 
-    if (!output) {
-        error("Unable to open %s: %s\n", filename, strerror(errno));
-        return NULL;
+    Rprintf("output_format_option=%s->%i\n", output_format_option,output_format);
+
+    const char *output_type_option = get_string(get_named_list_element(options, "output"));
+    if (output_type_option == NULL || !strcmp(output_type_option, "R") || !strcmp(output_type_option, "r"))
+        output_type = RDT_R_PRINT;
+    else if (!strcmp(output_type_option, "file"))
+        output_type = RDT_FILE;
+    else if (!strcmp(output_type_option, "DB") || !strcmp(output_type_option, "db"))
+        output_type = RDT_SQLITE;
+    else if (!strcmp(output_type_option, "R+DB") || !strcmp(output_type_option, "r+db") ||
+        !strcmp(output_type_option, "DB+R") || !strcmp(output_type_option, "db+r"))
+        output_type = RDT_R_PRINT_AND_SQLITE;
+    else
+        error("Unknown format type: \"%s\"\n", output_type_option);
+
+    Rprintf("output_type_option=%s->%i\n", output_type_option,output_type);
+
+    SEXP pretty_print_option = get_named_list_element(options, "pretty.print");
+    if (pretty_print_option == NULL || TYPEOF(pretty_print_option) == NILSXP)
+        pretty_print = true;
+    else
+        pretty_print = LOGICAL(pretty_print_option)[0] == TRUE;
+    Rprintf("pretty_print_option=%p->%i\n", (pretty_print_option), pretty_print);
+
+    SEXP overwrite_option = get_named_list_element(options, "overwrite");
+    if (overwrite_option == NULL || TYPEOF(overwrite_option) == NILSXP)
+        overwrite = false;
+    else
+        overwrite = LOGICAL(overwrite_option)[0] == TRUE;
+    Rprintf("overwrite_option=%p->%i\n", (overwrite_option), overwrite);
+
+    SEXP synthetic_call_id_option = get_named_list_element(options, "synthetic.call.id");
+    if (synthetic_call_id_option == NULL || TYPEOF(synthetic_call_id_option) == NILSXP)
+        call_id_use_ptr_fmt = false;
+    else
+        call_id_use_ptr_fmt = LOGICAL(synthetic_call_id_option)[0] == FALSE;
+    Rprintf("call_id_use_ptr_fmt=%p->%i\n", (synthetic_call_id_option), call_id_use_ptr_fmt);
+
+    if (output_type != RDT_SQLITE && output_type != RDT_R_PRINT_AND_SQLITE) {
+        output = fopen(filename, overwrite ? "w" : "wt"); // TODO options for wt?
+        if (!output) {
+            error("Unable to open %s: %s\n", filename, strerror(errno));
+            return NULL;
+        }
     }
+
+    if(overwrite && (output_type == RDT_SQLITE || output_type == RDT_R_PRINT_AND_SQLITE))
+        remove(filename);
+
+    if (output_type == RDT_SQLITE || output_type == RDT_R_PRINT_AND_SQLITE)
+        rdt_init_sqlite(filename);
 
     rdt_handler *h = (rdt_handler *)  malloc(sizeof(rdt_handler));
     memcpy(h, &trace_promises_rdt_handler, sizeof(rdt_handler));
@@ -856,5 +923,6 @@ rdt_handler *setup_promise_tracing(SEXP options) {
 }
 
 void cleanup_promise_tracing(/*rdt_handler *h,*/ SEXP options) {
-    rdt_close_sqlite();
+    if (output_type == RDT_SQLITE || output_type == RDT_R_PRINT_AND_SQLITE)
+        rdt_close_sqlite();
 }

@@ -66,54 +66,8 @@ SEXP Rdt(SEXP tracer, SEXP rho, SEXP options) {
     return R_TrueValue; // TODO Why does this return TRUE and not the return value of the expression anyway?
 }
 
-SEXP Rdt_deparse(SEXP exp) {
-    Rprintf("> %i (%s)\n", TYPEOF(exp), type2char(TYPEOF(exp)));
-
-    if (TYPEOF(exp) == LISTSXP) {
-        while (exp != R_NilValue) {
-            SEXP tag = exp->u.listsxp.tagval;
-            Rdt_deparse(tag);
-
-            // TODO check if tag == ... etc.
-            SEXP car = exp->u.listsxp.carval;
-            if (car != R_MissingArg) {
-                Rprintf("=");
-                Rdt_deparse(car);
-            }
-
-            exp = exp->u.listsxp.cdrval; // l := tl l
-        }
-        return R_TrueValue;
-    }
-
-    if (TYPEOF(exp) == CLOSXP) {
-        Rprintf("formals: ");
-        Rdt_deparse(exp->u.closxp.formals); // -> LISTSXP
-        Rprintf("body: ");
-        Rdt_deparse(exp->u.closxp.body);
-
-        return R_TrueValue;
-    }
-
-    if (TYPEOF(exp) == LANGSXP) {
-
-    }
-
-    if (TYPEOF(exp) == SYMSXP) {
-        return Rdt_deparse(exp->u.symsxp.pname);
-    }
-
-    if (TYPEOF(exp) == CHARSXP) {
-        const char *name = CHAR(exp);
-        Rprintf(name);
-        return R_TrueValue;
-    }
-
-    if (TYPEOF(exp) == REALSXP) {
-        // TODO
-    }
-
-    return R_FalseValue;
+inline const char *get_value_from_list(SEXP options) {
+    //if (sexp == R_NilValue || TYPEOF(sexp) != )
 }
 
 inline const char *get_string(SEXP sexp) {
