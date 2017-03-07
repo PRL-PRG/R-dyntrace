@@ -47,8 +47,7 @@ extern "C" {
 using namespace std;
 
 // If defined printout will include increasing indents showing function calls.
-#define RDT_PROMISES_INDENT
-static int TAB_WIDTH = 4; // TODO config
+static int TAB_WIDTH = 4;
 
 // Use generated call IDs instead of function env addresses
 #define RDT_CALL_ID
@@ -62,10 +61,8 @@ typedef int sid_t;
 #define RID_INVALID -1
 
 static FILE *output = NULL;
-
 static int indent;
 static int call_id_counter;
-
 
 // Function call stack (may be useful)
 // Whenever R makes a function call, we generate a function ID and store that ID on top of the stack
@@ -162,7 +159,6 @@ static inline void rdt_init_sqlite(const char *filename) {
 
     ifstream schema_file(RDT_SQLITE_SCHEMA);
     string schema_string;
-
     schema_file.seekg(0, ios::end);
     schema_string.reserve(schema_file.tellg());
     schema_file.seekg(0, ios::beg);
@@ -199,21 +195,6 @@ static inline string print_builtin(const char *type, const char *loc, const char
            << "loc(" << CHKSTR(loc) << ") "
            << "fun(" << CHKSTR(name) << "=" << hex << id << ")\n";
 
-
-//    fprintf(output,
-// TODO get rid of RDT_PROMISES_INDENT in favor of runtime options
-//#ifdef RDT_PROMISES_INDENT
-//            "-- %*s%s loc(%s) function(%s=%#x)\n",
-//            indent,
-//            "",
-//#else
-//            "-- %s loc(%s) function(%s=%#x)\n",
-//#endif
-//            type,
-//            CHKSTR(loc),
-//            CHKSTR(name),
-//            id);
-
     return stream.str();
 }
 
@@ -229,22 +210,6 @@ static inline string print_promise(const char *type, const char *loc, const char
            << "prom(" << CHKSTR(name) << "=" << hex << id << ") ";
     stream << "in(" << (call_id_use_ptr_fmt ? hex : dec) << in_call_id << ") ";
     stream << "from(" << (call_id_use_ptr_fmt ? hex : dec) << from_call_id << ")\n";
-
-//    fprintf(output,
-//// TODO get rid of RDT_PROMISES_INDENT in favor of runtime options
-//#ifdef RDT_PROMISES_INDENT
-//            "-- %*s%s loc(%s) promise(%s=%#x) in_call(" CALL_ID_FMT ") from_call(" CALL_ID_FMT ")\n",
-//            indent,
-//            "",
-//#else
-//            "-- %s loc(%s) promise(%s=%#x) in_call(" CALL_ID_FMT ") from_call(" CALL_ID_FMT ")\n",
-//#endif
-//            type,
-//            CHKSTR(loc),
-//            CHKSTR(name),
-//            id,
-//            in_call_id,
-//            from_call_id);
 
     return stream.str();
 }
@@ -354,21 +319,6 @@ static inline string print_function(const char *type, const char *loc, const cha
            << "call(" << (call_id_use_ptr_fmt ? hex : dec) << call_id << ") ";
     stream << "fun(" << CHKSTR(name) << "=" << hex << function_id << ") ";
 
-//    fprintf(output,
-//#ifdef RDT_PROMISES_INDENT
-//        "-- %*s%s loc(%s) call(" CALL_ID_FMT ") function(%s=%#x) ",
-//        indent, // http://stackoverflow.com/a/9448093/6846474
-//        "",
-//#else
-//        "-- %s loc(%s) call(" CALL_ID_FMT ") function(%s=%#x) ",
-//#endif
-//        type,
-//        CHKSTR(loc),
-//        call_id,
-//        CHKSTR(name),
-//        function_id
-//    );
-
     // print argument names and the promises bound to them
     stream << "arguments(";
     int i = 0;
@@ -397,38 +347,14 @@ static inline string print_function(const char *type, const char *loc, const cha
 static inline string print_unwind(const char *type, rid_t call_id) {
     stringstream stream;
     prepend_prefix(&stream);
-//    if (output_format == RDT_OUTPUT_TRACE) {
-//        if (pretty_print)
-//            stream << string(indent, ' ');
-//    } else
-//        stream << "-- ";
-
     stream << type << " "
            << "unwind(" << (call_id_use_ptr_fmt ? hex : dec) << call_id << ")\n";
-
-//    fprintf(output,
-//#ifdef RDT_PROMISES_INDENT
-//            "-- %*s%s unwind call(" CALL_ID_FMT ")\n",
-//            indent,
-//            "",
-//#else
-//            "-- %s unwind call(" CALL_ID_FMT ")\n",
-//#endif
-//            type,
-//            call_id
-//    );
     return stream.str();
 }
 
 // ??? can we get metadata about the program we're analysing in here?
 static void trace_promises_begin() {
     indent = 0;
-    call_id_counter = 0;
-
-    //output = fopen("trace.db", "w");
-
-    //fprintf(output, "TYPE,LOCATION,NAME\n");
-    //fflush(output);
 
     // We have to make sure the stack is not empty
     // when referring to the promise created by call to Rdt.
@@ -509,9 +435,9 @@ static inline void adjust_fun_stack(SEXP rho) {
         curr_env_stack.pop();
 #endif
         fun_stack.pop();
-#ifdef RDT_PROMISES_INDENT
-        indent -= TAB_WIDTH;
-#endif
+
+        if (pretty_print)
+            indent -= TAB_WIDTH;
         rdt_print(RDT_OUTPUT_TRACE, {print_unwind("<=", call_id)});
     }
 }
@@ -605,9 +531,8 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
                mk_sql_function_call(call_id, call_ptr, name, loc, call_type, fn_id),
                mk_sql_promises(arguments, call_id)});
 
-    #ifdef RDT_PROMISES_INDENT
-    indent += TAB_WIDTH;
-    #endif
+    if (pretty_print)
+        indent += TAB_WIDTH;
 
     // Associate promises with call ID
     for (auto & a : arguments) {
@@ -624,9 +549,8 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
 }
 
 static void trace_promises_function_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
-    #ifdef RDT_PROMISES_INDENT
-    indent -= TAB_WIDTH;
-    #endif
+    if (pretty_print)
+        indent -= TAB_WIDTH;
 
     const char *type = is_byte_compiled(call) ? "<= bcod" : "<= func";
     const char *name = get_name(call);
@@ -877,6 +801,11 @@ rdt_handler *setup_promise_tracing(SEXP options) {
             return NULL;
         }
     }
+
+    // XXX I moved this counter initialization here, so that several consecutive Rdt calls can be put into the same trace/DB/etc.
+    // FIXME if not overwrite, then this should be some number, otherwise call IDs will get screwed up, right?
+    call_id_counter = 0;
+    already_inserted_functions.clear();
 
     if(overwrite && (output_type == RDT_SQLITE || output_type == RDT_R_PRINT_AND_SQLITE))
         remove(filename);
