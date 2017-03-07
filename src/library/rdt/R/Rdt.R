@@ -12,8 +12,12 @@ Rdt <- function(block, tracer="promises", ...) {
     .Call(C_Rdt, tracer, environment(), list(...))
 }
 
-Rdt_deparse <- function(expression) {
-    if (missing(expression)) stop("expression is required")
-    .Call(C_Rdt_deparse, expression)
-}
+trace.promises.r <- function(expression)
+    Rdt(expression, tracer="promises", output="R", format="trace", pretty.print=TRUE)
+trace.promises.file <- function(expression, path="trace.txt")
+    Rdt(expression, tracer="promises", output="file", path=path, format="trace", pretty.print=FALSE, overwrite=TRUE)
+trace.promises.sql <- function(expression, path="trace.sql")
+    Rdt(expression, tracer="promises", output="file", path=path, format="sql", pretty.print=FALSE, overwrite=TRUE)
+trace.promises.db <- function(expression, path="trace.sqlite")
+    Rdt(expression, tracer="promises", output="db", path=path, format="sql", pretty.print=FALSE, overwrite=TRUE)
 

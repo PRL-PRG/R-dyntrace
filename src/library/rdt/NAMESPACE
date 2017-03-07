@@ -2,6 +2,10 @@
 useDynLib(rdt, .registration = TRUE, .fixes = "C_")
 
 export(Rdt)
-export(Rdt_deparse)
+
+export(trace.promises.r)
+export(trace.promises.file)
+export(trace.promises.sql)
+export(trace.promises.db)
 
 export(RdtCalltimes, RdtFlow)
