@@ -756,7 +756,7 @@ rdt_handler *setup_promise_tracing(SEXP options) {
     else
         error("Unknown format type: \"%s\"\n", output_format_option);
 
-    Rprintf("output_format_option=%s->%i\n", output_format_option,output_format);
+    //Rprintf("output_format_option=%s->%i\n", output_format_option,output_format);
 
     const char *output_type_option = get_string(get_named_list_element(options, "output"));
     if (output_type_option == NULL || !strcmp(output_type_option, "R") || !strcmp(output_type_option, "r"))
@@ -771,35 +771,35 @@ rdt_handler *setup_promise_tracing(SEXP options) {
     else
         error("Unknown format type: \"%s\"\n", output_type_option);
 
-    Rprintf("output_type_option=%s->%i\n", output_type_option,output_type);
+    //Rprintf("output_type_option=%s->%i\n", output_type_option,output_type);
 
     SEXP pretty_print_option = get_named_list_element(options, "pretty.print");
     if (pretty_print_option == NULL || TYPEOF(pretty_print_option) == NILSXP)
         pretty_print = true;
     else
         pretty_print = LOGICAL(pretty_print_option)[0] == TRUE;
-    Rprintf("pretty_print_option=%p->%i\n", (pretty_print_option), pretty_print);
+    //Rprintf("pretty_print_option=%p->%i\n", (pretty_print_option), pretty_print);
 
     SEXP indent_width_option = get_named_list_element(options, "indent.width");
     R_inspect(indent_width_option);
     if (indent_width_option != NULL && TYPEOF(indent_width_option) != NILSXP)
         if (TYPEOF(indent_width_option) == REALSXP)
             indent_width = (int) *REAL(indent_width_option);
-    Rprintf("indent_width_option=%p->%i\n", indent_width_option, indent_width);
+    //Rprintf("indent_width_option=%p->%i\n", indent_width_option, indent_width);
 
     SEXP overwrite_option = get_named_list_element(options, "overwrite");
     if (overwrite_option == NULL || TYPEOF(overwrite_option) == NILSXP)
         overwrite = false;
     else
         overwrite = LOGICAL(overwrite_option)[0] == TRUE;
-    Rprintf("overwrite_option=%p->%i\n", (overwrite_option), overwrite);
+    //Rprintf("overwrite_option=%p->%i\n", (overwrite_option), overwrite);
 
     SEXP synthetic_call_id_option = get_named_list_element(options, "synthetic.call.id");
     if (synthetic_call_id_option == NULL || TYPEOF(synthetic_call_id_option) == NILSXP)
         call_id_use_ptr_fmt = false;
     else
         call_id_use_ptr_fmt = LOGICAL(synthetic_call_id_option)[0] == FALSE;
-    Rprintf("call_id_use_ptr_fmt=%p->%i\n", (synthetic_call_id_option), call_id_use_ptr_fmt);
+    //Rprintf("call_id_use_ptr_fmt=%p->%i\n", (synthetic_call_id_option), call_id_use_ptr_fmt);
 
     if (output_type != RDT_SQLITE && output_type != RDT_R_PRINT_AND_SQLITE) {
         output = fopen(filename, overwrite ? "w" : "wt"); // TODO options for wt?
