@@ -1,11 +1,11 @@
--- strictness (diagnostic)
+-- strictness (aggregative)
 -- run:
 --     # prepare DB
 --     rm example.sqlite
 --     cat src/library/rdt/sql/{schema.sql,example-trace.sql} | sqlite3 example.sqlite
 --
 --     # run query
---     <src/library/rdt/sql/promise-strictness-diagnostic.sql sqlite3 example.sqlite
+--     <src/library/rdt/sql/promise-strictness-aggregative.sql sqlite3 example.sqlite
 --
 .width 16, 16, 34, 34
 .mode column
@@ -50,8 +50,24 @@ from promises;
 select
 	function_names.function_id,
 	function_names.names,
-	arguments.name,
-	(select function_evals.evaluations from function_evals where function_evals.function_id = function_names.function_id) as evaluations,
-	(select sum(forced) from argument_forces where argument_forces.function_id = function_names.function_id and argument_forces.argument_name = arguments.name) as forced
+	arguments.name as argument,
+
+	(select
+	    function_evals.evaluations
+	from function_evals
+	where function_evals.function_id = function_names.function_id) as evaluations,
+
+	(select
+	    sum(forced)
+	from argument_forces
+	where
+	    argument_forces.function_id = function_names.function_id and
+	    argument_forces.argument_name = arguments.name) as forced,
+
+    (select
+	    functions.location
+	from functions
+	where functions.id = function_names.function_id) as function_location
+
 from function_names join arguments on function_names.function_id = arguments.function_id
 group by function_names.function_id, arguments.name
