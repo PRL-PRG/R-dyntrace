@@ -473,41 +473,17 @@ typedef pair<rid_t, string> arg_key_t;
 static map<arg_key_t, sid_t> argument_ids;
 
 static inline sid_t generate_argument_id(rid_t function_id, string argument) {
-    Rprintf("generate_argument_id(%p, %s)\n", function_id, argument.c_str());
     arg_key_t key = make_pair(function_id, argument);
     auto iterator = argument_ids.find(key);
 
     if (iterator != argument_ids.end()) {
-        Rprintf("generate_argument_id(%p, %s) -- exists: %i\n", function_id, argument.c_str(), iterator->second);
         return iterator->second;
     }
 
     sid_t argument_id = ++argument_id_sequence;
     argument_ids[key] = argument_id;
-    Rprintf("generate_argument_id(%p, %s) -- does not exist: %i\n", function_id, argument.c_str(), argument_id);
     return argument_id;
 }
-
-//static inline sid_t get_argument_id(rid_t function_id, string argument) {
-//    auto of_function = argument_ids.find(function_id);
-//    if (of_function != argument_ids.end()) {
-//        auto of_argument = of_function.find(argument);
-//
-//        if (of_argument != of_function.end())
-//            return of_argument->second;
-//
-//        sid_t argument_id = ++argument_ids;
-//        of_function[argument] = argument_id;
-//        return argument_id;
-//    }
-//
-//    unordered_map<string, sid_t> fff;
-//
-//    sid_t argument_id = ++argument_ids;
-//    argument_ids[key] = argument_id;
-//    return argument_id;
-//
-//}
 
 static inline int get_arguments(SEXP op, SEXP rho, vector<arg_t> & arguments) {
     SEXP formals = FORMALS(op);
@@ -835,7 +811,6 @@ rdt_handler *setup_promise_tracing(SEXP options) {
     //Rprintf("pretty_print_option=%p->%i\n", (pretty_print_option), pretty_print);
 
     SEXP indent_width_option = get_named_list_element(options, "indent.width");
-    R_inspect(indent_width_option);
     if (indent_width_option != NULL && TYPEOF(indent_width_option) != NILSXP)
         if (TYPEOF(indent_width_option) == REALSXP)
             indent_width = (int) *REAL(indent_width_option);
@@ -871,6 +846,7 @@ rdt_handler *setup_promise_tracing(SEXP options) {
     if(overwrite && (output_type == RDT_SQLITE || output_type == RDT_R_PRINT_AND_SQLITE)) {
         remove(filename);
         argument_id_sequence = 0;
+        argument_ids.clear();
     }
 
     if (output_type == RDT_SQLITE || output_type == RDT_R_PRINT_AND_SQLITE)
