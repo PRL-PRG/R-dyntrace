@@ -5,7 +5,7 @@
 #include <initializer_list>
 #include <unordered_map>
 #include <tuple>
-#include <unordered_map>
+#include <map>
 #include <errno.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -81,10 +81,12 @@ static unordered_map<rid_t, rid_t> promise_origin;
 typedef vector<rid_t> prom_vec_t;
 typedef tuple<string, sid_t, prom_vec_t> arg_t;
 
+static unordered_set<rid_t> already_inserted_functions;
+static sid_t argument_id_sequence = 0;
+
 enum OutputFormat: char {RDT_OUTPUT_TRACE, RDT_OUTPUT_SQL, RDT_OUTPUT_BOTH};
 enum Output: char {RDT_R_PRINT, RDT_FILE, RDT_SQLITE, RDT_R_PRINT_AND_SQLITE};
 
-// TODO make these settable from Rdt(...)
 static int output_type = RDT_R_PRINT_AND_SQLITE;
 static int output_format = RDT_OUTPUT_BOTH;
 static bool pretty_print = true;
@@ -220,8 +222,6 @@ static inline string wrap_string(string s) {
     return "'" + string(s) + "'";
 }
 
-static unordered_set<rid_t> already_inserted_functions;
-static sid_t argument_id_sequence = 0;
 static inline string mk_sql_function(rid_t function_id, vector<arg_t> const& arguments, const char* location, const char* definition) {
     stringstream stream;
     // Don't generate anything if one was previously generated.
@@ -453,6 +453,62 @@ static SEXP get_promise(SEXP var, SEXP rho) {
     return prom;
 }
 
+// XXX Better way to do this?
+//class ArgumentIDKey {
+//  public:
+//    rid_t function_id;
+//    string argument;
+//    ArgumentIDKey(rid_t function_id, string argument) {
+//      this->function_id = function_id;
+//      this->argument = argument;
+//    }
+//    bool operator<(const ArgumentIDKey& k) const {
+//      if (this->function_id == k.function_id)
+//        return this->argument.compare(k.argument);
+//      return this->function_id < k.function_id;
+//    }
+//};
+
+typedef pair<rid_t, string> arg_key_t;
+static map<arg_key_t, sid_t> argument_ids;
+
+static inline sid_t generate_argument_id(rid_t function_id, string argument) {
+    Rprintf("generate_argument_id(%p, %s)\n", function_id, argument.c_str());
+    arg_key_t key = make_pair(function_id, argument);
+    auto iterator = argument_ids.find(key);
+
+    if (iterator != argument_ids.end()) {
+        Rprintf("generate_argument_id(%p, %s) -- exists: %i\n", function_id, argument.c_str(), iterator->second);
+        return iterator->second;
+    }
+
+    sid_t argument_id = ++argument_id_sequence;
+    argument_ids[key] = argument_id;
+    Rprintf("generate_argument_id(%p, %s) -- does not exist: %i\n", function_id, argument.c_str(), argument_id);
+    return argument_id;
+}
+
+//static inline sid_t get_argument_id(rid_t function_id, string argument) {
+//    auto of_function = argument_ids.find(function_id);
+//    if (of_function != argument_ids.end()) {
+//        auto of_argument = of_function.find(argument);
+//
+//        if (of_argument != of_function.end())
+//            return of_argument->second;
+//
+//        sid_t argument_id = ++argument_ids;
+//        of_function[argument] = argument_id;
+//        return argument_id;
+//    }
+//
+//    unordered_map<string, sid_t> fff;
+//
+//    sid_t argument_id = ++argument_ids;
+//    argument_ids[key] = argument_id;
+//    return argument_id;
+//
+//}
+
 static inline int get_arguments(SEXP op, SEXP rho, vector<arg_t> & arguments) {
     SEXP formals = FORMALS(op);
 
@@ -468,9 +524,7 @@ static inline int get_arguments(SEXP op, SEXP rho, vector<arg_t> & arguments) {
         prom_vec_t & arg_prom_vec = get<2>(arg);
 
         arg_name = get_name(argument_expression);
-        //if (pair(arg_name,function_id) in argument_id_map)
-        //arg_id <- argument_id_map(pair(arg_name, function_id))
-        arg_id = ++argument_id_sequence; //FIXME?
+        arg_id = generate_argument_id(get_function_id(op), arg_name);
 
         // Retrieve the promise for the argument.
         // The call SEXP only contains AST to find the actual argument value, we need to search the environment.
@@ -814,8 +868,10 @@ rdt_handler *setup_promise_tracing(SEXP options) {
     call_id_counter = 0;
     already_inserted_functions.clear();
 
-    if(overwrite && (output_type == RDT_SQLITE || output_type == RDT_R_PRINT_AND_SQLITE))
+    if(overwrite && (output_type == RDT_SQLITE || output_type == RDT_R_PRINT_AND_SQLITE)) {
         remove(filename);
+        argument_id_sequence = 0;
+    }
 
     if (output_type == RDT_SQLITE || output_type == RDT_R_PRINT_AND_SQLITE)
         rdt_init_sqlite(filename);
