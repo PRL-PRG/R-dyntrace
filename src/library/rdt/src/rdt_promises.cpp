@@ -46,9 +46,6 @@ extern "C" {
 
 using namespace std;
 
-// If defined printout will include increasing indents showing function calls.
-static int TAB_WIDTH = 4;
-
 // Use generated call IDs instead of function env addresses
 #define RDT_CALL_ID
 
@@ -92,6 +89,7 @@ static int output_type = RDT_R_PRINT_AND_SQLITE;
 static int output_format = RDT_OUTPUT_BOTH;
 static bool pretty_print = true;
 static bool overwrite = false;
+static int indent_width = 4;
 //static bool synthetic_call_id = true;
 
 static inline void prepend_prefix(stringstream *stream) {
@@ -437,7 +435,7 @@ static inline void adjust_fun_stack(SEXP rho) {
         fun_stack.pop();
 
         if (pretty_print)
-            indent -= TAB_WIDTH;
+            indent -= indent_width;
         rdt_print(RDT_OUTPUT_TRACE, {print_unwind("<=", call_id)});
     }
 }
@@ -470,7 +468,9 @@ static inline int get_arguments(SEXP op, SEXP rho, vector<arg_t> & arguments) {
         prom_vec_t & arg_prom_vec = get<2>(arg);
 
         arg_name = get_name(argument_expression);
-        arg_id = ++argument_id_sequence;
+        //if (pair(arg_name,function_id) in argument_id_map)
+        //arg_id <- argument_id_map(pair(arg_name, function_id))
+        arg_id = ++argument_id_sequence; //FIXME?
 
         // Retrieve the promise for the argument.
         // The call SEXP only contains AST to find the actual argument value, we need to search the environment.
@@ -532,7 +532,7 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
                mk_sql_promises(arguments, call_id)});
 
     if (pretty_print)
-        indent += TAB_WIDTH;
+        indent += indent_width;
 
     // Associate promises with call ID
     for (auto & a : arguments) {
@@ -550,7 +550,7 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
 
 static void trace_promises_function_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
     if (pretty_print)
-        indent -= TAB_WIDTH;
+        indent -= indent_width;
 
     const char *type = is_byte_compiled(call) ? "<= bcod" : "<= func";
     const char *name = get_name(call);
@@ -779,6 +779,13 @@ rdt_handler *setup_promise_tracing(SEXP options) {
     else
         pretty_print = LOGICAL(pretty_print_option)[0] == TRUE;
     Rprintf("pretty_print_option=%p->%i\n", (pretty_print_option), pretty_print);
+
+    SEXP indent_width_option = get_named_list_element(options, "indent.width");
+    R_inspect(indent_width_option);
+    if (indent_width_option != NULL && TYPEOF(indent_width_option) != NILSXP)
+        if (TYPEOF(indent_width_option) == REALSXP)
+            indent_width = (int) *REAL(indent_width_option);
+    Rprintf("indent_width_option=%p->%i\n", indent_width_option, indent_width);
 
     SEXP overwrite_option = get_named_list_element(options, "overwrite");
     if (overwrite_option == NULL || TYPEOF(overwrite_option) == NILSXP)
