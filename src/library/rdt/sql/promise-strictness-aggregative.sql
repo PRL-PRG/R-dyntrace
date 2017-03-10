@@ -36,12 +36,6 @@ as select
 		from functions left outer join calls on functions.id = calls.function_id)
 	group by function_id;
 
---select
---	function_names.function_id as function,
---	function_names.names as names,
---	function_evals.evaluations  as "no. of executions"
---from function_names join function_evals on function_names.function_id = function_evals.function_id;
-
 drop view if exists argument_forces;
 create temporary view
 	argument_forces
@@ -59,7 +53,5 @@ select
 	arguments.name,
 	(select function_evals.evaluations from function_evals where function_evals.function_id = function_names.function_id) as evaluations,
 	(select sum(forced) from argument_forces where argument_forces.function_id = function_names.function_id and argument_forces.argument_name = arguments.name) as forced
-	--sum(forced) as forced
 from function_names join arguments on function_names.function_id = arguments.function_id
---join argument_forces on argument_forces.function_id = arguments.function_id
 group by function_names.function_id, arguments.name
