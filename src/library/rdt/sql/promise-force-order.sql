@@ -18,7 +18,7 @@ select
 
 	group_concat(
 	    (select
-		    arguments.name
+		    arguments.name -- || ":" || promise_evaluations.clock
 	    from promises join arguments on promises.argument_id = arguments.id
 	    where promises.id = promise_evaluations.promise_id),
 	    " < "
