@@ -1,3 +1,8 @@
+//#ifdef HAVE_CONFIG_H
+//# include <config.h>
+//#endif
+//#include <Defn.h>
+
 #include <vector>
 #include <string>
 #include <stack>
@@ -225,35 +230,37 @@ static inline string wrap_string(string s) {
 static inline string mk_sql_function(rid_t function_id, vector<arg_t> const& arguments, const char* location, const char* definition) {
     stringstream stream;
     // Don't generate anything if one was previously generated.
-    if(!already_inserted_functions.count(function_id)) {
-        // Generate `functions' update containing function definition.
-        stream << "insert into functions values ("
-               << "0x" << hex << function_id << ",";
-        stream << wrap_nullable_string(location) << ","
-               << wrap_nullable_string(definition) <<
-               ");\n";
+    if(already_inserted_functions.count(function_id))
+        return "";
 
-        // Generate `arguments' update wrt function above.
-        if (arguments.size() > 0) {
-            stream << "insert into arguments select";
+    // Generate `functions' update containing function definition.
+    stream << "insert into functions values ("
+           << "0x" << hex << function_id << ",";
+    stream << wrap_nullable_string(location) << ","
+           << wrap_nullable_string(definition) <<
+           ");\n";
 
-            int index = 0;
-            for (auto argument : arguments) {
-                if (index)
-                    stream << (pretty_print ? "\n            " : " ") << "union all select";
+    // Generate `arguments' update wrt function above.
+    if (arguments.size() > 0) {
+        stream << "insert into arguments select";
 
-                stream << " "
-                       << dec << get<1>(argument) << ","
-                       << wrap_string(get<0>(argument)) << ","
-                       << index << ","
-                       << "0x" << hex << function_id;
+        int index = 0;
+        for (auto argument : arguments) {
+            if (index)
+                stream << (pretty_print ? "\n            " : " ") << "union all select";
 
-                index++;
-            }
-            stream << ";\n";
+            stream << " "
+                   << dec << get<1>(argument) << ","
+                   << wrap_string(get<0>(argument)) << ","
+                   << index << ","
+                   << "0x" << hex << function_id;
+
+            index++;
         }
-        already_inserted_functions.insert(function_id);
+        stream << ";\n";
     }
+    already_inserted_functions.insert(function_id);
+
     return stream.str();
 }
 
@@ -553,11 +560,23 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
     int argument_count;
 
     argument_count = get_arguments(op, rho, arguments);
+
+    // if (SQL call)
+    //    function_definition <- deparse1line(function)
+    // otherwise function_definition <- NULL;
+    const char* fn_definition = NULL;
+    if (output_format != RDT_OUTPUT_TRACE)
+        fn_definition = get_expression(op);
+                //deparse1line(op, FALSE);
+        //R_inspect(deparsed_function);
+        // FIXME ESCAPE fn_definition (prepared statements?)
+        //Rprintf(fn_definition);
+
     // TODO link with mk_sql
     // TODO rename to reflect non-printing nature
     rdt_print(RDT_OUTPUT_TRACE, {print_function(type, loc, fqfn, fn_id, call_id, arguments, argument_count)});
 
-    rdt_print(RDT_OUTPUT_SQL, {mk_sql_function(fn_id, arguments, loc, NULL),
+    rdt_print(RDT_OUTPUT_SQL, {mk_sql_function(fn_id, arguments, loc, fn_definition),
                mk_sql_function_call(call_id, call_ptr, name, loc, call_type, fn_id),
                mk_sql_promises(arguments, call_id)});
 
