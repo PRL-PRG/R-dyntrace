@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "rdt.h"
+#include "../../../main/inspect.h"
 
 static FILE *output = NULL;
 static uint64_t last = 0;
