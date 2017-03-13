@@ -345,7 +345,7 @@ static inline string mk_sql_promise_evaluation(int event_type, rid_t promise_id,
 }
 
 
-static inline string print_function(const char *type, const char *loc, const char *name, rid_t function_id, rid_t call_id, vector<arg_t> const& arguments, const int arguments_num) {
+static inline string print_function(const char *type, const char *loc, const char *name, rid_t function_id, rid_t call_id, vector<arg_t> const& arguments) {
     stringstream stream;
     prepend_prefix(&stream);
 
@@ -370,7 +370,7 @@ static inline string print_function(const char *type, const char *loc, const cha
         for (auto it = ++p.begin(); it != p.end(); it++)
 //            fprintf(output, ",%#x", *it);
             stream << "," << *it;
-        if (i < arguments_num - 1)
+        if (i < arguments.size() - 1)
             stream << ";";
             //fprintf(output, ";"); // semicolon separates individual args
         ++i;
@@ -525,7 +525,9 @@ static inline sid_t generate_argument_id(rid_t function_id, string argument) {
     return argument_id;
 }
 
-static inline int get_arguments(SEXP op, SEXP rho, vector<arg_t> & arguments) {
+// TODO return arguments with 'return'?
+static inline vector<arg_t> get_arguments(SEXP op, SEXP rho) {
+    vector<arg_t> arguments;
     SEXP formals = FORMALS(op);
 
     int argument_count = count_elements(formals);
@@ -557,9 +559,8 @@ static inline int get_arguments(SEXP op, SEXP rho, vector<arg_t> & arguments) {
         arguments.push_back(arg);
     }
 
-    return argument_count;
+    return arguments;
 }
-
 
 // Triggered when entering function evaluation.
 static void trace_promises_function_entry(const SEXP call, const SEXP op, const SEXP rho) {
@@ -589,10 +590,7 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
     curr_env_stack.push(get_sexp_address(rho));
 #endif
 
-    vector<arg_t> arguments;
-    int argument_count;
-
-    argument_count = get_arguments(op, rho, arguments);
+    vector<arg_t> arguments = get_arguments(op, rho);
 
     // if (SQL call)
     //    function_definition <- deparse1line(function)
@@ -607,7 +605,7 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
 
     // TODO link with mk_sql
     // TODO rename to reflect non-printing nature
-    rdt_print(RDT_OUTPUT_TRACE, {print_function(type, loc, fqfn, fn_id, call_id, arguments, argument_count)});
+    rdt_print(RDT_OUTPUT_TRACE, {print_function(type, loc, fqfn, fn_id, call_id, arguments)});
 
     rdt_print(RDT_OUTPUT_SQL, {mk_sql_function(fn_id, arguments, loc, fn_definition),
                mk_sql_function_call(call_id, call_ptr, name, loc, call_type, fn_id),
@@ -648,11 +646,9 @@ static void trace_promises_function_exit(const SEXP call, const SEXP op, const S
         fqfn = name != NULL ? strdup(name) : NULL;
     }
 
-    vector<arg_t> arguments;
-    int argument_count;
+    vector<arg_t> arguments = get_arguments(op, rho);
 
-    argument_count = get_arguments(op, rho, arguments);
-    rdt_print(RDT_OUTPUT_TRACE, {print_function(type, loc, name, fn_id, call_id, arguments, argument_count)});
+    rdt_print(RDT_OUTPUT_TRACE, {print_function(type, loc, name, fn_id, call_id, arguments)});
 
     // Pop current function ID
     fun_stack.pop();
@@ -706,7 +702,6 @@ static void trace_promises_force_promise_entry(const SEXP symbol, const SEXP rho
     rid_t in_call_id = fun_stack.top();
     rid_t from_call_id = promise_origin[id];
 
-    // TODO: save in_call_id to db
     // in_call_id = current call
     rdt_print(RDT_OUTPUT_TRACE, {print_promise("=> prom", NULL, name, id, in_call_id, from_call_id)});
     rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise_evaluation(RDT_FORCE_PROMISE, id, from_call_id)});
