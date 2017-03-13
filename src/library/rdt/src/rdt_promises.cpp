@@ -227,28 +227,10 @@ static inline string escape_sql_quote_string(string s) {
     size_t position = 0;
     while ((position = s.find("'", position)) != string::npos) {
         s.replace(position, 1, "''");
-        position+=2; // length of "\\'"
+        position += 2; // length of "''"
     }
     return s;
 }
-
-//static inline string escape_sql_slash_string(string s) {
-//    size_t position = 0;
-//    while ((position = s.find("\\", position)) != string::npos) {
-//        s.replace(position, 1, "\\\\");
-//        position+=2;
-//    }
-//    return s;
-//}
-
-//static inline string escape_sql_newline_string(string s) {
-//    size_t position = 0;
-//    while ((position = s.find("\n", position)) != string::npos) {
-//        s.replace(position, 1, "\\n");
-//        position+=2;
-//    }
-//    return s;
-//}
 
 // I'm not using prepared statements, since we have to escape in the case of SQL script files, so: two birds with one stone.
 static inline string wrap_and_escape_nullable_string(const char* s) {
