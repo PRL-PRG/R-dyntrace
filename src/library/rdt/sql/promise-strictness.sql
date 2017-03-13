@@ -5,7 +5,7 @@
 --     cat src/library/rdt/sql/{schema.sql,example-trace.sql} | sqlite3 example.sqlite
 --
 --     # run query
---     <src/library/rdt/sql/promise-strictness-aggregative.sql sqlite3 example.sqlite
+--     <src/library/rdt/sql/promise-strictness.sql sqlite3 example.sqlite
 --
 .width 16, 16, 16, 16, 16, 32, 64
 .mode column
