@@ -7,7 +7,7 @@
 --     # run query
 --     <src/library/rdt/sql/promise-strictness-aggregative.sql sqlite3 example.sqlite
 --
-.width 16, 16, 34, 34
+.width 16, 16, 16, 16, 16, 32, 64
 .mode column
 .headers on
 
@@ -51,7 +51,6 @@ select
 	function_names.function_id,
 	function_names.names,
 	arguments.name as argument,
-
 	(select
 	    function_evals.evaluations
 	from function_evals
@@ -67,7 +66,11 @@ select
     (select
 	    functions.location
 	from functions
-	where functions.id = function_names.function_id) as function_location
+	where functions.id = function_names.function_id) as function_location,
 
+	(select
+	    replace(functions.definition, CHAR(10), '\n')
+	from functions
+	where functions.id = function_names.function_id) as function_definition
 from function_names join arguments on function_names.function_id = arguments.function_id
-group by function_names.function_id, arguments.name
+group by function_names.function_id, arguments.name;

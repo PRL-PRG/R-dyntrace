@@ -7,7 +7,7 @@
 --     # run query
 --     <src/library/rdt/sql/promise-sforce-order.sql sqlite3 example.sqlite
 --
-.width 16, 16, 34, 34
+.width 16, 16, 16, 32, 32, 64
 .mode column
 .headers on
 
@@ -27,7 +27,12 @@ select
 	(select
 	    functions.location
 	from functions
-	where functions.id = calls.function_id) as function_location
+	where functions.id = calls.function_id) as function_location,
+
+	(select
+	    replace(functions.definition, CHAR(10), '\n')
+	from functions
+	where functions.id = calls.function_id) as function_definition
 
 from calls join promise_evaluations on calls.id = promise_evaluations.call_id
 group by calls.id
