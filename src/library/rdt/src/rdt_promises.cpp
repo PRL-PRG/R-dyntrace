@@ -310,7 +310,7 @@ static inline string mk_sql_function_call(rid_t call_id, rid_t call_ptr, const c
     return stream.str();
 }
 
-static inline string mk_sql_promises(vector<arg_t> arguments, rid_t call_id) {
+static inline string mk_sql_promises(vector<arg_t> const& arguments, rid_t call_id) {
     std::stringstream stream;
     if (arguments.size() > 0) {
         stream << (pretty_print ? "insert into promises  select" : "insert into promises select");
