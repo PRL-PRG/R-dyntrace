@@ -9,6 +9,7 @@
 #include <sstream>
 #include <initializer_list>
 #include <unordered_map>
+#include <utility>
 #include <tuple>
 #include <map>
 #include <errno.h>
@@ -21,6 +22,7 @@
 #include <string>
 #include <fstream>
 #include <streambuf>
+#include <functional>
 
 //#ifdef SQLITE3_H
 #define RDT_SQLITE_SUPPORT
@@ -83,8 +85,81 @@ static bool call_id_use_ptr_fmt = true;
 // Map from promise IDs to call IDs
 static unordered_map<rid_t, rid_t> promise_origin;
 
-typedef vector<rid_t> prom_vec_t;
-typedef tuple<string, sid_t, prom_vec_t> arg_t;
+//typedef vector<rid_t> prom_vec_t;
+typedef tuple<string, sid_t, rid_t> arg_t;
+typedef tuple<sid_t, rid_t> anon_arg_t;
+
+class arglist_t {
+    vector<arg_t> args;
+    vector<arg_t> ddd_kw_args;
+    vector<arg_t> ddd_pos_args;
+    mutable vector<reference_wrapper<const arg_t>> arg_refs;
+    mutable bool update_arg_refs;
+
+    template<typename T>
+    void push_back_tmpl(T&& value, bool ddd) {
+        if (ddd) {
+            arg_t new_value = value;
+            string & arg_name = get<0>(new_value);
+            arg_name = "...[" + arg_name + "]";
+            ddd_kw_args.push_back(new_value);
+        }
+        else {
+            args.push_back(forward<T>(value));
+        }
+        update_arg_refs = true;
+    }
+
+    template<typename T>
+    void push_back_anon_tmpl(T&& value) {
+        string arg_name = "...[" + to_string(ddd_pos_args.size()) + "]";
+        // prepend string arg_name to anon_arg_t value
+        arg_t new_value = tuple_cat(make_tuple(arg_name), value);
+
+        ddd_pos_args.push_back(new_value);
+        update_arg_refs = true;
+    }
+public:
+    arglist_t() {
+        update_arg_refs = true;
+    }
+
+    void push_back(const arg_t& value, bool ddd = false) {
+        push_back_tmpl(value, ddd);
+    }
+
+    void push_back(arg_t&& value, bool ddd = false) {
+        push_back_tmpl(value, ddd);
+    }
+
+    void push_back(const anon_arg_t& value) {
+        push_back_anon_tmpl(value);
+    }
+
+    void push_back(anon_arg_t&& value) {
+        push_back_anon_tmpl(value);
+    }
+
+    // Return vector of references to elements of our three inner vectors
+    // so we can iterate over all of them in one for loop.
+    vector<reference_wrapper<const arg_t>> all() const {
+        if (update_arg_refs) {
+            arg_refs.assign(args.begin(), args.end());
+            arg_refs.insert(arg_refs.end(), ddd_kw_args.begin(), ddd_kw_args.end());
+            arg_refs.insert(arg_refs.end(), ddd_pos_args.begin(), ddd_pos_args.end());
+            update_arg_refs = false;
+        }
+
+        return arg_refs;
+    }
+
+    size_t size() const {
+        if (update_arg_refs) {
+            all();
+        }
+        return arg_refs.size();
+    }
+};
 
 static unordered_set<rid_t> already_inserted_functions;
 static sid_t argument_id_sequence = 0;
@@ -256,11 +331,11 @@ static inline string wrap_and_escape_nullable_string(const char* s) {
             escape_sql_quote_string(string(s)) + "'";
 }
 
-static inline string wrap_string(string s) {
-    return "'" + string(s) + "'";
+static inline string wrap_string(const string & s) {
+    return "'" + s + "'";
 }
 
-static inline string mk_sql_function(rid_t function_id, vector<arg_t> const& arguments, const char* location, const char* definition) {
+static inline string mk_sql_function(rid_t function_id, arglist_t const& arguments, const char* location, const char* definition) {
     stringstream stream;
     // Don't generate anything if one was previously generated.
     if(already_inserted_functions.count(function_id))
@@ -278,7 +353,8 @@ static inline string mk_sql_function(rid_t function_id, vector<arg_t> const& arg
         stream << "insert into arguments select";
 
         int index = 0;
-        for (auto argument : arguments) {
+        for (auto arg_ref : arguments.all()) {
+            const arg_t & argument = arg_ref.get();
             if (index)
                 stream << (pretty_print ? "\n            " : " ") << "union all select";
 
@@ -310,23 +386,24 @@ static inline string mk_sql_function_call(rid_t call_id, rid_t call_ptr, const c
     return stream.str();
 }
 
-static inline string mk_sql_promises(vector<arg_t> const& arguments, rid_t call_id) {
+static inline string mk_sql_promises(arglist_t const& arguments, rid_t call_id) {
     std::stringstream stream;
     if (arguments.size() > 0) {
         stream << (pretty_print ? "insert into promises  select" : "insert into promises select");
         int index = 0;
-        for (auto & argument : arguments) {
+        for (auto arg_ref : arguments.all()) {
+            const arg_t & argument = arg_ref.get();
             sid_t arg_id = get<1>(argument);
-            for (auto promise : get<2>(argument)) {
-                if (index)
-                    stream << (pretty_print ? "\n            " : " ") << "union all select";
+            rid_t promise = get<2>(argument);
 
-                stream << " "
-                       << "0x" << hex << promise << ","
-                       << dec << call_id << ","
-                       << dec << arg_id;
-                index++;
-            }
+            if (index)
+                stream << (pretty_print ? "\n            " : " ") << "union all select";
+
+            stream << " "
+                   << "0x" << hex << promise << ","
+                   << dec << call_id << ","
+                   << dec << arg_id;
+            index++;
         }
         stream << ";\n";
     }
@@ -345,7 +422,7 @@ static inline string mk_sql_promise_evaluation(int event_type, rid_t promise_id,
 }
 
 
-static inline string print_function(const char *type, const char *loc, const char *name, rid_t function_id, rid_t call_id, vector<arg_t> const& arguments) {
+static inline string print_function(const char *type, const char *loc, const char *name, rid_t function_id, rid_t call_id, arglist_t const& arguments) {
     stringstream stream;
     prepend_prefix(&stream);
 
@@ -360,18 +437,14 @@ static inline string print_function(const char *type, const char *loc, const cha
     // print argument names and the promises bound to them
     stream << "arguments(";
     int i = 0;
-    for (auto & a : arguments) {
-        const prom_vec_t & p = get<2>(a);
+    for (auto arg_ref : arguments.all()) {
+        const arg_t & argument = arg_ref.get();
+        rid_t promise = get<2>(argument);
         //fprintf(output, "%s=%#x", get<0>(a).c_str(), p[0]);
-        stream << get<0>(a).c_str() << "=" << p[0];
+        stream << get<0>(argument).c_str() << "=" << promise;
 
-        // iterate from second bound value if there is any
-        // and produce comma separated list of promises
-        for (auto it = ++p.begin(); it != p.end(); it++)
-//            fprintf(output, ",%#x", *it);
-            stream << "," << *it;
         if (i < arguments.size() - 1)
-            stream << ";";
+            stream << ",";
             //fprintf(output, ";"); // semicolon separates individual args
         ++i;
     }
@@ -512,7 +585,7 @@ static SEXP get_promise(SEXP var, SEXP rho) {
 typedef pair<rid_t, string> arg_key_t;
 static map<arg_key_t, sid_t> argument_ids;
 
-static inline sid_t generate_argument_id(rid_t function_id, string argument) {
+static inline sid_t generate_argument_id(rid_t function_id, const string & argument) {
     arg_key_t key = make_pair(function_id, argument);
     auto iterator = argument_ids.find(key);
 
@@ -525,38 +598,45 @@ static inline sid_t generate_argument_id(rid_t function_id, string argument) {
     return argument_id;
 }
 
-// TODO return arguments with 'return'?
-static inline vector<arg_t> get_arguments(SEXP op, SEXP rho) {
-    vector<arg_t> arguments;
-    SEXP formals = FORMALS(op);
+static inline arglist_t get_arguments(SEXP op, SEXP rho) {
+    arglist_t arguments;
 
-    int argument_count = count_elements(formals);
-
-    for (int i=0; i<argument_count; i++, formals = CDR(formals)) {
+    for (SEXP formals = FORMALS(op); formals != R_NilValue; formals = CDR(formals)) {
         // Retrieve the argument name.
         SEXP argument_expression = TAG(formals);
-
-        arg_t arg;
-        string & arg_name = get<0>(arg);
-        sid_t & arg_id = get<1>(arg);
-        prom_vec_t & arg_prom_vec = get<2>(arg);
-
-        arg_name = get_name(argument_expression);
-        arg_id = generate_argument_id(get_function_id(op), arg_name);
-
-        // Retrieve the promise for the argument.
-        // The call SEXP only contains AST to find the actual argument value, we need to search the environment.
         SEXP promise_expression = get_promise(argument_expression, rho);
 
         if (TYPEOF(promise_expression) == DOTSXP) {
+            int i = 0;
             for(SEXP dots = promise_expression; dots != R_NilValue; dots = CDR(dots)) {
-                arg_prom_vec.push_back(get_promise_id(CAR(dots)));
+                SEXP ddd_argument_expression = TAG(dots);
+                SEXP ddd_promise_expression = CAR(dots);
+                if (ddd_argument_expression == R_NilValue) {
+                    arguments.push_back({
+                                                generate_argument_id(get_function_id(op), to_string(i++)),
+                                                get_promise_id(ddd_promise_expression)
+                                        }); // ... argument without a name
+                }
+                else {
+                    string ddd_arg_name = get_name(ddd_argument_expression);
+                    arguments.push_back({
+                                                ddd_arg_name,
+                                                generate_argument_id(get_function_id(op), ddd_arg_name),
+                                                get_promise_id(ddd_promise_expression)
+                                        }, true); // this flag says we're inserting a ... argument
+                }
             }
         }
         else {
-            arg_prom_vec.push_back(get_promise_id(promise_expression));
+            // Retrieve the promise for the argument.
+            // The call SEXP only contains AST to find the actual argument value, we need to search the environment.
+            string arg_name = get_name(argument_expression);
+            arguments.push_back({
+                                        arg_name,
+                                        generate_argument_id(get_function_id(op), arg_name),
+                                        get_promise_id(promise_expression)
+                                });
         }
-        arguments.push_back(arg);
     }
 
     return arguments;
@@ -590,7 +670,7 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
     curr_env_stack.push(get_sexp_address(rho));
 #endif
 
-    vector<arg_t> arguments = get_arguments(op, rho);
+    arglist_t arguments = get_arguments(op, rho);
 
     // if (SQL call)
     //    function_definition <- deparse1line(function)
@@ -615,11 +695,10 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
         indent += indent_width;
 
     // Associate promises with call ID
-    for (auto & a : arguments) {
-        auto & promises = get<2>(a);
-        for (auto p : promises) {
-            promise_origin[p] = call_id;
-        }
+    for (auto arg_ref : arguments.all()) {
+        const arg_t & argument = arg_ref.get();
+        auto & promise = get<2>(argument);
+        promise_origin[promise] = call_id;
     }
 
     if (loc)
@@ -646,7 +725,7 @@ static void trace_promises_function_exit(const SEXP call, const SEXP op, const S
         fqfn = name != NULL ? strdup(name) : NULL;
     }
 
-    vector<arg_t> arguments = get_arguments(op, rho);
+    arglist_t arguments = get_arguments(op, rho);
 
     rdt_print(RDT_OUTPUT_TRACE, {print_function(type, loc, name, fn_id, call_id, arguments)});
 
@@ -677,7 +756,7 @@ static void trace_promises_builtin_entry(const SEXP call, const SEXP op, const S
     // TODO merge rdt_print_calls
     rdt_print(RDT_OUTPUT_TRACE, {print_builtin("=> b-in", NULL, name, fn_id)});
 
-    vector<arg_t> arguments;
+    arglist_t arguments;
 
     rdt_print(RDT_OUTPUT_SQL, {mk_sql_function(fn_id, arguments, NULL, NULL),
                mk_sql_function_call(call_id, call_ptr, name, NULL, 1, fn_id)});
