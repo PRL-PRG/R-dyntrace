@@ -51,3 +51,8 @@ curry <-
 											x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8 + x9 + x10
 
 curry_eval <- function() curry(1)(2)(3)(4)(5)(6)(7)(8)(9)(10)
+
+kw_inner <- function(x=0,y=0,z=0,v=0) x+y+z+v
+kw_outer <- function(a,b,...) a + kw_inner(z=b, ...)
+
+testKwDdd <- function() kw_outer(a=1, b=2, x=3, 4)
