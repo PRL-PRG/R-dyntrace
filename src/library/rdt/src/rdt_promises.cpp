@@ -66,6 +66,8 @@ typedef int sid_t;
 
 static FILE *output = NULL;
 static int indent;
+
+
 static int call_id_counter;
 
 // Function call stack (may be useful)
@@ -73,17 +75,55 @@ static int call_id_counter;
 // so that we know where we are (e.g. when printing function ID at function_exit hook)
 static stack<rid_t, vector<rid_t>> fun_stack;
 
+// Map from promise IDs to call IDs
+static unordered_map<rid_t, rid_t> promise_origin;
+
+static unordered_set<rid_t> already_inserted_functions;
+static sid_t argument_id_sequence = 0;
+
 #ifdef RDT_CALL_ID
 #define CALL_ID_FMT "%d"
 static stack<rid_t, vector<rid_t>> curr_env_stack;
-static bool call_id_use_ptr_fmt = false;
 #else
 #define CALL_ID_FMT "%#x"
-static bool call_id_use_ptr_fmt = true;
 #endif
 
-// Map from promise IDs to call IDs
-static unordered_map<rid_t, rid_t> promise_origin;
+
+enum OutputFormat: char {RDT_OUTPUT_TRACE, RDT_OUTPUT_SQL, RDT_OUTPUT_BOTH};
+enum Output: char {RDT_R_PRINT, RDT_FILE, RDT_SQLITE, RDT_R_PRINT_AND_SQLITE};
+
+struct tracer_conf_t {
+    int output_type;
+    int output_format;
+    bool pretty_print;
+    bool overwrite;
+    int indent_width;
+    //static bool synthetic_call_id = true;
+    bool call_id_use_ptr_fmt;
+
+    tracer_conf_t() {
+        // Config defaults
+        output_type = RDT_R_PRINT_AND_SQLITE;
+        output_format = RDT_OUTPUT_BOTH;
+        pretty_print = true;
+        overwrite = false;
+        indent_width = 4;
+#ifdef RDT_CALL_ID
+        call_id_use_ptr_fmt = false;
+#else
+        call_id_use_ptr_fmt = true;
+#endif
+    }
+
+    // Update configuration in a smart way
+    // (e.g. ignore changes of output type/format if overwrite == false)
+    void update(const tracer_conf_t & conf) {
+        // TODO: implement
+    }
+};
+
+static tracer_conf_t tracer_conf; // init default configuration
+
 
 //typedef vector<rid_t> prom_vec_t;
 typedef tuple<string, sid_t, rid_t> arg_t;
@@ -161,32 +201,20 @@ public:
     }
 };
 
-static unordered_set<rid_t> already_inserted_functions;
-static sid_t argument_id_sequence = 0;
-
-enum OutputFormat: char {RDT_OUTPUT_TRACE, RDT_OUTPUT_SQL, RDT_OUTPUT_BOTH};
-enum Output: char {RDT_R_PRINT, RDT_FILE, RDT_SQLITE, RDT_R_PRINT_AND_SQLITE};
-
-static int output_type = RDT_R_PRINT_AND_SQLITE;
-static int output_format = RDT_OUTPUT_BOTH;
-static bool pretty_print = true;
-static bool overwrite = false;
-static int indent_width = 4;
-//static bool synthetic_call_id = true;
 
 static inline void prepend_prefix(stringstream *stream) {
-    if (output_format == RDT_OUTPUT_TRACE) {
-        if (pretty_print)
+    if (tracer_conf.output_format == RDT_OUTPUT_TRACE) {
+        if (tracer_conf.pretty_print)
             (*stream) << string(indent, ' ');
     } else
         (*stream) << "-- ";
 }
 
 static inline void rdt_print(OutputFormat string_format, std::initializer_list<string> strings) {
-    if (output_format != RDT_OUTPUT_BOTH && string_format != output_format)
+    if (tracer_conf.output_format != RDT_OUTPUT_BOTH && string_format != tracer_conf.output_format)
         return;
 
-    switch (output_type) {
+    switch (tracer_conf.output_type) {
         case RDT_FILE:
             for (auto string : strings)
                 fprintf(output, "%s", string.c_str());
@@ -203,7 +231,7 @@ static inline void rdt_print(OutputFormat string_format, std::initializer_list<s
 
             string sql_string = sql.str();
 
-            if (output_type == RDT_R_PRINT_AND_SQLITE)
+            if (tracer_conf.output_type == RDT_R_PRINT_AND_SQLITE)
                 Rprintf("%s", sql_string.c_str());
 
             int outcome = sqlite3_exec(sqlite_database, sql_string.c_str(), NULL, 0, &error_msg);
@@ -268,7 +296,7 @@ static inline string print_builtin(const char *type, const char *loc, const char
     stringstream stream;
     prepend_prefix(&stream);
 
-    if (pretty_print && (output_format == RDT_OUTPUT_TRACE))
+    if (tracer_conf.pretty_print && (tracer_conf.output_format == RDT_OUTPUT_TRACE))
         stream << string(indent, ' ');
 
     stream << type << " "
@@ -282,14 +310,16 @@ static inline string print_promise(const char *type, const char *loc, const char
     stringstream stream;
     prepend_prefix(&stream);
 
-    if (pretty_print && (output_format == RDT_OUTPUT_TRACE))
+    if (tracer_conf.pretty_print && (tracer_conf.output_format == RDT_OUTPUT_TRACE))
         stream << string(indent, ' ');
+
+    auto num_fmt = tracer_conf.call_id_use_ptr_fmt ? hex : dec;
 
     stream << type << " "
            << "loc(" << CHKSTR(loc) << ") "
            << "prom(" << CHKSTR(name) << "=" << hex << id << ") ";
-    stream << "in(" << (call_id_use_ptr_fmt ? hex : dec) << in_call_id << ") ";
-    stream << "from(" << (call_id_use_ptr_fmt ? hex : dec) << from_call_id << ")\n";
+    stream << "in(" << num_fmt << in_call_id << ") ";
+    stream << "from(" << num_fmt << from_call_id << ")\n";
 
     return stream.str();
 }
@@ -356,7 +386,7 @@ static inline string mk_sql_function(rid_t function_id, arglist_t const& argumen
         for (auto arg_ref : arguments.all()) {
             const arg_t & argument = arg_ref.get();
             if (index)
-                stream << (pretty_print ? "\n            " : " ") << "union all select";
+                stream << (tracer_conf.pretty_print ? "\n            " : " ") << "union all select";
 
             stream << " "
                    << dec << get<1>(argument) << ","
@@ -389,7 +419,7 @@ static inline string mk_sql_function_call(rid_t call_id, rid_t call_ptr, const c
 static inline string mk_sql_promises(arglist_t const& arguments, rid_t call_id) {
     std::stringstream stream;
     if (arguments.size() > 0) {
-        stream << (pretty_print ? "insert into promises  select" : "insert into promises select");
+        stream << (tracer_conf.pretty_print ? "insert into promises  select" : "insert into promises select");
         int index = 0;
         for (auto arg_ref : arguments.all()) {
             const arg_t & argument = arg_ref.get();
@@ -397,7 +427,7 @@ static inline string mk_sql_promises(arglist_t const& arguments, rid_t call_id) 
             rid_t promise = get<2>(argument);
 
             if (index)
-                stream << (pretty_print ? "\n            " : " ") << "union all select";
+                stream << (tracer_conf.pretty_print ? "\n            " : " ") << "union all select";
 
             stream << " "
                    << "0x" << hex << promise << ","
@@ -426,12 +456,12 @@ static inline string print_function(const char *type, const char *loc, const cha
     stringstream stream;
     prepend_prefix(&stream);
 
-    if (pretty_print && (output_format == RDT_OUTPUT_TRACE))
+    if (tracer_conf.pretty_print && (tracer_conf.output_format == RDT_OUTPUT_TRACE))
         stream << string(indent, ' ');
 
     stream << type << " "
            << "loc(" << CHKSTR(loc) << ") "
-           << "call(" << (call_id_use_ptr_fmt ? hex : dec) << call_id << ") ";
+           << "call(" << (tracer_conf.call_id_use_ptr_fmt ? hex : dec) << call_id << ") ";
     stream << "fun(" << CHKSTR(name) << "=" << hex << function_id << ") ";
 
     // print argument names and the promises bound to them
@@ -459,7 +489,7 @@ static inline string print_unwind(const char *type, rid_t call_id) {
     stringstream stream;
     prepend_prefix(&stream);
     stream << type << " "
-           << "unwind(" << (call_id_use_ptr_fmt ? hex : dec) << call_id << ")\n";
+           << "unwind(" << (tracer_conf.call_id_use_ptr_fmt ? hex : dec) << call_id << ")\n";
     return stream.str();
 }
 
@@ -547,8 +577,8 @@ static inline void adjust_fun_stack(SEXP rho) {
 #endif
         fun_stack.pop();
 
-        if (pretty_print)
-            indent -= indent_width;
+        if (tracer_conf.pretty_print)
+            indent -= tracer_conf.indent_width;
         rdt_print(RDT_OUTPUT_TRACE, {print_unwind("<=", call_id)});
     }
 }
@@ -676,7 +706,7 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
     //    function_definition <- deparse1line(function)
     // otherwise function_definition <- NULL;
     const char* fn_definition = NULL;
-    if (output_format != RDT_OUTPUT_TRACE)
+    if (tracer_conf.output_format != RDT_OUTPUT_TRACE)
         fn_definition = get_expression(op);
                 //deparse1line(op, FALSE);
         //R_inspect(deparsed_function);
@@ -691,8 +721,8 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
                mk_sql_function_call(call_id, call_ptr, name, loc, call_type, fn_id),
                mk_sql_promises(arguments, call_id)});
 
-    if (pretty_print)
-        indent += indent_width;
+    if (tracer_conf.pretty_print)
+        indent += tracer_conf.indent_width;
 
     // Associate promises with call ID
     for (auto arg_ref : arguments.all()) {
@@ -708,8 +738,8 @@ static void trace_promises_function_entry(const SEXP call, const SEXP op, const 
 }
 
 static void trace_promises_function_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
-    if (pretty_print)
-        indent -= indent_width;
+    if (tracer_conf.pretty_print)
+        indent -= tracer_conf.indent_width;
 
     const char *type = is_byte_compiled(call) ? "<= bcod" : "<= func";
     const char *name = get_name(call);
@@ -904,11 +934,11 @@ rdt_handler *setup_promise_tracing(SEXP options) {
 
     const char *output_format_option = get_string(get_named_list_element(options, "format"));
     if (output_format_option == NULL || !strcmp(output_format_option, "trace"))
-        output_format = RDT_OUTPUT_TRACE;
+        tracer_conf.output_format = RDT_OUTPUT_TRACE;
     else if (!strcmp(output_format_option, "SQL") || !strcmp(output_format_option, "sql"))
-        output_format = RDT_OUTPUT_SQL;
+        tracer_conf.output_format = RDT_OUTPUT_SQL;
     else if (!strcmp(output_format_option, "both"))
-        output_format = RDT_OUTPUT_BOTH;
+        tracer_conf.output_format = RDT_OUTPUT_BOTH;
     else
         error("Unknown format type: \"%s\"\n", output_format_option);
 
@@ -916,14 +946,14 @@ rdt_handler *setup_promise_tracing(SEXP options) {
 
     const char *output_type_option = get_string(get_named_list_element(options, "output"));
     if (output_type_option == NULL || !strcmp(output_type_option, "R") || !strcmp(output_type_option, "r"))
-        output_type = RDT_R_PRINT;
+        tracer_conf.output_type = RDT_R_PRINT;
     else if (!strcmp(output_type_option, "file"))
-        output_type = RDT_FILE;
+        tracer_conf.output_type = RDT_FILE;
     else if (!strcmp(output_type_option, "DB") || !strcmp(output_type_option, "db"))
-        output_type = RDT_SQLITE;
+        tracer_conf.output_type = RDT_SQLITE;
     else if (!strcmp(output_type_option, "R+DB") || !strcmp(output_type_option, "r+db") ||
         !strcmp(output_type_option, "DB+R") || !strcmp(output_type_option, "db+r"))
-        output_type = RDT_R_PRINT_AND_SQLITE;
+        tracer_conf.output_type = RDT_R_PRINT_AND_SQLITE;
     else
         error("Unknown format type: \"%s\"\n", output_type_option);
 
@@ -931,33 +961,33 @@ rdt_handler *setup_promise_tracing(SEXP options) {
 
     SEXP pretty_print_option = get_named_list_element(options, "pretty.print");
     if (pretty_print_option == NULL || TYPEOF(pretty_print_option) == NILSXP)
-        pretty_print = true;
+        tracer_conf.pretty_print = true;
     else
-        pretty_print = LOGICAL(pretty_print_option)[0] == TRUE;
+        tracer_conf.pretty_print = LOGICAL(pretty_print_option)[0] == TRUE;
     //Rprintf("pretty_print_option=%p->%i\n", (pretty_print_option), pretty_print);
 
     SEXP indent_width_option = get_named_list_element(options, "indent.width");
     if (indent_width_option != NULL && TYPEOF(indent_width_option) != NILSXP)
         if (TYPEOF(indent_width_option) == REALSXP)
-            indent_width = (int) *REAL(indent_width_option);
+            tracer_conf.indent_width = (int) *REAL(indent_width_option);
     //Rprintf("indent_width_option=%p->%i\n", indent_width_option, indent_width);
 
     SEXP overwrite_option = get_named_list_element(options, "overwrite");
     if (overwrite_option == NULL || TYPEOF(overwrite_option) == NILSXP)
-        overwrite = false;
+        tracer_conf.overwrite = false;
     else
-        overwrite = LOGICAL(overwrite_option)[0] == TRUE;
+        tracer_conf.overwrite = LOGICAL(overwrite_option)[0] == TRUE;
     //Rprintf("overwrite_option=%p->%i\n", (overwrite_option), overwrite);
 
     SEXP synthetic_call_id_option = get_named_list_element(options, "synthetic.call.id");
     if (synthetic_call_id_option == NULL || TYPEOF(synthetic_call_id_option) == NILSXP)
-        call_id_use_ptr_fmt = false;
+        tracer_conf.call_id_use_ptr_fmt = false;
     else
-        call_id_use_ptr_fmt = LOGICAL(synthetic_call_id_option)[0] == FALSE;
+        tracer_conf.call_id_use_ptr_fmt = LOGICAL(synthetic_call_id_option)[0] == FALSE;
     //Rprintf("call_id_use_ptr_fmt=%p->%i\n", (synthetic_call_id_option), call_id_use_ptr_fmt);
 
-    if (output_type != RDT_SQLITE && output_type != RDT_R_PRINT_AND_SQLITE) {
-        output = fopen(filename, overwrite ? "w" : "wt"); // TODO options for wt?
+    if (tracer_conf.output_type != RDT_SQLITE && tracer_conf.output_type != RDT_R_PRINT_AND_SQLITE) {
+        output = fopen(filename, tracer_conf.overwrite ? "w" : "wt"); // TODO options for wt?
         if (!output) {
             error("Unable to open %s: %s\n", filename, strerror(errno));
             return NULL;
@@ -969,13 +999,13 @@ rdt_handler *setup_promise_tracing(SEXP options) {
     call_id_counter = 0;
     already_inserted_functions.clear();
 
-    if(overwrite && (output_type == RDT_SQLITE || output_type == RDT_R_PRINT_AND_SQLITE)) {
+    if(tracer_conf.overwrite && (tracer_conf.output_type == RDT_SQLITE || tracer_conf.output_type == RDT_R_PRINT_AND_SQLITE)) {
         remove(filename);
         argument_id_sequence = 0;
         argument_ids.clear();
     }
 
-    if (output_type == RDT_SQLITE || output_type == RDT_R_PRINT_AND_SQLITE)
+    if (tracer_conf.output_type == RDT_SQLITE || tracer_conf.output_type == RDT_R_PRINT_AND_SQLITE)
         rdt_init_sqlite(filename);
 
     rdt_handler *h = (rdt_handler *)  malloc(sizeof(rdt_handler));
@@ -1017,6 +1047,6 @@ rdt_handler *setup_promise_tracing(SEXP options) {
 }
 
 void cleanup_promise_tracing(/*rdt_handler *h,*/ SEXP options) {
-    if (output_type == RDT_SQLITE || output_type == RDT_R_PRINT_AND_SQLITE)
+    if (tracer_conf.output_type == RDT_SQLITE || tracer_conf.output_type == RDT_R_PRINT_AND_SQLITE)
         rdt_close_sqlite();
 }
