@@ -104,8 +104,11 @@ struct tracer_conf_t {
             *this = conf; // overwrites all members
             first_update = false;
         }
-        // We actually don't want to change any configuration
-        // if conf.overwrite is false and we're appending to a previous trace.
+        else {
+            //overwrite = conf.overwrite;
+            // This is the same as the above line but we know conf.overwrite cannot be true (because we're in this branch)
+            overwrite = false;
+        }
     }
 };
 
