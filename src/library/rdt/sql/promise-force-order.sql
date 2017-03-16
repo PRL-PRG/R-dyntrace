@@ -17,9 +17,20 @@ select
 	calls.function_name,
 
 	group_concat(
-	    (select
+	    (
+		select
 		    arguments.name -- || ":" || promise_evaluations.clock
-	    from promises join arguments on promises.argument_id = arguments.id
+			|| case
+				when promise_evaluations.event_type = 0 then '=' -- lookup
+				when promise_evaluations.event_type = 15 then '!' -- force
+				when promise_evaluations.event_type = 48 then  '?' -- peek
+			end
+	    from promises
+		join promise_associations on promise_associations.promise_id = promises.id
+		join arguments on promise_associations.argument_id = arguments.id
+		--select
+		 --   arguments.name -- || ":" || promise_evaluations.clock
+	    --from promises join arguments on promises.argument_id = arguments.id
 	    where promises.id = promise_evaluations.promise_id),
 	    " < "
 	) as promise_evaluation_order,

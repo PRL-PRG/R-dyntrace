@@ -52,7 +52,7 @@ create table promise_associations (
 create table promise_evaluations (
     --[ data ]-----------------------------------------------------------------
     clock integer primary key autoincrement, -- imposes an order on evaluations
-    event_type integer not null, -- 0x0: lookup, 0xf: force
+    event_type integer not null, -- 0x0: lookup, 0xf: force, 0x30: peek
     --[ relations ]------------------------------------------------------------
     promise_id integer not null,
     call_id integer not null,

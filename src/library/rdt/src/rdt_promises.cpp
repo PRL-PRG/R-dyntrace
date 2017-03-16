@@ -191,6 +191,7 @@ struct tracer_state_t {
 
     int call_id_counter; // IDs assigned should be globally unique but we can reset it after each pass if overwrite is true)
     unordered_set<rid_t> already_inserted_functions; // Should be kept across Rdt calls (unless overwrite is true)
+    unordered_set<rid_t> already_inserted_promises; // Should be kept across Rdt calls (unless overwrite is true)
     sid_t argument_id_sequence; // Should be globally unique (can reset between tracer calls if overwrite is true)
     map<arg_key_t, sid_t> argument_ids; // Should be kept across Rdt calls (unless overwrite is true)
 
@@ -259,6 +260,7 @@ private:
         call_id_counter = 0;
         argument_id_sequence = 0;
         already_inserted_functions.clear();
+        already_inserted_promises.clear();
         argument_ids.clear();
     }
 };
@@ -505,6 +507,9 @@ static inline string mk_sql_function_call(rid_t call_id, rid_t call_ptr, const c
 static inline string mk_sql_promises(arglist_t const& arguments, rid_t call_id) {
     std::stringstream promise_stream;
     std::stringstream promise_association_stream;
+
+    int inserted_promises = 0;
+
     if (arguments.size() > 0) {
         promise_stream << (tracer_conf.pretty_print ? "insert into promises  select"
                                                     : "insert into promises select");
@@ -517,13 +522,22 @@ static inline string mk_sql_promises(arglist_t const& arguments, rid_t call_id) 
             sid_t arg_id = get<1>(argument);
             rid_t promise = get<2>(argument);
 
-            if (index) {
-                promise_stream << (tracer_conf.pretty_print ? "\n            " : " ") << "union all select";
-                promise_association_stream << (tracer_conf.pretty_print ? "\n            " : " ") << "union all select";
+            bool promise_already_inserted = STATE(already_inserted_promises).count(promise);
+            if (!promise_already_inserted) {
+                STATE(already_inserted_promises).insert(promise);
+
+                if (inserted_promises)
+                    promise_stream << (tracer_conf.pretty_print ? "\n            " : " ")
+                                   << "union all select";
+
+                promise_stream << " 0x" << hex << promise;
+
+                inserted_promises++;
             }
 
-            promise_stream << " "
-                   << "0x" << hex << promise;
+            if (index)
+                promise_association_stream << (tracer_conf.pretty_print ? "\n            " : " ")
+                                           << "union all select";
 
             promise_association_stream << " "
                            << "0x" << hex << promise << ","
@@ -532,12 +546,15 @@ static inline string mk_sql_promises(arglist_t const& arguments, rid_t call_id) 
 
             index++;
         }
-        promise_stream << ";\n";
         promise_association_stream << ";\n";
 
-        promise_stream << promise_association_stream.str();
+        if (inserted_promises) {
+            promise_stream << ";\n";
+            promise_stream << promise_association_stream.str();
+        }
     }
-    return promise_stream.str();
+
+    return inserted_promises ? promise_stream.str() : promise_association_stream.str();
 }
 
 static inline string mk_sql_promise_evaluation(int event_type, rid_t promise_id, rid_t call_id) {
