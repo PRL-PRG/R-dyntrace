@@ -7,5 +7,6 @@ export(trace.promises.r)
 export(trace.promises.file)
 export(trace.promises.sql)
 export(trace.promises.db)
+export(trace.promises.both)
 
 export(RdtCalltimes, RdtFlow)

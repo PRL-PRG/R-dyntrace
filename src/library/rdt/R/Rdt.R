@@ -21,4 +21,6 @@ trace.promises.sql <- function(expression, path="trace.sql")
 trace.promises.db <- function(expression, path="trace.sqlite")
     Rdt(expression, tracer="promises", output="db", path=path, format="sql", pretty.print=FALSE, overwrite=TRUE)
 
+trace.promises.both <- function(expression, path="trace.sqlite")
+	Rdt(expression, tracer="promises", output="R+DB", format="both", path=path, overwrite=TRUE)
 # keep an empty line below this one

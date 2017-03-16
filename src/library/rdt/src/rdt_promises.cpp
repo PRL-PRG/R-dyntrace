@@ -421,7 +421,7 @@ static inline string print_promise(const char *type, const char *loc, const char
 
     stream << type << " "
            << "loc(" << CHKSTR(loc) << ") "
-           << "prom(" << CHKSTR(name) << "=" << hex << id << ") ";
+           << "prom(" << CHKSTR(name) << "=0x" << hex << id << ") ";
     stream << "in(" << num_fmt << in_call_id << ") ";
     stream << "from(" << num_fmt << from_call_id << ")\n";
 
@@ -717,12 +717,15 @@ static inline arglist_t get_arguments(SEXP op, SEXP rho) {
             // Retrieve the promise for the argument.
             // The call SEXP only contains AST to find the actual argument value, we need to search the environment.
             string arg_name = get_name(argument_expression);
-            arguments.push_back({
-                                        arg_name,
-                                        get_argument_id(get_function_id(op), arg_name),
-                                        get_promise_id(promise_expression)
-                                });
+            rid_t prom_id = get_promise_id(promise_expression);
+            if (prom_id != RID_INVALID)
+                arguments.push_back({
+                                            arg_name,
+                                            get_argument_id(get_function_id(op), arg_name),
+                                            prom_id
+                                    });
         }
+
     }
 
     return arguments;
