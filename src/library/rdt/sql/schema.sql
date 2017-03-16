@@ -35,7 +35,7 @@ create table calls (
 
 create table promises (
     --[ identity ]-------------------------------------------------------------
-    id integer primary key, -- equal to promise pointer SEXP
+    id integer primary key -- equal to promise pointer SEXP
 );
 
 create table promise_associations (

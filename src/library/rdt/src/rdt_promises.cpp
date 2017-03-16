@@ -503,27 +503,41 @@ static inline string mk_sql_function_call(rid_t call_id, rid_t call_ptr, const c
 }
 
 static inline string mk_sql_promises(arglist_t const& arguments, rid_t call_id) {
-    std::stringstream stream;
+    std::stringstream promise_stream;
+    std::stringstream promise_association_stream;
     if (arguments.size() > 0) {
-        stream << (tracer_conf.pretty_print ? "insert into promises  select" : "insert into promises select");
+        promise_stream << (tracer_conf.pretty_print ? "insert into promises  select"
+                                                    : "insert into promises select");
+        promise_association_stream << (
+                tracer_conf.pretty_print ? "insert into promise_associations select"
+                                         : "insert into promise_associations select");
         int index = 0;
         for (auto arg_ref : arguments.all()) {
             const arg_t & argument = arg_ref.get();
             sid_t arg_id = get<1>(argument);
             rid_t promise = get<2>(argument);
 
-            if (index)
-                stream << (tracer_conf.pretty_print ? "\n            " : " ") << "union all select";
+            if (index) {
+                promise_stream << (tracer_conf.pretty_print ? "\n            " : " ") << "union all select";
+                promise_association_stream << (tracer_conf.pretty_print ? "\n            " : " ") << "union all select";
+            }
 
-            stream << " "
-                   << "0x" << hex << promise << ","
-                   << dec << call_id << ","
-                   << dec << arg_id;
+            promise_stream << " "
+                   << "0x" << hex << promise;
+
+            promise_association_stream << " "
+                           << "0x" << hex << promise << ","
+                           << dec << call_id << ","
+                           << dec << arg_id;
+
             index++;
         }
-        stream << ";\n";
+        promise_stream << ";\n";
+        promise_association_stream << ";\n";
+
+        promise_stream << promise_association_stream.str();
     }
-    return stream.str();
+    return promise_stream.str();
 }
 
 static inline string mk_sql_promise_evaluation(int event_type, rid_t promise_id, rid_t call_id) {
