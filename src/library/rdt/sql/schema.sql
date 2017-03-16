@@ -36,10 +36,15 @@ create table calls (
 create table promises (
     --[ identity ]-------------------------------------------------------------
     id integer primary key, -- equal to promise pointer SEXP
+);
+
+create table promise_associations (
     --[ relations ]------------------------------------------------------------
+    promise_id integer not null,
     call_id integer not null,
     argument_id integer not null,
     --[ keys ]-----------------------------------------------------------------
+    foreign key (promise_id) references promises,
     foreign key (call_id) references calls,
     foreign key (argument_id) references arguments
 );
