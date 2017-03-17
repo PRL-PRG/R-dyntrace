@@ -156,7 +156,8 @@ static inline void rdt_print(OutputFormat string_format, std::initializer_list<s
 
             if (outcome != SQLITE_OK) {
                 fprintf(stderr, "SQLite: [%i] %s/%s in: %s\n", outcome, error_msg, sqlite3_errmsg(sqlite_database), sql_string.c_str());
-                sqlite3_free(error_msg);
+                if (error_msg)
+                    sqlite3_free(error_msg);
             }
 
             break;
