@@ -1916,7 +1916,21 @@ SEXP attribute_hidden do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP rval, srcref;
 
     if (TYPEOF(op) == PROMSXP) {
-	op = forcePromise(op);
+    // Tracing: we now handle this. Not sure how to trigger it though.
+
+#ifdef ENABLE_RDT
+        if(RDT_IS_ENABLED(probe_force_promise_entry)) {
+            RDT_FIRE_PROBE(probe_force_promise_entry, op, rho);
+        }
+#endif
+        op = forcePromise(op);
+
+#ifdef ENABLE_RDT
+        if(RDT_IS_ENABLED(probe_force_promise_exit)) {
+			RDT_FIRE_PROBE(probe_force_promise_exit, op, rho, PRVALUE(op));
+		}
+#endif
+
 	SET_NAMED(op, 2);
     }
     if (length(args) < 2) WrongArgCount("function");
@@ -3596,11 +3610,24 @@ static R_INLINE int bcStackScalarRealEx(R_bcstack_t *s, scalar_value_t *px,
     Relop2(opval, opsym); \
 } while (0)
 
-static R_INLINE SEXP getPrimitive(SEXP symbol, SEXPTYPE type)
+static R_INLINE SEXP getPrimitive(SEXP symbol, SEXPTYPE type, SEXP rho)
 {
     SEXP value = SYMVALUE(symbol);
     if (TYPEOF(value) == PROMSXP) {
-	value = forcePromise(value);
+    // Tracing: we dont't handle this. Not sure why not. This can potentially happen a lot, actually.
+#ifdef ENABLE_RDT
+        if(RDT_IS_ENABLED(probe_force_promise_entry)) {
+            RDT_FIRE_PROBE(probe_force_promise_entry, value, rho);
+        }
+#endif
+
+        value = forcePromise(value);
+
+#ifdef ENABLE_RDT
+        if(RDT_IS_ENABLED(probe_force_promise_exit)) {
+			RDT_FIRE_PROBE(probe_force_promise_exit, value, rho, PRVALUE(value));
+		}
+#endif
 	SET_NAMED(value, 2);
     }
     if (TYPEOF(value) != type) {
@@ -3620,7 +3647,7 @@ static R_INLINE SEXP getPrimitive(SEXP symbol, SEXPTYPE type)
 static SEXP cmp_relop(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 		      SEXP rho)
 {
-    SEXP op = getPrimitive(opsym, BUILTINSXP);
+    SEXP op = getPrimitive(opsym, BUILTINSXP, rho);
     if (isObject(x) || isObject(y)) {
 	SEXP args, ans;
 	args = CONS_NR(x, CONS_NR(y, R_NilValue));
@@ -3636,7 +3663,7 @@ static SEXP cmp_relop(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 
 static SEXP cmp_arith1(SEXP call, SEXP opsym, SEXP x, SEXP rho)
 {
-    SEXP op = getPrimitive(opsym, BUILTINSXP);
+    SEXP op = getPrimitive(opsym, BUILTINSXP, rho);
     if (isObject(x)) {
 	SEXP args, ans;
 	args = CONS_NR(x, R_NilValue);
@@ -3653,9 +3680,24 @@ static SEXP cmp_arith1(SEXP call, SEXP opsym, SEXP x, SEXP rho)
 static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 		       SEXP rho)
 {
-    SEXP op = getPrimitive(opsym, BUILTINSXP);
+    SEXP op = getPrimitive(opsym, BUILTINSXP, rho);
     if (TYPEOF(op) == PROMSXP) {
-	op = forcePromise(op);
+
+    // Tracing: we didn't handle this. Not sure why not.
+#ifdef ENABLE_RDT
+        if(RDT_IS_ENABLED(probe_force_promise_entry)) {
+            RDT_FIRE_PROBE(probe_force_promise_entry, op, rho);
+        }
+#endif
+
+        op = forcePromise(op);
+
+#ifdef ENABLE_RDT
+        if(RDT_IS_ENABLED(probe_force_promise_exit)) {
+			RDT_FIRE_PROBE(probe_force_promise_exit, op, rho, PRVALUE(op));
+		}
+#endif
+
 	SET_NAMED(op, 2);
     }
     if (isObject(x) || isObject(y)) {
@@ -3674,7 +3716,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 #define Builtin1(do_fun,which,rho) do { \
   SEXP call = VECTOR_ELT(constants, GETOP()); \
   SETSTACK(-1, CONS_NR(GETSTACK(-1), R_NilValue));		     \
-  SETSTACK(-1, do_fun(call, getPrimitive(which, BUILTINSXP), \
+  SETSTACK(-1, do_fun(call, getPrimitive(which, BUILTINSXP, rho), \
 		      GETSTACK(-1), rho));		     \
   NEXT(); \
 } while(0)
@@ -3686,7 +3728,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
   SEXP tmp = CONS_NR(stack1, R_NilValue); \
   SETSTACK(-2, CONS_NR(stack2, tmp));     \
   R_BCNodeStackTop--; \
-  SETSTACK(-1, do_fun(call, getPrimitive(which, BUILTINSXP),	\
+  SETSTACK(-1, do_fun(call, getPrimitive(which, BUILTINSXP, rho),	\
 		      GETSTACK(-1), rho));			\
   NEXT(); \
 } while(0)
@@ -3877,7 +3919,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 	SEXP call = VECTOR_ELT(constants, GETOP());			\
 	SEXP args = CONS_NR(GETSTACK(-1), R_NilValue);			\
 	SETSTACK(-1, args); /* to protect */				\
-	SEXP op = getPrimitive(R_LogSym, SPECIALSXP);			\
+	SEXP op = getPrimitive(R_LogSym, SPECIALSXP, rho);			\
 	SETSTACK(-1, do_log_builtin(call, op, args, rho));		\
 	NEXT();								\
  } while (0)
@@ -3906,7 +3948,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 	SEXP args = CONS_NR(tmp, CONS_NR(GETSTACK(-1), R_NilValue));	\
 	R_BCNodeStackTop--;						\
 	SETSTACK(-1, args); /* to protect */				\
-	SEXP op = getPrimitive(R_LogSym, SPECIALSXP);			\
+	SEXP op = getPrimitive(R_LogSym, SPECIALSXP, rho);			\
 	SETSTACK(-1, do_log_builtin(call, op, args, rho));		\
 	NEXT();								\
     } while (0)
@@ -3976,7 +4018,7 @@ static R_INLINE double (*getMath1Fun(int i, SEXP call))(double) {
 	SEXP args = CONS_NR(GETSTACK(-1), R_NilValue);			\
 	SEXP sym = CAR(call);						\
 	SETSTACK(-1, args); /* to protect */				\
-	SEXP op = getPrimitive(sym, BUILTINSXP);			\
+	SEXP op = getPrimitive(sym, BUILTINSXP, rho);			\
 	SETSTACK(-1, do_math1(call, op, args, rho));			\
 	NEXT();								\
     } while (0)
@@ -4005,7 +4047,7 @@ static R_INLINE double (*getMath1Fun(int i, SEXP call))(double) {
 	    BCNPOP_IGNORE_VALUE();					\
 	}								\
 	SEXP sym = CAR(call);						\
-	SEXP op = getPrimitive(sym, BUILTINSXP);			\
+	SEXP op = getPrimitive(sym, BUILTINSXP, rho);			\
 	SETSTACK(-1, do_dotcall(call, op, args, rho));			\
 	NEXT();								\
     } while (0)
@@ -4346,15 +4388,27 @@ static void NORET UNBOUND_VARIABLE_ERROR(SEXP symbol)
 }
 
 static R_INLINE SEXP FORCE_PROMISE(SEXP value, SEXP symbol, SEXP rho,
-				   Rboolean keepmiss)
-{
+				   Rboolean keepmiss) {
     if (PRVALUE(value) == R_UnboundValue) {
-	/**** R_isMissing is inefficient */
-	if (keepmiss && R_isMissing(symbol, rho))
-	    value = R_MissingArg;
-	else value = forcePromise(value);
+        /**** R_isMissing is inefficient */
+        if (keepmiss && R_isMissing(symbol, rho)) {
+            value = R_MissingArg;
+        } else {
+#ifdef ENABLE_RDT
+            if(RDT_IS_ENABLED(probe_force_promise_entry)) {
+                RDT_FIRE_PROBE(probe_force_promise_entry, symbol, rho);
+            }
+#endif
+            value = forcePromise(value);
+        }
+    } else {
+        value = PRVALUE(value);
+#ifdef ENABLE_RDT
+        if(RDT_IS_ENABLED(probe_promise_lookup)) {
+			RDT_FIRE_PROBE(probe_promise_lookup, symbol, rho, value);
+		}
+#endif
     }
-    else value = PRVALUE(value);
     SET_NAMED(value, 2);
     return value;
 }
@@ -4395,19 +4449,8 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
     else if (TYPEOF(value) == PROMSXP) {
 	PROTECT(value);
 
-#ifdef ENABLE_RDT
-	if(RDT_IS_ENABLED(probe_force_promise_entry)) {
-		RDT_FIRE_PROBE(probe_force_promise_entry, symbol, rho);
-	}
-#endif		
-
+    // Tracing: we handled this and we handle this.
 	value = FORCE_PROMISE(value, symbol, rho, keepmiss);
-
-#ifdef ENABLE_RDT
-	if(RDT_IS_ENABLED(probe_force_promise_exit)) {
-		RDT_FIRE_PROBE(probe_force_promise_exit, symbol, rho, value);
-	}
-#endif		
 
 	UNPROTECT(1);
     } else if (NAMED(value) == 0 && value != R_NilValue)
@@ -4451,6 +4494,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 		    SEXP pv = PRVALUE(value);		\
 		    if (pv == R_UnboundValue) {		\
 			SEXP symbol = VECTOR_ELT(constants, sidx);	\
+            /* Tracing: we didn't handle this and we handle this. */ \
 			value = FORCE_PROMISE(value, symbol, rho, keepmiss); \
 		    }							\
 		    else value = pv;					\
@@ -5598,7 +5642,21 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
 	value = SYMVALUE(symbol);
 	if (TYPEOF(value) == PROMSXP) {
-	    value = forcePromise(value);
+        // Tracing: we didnt't handle this. Not sure why not. Also not sure what a GETSYMFUN op is.
+
+#ifdef ENABLE_RDT
+        if(RDT_IS_ENABLED(probe_force_promise_entry)) {
+            RDT_FIRE_PROBE(probe_force_promise_entry, value, rho);
+        }
+#endif
+        value = forcePromise(value);
+
+#ifdef ENABLE_RDT
+        if(RDT_IS_ENABLED(probe_force_promise_exit)) {
+			RDT_FIRE_PROBE(probe_force_promise_exit, value, rho, PRVALUE(value));
+		}
+#endif
+
 	    SET_NAMED(value, 2);
 	}
 	if(RTRACE(value)) {
@@ -5612,7 +5670,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       {
 	/* get the function */
 	SEXP symbol = VECTOR_ELT(constants, GETOP());
-	value = getPrimitive(symbol, BUILTINSXP);
+	value = getPrimitive(symbol, BUILTINSXP, rho);
 //#define REPORT_OVERRIDEN_BUILTINS
 #ifdef REPORT_OVERRIDEN_BUILTINS
 	if (value != findFun(symbol, rho)) {
@@ -5800,7 +5858,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
       {
 	SEXP call = VECTOR_ELT(constants, GETOP());
 	SEXP symbol = CAR(call);
-	SEXP fun = getPrimitive(symbol, SPECIALSXP);
+	SEXP fun = getPrimitive(symbol, SPECIALSXP, rho);
 	int flag;
 	const void *vmax = vmaxget();
 	if (RTRACE(fun)) {

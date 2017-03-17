@@ -2,12 +2,12 @@
 -- run:
 --     # prepare DB
 --     rm example.sqlite
---     cat src/library/rdt/sql/{schema.sql,example-trace.sql} | sqlite3 example.sqlite
+--     cat src/library/rdt/sql/{schema.sql,example-trace1.sql} | sqlite3 example.sqlite
 --
 --     # run query
 --     <src/library/rdt/sql/promise-strictness.sql sqlite3 example.sqlite
 --
-.width 16, 16, 16, 16, 16, 32, 64
+.width 16, 16, 16, 8, 8, 8, 48, 64
 .mode column
 .headers on
 
@@ -58,7 +58,14 @@ as select
 	where
 		promise_evaluations.promise_id = promises.id
 		and promise_evaluations.call_id = promise_associations.call_id
-		and promise_evaluations.event_type = 0xf) >= 1 as forced
+		and promise_evaluations.event_type = 0xf) >= 1 as forced,
+
+	(select count(*)
+	from promise_evaluations
+	where
+		promise_evaluations.promise_id = promises.id
+		and promise_evaluations.call_id = promise_associations.call_id
+		and promise_evaluations.event_type = 0x0) >= 1 as lookups
 
 from
 	promises
@@ -82,11 +89,17 @@ select
 		argument_forces.function_id = function_names.function_id and
 	    argument_forces.argument_name = arguments.name) as forced,
 
-	(select group_concat(argument_forces.promise_id, ', ')
+    (select sum(lookups)
 	from argument_forces
 	where
 		argument_forces.function_id = function_names.function_id and
-	    argument_forces.argument_name = arguments.name) as forced_promises,
+	    argument_forces.argument_name = arguments.name) as lookups,
+
+	--(select group_concat(argument_forces.promise_id, ', ')
+	--from argument_forces
+	--where
+	--	argument_forces.function_id = function_names.function_id and
+	--    argument_forces.argument_name = arguments.name) as forced_promises,
 
     (select functions.location
 	from functions

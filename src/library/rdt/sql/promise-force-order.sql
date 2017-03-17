@@ -2,7 +2,7 @@
 -- run:
 --     # prepare DB
 --     rm example.sqlite
---     cat src/library/rdt/sql/{schema.sql,example-trace.sql} | sqlite3 example.sqlite
+--     cat src/library/rdt/sql/{schema.sql,example-trace1.sql} | sqlite3 example.sqlite
 --
 --     # run query
 --     <src/library/rdt/sql/promise-sforce-order.sql sqlite3 example.sqlite
