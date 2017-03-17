@@ -532,7 +532,6 @@ set(SOURCE_FILES
     src/main/RBufferUtils.h
     src/main/rdtrace.c
     src/main/rdtrace.h
-    src/main/rdtrace_probes.h
     src/main/Rdynload.c
     src/main/registration.c
     src/main/relop.c
