@@ -10,6 +10,15 @@
 #define RDT_IS_ENABLED(name) (rdt_curr_handler->name != NULL)
 #define RDT_FIRE_PROBE(name, ...) (rdt_curr_handler->name(__VA_ARGS__))
 
+#ifdef ENABLE_RDT
+#define RDT_HOOK(name, ...) \
+    if(RDT_IS_ENABLED(name)) { \
+        RDT_FIRE_PROBE(name, __VA_ARGS__); \
+}
+#else
+#define RDT_HOOK(name, ...)
+#endif
+
 // ----------------------------------------------------------------------------
 // probes
 // ----------------------------------------------------------------------------

@@ -324,11 +324,7 @@ void attribute_hidden NORET findcontext(int mask, SEXP env, SEXP val)
 	     cptr != NULL && cptr->callflag != CTXT_TOPLEVEL;
 	     cptr = cptr->nextcontext)
 	    if ((cptr->callflag & mask) && cptr->cloenv == env) {
-#ifdef ENABLE_RDT
-			if(RDT_IS_ENABLED(probe_jump_ctxt)) {
-				RDT_FIRE_PROBE(probe_jump_ctxt, env, val);
-			}
-#endif
+			RDT_HOOK(probe_jump_ctxt, env, val);
 			R_jumpctxt(cptr, mask, val);
 		}
 	error(_("no function to return from, jumping to top level"));

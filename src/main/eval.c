@@ -535,11 +535,8 @@ static SEXP forcePromise(SEXP e)
 /* some places, e.g. deparse2buff, call this with a promise and rho = NULL */
 SEXP eval(SEXP e, SEXP rho)
 {
-#ifdef ENABLE_RDT
-    if(RDT_IS_ENABLED(probe_eval_entry)) {
-		RDT_FIRE_PROBE(probe_eval_entry, e, rho);
-    }
-#endif
+    RDT_HOOK(probe_eval_entry, e, rho);
+
     SEXP op, tmp;
     static int evalcount = 0;
 
@@ -581,11 +578,9 @@ SEXP eval(SEXP e, SEXP rho)
 	   to replacement functions won't modify constants in
 	   expressions.  */
 	if (NAMED(e) <= 1) SET_NAMED(e, 2);
-#ifdef ENABLE_RDT
-    	if(RDT_IS_ENABLED(probe_eval_exit)) {
-	    	RDT_FIRE_PROBE(probe_eval_exit, e, rho, e);
-    	}    	
-#endif	
+
+	RDT_HOOK(probe_eval_exit, e, rho, e);
+
 	return e;
     default: break;
     }
@@ -649,26 +644,16 @@ SEXP eval(SEXP e, SEXP rho)
 		/* not sure the PROTECT is needed here but keep it to
 		   be on the safe side. */
 		PROTECT(tmp);
-#ifdef ENABLE_RDT
-		if(RDT_IS_ENABLED(probe_force_promise_entry)) {
-			RDT_FIRE_PROBE(probe_force_promise_entry, e, rho);
-		}
-#endif
+
+		RDT_HOOK(probe_force_promise_entry, e, rho);
 		tmp = forcePromise(tmp);
-#ifdef ENABLE_RDT
-		if(RDT_IS_ENABLED(probe_force_promise_exit)) {
-			RDT_FIRE_PROBE(probe_force_promise_exit, e, rho, tmp);
-		}
-#endif		
+		RDT_HOOK(probe_force_promise_exit, e, rho, tmp);
+
 		UNPROTECT(1);
 	    }
 	    else {
 		tmp = PRVALUE(tmp);
-#ifdef ENABLE_RDT
-		if(RDT_IS_ENABLED(probe_promise_lookup)) {
-			RDT_FIRE_PROBE(probe_promise_lookup, e, rho, tmp);
-		}
-#endif
+		RDT_HOOK(probe_promise_lookup, e, rho, tmp);
 	    }
 	    SET_NAMED(tmp, 2);
 	}
@@ -680,17 +665,9 @@ SEXP eval(SEXP e, SEXP rho)
 	    /* We could just unconditionally use the return value from
 	       forcePromise; the test avoids the function call if the
 	       promise is already evaluated. */
-#ifdef ENABLE_RDT
-		if(RDT_IS_ENABLED(probe_force_promise_entry)) {
-			RDT_FIRE_PROBE(probe_force_promise_entry, e, rho);
-		}
-#endif
+		RDT_HOOK(probe_force_promise_entry, e, rho);
 		forcePromise(e);
-#ifdef ENABLE_RDT
-		if(RDT_IS_ENABLED(probe_force_promise_exit)) {
-			RDT_FIRE_PROBE(probe_force_promise_exit, e, rho, PRVALUE(e));
-		}
-#endif		
+		RDT_HOOK(probe_force_promise_exit, e, rho, PRVALUE(e));
 	}
 	tmp = PRVALUE(e);
 	/* This does _not_ change the value of NAMED on the value tmp,
@@ -719,11 +696,8 @@ SEXP eval(SEXP e, SEXP rho)
 	    PrintValue(e);
 	}
 	if (TYPEOF(op) == SPECIALSXP) {
-#ifdef ENABLE_RDT
-              if(RDT_IS_ENABLED(probe_builtin_entry)) {
-                  RDT_FIRE_PROBE(probe_builtin_entry, e, op, rho); // XXX
-              }
-#endif                  
+	    RDT_HOOK(probe_builtin_entry, e, op, rho); // XXX
+
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
 	    const void *vmax = vmaxget();
 	    PROTECT(CDR(e));
@@ -742,18 +716,12 @@ SEXP eval(SEXP e, SEXP rho)
 	    UNPROTECT(1);
 	    check_stack_balance(op, save);
 	    vmaxset(vmax);
-#ifdef ENABLE_RDT
-	      if(RDT_IS_ENABLED(probe_builtin_exit)) {
-	          RDT_FIRE_PROBE(probe_builtin_exit, e, op, rho, tmp); // XXX
-	      }
-#endif  
+
+	    RDT_HOOK(probe_builtin_exit, e, op, rho, tmp); // XXX
 	}
 	else if (TYPEOF(op) == BUILTINSXP) {
-#ifdef ENABLE_RDT
-              if(RDT_IS_ENABLED(probe_builtin_entry)) {
-                  RDT_FIRE_PROBE(probe_builtin_entry, e, op, rho); // XXX
-              }
-#endif                  
+	    RDT_HOOK(probe_builtin_entry, e, op, rho); // XXX
+
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
 	    const void *vmax = vmaxget();
 	    RCNTXT cntxt;
@@ -782,11 +750,8 @@ SEXP eval(SEXP e, SEXP rho)
 	    UNPROTECT(1);
 	    check_stack_balance(op, save);
 	    vmaxset(vmax);
-#ifdef ENABLE_RDT
-	      if(RDT_IS_ENABLED(probe_builtin_exit)) {
-	          RDT_FIRE_PROBE(probe_builtin_exit, e, op, rho, tmp); // XXX
-	      }
-#endif                  
+
+	    RDT_HOOK(probe_builtin_exit, e, op, rho, tmp); // XXX
 	}
 	else if (TYPEOF(op) == CLOSXP) {
 	    PROTECT(tmp = promiseArgs(CDR(e), rho));
@@ -804,11 +769,9 @@ SEXP eval(SEXP e, SEXP rho)
     }
     R_EvalDepth = depthsave;
     R_Srcref = srcrefsave;
-#ifdef ENABLE_RDT
-    	if(RDT_IS_ENABLED(probe_eval_exit)) {
-		    RDT_FIRE_PROBE(probe_eval_exit, e, rho, tmp);
-    	}
-#endif	
+
+    RDT_HOOK(probe_eval_exit, e, rho, tmp);
+
     return (tmp);
 }
 
@@ -1134,14 +1097,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 
     tmp = R_NilValue;
 
-#ifdef ENABLE_RDT
-    if(RDT_IS_ENABLED(probe_function_entry)) {
-        // Are we really supposed to pass the caller environment?
-		// RDT_FIRE_PROBE(probe_function_entry, call, op, rho);
-		// TODO: maybe pass both rho and newrho?
-		RDT_FIRE_PROBE(probe_function_entry, call, op, newrho);
-    }
-#endif
+    RDT_HOOK(probe_function_entry, call, op, newrho);
 
     /* Debugging */
 
@@ -1212,11 +1168,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
     R_Srcref = savesrc;
     endcontext(&cntxt);
 
-#ifdef ENABLE_RDT
-    if(RDT_IS_ENABLED(probe_function_exit)) {
-		RDT_FIRE_PROBE(probe_function_exit, call, op, newrho, tmp);
-    }
-#endif
+    RDT_HOOK(probe_function_exit, call, op, newrho, tmp);
 
     if (RDEBUG(op) && R_current_debug_state()) {
 	Rprintf("exiting from: ");
@@ -1917,21 +1869,11 @@ SEXP attribute_hidden do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     if (TYPEOF(op) == PROMSXP) {
     // Tracing: we now handle this. Not sure how to trigger it though.
-
-#ifdef ENABLE_RDT
-        if(RDT_IS_ENABLED(probe_force_promise_entry)) {
-            RDT_FIRE_PROBE(probe_force_promise_entry, op, rho);
-        }
-#endif
+        RDT_HOOK(probe_force_promise_entry, op, rho);
         op = forcePromise(op);
+        RDT_HOOK(probe_force_promise_exit, op, rho, PRVALUE(op));
 
-#ifdef ENABLE_RDT
-        if(RDT_IS_ENABLED(probe_force_promise_exit)) {
-			RDT_FIRE_PROBE(probe_force_promise_exit, op, rho, PRVALUE(op));
-		}
-#endif
-
-	SET_NAMED(op, 2);
+        SET_NAMED(op, 2);
     }
     if (length(args) < 2) WrongArgCount("function");
     CheckFormals(CAR(args));
@@ -3615,19 +3557,10 @@ static R_INLINE SEXP getPrimitive(SEXP symbol, SEXPTYPE type, SEXP rho)
     SEXP value = SYMVALUE(symbol);
     if (TYPEOF(value) == PROMSXP) {
     // Tracing: we dont't handle this. Not sure why not. This can potentially happen a lot, actually.
-#ifdef ENABLE_RDT
-        if(RDT_IS_ENABLED(probe_force_promise_entry)) {
-            RDT_FIRE_PROBE(probe_force_promise_entry, value, rho);
-        }
-#endif
-
+        RDT_HOOK(probe_force_promise_entry, value, rho);
         value = forcePromise(value);
+        RDT_HOOK(probe_force_promise_exit, value, rho, PRVALUE(value));
 
-#ifdef ENABLE_RDT
-        if(RDT_IS_ENABLED(probe_force_promise_exit)) {
-			RDT_FIRE_PROBE(probe_force_promise_exit, value, rho, PRVALUE(value));
-		}
-#endif
 	SET_NAMED(value, 2);
     }
     if (TYPEOF(value) != type) {
@@ -3683,22 +3616,12 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
     SEXP op = getPrimitive(opsym, BUILTINSXP, rho);
     if (TYPEOF(op) == PROMSXP) {
 
-    // Tracing: we didn't handle this. Not sure why not.
-#ifdef ENABLE_RDT
-        if(RDT_IS_ENABLED(probe_force_promise_entry)) {
-            RDT_FIRE_PROBE(probe_force_promise_entry, op, rho);
-        }
-#endif
-
+        // Tracing: we didn't handle this. Not sure why not.
+        RDT_HOOK(probe_force_promise_entry, op, rho);
         op = forcePromise(op);
+        RDT_HOOK(probe_force_promise_exit, op, rho, PRVALUE(op));
 
-#ifdef ENABLE_RDT
-        if(RDT_IS_ENABLED(probe_force_promise_exit)) {
-			RDT_FIRE_PROBE(probe_force_promise_exit, op, rho, PRVALUE(op));
-		}
-#endif
-
-	SET_NAMED(op, 2);
+        SET_NAMED(op, 2);
     }
     if (isObject(x) || isObject(y)) {
 	SEXP args, ans;
@@ -3738,14 +3661,10 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
   SEXP call = VECTOR_ELT(constants, GETOP()); \
   SEXP x = GETSTACK(-2); \
   SEXP y = GETSTACK(-1); \
-  if(RDT_IS_ENABLED(probe_builtin_entry)) { \
-      RDT_FIRE_PROBE(probe_builtin_entry, opsym, call, rho); \
-  } \
+  RDT_HOOK(probe_builtin_entry, opsym, call, rho); \
   SEXP tmp = do_fun(call, opval, opsym, x, y,rho); \
   SETSTACK(-2, tmp);	\
-  if(RDT_IS_ENABLED(probe_builtin_exit)) { \
-      RDT_FIRE_PROBE(probe_builtin_exit, opsym, call, rho, tmp); \
-  } \
+  RDT_HOOK(probe_builtin_exit, opsym, call, rho, tmp); \
   R_BCNodeStackTop--; \
   NEXT(); \
 } while(0)
@@ -4394,20 +4313,13 @@ static R_INLINE SEXP FORCE_PROMISE(SEXP value, SEXP symbol, SEXP rho,
         if (keepmiss && R_isMissing(symbol, rho)) {
             value = R_MissingArg;
         } else {
-#ifdef ENABLE_RDT
-            if(RDT_IS_ENABLED(probe_force_promise_entry)) {
-                RDT_FIRE_PROBE(probe_force_promise_entry, symbol, rho);
-            }
-#endif
+            RDT_HOOK(probe_force_promise_entry, symbol, rho);
+
             value = forcePromise(value);
         }
     } else {
         value = PRVALUE(value);
-#ifdef ENABLE_RDT
-        if(RDT_IS_ENABLED(probe_promise_lookup)) {
-			RDT_FIRE_PROBE(probe_promise_lookup, symbol, rho, value);
-		}
-#endif
+        RDT_HOOK(probe_promise_lookup, symbol, rho, value);
     }
     SET_NAMED(value, 2);
     return value;
@@ -5643,21 +5555,11 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	value = SYMVALUE(symbol);
 	if (TYPEOF(value) == PROMSXP) {
         // Tracing: we didnt't handle this. Not sure why not. Also not sure what a GETSYMFUN op is.
-
-#ifdef ENABLE_RDT
-        if(RDT_IS_ENABLED(probe_force_promise_entry)) {
-            RDT_FIRE_PROBE(probe_force_promise_entry, value, rho);
-        }
-#endif
+        RDT_HOOK(probe_force_promise_entry, value, rho);
         value = forcePromise(value);
+        RDT_HOOK(probe_force_promise_exit, value, rho, PRVALUE(value));
 
-#ifdef ENABLE_RDT
-        if(RDT_IS_ENABLED(probe_force_promise_exit)) {
-			RDT_FIRE_PROBE(probe_force_promise_exit, value, rho, PRVALUE(value));
-		}
-#endif
-
-	    SET_NAMED(value, 2);
+        SET_NAMED(value, 2);
 	}
 	if(RTRACE(value)) {
 	  Rprintf("trace: ");
@@ -5711,18 +5613,10 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXPTYPE ftype = CALL_FRAME_FTYPE();
 	if (ftype != SPECIALSXP) {
 	  if (ftype == BUILTINSXP) {
-#ifdef ENABLE_RDT
-              if(RDT_IS_ENABLED(probe_builtin_entry)) {
-                  RDT_FIRE_PROBE(probe_builtin_entry, CALL_FRAME_FUN(), code, rho); // XXX
-              }
-#endif                  
+	      RDT_HOOK(probe_builtin_entry, CALL_FRAME_FUN(), code, rho); // XXX
 	      value = bcEval(code, rho, TRUE);
-#ifdef ENABLE_RDT
-	      if(RDT_IS_ENABLED(probe_builtin_exit)) {
-	          RDT_FIRE_PROBE(probe_builtin_exit, CALL_FRAME_FUN(), code, rho, value); // XXX
+	      RDT_HOOK(probe_builtin_exit, CALL_FRAME_FUN(), code, rho, value); // XXX
 	      }
-#endif                  
-          }
 	  else
 	    value = mkPROMISE(code, rho);
 	  PUSHCALLARG(value);
@@ -5823,31 +5717,17 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    begincontext(&cntxt, CTXT_BUILTIN, call,
 			 R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
 	    R_Srcref = NULL;
-#ifdef ENABLE_RDT
-              if(RDT_IS_ENABLED(probe_builtin_entry)) {
-                  RDT_FIRE_PROBE(probe_builtin_entry, call, fun, rho); // XXX
-              }
-#endif                  
+
+	    RDT_HOOK(probe_builtin_entry, call, fun, rho); // XXX
 	    value = PRIMFUN(fun) (call, fun, args, rho);
-#ifdef ENABLE_RDT
-	      if(RDT_IS_ENABLED(probe_builtin_exit)) {
-	          RDT_FIRE_PROBE(probe_builtin_exit, call, fun, rho, value); // XXX
-	      }
-#endif                  
+	    RDT_HOOK(probe_builtin_exit, call, fun, rho, value); // XXX
+
 	    R_Srcref = oldref;
 	    endcontext(&cntxt);
 	} else {
-#ifdef ENABLE_RDT
-              if(RDT_IS_ENABLED(probe_builtin_entry)) {
-                  RDT_FIRE_PROBE(probe_builtin_entry, call, fun, rho); // XXX
-              }
-#endif                  
+	    RDT_HOOK(probe_builtin_entry, call, fun, rho); // XXX
 	    value = PRIMFUN(fun) (call, fun, args, rho);
-#ifdef ENABLE_RDT
-	      if(RDT_IS_ENABLED(probe_builtin_exit)) {
-	          RDT_FIRE_PROBE(probe_builtin_exit, call, fun, rho, value); // XXX
-	      }
-#endif                  
+	    RDT_HOOK(probe_builtin_exit, call, fun, rho, value); // XXX
 	}
 	if (flag < 2) R_Visible = flag != 1;
 	vmaxset(vmax);

@@ -954,9 +954,7 @@ static void TryToReleasePages(void)
 #ifdef ENABLE_RDT
             else {
                 if (TYPEOF(s) == PROMSXP) {
-                    if (RDT_IS_ENABLED(probe_gc_promise_unmarked)) {
-                        RDT_FIRE_PROBE(probe_gc_promise_unmarked, s);
-                    }
+                    RDT_HOOK(probe_gc_promise_unmarked, s);
                 }
             }
 #endif
@@ -2653,12 +2651,8 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 #ifdef R_MEMORY_PROFILING
 		R_ReportAllocation(hdrsize + size * sizeof(VECREC));
 #endif
-#ifdef ENABLE_RDT
-    if (RDT_IS_ENABLED(probe_vector_alloc)) {
         // TODO: can I get the source location?
-        RDT_FIRE_PROBE(probe_vector_alloc, type, length, (hdrsize + size * sizeof(VECREC)), "");
-    }				
-#endif
+        RDT_HOOK(probe_vector_alloc, type, length, (hdrsize + size * sizeof(VECREC)), "");
 	    } else s = NULL; /* suppress warning */
 	    if (! success) {
 		double dsize = (double)size * sizeof(VECREC)/1024.0;
@@ -2880,11 +2874,8 @@ static void gc_end_timing(void)
 
 static void R_gc_internal(R_size_t size_needed)
 {
-#ifdef ENABLE_RDT
-    if(RDT_IS_ENABLED(probe_gc_entry)) {
-        RDT_FIRE_PROBE(probe_gc_entry, size_needed);
-    }
-#endif
+    RDT_HOOK(probe_gc_entry, size_needed);
+
     if (!R_GCEnabled) {
       if (NO_FREE_NODES())
 	R_NSize = R_NodesInUse + 1;
@@ -2999,11 +2990,8 @@ static void R_gc_internal(R_size_t size_needed)
 	error("internal logical NA value has been modified");
     }
 
-#ifdef ENABLE_RDT
-    if(RDT_IS_ENABLED(probe_gc_exit)) {
-        RDT_FIRE_PROBE(probe_gc_exit, gc_count, vcells, ncells);
-    }
-#endif    
+
+    RDT_HOOK(probe_gc_exit, gc_count, vcells, ncells);
 }
 
 SEXP attribute_hidden do_memlimits(SEXP call, SEXP op, SEXP args, SEXP env)

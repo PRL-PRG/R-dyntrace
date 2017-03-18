@@ -294,11 +294,7 @@ static
 SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
 		    const char *generic, SEXP rho, SEXP callrho, SEXP defrho) {
 
-#ifdef ENABLE_RDT
-    if(RDT_IS_ENABLED(probe_S3_dispatch_entry)) {
-        RDT_FIRE_PROBE(probe_S3_dispatch_entry, generic, CHAR(STRING_ELT(dotClass, 0)), method, PRVALUE(CAR(cptr->promargs)));
-    }
-#endif
+	RDT_HOOK(probe_S3_dispatch_entry, generic, CHAR(STRING_ELT(dotClass, 0)), method, PRVALUE(CAR(cptr->promargs)));
 
     SEXP newvars = PROTECT(createS3Vars(
 	PROTECT(mkString(generic)),
@@ -344,11 +340,7 @@ SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
     R_GlobalContext->callflag = CTXT_RETURN;
     UNPROTECT(5); /* "generic,method", newvars, newcall, matchedarg */
 
-#ifdef ENABLE_RDT
-    if(RDT_IS_ENABLED(probe_S3_dispatch_exit)) {
-        RDT_FIRE_PROBE(probe_S3_dispatch_exit, generic, CHAR(STRING_ELT(dotClass, 0)), method, PRVALUE(CAR(cptr->promargs)), ans);
-    }
-#endif
+    RDT_HOOK(probe_S3_dispatch_exit, generic, CHAR(STRING_ELT(dotClass, 0)), method, PRVALUE(CAR(cptr->promargs)), ans);
 
     return ans;
 }
@@ -357,11 +349,7 @@ attribute_hidden
 int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	      SEXP rho, SEXP callrho, SEXP defrho, SEXP *ans)
 {
-#ifdef ENABLE_RDT
-    if(RDT_IS_ENABLED(probe_S3_generic_entry)) {
-        RDT_FIRE_PROBE(probe_S3_generic_entry, generic, obj);
-    }
-#endif
+    RDT_HOOK(probe_S3_generic_entry, generic, obj);
 
     SEXP klass, method, sxp;
     SEXP op;
@@ -397,11 +385,8 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	    }
 	    UNPROTECT(2); /* klass, sxp */
 
-#ifdef ENABLE_RDT
-    	    if(RDT_IS_ENABLED(probe_S3_generic_exit)) {
-		RDT_FIRE_PROBE(probe_S3_generic_exit, generic, obj, *ans);
-	    }
-#endif
+	    RDT_HOOK(probe_S3_generic_exit, generic, obj, *ans);
+
 	    return 1;
 	}
     }
@@ -412,21 +397,13 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 			      rho, callrho, defrho);
 	UNPROTECT(2); /* klass, sxp */
 
-#ifdef ENABLE_RDT
-	if(RDT_IS_ENABLED(probe_S3_generic_exit)) {
-		RDT_FIRE_PROBE(probe_S3_generic_exit, generic, obj, *ans);
-	}
-#endif
+	RDT_HOOK(probe_S3_generic_exit, generic, obj, *ans);
 	return 1;
     }
     UNPROTECT(2); /* klass, sxp */
     cptr->callflag = CTXT_RETURN;
 
-#ifdef ENABLE_RDT
-    if(RDT_IS_ENABLED(probe_S3_generic_exit)) {
-	RDT_FIRE_PROBE(probe_S3_generic_exit, generic, obj, NULL);
-    }
-#endif
+    RDT_HOOK(probe_S3_generic_exit, generic, obj, NULL);
     return 0;
 }
 

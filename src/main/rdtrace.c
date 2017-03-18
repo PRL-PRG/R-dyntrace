@@ -162,9 +162,7 @@ void rdt_start(const rdt_handler *handler) {
 
     rdt_curr_handler = handler;
 
-    if (RDT_IS_ENABLED(probe_begin)) {
-        RDT_FIRE_PROBE(probe_begin);
-    }     
+    RDT_HOOK(probe_begin);
 }
 
 void rdt_stop() {
@@ -172,9 +170,7 @@ void rdt_stop() {
         REprintf("RDT: rdt_stop()\n");
     }
 
-    if (RDT_IS_ENABLED(probe_end)) {
-        RDT_FIRE_PROBE(probe_end);
-    }     
+    RDT_HOOK(probe_end);
 
     rdt_curr_handler = &rdt_null_handler;
 }
