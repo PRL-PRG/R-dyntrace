@@ -737,5 +737,6 @@ include_directories(src/include)
 include_directories(src/include/R_ext)
 include_directories(src/include/Rmodules)
 include_directories(src/include/vg)
+include_directories(src/main)
 
 add_executable(R_3_3_1 ${SOURCE_FILES})
