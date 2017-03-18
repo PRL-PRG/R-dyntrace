@@ -3,6 +3,8 @@ project(R_3_3_1)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
+add_definitions(-DHAVE_CONFIG_H)
+
 set(SOURCE_FILES
         include/R.h
         include/R_ext/Applic.h
