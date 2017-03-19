@@ -405,9 +405,6 @@ static inline string print_builtin(const char *type, const char *loc, const char
     stringstream stream;
     prepend_prefix(&stream);
 
-    if (tracer_conf.pretty_print && (tracer_conf.output_format == RDT_OUTPUT_TRACE))
-        stream << string(STATE(indent), ' ');
-
     stream << type << " "
            << "loc(" << CHKSTR(loc) << ") "
            << "fun(" << CHKSTR(name) << "=" << hex << id << ")\n";
@@ -418,9 +415,6 @@ static inline string print_builtin(const char *type, const char *loc, const char
 static inline string print_promise(const char *type, const char *loc, const char *name, rid_t id, rid_t in_call_id, rid_t from_call_id) {
     stringstream stream;
     prepend_prefix(&stream);
-
-    if (tracer_conf.pretty_print && (tracer_conf.output_format == RDT_OUTPUT_TRACE))
-        stream << string(STATE(indent), ' ');
 
     auto num_fmt = tracer_conf.call_id_use_ptr_fmt ? hex : dec;
 
@@ -575,9 +569,6 @@ static inline string mk_sql_promise_evaluation(int event_type, rid_t promise_id,
 static inline string print_function(const char *type, const char *loc, const char *name, rid_t function_id, rid_t call_id, arglist_t const& arguments) {
     stringstream stream;
     prepend_prefix(&stream);
-
-    if (tracer_conf.pretty_print && (tracer_conf.output_format == RDT_OUTPUT_TRACE))
-        stream << string(STATE(indent), ' ');
 
     stream << type << " "
            << "loc(" << CHKSTR(loc) << ") "
