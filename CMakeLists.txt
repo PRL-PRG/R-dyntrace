@@ -363,7 +363,7 @@ set(SOURCE_FILES
         src/library/rdt/src/rdt_debug.cpp
         src/library/rdt/src/rdt_noop.cpp
         src/library/rdt/src/rdt_promises.cpp
-        src/library/rdt/src/rdt_trace.c
+        src/library/rdt/src/rdt_trace.cpp
         src/library/splines/src/splines.c
         src/library/stats/src/HoltWinters.c
         src/library/stats/src/PPsum.c
