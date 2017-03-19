@@ -731,7 +731,7 @@ set(SOURCE_FILES
         src/unix/sys-std.c
         src/unix/sys-unix.c
         src/unix/system.c
-        )
+        src/library/rdt/src/rdt_register_hook.h)
 
 include_directories(include)
 include_directories(include/R_ext)

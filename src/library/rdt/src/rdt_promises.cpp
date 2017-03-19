@@ -24,6 +24,7 @@
 #include <streambuf>
 #include <functional>
 
+
 //#ifdef SQLITE3_H
 #define RDT_SQLITE_SUPPORT
 //#endif
@@ -50,6 +51,7 @@ extern "C" {
 }
 
 #include "rdt.h"
+#include "rdt_register_hook.h"
 
 using namespace std;
 
@@ -62,7 +64,7 @@ using namespace std;
 typedef uintptr_t rid_t;
 typedef int sid_t;
 
-#define RID_INVALID -1
+#define RID_INVALID (rid_t)-1
 
 static FILE *output = NULL;
 
@@ -604,18 +606,6 @@ static inline string print_function(const char *type, const char *loc, const cha
 }
 
 
-// ??? can we get metadata about the program we're analysing in here?
-static void trace_promises_begin() {
-    tracer_state().start_pass();
-}
-
-static void trace_promises_end() {
-    tracer_state().finish_pass();
-
-    if (output)
-        fclose(output);
-}
-
 static inline int count_elements(SEXP list) {
     int counter = 0;
     SEXP tmp = list;
@@ -745,219 +735,238 @@ static inline arglist_t get_arguments(SEXP op, SEXP rho) {
     return arguments;
 }
 
-// Triggered when entering function evaluation.
-static void trace_promises_function_entry(const SEXP call, const SEXP op, const SEXP rho) {
-    const char *type = is_byte_compiled(call) ? "=> bcod" : "=> func";
-    int call_type = is_byte_compiled(call) ? 1 : 0;
-    const char *name = get_name(call);
-    const char *ns = get_ns_name(op);
-    rid_t fn_id = get_function_id(op);
-    rid_t call_ptr = get_sexp_address(rho);
-#ifdef RDT_CALL_ID
-    rid_t call_id = make_funcall_id(op);
-#else
-    rid_t call_id = make_funcall_id(rho);
-#endif
-    char *loc = get_location(op);
-    char *fqfn = NULL;
-
-    if (ns) {
-        asprintf(&fqfn, "%s::%s", ns, CHKSTR(name));
-    } else {
-        fqfn = name != NULL ? strdup(name) : NULL;
+// All the interpreter hooks go here
+// DECL_HOOK macro generates an initializer for each function
+// which is then used in the REGISTER_HOOKS macro to properly init rdt_handler.
+struct trace_promises {
+    // ??? can we get metadata about the program we're analysing in here?
+    DECL_HOOK(begin)() {
+        tracer_state().start_pass();
     }
 
-    // Push function ID on function stack
-    STATE(fun_stack).push(call_id);
+    DECL_HOOK(end)() {
+        tracer_state().finish_pass();
+
+        if (output)
+            fclose(output);
+    }
+
+    // Triggered when entering function evaluation.
+    DECL_HOOK(function_entry)(const SEXP call, const SEXP op, const SEXP rho) {
+        const char *type = is_byte_compiled(call) ? "=> bcod" : "=> func";
+        int call_type = is_byte_compiled(call) ? 1 : 0;
+        const char *name = get_name(call);
+        const char *ns = get_ns_name(op);
+        rid_t fn_id = get_function_id(op);
+        rid_t call_ptr = get_sexp_address(rho);
 #ifdef RDT_CALL_ID
-    STATE(curr_env_stack).push(get_sexp_address(rho));
+        rid_t call_id = make_funcall_id(op);
+#else
+        rid_t call_id = make_funcall_id(rho);
+#endif
+        char *loc = get_location(op);
+        char *fqfn = NULL;
+
+        if (ns) {
+            asprintf(&fqfn, "%s::%s", ns, CHKSTR(name));
+        } else {
+            fqfn = name != NULL ? strdup(name) : NULL;
+        }
+
+        // Push function ID on function stack
+        STATE(fun_stack).push(call_id);
+#ifdef RDT_CALL_ID
+        STATE(curr_env_stack).push(get_sexp_address(rho));
 #endif
 
-    arglist_t arguments = get_arguments(op, rho);
+        arglist_t arguments = get_arguments(op, rho);
 
-    // if (SQL call)
-    //    function_definition <- deparse1line(function)
-    // otherwise function_definition <- NULL;
-    const char* fn_definition = NULL;
-    if (tracer_conf.output_format != RDT_OUTPUT_TRACE)
-        fn_definition = get_expression(op);
-                //deparse1line(op, FALSE);
+        // if (SQL call)
+        //    function_definition <- deparse1line(function)
+        // otherwise function_definition <- NULL;
+        const char* fn_definition = NULL;
+        if (tracer_conf.output_format != RDT_OUTPUT_TRACE)
+            fn_definition = get_expression(op);
+        //deparse1line(op, FALSE);
         //R_inspect(deparsed_function);
         // FIXME ESCAPE fn_definition (prepared statements?)
         //Rprintf(fn_definition);
 
-    // TODO link with mk_sql
-    // TODO rename to reflect non-printing nature
-    rdt_print(RDT_OUTPUT_TRACE, {print_function(type, loc, fqfn, fn_id, call_id, arguments)});
+        // TODO link with mk_sql
+        // TODO rename to reflect non-printing nature
+        rdt_print(RDT_OUTPUT_TRACE, {print_function(type, loc, fqfn, fn_id, call_id, arguments)});
 
-    rdt_print(RDT_OUTPUT_SQL, {mk_sql_function(fn_id, arguments, loc, fn_definition),
-               mk_sql_function_call(call_id, call_ptr, name, loc, call_type, fn_id),
-               mk_sql_promises(arguments, call_id)});
+        rdt_print(RDT_OUTPUT_SQL, {mk_sql_function(fn_id, arguments, loc, fn_definition),
+                                   mk_sql_function_call(call_id, call_ptr, name, loc, call_type, fn_id),
+                                   mk_sql_promises(arguments, call_id)});
 
-    if (tracer_conf.pretty_print)
-        STATE(indent) += tracer_conf.indent_width;
+        if (tracer_conf.pretty_print)
+            STATE(indent) += tracer_conf.indent_width;
 
-    // Associate promises with call ID
-    for (auto arg_ref : arguments.all()) {
-        const arg_t & argument = arg_ref.get();
-        auto & promise = get<2>(argument);
-        STATE(promise_origin)[promise] = call_id;
+        // Associate promises with call ID
+        for (auto arg_ref : arguments.all()) {
+            const arg_t & argument = arg_ref.get();
+            auto & promise = get<2>(argument);
+            STATE(promise_origin)[promise] = call_id;
+        }
+
+        if (loc)
+            free(loc);
+        if (fqfn)
+            free(fqfn);
     }
 
-    if (loc)
-        free(loc);
-    if (fqfn)
-        free(fqfn);
-}
+    DECL_HOOK(function_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
+        if (tracer_conf.pretty_print)
+            STATE(indent) -= tracer_conf.indent_width;
 
-static void trace_promises_function_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
-    if (tracer_conf.pretty_print)
-        STATE(indent) -= tracer_conf.indent_width;
+        const char *type = is_byte_compiled(call) ? "<= bcod" : "<= func";
+        const char *name = get_name(call);
+        const char *ns = get_ns_name(op);
+        rid_t fn_id = get_function_id(op);
+        rid_t call_id = STATE(fun_stack).top();
+        char *loc = get_location(op);
+        char *fqfn = NULL;
 
-    const char *type = is_byte_compiled(call) ? "<= bcod" : "<= func";
-    const char *name = get_name(call);
-    const char *ns = get_ns_name(op);
-    rid_t fn_id = get_function_id(op);
-    rid_t call_id = STATE(fun_stack).top();
-    char *loc = get_location(op);
-    char *fqfn = NULL;
+        if (ns) {
+            asprintf(&fqfn, "%s::%s", ns, CHKSTR(name));
+        } else {
+            fqfn = name != NULL ? strdup(name) : NULL;
+        }
 
-    if (ns) {
-        asprintf(&fqfn, "%s::%s", ns, CHKSTR(name));
-    } else {
-        fqfn = name != NULL ? strdup(name) : NULL;
-    }
+        arglist_t arguments = get_arguments(op, rho);
 
-    arglist_t arguments = get_arguments(op, rho);
+        rdt_print(RDT_OUTPUT_TRACE, {print_function(type, loc, name, fn_id, call_id, arguments)});
 
-    rdt_print(RDT_OUTPUT_TRACE, {print_function(type, loc, name, fn_id, call_id, arguments)});
-
-    // Pop current function ID
-    STATE(fun_stack).pop();
+        // Pop current function ID
+        STATE(fun_stack).pop();
 #ifdef RDT_CALL_ID
-    STATE(curr_env_stack).pop();
+        STATE(curr_env_stack).pop();
 #endif
 
-    if (loc)
-        free(loc);
-    if (fqfn)
-        free(fqfn);
-}
+        if (loc)
+            free(loc);
+        if (fqfn)
+            free(fqfn);
+    }
 
-// TODO retrieve arguments
-static void trace_promises_builtin_entry(const SEXP call, const SEXP op, const SEXP rho) {
-    const char *name = get_name(call);
-    rid_t fn_id = get_function_id(op);
 
-    rid_t call_ptr = get_sexp_address(rho);
+    // TODO retrieve arguments
+    DECL_HOOK(builtin_entry)(const SEXP call, const SEXP op, const SEXP rho) {
+        const char *name = get_name(call);
+        rid_t fn_id = get_function_id(op);
+
+        rid_t call_ptr = get_sexp_address(rho);
 #ifdef RDT_CALL_ID
-    rid_t call_id = make_funcall_id(op);
+        rid_t call_id = make_funcall_id(op);
 #else
-    rid_t call_id = make_funcall_id(rho);
+        rid_t call_id = make_funcall_id(rho);
 #endif
 
-    // TODO merge rdt_print_calls
-    rdt_print(RDT_OUTPUT_TRACE, {print_builtin("=> b-in", NULL, name, fn_id)});
+        // TODO merge rdt_print_calls
+        rdt_print(RDT_OUTPUT_TRACE, {print_builtin("=> b-in", NULL, name, fn_id)});
 
-    arglist_t arguments;
+        arglist_t arguments;
 
-    rdt_print(RDT_OUTPUT_SQL, {mk_sql_function(fn_id, arguments, NULL, NULL),
-               mk_sql_function_call(call_id, call_ptr, name, NULL, 1, fn_id)});
-            // mk_sql_promises(promises, call_id, argument_ids)
+        rdt_print(RDT_OUTPUT_SQL, {mk_sql_function(fn_id, arguments, NULL, NULL),
+                                   mk_sql_function_call(call_id, call_ptr, name, NULL, 1, fn_id)});
+        // mk_sql_promises(promises, call_id, argument_ids)
 
-    //R_inspect(call);
-}
-
-static void trace_promises_builtin_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
-    const char *name = get_name(call);
-    rid_t id = get_function_id(op);
-
-    rdt_print(RDT_OUTPUT_TRACE, {print_builtin("<= b-in", NULL, name, id)});
-}
-
-// Promise is being used inside a function body for the first time.
-static void trace_promises_force_promise_entry(const SEXP symbol, const SEXP rho) {
-    const char *name = get_name(symbol);
-
-    SEXP promise_expression = get_promise(symbol, rho);
-    rid_t id = get_promise_id(promise_expression);
-    rid_t in_call_id = STATE(fun_stack).top();
-    rid_t from_call_id = STATE(promise_origin)[id];
-
-    // in_call_id = current call
-    rdt_print(RDT_OUTPUT_TRACE, {print_promise("=> prom", NULL, name, id, in_call_id, from_call_id)});
-    rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise_evaluation(RDT_FORCE_PROMISE, id, from_call_id)});
-
-}
-
-static void trace_promises_force_promise_exit(const SEXP symbol, const SEXP rho, const SEXP val) {
-    const char *name = get_name(symbol);
-
-    SEXP promise_expression = get_promise(symbol, rho);
-    rid_t id = get_promise_id(promise_expression);
-    rid_t in_call_id = STATE(fun_stack).top();
-    rid_t from_call_id = STATE(promise_origin)[id];
-
-    rdt_print(RDT_OUTPUT_TRACE, {print_promise("<= prom", NULL, name, id, in_call_id, from_call_id)});
-}
-
-static void trace_promises_promise_lookup(const SEXP symbol, const SEXP rho, const SEXP val) {
-    const char *name = get_name(symbol);
-
-    SEXP promise_expression = get_promise(symbol, rho);
-    rid_t id = get_promise_id(promise_expression);
-    rid_t in_call_id = STATE(fun_stack).top();
-    rid_t from_call_id = STATE(promise_origin)[id];
-
-    // TODO
-    rdt_print(RDT_OUTPUT_TRACE, {print_promise("<> lkup", NULL, name, id, in_call_id, from_call_id)});
-    rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise_evaluation(RDT_LOOKUP_PROMISE, id, from_call_id)});
-
-}
-
-static void trace_promises_error(const SEXP call, const char* message) {
-    char *call_str = NULL;
-    char *loc = get_location(call);
-
-    asprintf(&call_str, "\"%s\"", get_call(call));
-
-    if (loc) free(loc);
-    if (call_str) free(call_str);
-}
-
-static void trace_promises_vector_alloc(int sexptype, long length, long bytes, const char* srcref) {
-}
-
-// static void trace_eval_entry(SEXP e, SEXP rho) {
-//     switch(TYPEOF(e)) {
-//         case LANGSXP:
-//             fprintf(output, "%s\n");
-//             PrintValue
-//         break;
-//     }
-// }
-
-// static void trace_eval_exit(SEXP e, SEXP rho, SEXP retval) {
-//     printf("");
-// }
-
-static void trace_promises_gc_promise_unmarked(const SEXP promise) {
-    rid_t id = (rid_t)promise;
-    auto & promise_origin = STATE(promise_origin);
-
-    auto iter = promise_origin.find(id);
-    if (iter != promise_origin.end()) {
-        // If this is one of our traced promises,
-        // delete it from origin map because it is ready to be GCed
-        promise_origin.erase(iter);
-        //Rprintf("Promise %#x deleted.\n", id);
+        //R_inspect(call);
     }
-}
 
-static void trace_promises_jump_ctxt(const SEXP rho, const SEXP val) {
-    tracer_state().adjust_fun_stack(rho);
-}
+    DECL_HOOK(builtin_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
+        const char *name = get_name(call);
+        rid_t id = get_function_id(op);
 
+        rdt_print(RDT_OUTPUT_TRACE, {print_builtin("<= b-in", NULL, name, id)});
+    }
+
+    // Promise is being used inside a function body for the first time.
+    DECL_HOOK(force_promise_entry)(const SEXP symbol, const SEXP rho) {
+        const char *name = get_name(symbol);
+
+        SEXP promise_expression = get_promise(symbol, rho);
+        rid_t id = get_promise_id(promise_expression);
+        rid_t in_call_id = STATE(fun_stack).top();
+        rid_t from_call_id = STATE(promise_origin)[id];
+
+        // in_call_id = current call
+        rdt_print(RDT_OUTPUT_TRACE, {print_promise("=> prom", NULL, name, id, in_call_id, from_call_id)});
+        rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise_evaluation(RDT_FORCE_PROMISE, id, from_call_id)});
+
+    }
+
+    DECL_HOOK(force_promise_exit)(const SEXP symbol, const SEXP rho, const SEXP val) {
+        const char *name = get_name(symbol);
+
+        SEXP promise_expression = get_promise(symbol, rho);
+        rid_t id = get_promise_id(promise_expression);
+        rid_t in_call_id = STATE(fun_stack).top();
+        rid_t from_call_id = STATE(promise_origin)[id];
+
+        rdt_print(RDT_OUTPUT_TRACE, {print_promise("<= prom", NULL, name, id, in_call_id, from_call_id)});
+    }
+
+    DECL_HOOK(promise_lookup)(const SEXP symbol, const SEXP rho, const SEXP val) {
+        const char *name = get_name(symbol);
+
+        SEXP promise_expression = get_promise(symbol, rho);
+        rid_t id = get_promise_id(promise_expression);
+        rid_t in_call_id = STATE(fun_stack).top();
+        rid_t from_call_id = STATE(promise_origin)[id];
+
+        // TODO
+        rdt_print(RDT_OUTPUT_TRACE, {print_promise("<> lkup", NULL, name, id, in_call_id, from_call_id)});
+        rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise_evaluation(RDT_LOOKUP_PROMISE, id, from_call_id)});
+
+    }
+
+    DECL_HOOK(error)(const SEXP call, const char* message) {
+        char *call_str = NULL;
+        char *loc = get_location(call);
+
+        asprintf(&call_str, "\"%s\"", get_call(call));
+
+        if (loc) free(loc);
+        if (call_str) free(call_str);
+    }
+
+    DECL_HOOK(vector_alloc)(int sexptype, long length, long bytes, const char* srcref) {
+    }
+
+//    DECL_HOOK(eval_entry)(SEXP e, SEXP rho) {
+//        switch(TYPEOF(e)) {
+//            case LANGSXP:
+//                fprintf(output, "%s\n");
+//                PrintValue
+//            break;
+//        }
+//    }
+//
+//    DECL_HOOK(eval_exit)(SEXP e, SEXP rho, SEXP retval) {
+//        printf("");
+//    }
+
+    DECL_HOOK(gc_promise_unmarked)(const SEXP promise) {
+        rid_t id = (rid_t)promise;
+        auto & promise_origin = STATE(promise_origin);
+
+        auto iter = promise_origin.find(id);
+        if (iter != promise_origin.end()) {
+            // If this is one of our traced promises,
+            // delete it from origin map because it is ready to be GCed
+            promise_origin.erase(iter);
+            //Rprintf("Promise %#x deleted.\n", id);
+        }
+    }
+
+    DECL_HOOK(jump_ctxt)(const SEXP rho, const SEXP val) {
+        tracer_state().adjust_fun_stack(rho);
+    }
+};
+
+// TODO: move to trace_promises struct and add DECL_HOOK macro, if we need these
 static void trace_promises_gc_entry(R_size_t size_needed) {
 }
 
@@ -977,29 +986,31 @@ static void trace_promises_S3_dispatch_exit(const char *generic, const char *cla
 }
 
 // TODO properly turn off probes we don't use
-static const rdt_handler trace_promises_rdt_handler = {
-        &trace_promises_begin,
-        &trace_promises_end,
-        &trace_promises_function_entry,
-        &trace_promises_function_exit,
-        &trace_promises_builtin_entry,
-        &trace_promises_builtin_exit,
-        &trace_promises_force_promise_entry,
-        &trace_promises_force_promise_exit,
-        &trace_promises_promise_lookup,
-        &trace_promises_error,
-        &trace_promises_vector_alloc,
-        NULL, // &trace_eval_entry,
-        NULL, // &trace_eval_exit,
-        &trace_promises_gc_entry,
-        &trace_promises_gc_exit,
-        &trace_promises_gc_promise_unmarked,
-        &trace_promises_jump_ctxt,
-        &trace_promises_S3_generic_entry,
-        &trace_promises_S3_generic_exit,
-        &trace_promises_S3_dispatch_entry,
-        &trace_promises_S3_dispatch_exit
-};
+//static const rdt_handler trace_promises_rdt_handler = {
+//        &trace_promises_begin,
+//        &trace_promises_end,
+//        &trace_promises_function_entry,
+//        &trace_promises_function_exit,
+//        &trace_promises_builtin_entry,
+//        &trace_promises_builtin_exit,
+//        &trace_promises_force_promise_entry,
+//        &trace_promises_force_promise_exit,
+//        &trace_promises_promise_lookup,
+//        &trace_promises_error,
+//        &trace_promises_vector_alloc,
+//        NULL, // &trace_eval_entry,
+//        NULL, // &trace_eval_exit,
+//        &trace_promises_gc_entry,
+//        &trace_promises_gc_exit,
+//        &trace_promises_gc_promise_unmarked,
+//        &trace_promises_jump_ctxt,
+//        &trace_promises_S3_generic_entry,
+//        &trace_promises_S3_generic_exit,
+//        &trace_promises_S3_dispatch_entry,
+//        &trace_promises_S3_dispatch_exit
+//};
+
+
 
 tracer_conf_t get_config_from_R_options(SEXP options) {
     tracer_conf_t conf;
@@ -1090,8 +1101,23 @@ rdt_handler *setup_promise_tracing(SEXP options) {
     if (tracer_conf.output_type == RDT_SQLITE || tracer_conf.output_type == RDT_R_PRINT_AND_SQLITE)
         rdt_init_sqlite(tracer_conf.filename);
 
-    rdt_handler *h = (rdt_handler *)  malloc(sizeof(rdt_handler));
-    memcpy(h, &trace_promises_rdt_handler, sizeof(rdt_handler));
+    rdt_handler *h = (rdt_handler *) malloc(sizeof(rdt_handler));
+    //memcpy(h, &trace_promises_rdt_handler, sizeof(rdt_handler));
+    //*h = trace_promises_rdt_handler; // This actually does the same thing as memcpy
+    *h = REGISTER_HOOKS(trace_promises,
+                        tr::begin,
+                        tr::end,
+                        tr::function_entry,
+                        tr::function_exit,
+                        tr::builtin_entry,
+                        tr::builtin_exit,
+                        tr::force_promise_entry,
+                        tr::force_promise_exit,
+                        tr::promise_lookup,
+                        tr::error,
+                        tr::vector_alloc,
+                        tr::gc_promise_unmarked,
+                        tr::jump_ctxt);
 
     SEXP disabled_probes = get_named_list_element(options, "disabled.probes");
     if (disabled_probes != R_NilValue && TYPEOF(disabled_probes) == STRSXP) {
