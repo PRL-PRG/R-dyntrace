@@ -360,8 +360,8 @@ set(SOURCE_FILES
         src/library/rdt/src/init.c
         src/library/rdt/src/rdt.c
         src/library/rdt/src/rdt.h
-        src/library/rdt/src/rdt_debug.c
-        src/library/rdt/src/rdt_noop.c
+        src/library/rdt/src/rdt_debug.cpp
+        src/library/rdt/src/rdt_noop.cpp
         src/library/rdt/src/rdt_promises.cpp
         src/library/rdt/src/rdt_trace.c
         src/library/splines/src/splines.c

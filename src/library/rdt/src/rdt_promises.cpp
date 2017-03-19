@@ -48,9 +48,9 @@ static sqlite3 *sqlite_database;
 
 extern "C" {
 #include "../../../main/inspect.h"
+#include "rdt.h"
 }
 
-#include "rdt.h"
 #include "rdt_register_hook.h"
 
 using namespace std;

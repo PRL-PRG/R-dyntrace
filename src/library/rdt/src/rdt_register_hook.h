@@ -11,7 +11,7 @@
 #define DECL_HOOK(hook_name) \
     struct hook_name { \
         template<typename T> \
-        static void init(rdt_handler& h) { \
+        inline static void init(rdt_handler& h) { \
             h.probe_ ## hook_name = T::fn_ ## hook_name; \
         } \
     }; \

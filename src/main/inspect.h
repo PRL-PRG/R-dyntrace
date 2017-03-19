@@ -3,7 +3,7 @@
 //
 
 #ifndef INSPECT_H
-#define NSPECT_H
+#define INSPECT_H
 
 #include <Rinternals.h>
 
