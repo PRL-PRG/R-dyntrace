@@ -12,7 +12,7 @@ Rdt <- function(block, tracer="promises", ...) {
     .Call(C_Rdt, tracer, environment(), list(...))
 }
 
-trace.promises.r <- function(expression, tracer="promises", output="R", format="trace", pretty.print=TRUE, overwrite=FALSE, synthetic.call.id=TRUE, path="trace")
+trace.promises.r <- function(expression, tracer="promises", output="R", format="trace", pretty.print=TRUE, overwrite=TRUE, synthetic.call.id=TRUE, path="trace")
     Rdt(expression, tracer=tracer, output=output, path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite)
 
 trace.promises.file <- function(expression, tracer="promises", output="file", path="trace.txt", format="trace", pretty.print=FALSE, overwrite=TRUE, synthetic.call.id=TRUE)
