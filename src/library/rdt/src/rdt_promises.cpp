@@ -721,8 +721,10 @@ struct trace_promises {
     DECL_HOOK(end)() {
         tracer_state().finish_pass();
 
-        if (output)
+        if (output) {
             fclose(output);
+            output = NULL;
+        }
     }
 
     // Triggered when entering function evaluation.
