@@ -12,15 +12,19 @@ Rdt <- function(block, tracer="promises", ...) {
     .Call(C_Rdt, tracer, environment(), list(...))
 }
 
-trace.promises.r <- function(expression)
-    Rdt(expression, tracer="promises", output="R", format="trace", pretty.print=TRUE)
-trace.promises.file <- function(expression, path="trace.txt")
-    Rdt(expression, tracer="promises", output="file", path=path, format="trace", pretty.print=FALSE, overwrite=TRUE)
-trace.promises.sql <- function(expression, path="trace1.sql")
-    Rdt(expression, tracer="promises", output="file", path=path, format="sql", pretty.print=FALSE, overwrite=TRUE)
-trace.promises.db <- function(expression, path="trace.sqlite")
-    Rdt(expression, tracer="promises", output="db", path=path, format="sql", pretty.print=FALSE, overwrite=TRUE)
+trace.promises.r <- function(expression, tracer="promises", output="R", format="trace", pretty.print=TRUE, overwrite=FALSE, synthetic.call.id=TRUE, path="trace")
+    Rdt(expression, tracer=tracer, output=output, path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite)
 
-trace.promises.both <- function(expression, path="trace.sqlite")
-	Rdt(expression, tracer="promises", output="R+DB", format="both", path=path, overwrite=TRUE)
+trace.promises.file <- function(expression, tracer="promises", output="file", path="trace.txt", format="trace", pretty.print=FALSE, overwrite=TRUE, synthetic.call.id=TRUE)
+    Rdt(expression, tracer=tracer, output=output, path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite)
+
+trace.promises.sql <- function(expression, tracer="promises", output="file", path="trace.sql", format="sql", pretty.print=FALSE, overwrite=TRUE, synthetic.call.id=TRUE)
+    Rdt(expression, tracer=tracer, output=output, path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite)
+
+trace.promises.db <- function(expression, tracer="promises", output="DB", path="trace.sqlite", format="sql", pretty.print=FALSE, overwrite=TRUE, synthetic.call.id=TRUE)
+    Rdt(expression, tracer=tracer, output=output, path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite)
+
+trace.promises.both <- function(expression, tracer="promises", output="R+DB", path="trace.sqlite", format="both", pretty.print=FALSE, overwrite=TRUE, synthetic.call.id=TRUE)
+    Rdt(expression, tracer=tracer, output=output, path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite)
+
 # keep an empty line below this one
