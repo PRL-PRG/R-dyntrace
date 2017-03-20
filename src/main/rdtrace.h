@@ -7,15 +7,7 @@
 #include <config.h>
 #endif
 
-// Had problems with multiple definitions of `R_OutputCon` which is a global int defined in Defn.h
-//#include <Defn.h>
-
-// Using Rinternals.h instead
-#include <Rinternals.h>
-typedef size_t R_size_t;
-extern SEXP R_TrueValue;
-extern SEXP R_FalseValue;
-extern SEXP R_LogicalNAValue;
+#include <Defn.h>
 
 #define RDT_IS_ENABLED(name) (rdt_curr_handler->name != NULL)
 #define RDT_FIRE_PROBE(name, ...) (rdt_curr_handler->name(__VA_ARGS__))

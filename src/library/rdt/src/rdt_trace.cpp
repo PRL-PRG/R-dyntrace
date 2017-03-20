@@ -6,6 +6,7 @@
 #include <inttypes.h>
 
 extern "C" {
+#include <Rinternals.h>
 #include "rdt.h"
 }
 

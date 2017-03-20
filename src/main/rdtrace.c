@@ -1,7 +1,7 @@
-#include <errno.h>
 #include <dlfcn.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <rdtrace.h>
 #include <time.h>
 

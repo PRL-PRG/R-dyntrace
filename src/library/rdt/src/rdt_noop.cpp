@@ -1,6 +1,8 @@
 #include <stdlib.h>
 
 extern "C" {
+// If I don't include this before rdt.h, I get strange compiler errors...
+#include <Rinternals.h>
 #include "rdt.h"
 }
 
