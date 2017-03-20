@@ -9,6 +9,7 @@
 #include <sstream>
 #include <initializer_list>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <tuple>
 #include <map>
@@ -34,9 +35,6 @@
 static std::string RDT_SQLITE_SCHEMA = "src/library/rdt/sql/schema.sql";
 static sqlite3 *sqlite_database;
 #endif
-
-// SQL specific
-#include <unordered_set>
 
 //#include <Defn.h>
 
@@ -194,7 +192,6 @@ struct tracer_state_t {
 
     int call_id_counter; // IDs assigned should be globally unique but we can reset it after each pass if overwrite is true)
     unordered_set<rid_t> already_inserted_functions; // Should be kept across Rdt calls (unless overwrite is true)
-    unordered_set<rid_t> already_inserted_promises; // Should be kept across Rdt calls (unless overwrite is true)
     sid_t argument_id_sequence; // Should be globally unique (can reset between tracer calls if overwrite is true)
     map<arg_key_t, sid_t> argument_ids; // Should be kept across Rdt calls (unless overwrite is true)
 
@@ -263,7 +260,6 @@ private:
         call_id_counter = 0;
         argument_id_sequence = 0;
         already_inserted_functions.clear();
-        already_inserted_promises.clear();
         argument_ids.clear();
     }
 };
@@ -501,15 +497,20 @@ static inline string mk_sql_function_call(rid_t call_id, rid_t call_ptr, const c
     return stream.str();
 }
 
-static inline string mk_sql_promises(arglist_t const& arguments, rid_t call_id) {
+static inline string mk_sql_promise(rid_t prom_id) {
     std::stringstream promise_stream;
+
+    promise_stream << (tracer_conf.pretty_print ? "insert into promises  select"
+                                                : "insert into promises select");
+    promise_stream << " 0x" << hex << prom_id << ";\n";
+
+    return promise_stream.str();
+}
+
+static inline string mk_sql_promise_assoc(arglist_t const& arguments, rid_t call_id) {
     std::stringstream promise_association_stream;
 
-    int inserted_promises = 0;
-
     if (arguments.size() > 0) {
-        promise_stream << (tracer_conf.pretty_print ? "insert into promises  select"
-                                                    : "insert into promises select");
         promise_association_stream << (
                 tracer_conf.pretty_print ? "insert into promise_associations select"
                                          : "insert into promise_associations select");
@@ -518,19 +519,6 @@ static inline string mk_sql_promises(arglist_t const& arguments, rid_t call_id) 
             const arg_t & argument = arg_ref.get();
             sid_t arg_id = get<1>(argument);
             rid_t promise = get<2>(argument);
-
-            bool promise_already_inserted = STATE(already_inserted_promises).count(promise);
-            if (!promise_already_inserted) {
-                STATE(already_inserted_promises).insert(promise);
-
-                if (inserted_promises)
-                    promise_stream << (tracer_conf.pretty_print ? "\n            " : " ")
-                                   << "union all select";
-
-                promise_stream << " 0x" << hex << promise;
-
-                inserted_promises++;
-            }
 
             if (index)
                 promise_association_stream << (tracer_conf.pretty_print ? "\n            " : " ")
@@ -544,14 +532,9 @@ static inline string mk_sql_promises(arglist_t const& arguments, rid_t call_id) 
             index++;
         }
         promise_association_stream << ";\n";
-
-        if (inserted_promises) {
-            promise_stream << ";\n";
-            promise_stream << promise_association_stream.str();
-        }
     }
 
-    return inserted_promises ? promise_stream.str() : promise_association_stream.str();
+    return promise_association_stream.str();
 }
 
 static inline string mk_sql_promise_evaluation(int event_type, rid_t promise_id, rid_t call_id) {
@@ -789,7 +772,7 @@ struct trace_promises {
 
         rdt_print(RDT_OUTPUT_SQL, {mk_sql_function(fn_id, arguments, loc, fn_definition),
                                    mk_sql_function_call(call_id, call_ptr, name, loc, call_type, fn_id),
-                                   mk_sql_promises(arguments, call_id)});
+                                   mk_sql_promise_assoc(arguments, call_id)});
 
         if (tracer_conf.pretty_print)
             STATE(indent) += tracer_conf.indent_width;
@@ -871,6 +854,15 @@ struct trace_promises {
         rid_t id = get_function_id(op);
 
         rdt_print(RDT_OUTPUT_TRACE, {print_builtin("<= b-in", NULL, name, id)});
+    }
+
+    DECL_HOOK(promise_created)(const SEXP prom) {
+        rid_t prom_id = get_sexp_address(prom);
+        //Rprintf("PROMISE CREATED at %p\n", get_sexp_address(prom));
+        //TODO implement promise allocation pretty print
+        //rdt_print(RDT_OUTPUT_TRACE, {print_promise_alloc(prom_id)});
+
+        rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise(prom_id)});
     }
 
     // Promise is being used inside a function body for the first time.
@@ -1108,7 +1100,8 @@ rdt_handler *setup_promise_tracing(SEXP options) {
                         tr::error,
                         tr::vector_alloc,
                         tr::gc_promise_unmarked,
-                        tr::jump_ctxt);
+                        tr::jump_ctxt,
+                        tr::promise_created);
 
     SEXP disabled_probes = get_named_list_element(options, "disabled.probes");
     if (disabled_probes != R_NilValue && TYPEOF(disabled_probes) == STRSXP) {

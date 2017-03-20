@@ -2367,6 +2367,8 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     PRVALUE(s) = R_UnboundValue;
     PRSEEN(s) = 0;
     ATTRIB(s) = R_NilValue;
+
+    RDT_HOOK(probe_promise_created, s);
     return s;
 }
 
