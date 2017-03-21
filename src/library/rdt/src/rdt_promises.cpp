@@ -188,7 +188,7 @@ struct tracer_state_t {
 
     // Map from promise IDs to call IDs
     unordered_map<rid_t, rid_t> promise_origin; // Should be reset on each tracer pass
-    unordered_set<SEXP> fresh_promises;
+    unordered_set<rid_t> fresh_promises;
 
 
     int call_id_counter; // IDs assigned should be globally unique but we can reset it after each pass if overwrite is true)
@@ -802,7 +802,7 @@ struct trace_promises {
         for (auto arg_ref : arguments.all()) {
             const arg_t & argument = arg_ref.get();
             auto & promise = get<2>(argument);
-            auto it = fresh_promises.find((SEXP)promise);
+            auto it = fresh_promises.find(promise);
 
             if (it != fresh_promises.end()) {
                 STATE(promise_origin)[promise] = call_id;
@@ -898,7 +898,7 @@ struct trace_promises {
 
     DECL_HOOK(promise_created)(const SEXP prom) {
         rid_t prom_id = get_sexp_address(prom);
-        STATE(fresh_promises).insert(prom);
+        STATE(fresh_promises).insert(prom_id);
 
         //Rprintf("PROMISE CREATED at %p\n", get_sexp_address(prom));
         //TODO implement promise allocation pretty print
