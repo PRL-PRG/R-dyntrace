@@ -397,13 +397,21 @@ static inline void rdt_close_sqlite() {
 #endif
 }
 
-static inline string print_builtin(const char *type, const char *loc, const char *name, rid_t id) {
+static inline string print_builtin(const char *type, const char *loc, const char *name, rid_t id, rid_t call_id) {
     stringstream stream;
     prepend_prefix(&stream);
 
     stream << type << " "
-           << "loc(" << CHKSTR(loc) << ") "
-           << "fun(" << CHKSTR(name) << "=" << hex << id << ")\n";
+           << "loc(" << CHKSTR(loc) << ") ";
+    stream << "call(";
+    if (tracer_conf.call_id_use_ptr_fmt) {
+        stream << "0x" << hex << call_id;
+    }
+    else {
+        stream << call_id;
+    }
+
+    stream << ") fun(" << CHKSTR(name) << "=" << hex << id << ")\n";
 
     return stream.str();
 }
@@ -413,12 +421,13 @@ static inline string print_promise(const char *type, const char *loc, const char
     prepend_prefix(&stream);
 
     auto num_fmt = tracer_conf.call_id_use_ptr_fmt ? hex : dec;
+    string num_pref = tracer_conf.call_id_use_ptr_fmt ? "0x" : "";
 
     stream << type << " "
            << "loc(" << CHKSTR(loc) << ") "
            << "prom(" << CHKSTR(name) << "=0x" << hex << id << ") ";
-    stream << "in(" << num_fmt << in_call_id << ") ";
-    stream << "from(" << num_fmt << from_call_id << ")\n";
+    stream << "in(" << num_pref << num_fmt << in_call_id << ") ";
+    stream << "from(" << num_pref << num_fmt << from_call_id << ")\n";
 
     return stream.str();
 }
@@ -554,9 +563,17 @@ static inline string print_function(const char *type, const char *loc, const cha
     prepend_prefix(&stream);
 
     stream << type << " "
-           << "loc(" << CHKSTR(loc) << ") "
-           << "call(" << (tracer_conf.call_id_use_ptr_fmt ? hex : dec) << call_id << ") ";
-    stream << "fun(" << CHKSTR(name) << "=" << hex << function_id << ") ";
+           << "loc(" << CHKSTR(loc) << ") ";
+
+    stream << "call(";
+    if (tracer_conf.call_id_use_ptr_fmt) {
+        stream << "0x" << hex << call_id;
+    }
+    else {
+        stream << call_id;
+    }
+
+    stream << ") fun(" << CHKSTR(name) << "=0x" << hex << function_id << ") ";
 
     // print argument names and the promises bound to them
     stream << "arguments(";
@@ -565,7 +582,7 @@ static inline string print_function(const char *type, const char *loc, const cha
         const arg_t & argument = arg_ref.get();
         rid_t promise = get<2>(argument);
         //fprintf(output, "%s=%#x", get<0>(a).c_str(), p[0]);
-        stream << get<0>(argument).c_str() << "=" << promise;
+        stream << get<0>(argument).c_str() << "=0x" << hex << promise;
 
         if (i < arguments.size() - 1)
             stream << ",";
@@ -836,11 +853,14 @@ struct trace_promises {
 #ifdef RDT_CALL_ID
         rid_t call_id = make_funcall_id(op);
 #else
-        rid_t call_id = make_funcall_id(rho);
+        // Builtins have no environment of their own
+        // we take the parent env rho and add 1 to it to create a new pseudo-address
+        // it will be unique because real pointers are aligned (no odd addresses)
+        rid_t call_id = make_funcall_id(rho) | 1;
 #endif
 
         // TODO merge rdt_print_calls
-        rdt_print(RDT_OUTPUT_TRACE, {print_builtin("=> b-in", NULL, name, fn_id)});
+        rdt_print(RDT_OUTPUT_TRACE, {print_builtin("=> b-in", NULL, name, fn_id, call_id)});
 
         arglist_t arguments;
 
@@ -848,14 +868,25 @@ struct trace_promises {
                                    mk_sql_function_call(call_id, call_ptr, name, NULL, 1, fn_id)});
         // mk_sql_promises(promises, call_id, argument_ids)
 
+        STATE(fun_stack).push(call_id);
+#ifdef RDT_CALL_ID
+        STATE(curr_env_stack).push(get_sexp_address(rho) | 1);
+#endif
+
         //R_inspect(call);
     }
 
     DECL_HOOK(builtin_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
         const char *name = get_name(call);
         rid_t id = get_function_id(op);
+        rid_t call_id = STATE(fun_stack).top();
 
-        rdt_print(RDT_OUTPUT_TRACE, {print_builtin("<= b-in", NULL, name, id)});
+        STATE(fun_stack).pop();
+#ifdef RDT_CALL_ID
+        STATE(curr_env_stack).pop();
+#endif
+
+        rdt_print(RDT_OUTPUT_TRACE, {print_builtin("<= b-in", NULL, name, id, call_id)});
     }
 
     DECL_HOOK(promise_created)(const SEXP prom) {
@@ -1051,12 +1082,14 @@ tracer_conf_t get_config_from_R_options(SEXP options) {
         conf.overwrite = LOGICAL(overwrite_option)[0] == TRUE;
     //Rprintf("overwrite_option=%p->%i\n", (overwrite_option), overwrite);
 
+#ifdef RDT_CALL_ID
     SEXP synthetic_call_id_option = get_named_list_element(options, "synthetic.call.id");
     if (synthetic_call_id_option == NULL || TYPEOF(synthetic_call_id_option) == NILSXP)
         conf.call_id_use_ptr_fmt = false;
     else
         conf.call_id_use_ptr_fmt = LOGICAL(synthetic_call_id_option)[0] == FALSE;
     //Rprintf("call_id_use_ptr_fmt=%p->%i\n", (synthetic_call_id_option), call_id_use_ptr_fmt);
+#endif
 
     return conf;
 }
