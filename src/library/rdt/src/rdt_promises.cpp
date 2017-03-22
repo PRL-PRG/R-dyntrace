@@ -199,7 +199,9 @@ struct tracer_state_t {
     // Map from promise address to promise ID;
     unordered_map<prom_addr_t, prom_id_t> promise_ids;
 
-    int call_id_counter; // IDs assigned should be globally unique but we can reset it after each pass if overwrite is true)
+    call_id_t call_id_counter; // IDs assigned should be globally unique but we can reset it after each pass if overwrite is true)
+    prom_id_t prom_id_counter; // IDs assigned should be globally unique but we can reset it after each pass if overwrite is true)
+
     unordered_set<fn_addr_t> already_inserted_functions; // Should be kept across Rdt calls (unless overwrite is true)
     arg_id_t argument_id_sequence; // Should be globally unique (can reset between tracer calls if overwrite is true)
     map<arg_key_t, arg_id_t> argument_ids; // Should be kept across Rdt calls (unless overwrite is true)
@@ -263,11 +265,13 @@ private:
     tracer_state_t() {
         indent = 0;
         call_id_counter = 0;
+        prom_id_counter = 0;
         argument_id_sequence = 0;
     }
 
     void reset() {
         call_id_counter = 0;
+        prom_id_counter = 0;
         argument_id_sequence = 0;
         already_inserted_functions.clear();
         argument_ids.clear();
@@ -615,7 +619,7 @@ static inline int count_elements(SEXP list) {
     return counter;
 }
 
-static inline prom_id_t get_promise_id(SEXP promise) { // TODO: modify to return synthetic ID
+static inline prom_id_t get_promise_id(SEXP promise) {
     if (promise == R_NilValue)
         return RID_INVALID;
     if (TYPEOF(promise) != PROMSXP)
@@ -623,11 +627,19 @@ static inline prom_id_t get_promise_id(SEXP promise) { // TODO: modify to return
 
     // A new promise is always created for each argument.
     // Even if the argument is already a promise passed from the caller, it gets re-wrapped.
-    return get_sexp_address(promise);
+    prom_addr_t prom_addr = get_sexp_address(promise);
+    return STATE(promise_ids)[prom_addr];
 }
 
 static inline prom_id_t make_promise_id(SEXP promise) {
-    // TODO: implement
+    if (promise == R_NilValue)
+        return RID_INVALID;
+
+    prom_addr_t prom_addr = get_sexp_address(promise);
+    prom_id_t prom_id = ++STATE(prom_id_counter);
+    STATE(promise_ids)[prom_addr] = prom_id;
+
+    return prom_id;
 }
 
 static inline fn_addr_t get_function_id(SEXP func) {
@@ -986,6 +998,7 @@ struct trace_promises {
 //    }
 
     DECL_HOOK(gc_promise_unmarked)(const SEXP promise) {
+        prom_addr_t addr = get_sexp_address(promise);
         prom_id_t id = get_promise_id(promise);
         auto & promise_origin = STATE(promise_origin);
 
@@ -996,6 +1009,8 @@ struct trace_promises {
             promise_origin.erase(iter);
             //Rprintf("Promise %#x deleted.\n", id);
         }
+
+        STATE(promise_ids).erase(addr);
     }
 
     DECL_HOOK(jump_ctxt)(const SEXP rho, const SEXP val) {
