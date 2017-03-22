@@ -34,6 +34,15 @@
 #include <sqlite3.h>
 static std::string RDT_SQLITE_SCHEMA = "src/library/rdt/sql/schema.sql";
 static sqlite3 *sqlite_database;
+
+// Prepared statement objects.
+static sqlite3_stmt *prepared_sql_insert_function = NULL;
+static sqlite3_stmt *prepared_sql_insert_arguments1 = NULL;
+static sqlite3_stmt *prepared_sql_insert_arguments2 = NULL;
+static sqlite3_stmt *prepared_sql_insert_call = NULL;
+static sqlite3_stmt *prepared_sql_insert_promise = NULL;
+static sqlite3_stmt *prepared_sql_insert_promise_assoc1 = NULL;
+static sqlite3_stmt *prepared_sql_insert_promise_eval = NULL;
 #endif
 
 //#include <Defn.h>
@@ -67,7 +76,7 @@ typedef int sid_t;
 static FILE *output = NULL;
 
 
-enum OutputFormat: char {RDT_OUTPUT_TRACE, RDT_OUTPUT_SQL, RDT_OUTPUT_BOTH};
+enum OutputFormat: char {RDT_OUTPUT_TRACE, RDT_OUTPUT_SQL, RDT_OUTPUT_BOTH, RDT_OUTPUT_COMPILED_SQLITE};
 enum Output: char {RDT_R_PRINT, RDT_FILE, RDT_SQLITE, RDT_R_PRINT_AND_SQLITE};
 
 struct tracer_conf_t {
@@ -175,6 +184,7 @@ typedef pair<rid_t, string> arg_key_t;
 
 struct tracer_state_t {
     int indent;
+    int clock_id;
     // Function call stack (may be useful)
     // Whenever R makes a function call, we generate a function ID and store that ID on top of the stack
     // so that we know where we are (e.g. when printing function ID at function_exit hook)
@@ -202,6 +212,7 @@ struct tracer_state_t {
         }
 
         indent = 0;
+        clock_id = 0;
 
         // We have to make sure the stack is not empty
         // when referring to the promise created by call to Rdt.
@@ -253,6 +264,7 @@ struct tracer_state_t {
 private:
     tracer_state_t() {
         indent = 0;
+        clock_id = 0;
         call_id_counter = 0;
         argument_id_sequence = 0;
     }
@@ -358,6 +370,56 @@ static inline void prepend_prefix(stringstream *stream) {
 }
 
 
+#ifdef RDT_SQLITE_SUPPORT
+static inline void compile_prepared_sql_statements() {
+    sqlite3_prepare_v2(sqlite_database,
+                       "insert into functions values (?, ?, ?);",
+                       -1, &prepared_sql_insert_function, NULL);
+
+    sqlite3_prepare_v2(sqlite_database,
+                       "insert into functions arguments values (?, ?, ?, ?);",
+                       -1, &prepared_sql_insert_arguments1, NULL);
+
+    sqlite3_prepare_v2(sqlite_database,
+                       "insert into functions arguments select ?, ?, ?, ? union all select ?, ?, ?, ?;",
+                       -1, &prepared_sql_insert_arguments2, NULL);
+
+    sqlite3_prepare_v2(sqlite_database,
+                       "insert into calls values (?, ?, ?, ?, ?, ?);",
+                       -1, &prepared_sql_insert_call, NULL);
+
+    sqlite3_prepare_v2(sqlite_database,
+                       "insert into promises values (?);",
+                       -1, &prepared_sql_insert_promise, NULL);
+
+    sqlite3_prepare_v2(sqlite_database,
+                       "insert into promise_associations values (?, ?, ?);",
+                       -1, &prepared_sql_insert_promise_assoc1, NULL);
+
+    sqlite3_prepare_v2(sqlite_database,
+                       "insert into promise_evaluations values (?, ?, ?, ?);",
+                       -1, &prepared_sql_insert_promise_eval, NULL);
+
+}
+
+static inline void free_prepared_sql_statements() {
+    sqlite3_finalize(prepared_sql_insert_function);
+    sqlite3_finalize(prepared_sql_insert_arguments1);
+    sqlite3_finalize(prepared_sql_insert_arguments2);
+    sqlite3_finalize(prepared_sql_insert_call);
+    sqlite3_finalize(prepared_sql_insert_promise);
+    sqlite3_finalize(prepared_sql_insert_promise_assoc1);
+    sqlite3_finalize(prepared_sql_insert_promise_eval);
+//    free(prepared_sql_insert_function);
+//    free(prepared_sql_insert_arguments1);
+//    free(prepared_sql_insert_arguments2);
+//    free(prepared_sql_insert_call);
+//    free(prepared_sql_insert_promise);
+//    free(prepared_sql_insert_promise_assoc1);
+//    free(prepared_sql_insert_promise_eval);
+}
+#endif
+
 static inline void rdt_init_sqlite(const char *filename) {
 #ifdef RDT_SQLITE_SUPPORT
     int outcome;
@@ -387,6 +449,8 @@ static inline void rdt_init_sqlite(const char *filename) {
         fprintf(stderr, "SQLite: [%i] %s/%s in: \"%s\"\n", outcome, error_msg, sqlite3_errmsg(sqlite_database), schema_string.c_str());
         sqlite3_free(error_msg);
     }
+
+    compile_prepared_sql_statements();
 #else
     fprintf(stderr, "-- SQLite support is missing...?\n");
 #endif
@@ -394,6 +458,7 @@ static inline void rdt_init_sqlite(const char *filename) {
 
 static inline void rdt_close_sqlite() {
 #ifdef RDT_SQLITE_SUPPORT
+    free_prepared_sql_statements();
     sqlite3_close(sqlite_database);
 #endif
 }
@@ -456,13 +521,73 @@ static inline string wrap_string(const string & s) {
     return "'" + s + "'";
 }
 
+
+
+static inline void run_prep_sql_function(rid_t function_id, arglist_t const& arguments, const char* location, const char* definition) {
+    // Don't run anything if one was previously generated.
+    if(STATE(already_inserted_functions).count(function_id))
+        return;
+
+    // Bind parameters to statement.
+    sqlite3_bind_int(prepared_sql_insert_function, 1, function_id);
+
+    if (location == NULL)
+        sqlite3_bind_null(prepared_sql_insert_function, 2);
+    else
+        sqlite3_bind_text(prepared_sql_insert_function, 2, location, -1, SQLITE_STATIC);
+
+    if (definition == NULL)
+        sqlite3_bind_null(prepared_sql_insert_function, 3);
+    else
+        sqlite3_bind_text(prepared_sql_insert_function, 3, definition, -1, SQLITE_STATIC);
+
+    //Rprintf("function: %s\n", sqlite3_sql(prepared_sql_insert_function));
+
+    // Insert function into DB using prepared statement.
+    auto result = sqlite3_step(prepared_sql_insert_function);
+
+    if (result != SQLITE_DONE) {
+        Rprintf("Error executing compiled SQL expression: [%s] %s\n", "function", sqlite3_errmsg(sqlite_database));
+        return;
+    }
+
+    sqlite3_reset(prepared_sql_insert_function);
+
+    // Generate `arguments' update wrt function above.
+    if (arguments.size() > 0) {
+        int index = 0;
+        for (auto arg_ref : arguments.all()) {
+            const arg_t & argument = arg_ref.get();
+
+            sqlite3_bind_int(prepared_sql_insert_arguments1, 1, get<1>(argument));
+            sqlite3_bind_text(prepared_sql_insert_arguments1, 2, get<0>(argument).c_str(), -1, SQLITE_STATIC);
+            sqlite3_bind_int(prepared_sql_insert_arguments1, 3, index);
+            sqlite3_bind_int(prepared_sql_insert_arguments1, 4, function_id);
+
+            index++;
+
+            //Rprintf("arguments: %s\n", sqlite3_sql(prepared_sql_insert_arguments1));
+
+            result = sqlite3_step(prepared_sql_insert_arguments1);
+
+            if (result != SQLITE_DONE) {
+                Rprintf("Error executing compiled SQL expression: [%s] %s\n", "arguments", sqlite3_errmsg(sqlite_database));
+                return;
+            }
+
+            sqlite3_reset(prepared_sql_insert_arguments1);
+        }
+    }
+
+    STATE(already_inserted_functions).insert(function_id);
+}
+
 static inline string mk_sql_function(rid_t function_id, arglist_t const& arguments, const char* location, const char* definition) {
     stringstream stream;
     // Don't generate anything if one was previously generated.
     if(STATE(already_inserted_functions).count(function_id))
         return "";
 
-    // Generate `functions' update containing function definition.
     stream << "insert into functions values ("
            << "0x" << hex << function_id << ",";
     stream << wrap_nullable_string(location) << ","
@@ -494,6 +619,36 @@ static inline string mk_sql_function(rid_t function_id, arglist_t const& argumen
     return stream.str();
 }
 
+static inline void run_prep_sql_function_call(rid_t call_id, rid_t call_ptr, const char *name, const char* location, int call_type, rid_t function_id) {
+    sqlite3_bind_int(prepared_sql_insert_call, 1, call_id);
+    sqlite3_bind_int(prepared_sql_insert_call, 2, call_ptr);
+
+    if (name == NULL)
+        sqlite3_bind_null(prepared_sql_insert_call, 3);
+    else
+        sqlite3_bind_text(prepared_sql_insert_call, 3, name, -1, SQLITE_STATIC);
+
+    if (location == NULL)
+        sqlite3_bind_null(prepared_sql_insert_call, 4);
+    else
+        sqlite3_bind_text(prepared_sql_insert_call, 4, location, -1, SQLITE_STATIC);
+
+    sqlite3_bind_int(prepared_sql_insert_call, 5, call_type);
+    sqlite3_bind_int(prepared_sql_insert_call, 6, function_id);
+
+    //Rprintf("call: %s\n", sqlite3_sql(prepared_sql_insert_call));
+
+    // Insert function into DB using prepared statement.
+    auto result = sqlite3_step(prepared_sql_insert_call);
+
+    if (result != SQLITE_DONE) {
+        Rprintf("Error executing compiled SQL expression: [%s] %s\n", "call", sqlite3_errmsg(sqlite_database));
+        return;
+    }
+
+    sqlite3_reset(prepared_sql_insert_call);
+}
+
 static inline string mk_sql_function_call(rid_t call_id, rid_t call_ptr, const char *name, const char* location, int call_type, rid_t function_id) {
     std::stringstream stream;
     stream << "insert into calls values ("
@@ -507,14 +662,59 @@ static inline string mk_sql_function_call(rid_t call_id, rid_t call_ptr, const c
     return stream.str();
 }
 
+static inline void run_prep_sql_promise(rid_t prom_id) {
+    std::stringstream promise_stream;
+
+    sqlite3_bind_int(prepared_sql_insert_promise, 1, prom_id);
+
+    auto result = sqlite3_step(prepared_sql_insert_promise);
+
+    //Rprintf("promise: %s\n", sqlite3_sql(prepared_sql_insert_promise));
+
+    if (result != SQLITE_DONE) {
+        Rprintf("Error executing compiled SQL expression: [%s] %s\n", "promise", sqlite3_errmsg(sqlite_database));
+        return;
+    }
+
+    sqlite3_reset(prepared_sql_insert_promise);
+}
+
 static inline string mk_sql_promise(rid_t prom_id) {
     std::stringstream promise_stream;
 
-    promise_stream << (tracer_conf.pretty_print ? "insert into promises  select"
-                                                : "insert into promises select");
-    promise_stream << " 0x" << hex << prom_id << ";\n";
+    promise_stream << "insert into promises values (";
+    promise_stream << " 0x" << hex << prom_id << ");\n";
 
     return promise_stream.str();
+}
+
+static inline void run_prep_sql_promise_assoc(arglist_t const& arguments, rid_t call_id) {
+    if (arguments.size() > 0) {
+        int index = 0;
+        for (auto arg_ref : arguments.all()) {
+
+            const arg_t & argument = arg_ref.get();
+            sid_t arg_id = get<1>(argument);
+            rid_t promise = get<2>(argument);
+
+            sqlite3_bind_int(prepared_sql_insert_promise_assoc1, 1, promise);
+            sqlite3_bind_int(prepared_sql_insert_promise_assoc1, 2, call_id);
+            sqlite3_bind_int(prepared_sql_insert_promise_assoc1, 3, arg_id);
+
+            //Rprintf("promise assoc: %s\n", sqlite3_sql(prepared_sql_insert_promise_assoc1));
+
+            auto result = sqlite3_step(prepared_sql_insert_promise_assoc1);
+
+            if (result != SQLITE_DONE) {
+                Rprintf("Error executing compiled SQL expression: [%s] %s\n", "promise assoc", sqlite3_errmsg(sqlite_database));
+                return;
+            }
+
+            sqlite3_reset(prepared_sql_insert_promise_assoc1);
+
+            index++;
+        }
+    }
 }
 
 static inline string mk_sql_promise_assoc(arglist_t const& arguments, rid_t call_id) {
@@ -546,6 +746,28 @@ static inline string mk_sql_promise_assoc(arglist_t const& arguments, rid_t call
 
     return promise_association_stream.str();
 }
+
+
+static inline void run_prep_sql_promise_evaluation(int event_type, rid_t promise_id, rid_t call_id) {
+    sqlite3_bind_int(prepared_sql_insert_promise_eval, 1, STATE(clock_id));
+    sqlite3_bind_int(prepared_sql_insert_promise_eval, 2, event_type);
+    sqlite3_bind_int(prepared_sql_insert_promise_eval, 3, promise_id);
+    sqlite3_bind_int(prepared_sql_insert_promise_eval, 4, call_id);
+
+    STATE(clock_id)++;
+
+    //Rprintf("promise eval: %s %d %d %d\n", sqlite3_sql(prepared_sql_insert_promise_eval), event_type, promise_id, call_id);
+
+    auto result = sqlite3_step(prepared_sql_insert_promise_eval);
+
+    if (result != SQLITE_DONE) {
+        Rprintf("Error executing compiled SQL expression: [%s] %s\n", "promise eval", sqlite3_errmsg(sqlite_database));
+        return;
+    }
+
+    sqlite3_reset(prepared_sql_insert_promise_eval);
+}
+
 
 static inline string mk_sql_promise_evaluation(int event_type, rid_t promise_id, rid_t call_id) {
     std::stringstream stream;
@@ -794,6 +1016,12 @@ struct trace_promises {
                                    mk_sql_function_call(call_id, call_ptr, fqfn, loc, call_type, fn_id),
                                    mk_sql_promise_assoc(arguments, call_id)});
 
+        if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
+            run_prep_sql_function(fn_id, arguments, loc, fn_definition);
+            run_prep_sql_function_call(call_id, call_ptr, fqfn, loc, call_type, fn_id);
+            run_prep_sql_promise_assoc(arguments, call_id);
+        }
+
         if (tracer_conf.pretty_print)
             STATE(indent) += tracer_conf.indent_width;
 
@@ -874,6 +1102,12 @@ struct trace_promises {
                                    mk_sql_function_call(call_id, call_ptr, name, NULL, 1, fn_id)});
         // mk_sql_promises(promises, call_id, argument_ids)
 
+        if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
+            run_prep_sql_function(fn_id, arguments, NULL, NULL);
+            run_prep_sql_function_call(call_id, call_ptr, name, NULL, 1, fn_id);
+            //run_prep_sql_promise_assoc(arguments, call_id);
+        }
+
         STATE(fun_stack).push(call_id);
 #ifdef RDT_CALL_ID
         STATE(curr_env_stack).push(get_sexp_address(rho) | 1);
@@ -904,6 +1138,10 @@ struct trace_promises {
         //rdt_print(RDT_OUTPUT_TRACE, {print_promise_alloc(prom_id)});
 
         rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise(prom_id)});
+
+        if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
+            run_prep_sql_promise(prom_id);
+        }
     }
 
     // Promise is being used inside a function body for the first time.
@@ -919,6 +1157,9 @@ struct trace_promises {
         rdt_print(RDT_OUTPUT_TRACE, {print_promise("=> prom", NULL, name, id, in_call_id, from_call_id)});
         rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise_evaluation(RDT_FORCE_PROMISE, id, from_call_id)});
 
+        if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
+            run_prep_sql_promise_evaluation(RDT_FORCE_PROMISE, id, from_call_id);
+        }
     }
 
     DECL_HOOK(force_promise_exit)(const SEXP symbol, const SEXP rho, const SEXP val) {
@@ -944,6 +1185,9 @@ struct trace_promises {
         rdt_print(RDT_OUTPUT_TRACE, {print_promise("<> lkup", NULL, name, id, in_call_id, from_call_id)});
         rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise_evaluation(RDT_LOOKUP_PROMISE, id, from_call_id)});
 
+        if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
+            run_prep_sql_promise_evaluation(RDT_LOOKUP_PROMISE, id, from_call_id);
+        }
     }
 
     DECL_HOOK(error)(const SEXP call, const char* message) {
@@ -1048,6 +1292,8 @@ tracer_conf_t get_config_from_R_options(SEXP options) {
         conf.output_format = RDT_OUTPUT_TRACE;
     else if (!strcmp(output_format_option, "SQL") || !strcmp(output_format_option, "sql"))
         conf.output_format = RDT_OUTPUT_SQL;
+    else if (!strcmp(output_format_option, "PSQL") || !strcmp(output_format_option, "psql"))
+        conf.output_format = RDT_OUTPUT_COMPILED_SQLITE;
     else if (!strcmp(output_format_option, "both"))
         conf.output_format = RDT_OUTPUT_BOTH;
     else
