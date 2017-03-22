@@ -791,7 +791,7 @@ struct trace_promises {
         rdt_print(RDT_OUTPUT_TRACE, {print_function(type, loc, fqfn, fn_id, call_id, arguments)});
 
         rdt_print(RDT_OUTPUT_SQL, {mk_sql_function(fn_id, arguments, loc, fn_definition),
-                                   mk_sql_function_call(call_id, call_ptr, name, loc, call_type, fn_id),
+                                   mk_sql_function_call(call_id, call_ptr, fqfn, loc, call_type, fn_id),
                                    mk_sql_promise_assoc(arguments, call_id)});
 
         if (tracer_conf.pretty_print)
@@ -836,7 +836,7 @@ struct trace_promises {
 
         arglist_t arguments = get_arguments(op, rho);
 
-        rdt_print(RDT_OUTPUT_TRACE, {print_function(type, loc, name, fn_id, call_id, arguments)});
+        rdt_print(RDT_OUTPUT_TRACE, {print_function(type, loc, fqfn, fn_id, call_id, arguments)});
 
         // Pop current function ID
         STATE(fun_stack).pop();
@@ -849,7 +849,6 @@ struct trace_promises {
         if (fqfn)
             free(fqfn);
     }
-
 
     // TODO retrieve arguments
     DECL_HOOK(builtin_entry)(const SEXP call, const SEXP op, const SEXP rho) {
