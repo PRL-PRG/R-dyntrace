@@ -904,7 +904,8 @@ struct trace_promises {
         STATE(curr_env_stack).push(call_ptr | 1);
 #endif
 
-        //R_inspect(call);
+        if (tracer_conf.pretty_print)
+            STATE(indent) += tracer_conf.indent_width;
     }
 
     DECL_HOOK(builtin_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
@@ -916,6 +917,8 @@ struct trace_promises {
 #ifdef RDT_CALL_ID
         STATE(curr_env_stack).pop();
 #endif
+        if (tracer_conf.pretty_print)
+            STATE(indent) -= tracer_conf.indent_width;
 
         rdt_print(RDT_OUTPUT_TRACE, {print_builtin("<= b-in", NULL, name, id, call_id)});
     }
