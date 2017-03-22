@@ -60,7 +60,14 @@ using namespace std;
 #define RDT_FORCE_PROMISE 0xF
 
 typedef uintptr_t rid_t;
-typedef int sid_t;
+
+typedef rid_t prom_addr_t;
+typedef rid_t env_addr_t;
+typedef rid_t fn_addr_t;
+typedef rid_t prom_id_t;
+typedef rid_t call_id_t;
+
+typedef int arg_id_t;
 
 #define RID_INVALID (rid_t)-1
 
@@ -120,7 +127,7 @@ static inline rid_t get_sexp_address(SEXP e) {
 
 static inline void prepend_prefix(stringstream *stream);
 
-static inline string print_unwind(const char *type, rid_t call_id) {
+static inline string print_unwind(const char *type, call_id_t call_id) {
     stringstream stream;
     prepend_prefix(&stream);
     stream << type << " "
@@ -171,30 +178,31 @@ static inline void rdt_print(OutputFormat string_format, std::initializer_list<s
     }
 }
 
-typedef pair<rid_t, string> arg_key_t;
+typedef pair<fn_addr_t, string> arg_key_t;
 
 struct tracer_state_t {
     int indent;
     // Function call stack (may be useful)
     // Whenever R makes a function call, we generate a function ID and store that ID on top of the stack
     // so that we know where we are (e.g. when printing function ID at function_exit hook)
-    stack<rid_t, vector<rid_t>> fun_stack; // Should be reset on each tracer pass
+    stack<call_id_t, vector<call_id_t>> fun_stack; // Should be reset on each tracer pass
 #ifdef RDT_CALL_ID
 #define CALL_ID_FMT "%d"
-    stack<rid_t, vector<rid_t>> curr_env_stack; // Should be reset on each tracer pass
+    stack<env_addr_t , vector<env_addr_t>> curr_env_stack; // Should be reset on each tracer pass
 #else
 #define CALL_ID_FMT "%#x"
 #endif
 
     // Map from promise IDs to call IDs
-    unordered_map<rid_t, rid_t> promise_origin; // Should be reset on each tracer pass
-    unordered_set<rid_t> fresh_promises;
-
+    unordered_map<prom_id_t, call_id_t> promise_origin; // Should be reset on each tracer pass
+    unordered_set<prom_id_t> fresh_promises;
+    // Map from promise address to promise ID;
+    unordered_map<prom_addr_t, prom_id_t> promise_ids;
 
     int call_id_counter; // IDs assigned should be globally unique but we can reset it after each pass if overwrite is true)
-    unordered_set<rid_t> already_inserted_functions; // Should be kept across Rdt calls (unless overwrite is true)
-    sid_t argument_id_sequence; // Should be globally unique (can reset between tracer calls if overwrite is true)
-    map<arg_key_t, sid_t> argument_ids; // Should be kept across Rdt calls (unless overwrite is true)
+    unordered_set<fn_addr_t> already_inserted_functions; // Should be kept across Rdt calls (unless overwrite is true)
+    arg_id_t argument_id_sequence; // Should be globally unique (can reset between tracer calls if overwrite is true)
+    map<arg_key_t, arg_id_t> argument_ids; // Should be kept across Rdt calls (unless overwrite is true)
 
     void start_pass() {
         if (tracer_conf.overwrite) {
@@ -224,7 +232,8 @@ struct tracer_state_t {
     // When doing longjump (exception thrown, etc.) this function gets the target environment
     // and unwinds function call stack until that environment is on top. It also fixes indentation.
     void adjust_fun_stack(SEXP rho) {
-        rid_t call_id, call_addr;
+        call_id_t call_id;
+        env_addr_t call_addr;
 
         while (!fun_stack.empty() &&
 #ifdef RDT_CALL_ID
@@ -273,8 +282,8 @@ static inline tracer_state_t& tracer_state() {
 #define STATE(property) tracer_state().property
 
 //typedef vector<rid_t> prom_vec_t;
-typedef tuple<string, sid_t, rid_t> arg_t;
-typedef tuple<sid_t, rid_t> anon_arg_t;
+typedef tuple<string, arg_id_t, prom_id_t> arg_t;
+typedef tuple<arg_id_t, prom_id_t> anon_arg_t;
 
 class arglist_t {
     vector<arg_t> args;
@@ -398,7 +407,7 @@ static inline void rdt_close_sqlite() {
 #endif
 }
 
-static inline string print_builtin(const char *type, const char *loc, const char *name, rid_t id, rid_t call_id) {
+static inline string print_builtin(const char *type, const char *loc, const char *name, fn_addr_t id, call_id_t call_id) {
     stringstream stream;
     prepend_prefix(&stream);
 
@@ -417,7 +426,7 @@ static inline string print_builtin(const char *type, const char *loc, const char
     return stream.str();
 }
 
-static inline string print_promise(const char *type, const char *loc, const char *name, rid_t id, rid_t in_call_id, rid_t from_call_id) {
+static inline string print_promise(const char *type, const char *loc, const char *name, prom_id_t id, call_id_t in_call_id, call_id_t from_call_id) {
     stringstream stream;
     prepend_prefix(&stream);
 
@@ -456,7 +465,7 @@ static inline string wrap_string(const string & s) {
     return "'" + s + "'";
 }
 
-static inline string mk_sql_function(rid_t function_id, arglist_t const& arguments, const char* location, const char* definition) {
+static inline string mk_sql_function(fn_addr_t function_id, arglist_t const& arguments, const char* location, const char* definition) {
     stringstream stream;
     // Don't generate anything if one was previously generated.
     if(STATE(already_inserted_functions).count(function_id))
@@ -494,7 +503,7 @@ static inline string mk_sql_function(rid_t function_id, arglist_t const& argumen
     return stream.str();
 }
 
-static inline string mk_sql_function_call(rid_t call_id, rid_t call_ptr, const char *name, const char* location, int call_type, rid_t function_id) {
+static inline string mk_sql_function_call(call_id_t call_id, env_addr_t call_ptr, const char *name, const char* location, int call_type, fn_addr_t function_id) {
     std::stringstream stream;
     stream << "insert into calls values ("
            << dec << call_id << ","
@@ -507,7 +516,7 @@ static inline string mk_sql_function_call(rid_t call_id, rid_t call_ptr, const c
     return stream.str();
 }
 
-static inline string mk_sql_promise(rid_t prom_id) {
+static inline string mk_sql_promise(prom_id_t prom_id) {
     std::stringstream promise_stream;
 
     promise_stream << (tracer_conf.pretty_print ? "insert into promises  select"
@@ -517,7 +526,7 @@ static inline string mk_sql_promise(rid_t prom_id) {
     return promise_stream.str();
 }
 
-static inline string mk_sql_promise_assoc(arglist_t const& arguments, rid_t call_id) {
+static inline string mk_sql_promise_assoc(arglist_t const& arguments, call_id_t call_id) {
     std::stringstream promise_association_stream;
 
     if (arguments.size() > 0) {
@@ -527,8 +536,8 @@ static inline string mk_sql_promise_assoc(arglist_t const& arguments, rid_t call
         int index = 0;
         for (auto arg_ref : arguments.all()) {
             const arg_t & argument = arg_ref.get();
-            sid_t arg_id = get<1>(argument);
-            rid_t promise = get<2>(argument);
+            arg_id_t arg_id = get<1>(argument);
+            prom_id_t promise = get<2>(argument);
 
             if (index)
                 promise_association_stream << (tracer_conf.pretty_print ? "\n            " : " ")
@@ -547,7 +556,7 @@ static inline string mk_sql_promise_assoc(arglist_t const& arguments, rid_t call
     return promise_association_stream.str();
 }
 
-static inline string mk_sql_promise_evaluation(int event_type, rid_t promise_id, rid_t call_id) {
+static inline string mk_sql_promise_evaluation(int event_type, prom_id_t promise_id, call_id_t call_id) {
     std::stringstream stream;
     stream << "insert into promise_evaluations values ("
            << "$next_id,"
@@ -559,7 +568,7 @@ static inline string mk_sql_promise_evaluation(int event_type, rid_t promise_id,
 }
 
 
-static inline string print_function(const char *type, const char *loc, const char *name, rid_t function_id, rid_t call_id, arglist_t const& arguments) {
+static inline string print_function(const char *type, const char *loc, const char *name, fn_addr_t function_id, call_id_t call_id, arglist_t const& arguments) {
     stringstream stream;
     prepend_prefix(&stream);
 
@@ -581,7 +590,7 @@ static inline string print_function(const char *type, const char *loc, const cha
     int i = 0;
     for (auto arg_ref : arguments.all()) {
         const arg_t & argument = arg_ref.get();
-        rid_t promise = get<2>(argument);
+        prom_id_t promise = get<2>(argument);
         //fprintf(output, "%s=%#x", get<0>(a).c_str(), p[0]);
         stream << get<0>(argument).c_str() << "=0x" << hex << promise;
 
@@ -606,7 +615,7 @@ static inline int count_elements(SEXP list) {
     return counter;
 }
 
-static inline rid_t get_promise_id(SEXP promise) {
+static inline prom_id_t get_promise_id(SEXP promise) { // TODO: modify to return synthetic ID
     if (promise == R_NilValue)
         return RID_INVALID;
     if (TYPEOF(promise) != PROMSXP)
@@ -617,20 +626,24 @@ static inline rid_t get_promise_id(SEXP promise) {
     return get_sexp_address(promise);
 }
 
-static inline rid_t get_function_id(SEXP func) {
+static inline prom_id_t make_promise_id(SEXP promise) {
+    // TODO: implement
+}
+
+static inline fn_addr_t get_function_id(SEXP func) {
     assert(TYPEOF(func) == CLOSXP);
     return get_sexp_address(func);
 }
 
 #ifdef RDT_CALL_ID
-static inline rid_t make_funcall_id(SEXP function) {
+static inline call_id_t make_funcall_id(SEXP function) {
     if (function == R_NilValue)
         return RID_INVALID;
 
     return ++STATE(call_id_counter);
 }
 #else
-static inline rid_t make_funcall_id(SEXP fn_env) {
+static inline call_id_t make_funcall_id(SEXP fn_env) {
     assert(fn_env != NULL);
     return get_sexp_address(fn_env);
 }
@@ -667,7 +680,7 @@ static SEXP get_promise(SEXP var, SEXP rho) {
 //};
 
 
-static inline sid_t get_argument_id(rid_t function_id, const string & argument) {
+static inline arg_id_t get_argument_id(fn_addr_t function_id, const string & argument) {
     arg_key_t key = make_pair(function_id, argument);
     auto iterator = STATE(argument_ids).find(key);
 
@@ -675,7 +688,7 @@ static inline sid_t get_argument_id(rid_t function_id, const string & argument) 
         return iterator->second;
     }
 
-    sid_t argument_id = ++STATE(argument_id_sequence);
+    arg_id_t argument_id = ++STATE(argument_id_sequence);
     STATE(argument_ids)[key] = argument_id;
     return argument_id;
 }
@@ -713,7 +726,7 @@ static inline arglist_t get_arguments(SEXP op, SEXP rho) {
             // Retrieve the promise for the argument.
             // The call SEXP only contains AST to find the actual argument value, we need to search the environment.
             string arg_name = get_name(argument_expression);
-            rid_t prom_id = get_promise_id(promise_expression);
+            prom_id_t prom_id = get_promise_id(promise_expression);
             if (prom_id != RID_INVALID)
                 arguments.push_back({
                                             arg_name,
@@ -751,12 +764,12 @@ struct trace_promises {
         int call_type = is_byte_compiled(call) ? 1 : 0;
         const char *name = get_name(call);
         const char *ns = get_ns_name(op);
-        rid_t fn_id = get_function_id(op);
-        rid_t call_ptr = get_sexp_address(rho);
+        fn_addr_t fn_id = get_function_id(op);
+        env_addr_t call_ptr = get_sexp_address(rho);
 #ifdef RDT_CALL_ID
-        rid_t call_id = make_funcall_id(op);
+        call_id_t call_id = make_funcall_id(op);
 #else
-        rid_t call_id = make_funcall_id(rho);
+        call_id_t call_id = make_funcall_id(rho);
 #endif
         char *loc = get_location(op);
         char *fqfn = NULL;
@@ -770,7 +783,7 @@ struct trace_promises {
         // Push function ID on function stack
         STATE(fun_stack).push(call_id);
 #ifdef RDT_CALL_ID
-        STATE(curr_env_stack).push(get_sexp_address(rho));
+        STATE(curr_env_stack).push(call_ptr);
 #endif
 
         arglist_t arguments = get_arguments(op, rho);
@@ -823,8 +836,8 @@ struct trace_promises {
         const char *type = is_byte_compiled(call) ? "<= bcod" : "<= func";
         const char *name = get_name(call);
         const char *ns = get_ns_name(op);
-        rid_t fn_id = get_function_id(op);
-        rid_t call_id = STATE(fun_stack).top();
+        fn_addr_t fn_id = get_function_id(op);
+        call_id_t call_id = STATE(fun_stack).top();
         char *loc = get_location(op);
         char *fqfn = NULL;
 
@@ -853,16 +866,16 @@ struct trace_promises {
     // TODO retrieve arguments
     DECL_HOOK(builtin_entry)(const SEXP call, const SEXP op, const SEXP rho) {
         const char *name = get_name(call);
-        rid_t fn_id = get_function_id(op);
+        fn_addr_t fn_id = get_function_id(op);
 
-        rid_t call_ptr = get_sexp_address(rho);
+        env_addr_t call_ptr = get_sexp_address(rho);
 #ifdef RDT_CALL_ID
-        rid_t call_id = make_funcall_id(op);
+        call_id_t call_id = make_funcall_id(op);
 #else
         // Builtins have no environment of their own
         // we take the parent env rho and add 1 to it to create a new pseudo-address
         // it will be unique because real pointers are aligned (no odd addresses)
-        rid_t call_id = make_funcall_id(rho) | 1;
+        call_id_t call_id = make_funcall_id(rho) | 1;
 #endif
 
         // TODO merge rdt_print_calls
@@ -876,7 +889,7 @@ struct trace_promises {
 
         STATE(fun_stack).push(call_id);
 #ifdef RDT_CALL_ID
-        STATE(curr_env_stack).push(get_sexp_address(rho) | 1);
+        STATE(curr_env_stack).push(call_ptr | 1);
 #endif
 
         //R_inspect(call);
@@ -884,8 +897,8 @@ struct trace_promises {
 
     DECL_HOOK(builtin_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
         const char *name = get_name(call);
-        rid_t id = get_function_id(op);
-        rid_t call_id = STATE(fun_stack).top();
+        fn_addr_t id = get_function_id(op);
+        call_id_t call_id = STATE(fun_stack).top();
 
         STATE(fun_stack).pop();
 #ifdef RDT_CALL_ID
@@ -896,7 +909,7 @@ struct trace_promises {
     }
 
     DECL_HOOK(promise_created)(const SEXP prom) {
-        rid_t prom_id = get_sexp_address(prom);
+        prom_id_t prom_id = make_promise_id(prom);
         STATE(fresh_promises).insert(prom_id);
 
         //Rprintf("PROMISE CREATED at %p\n", get_sexp_address(prom));
@@ -911,9 +924,9 @@ struct trace_promises {
         const char *name = get_name(symbol);
 
         SEXP promise_expression = get_promise(symbol, rho);
-        rid_t id = get_promise_id(promise_expression);
-        rid_t in_call_id = STATE(fun_stack).top();
-        rid_t from_call_id = STATE(promise_origin)[id];
+        prom_id_t id = get_promise_id(promise_expression);
+        call_id_t in_call_id = STATE(fun_stack).top();
+        call_id_t from_call_id = STATE(promise_origin)[id];
 
         // in_call_id = current call
         rdt_print(RDT_OUTPUT_TRACE, {print_promise("=> prom", NULL, name, id, in_call_id, from_call_id)});
@@ -925,9 +938,9 @@ struct trace_promises {
         const char *name = get_name(symbol);
 
         SEXP promise_expression = get_promise(symbol, rho);
-        rid_t id = get_promise_id(promise_expression);
-        rid_t in_call_id = STATE(fun_stack).top();
-        rid_t from_call_id = STATE(promise_origin)[id];
+        prom_id_t id = get_promise_id(promise_expression);
+        call_id_t in_call_id = STATE(fun_stack).top();
+        call_id_t from_call_id = STATE(promise_origin)[id];
 
         rdt_print(RDT_OUTPUT_TRACE, {print_promise("<= prom", NULL, name, id, in_call_id, from_call_id)});
     }
@@ -936,9 +949,9 @@ struct trace_promises {
         const char *name = get_name(symbol);
 
         SEXP promise_expression = get_promise(symbol, rho);
-        rid_t id = get_promise_id(promise_expression);
-        rid_t in_call_id = STATE(fun_stack).top();
-        rid_t from_call_id = STATE(promise_origin)[id];
+        prom_id_t id = get_promise_id(promise_expression);
+        call_id_t in_call_id = STATE(fun_stack).top();
+        call_id_t from_call_id = STATE(promise_origin)[id];
 
         // TODO
         rdt_print(RDT_OUTPUT_TRACE, {print_promise("<> lkup", NULL, name, id, in_call_id, from_call_id)});
@@ -973,7 +986,7 @@ struct trace_promises {
 //    }
 
     DECL_HOOK(gc_promise_unmarked)(const SEXP promise) {
-        rid_t id = (rid_t)promise;
+        prom_id_t id = get_promise_id(promise);
         auto & promise_origin = STATE(promise_origin);
 
         auto iter = promise_origin.find(id);
