@@ -445,7 +445,7 @@ static inline string print_promise(const char *type, const char *loc, const char
 
     stream << type << " "
            << "loc(" << CHKSTR(loc) << ") "
-           << "prom(" << CHKSTR(name) << "=0x" << hex << id << ") ";
+           << "prom(" << CHKSTR(name) << id << ") ";
     stream << "in(" << num_pref << num_fmt << in_call_id << ") ";
     stream << "from(" << num_pref << num_fmt << from_call_id << ")\n";
 
@@ -602,7 +602,7 @@ static inline string print_function(const char *type, const char *loc, const cha
         const arg_t & argument = arg_ref.get();
         prom_id_t promise = get<2>(argument);
         //fprintf(output, "%s=%#x", get<0>(a).c_str(), p[0]);
-        stream << get<0>(argument).c_str() << "=0x" << hex << promise;
+        stream << get<0>(argument).c_str() << promise;
 
         if (i < arguments.size() - 1)
             stream << ",";
