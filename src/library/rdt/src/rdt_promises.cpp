@@ -45,6 +45,10 @@ static sqlite3_stmt *prepared_sql_insert_arguments5 = NULL;
 static sqlite3_stmt *prepared_sql_insert_call = NULL;
 static sqlite3_stmt *prepared_sql_insert_promise = NULL;
 static sqlite3_stmt *prepared_sql_insert_promise_assoc1 = NULL;
+static sqlite3_stmt *prepared_sql_insert_promise_assoc2 = NULL;
+static sqlite3_stmt *prepared_sql_insert_promise_assoc3 = NULL;
+static sqlite3_stmt *prepared_sql_insert_promise_assoc4 = NULL;
+static sqlite3_stmt *prepared_sql_insert_promise_assoc5 = NULL;
 static sqlite3_stmt *prepared_sql_insert_promise_eval = NULL;
 #endif
 
@@ -391,42 +395,28 @@ static void compile_prepared_sql_statements() {
         fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
 
     result = sqlite3_prepare_v2(sqlite_database,
-                       "insert into arguments "
-                               "select ?, ?, ?, ? union all "
-                               "select ?, ?, ?, ?;",
+                       "insert into arguments select ?, ?, ?, ? union all select ?, ?, ?, ?;",
                        -1, &prepared_sql_insert_arguments2, NULL);
 
     if (result != SQLITE_OK)
         fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
 
     result = sqlite3_prepare_v2(sqlite_database,
-                       "insert into arguments "
-                               "select ?, ?, ?, ? union all "
-                               "select ?, ?, ?, ? union all "
-                               "select ?, ?, ?, ?;",
+                       "insert into arguments select ?, ?, ?, ? union all select ?, ?, ?, ? union all select ?, ?, ?, ?;",
                        -1, &prepared_sql_insert_arguments3, NULL);
 
     if (result != SQLITE_OK)
         fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
 
     result = sqlite3_prepare_v2(sqlite_database,
-                       "insert into arguments "
-                               "select ?, ?, ?, ? union all "
-                               "select ?, ?, ?, ? union all "
-                               "select ?, ?, ?, ? union all "
-                               "select ?, ?, ?, ?;",
+                       "insert into arguments select ?, ?, ?, ? union all select ?, ?, ?, ? union all select ?, ?, ?, ? union all select ?, ?, ?, ?;",
                        -1, &prepared_sql_insert_arguments4, NULL);
 
     if (result != SQLITE_OK)
         fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
 
     result = sqlite3_prepare_v2(sqlite_database,
-                       "insert into functions arguments "
-                               "select ?, ?, ?, ? union all "
-                               "select ?, ?, ?, ? union all "
-                               "select ?, ?, ?, ? union all "
-                               "select ?, ?, ?, ? union all "
-                               "select ?, ?, ?, ?;",
+                       "insert into arguments select ?, ?, ?, ? union all select ?, ?, ?, ? union all select ?, ?, ?, ? union all select ?, ?, ?, ? union all select ?, ?, ?, ?;",
                        -1, &prepared_sql_insert_arguments5, NULL);
 
     if (result != SQLITE_OK)
@@ -454,6 +444,34 @@ static void compile_prepared_sql_statements() {
         fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
 
     result = sqlite3_prepare_v2(sqlite_database,
+                                "insert into promise_associations select ?, ?, ? union all select ?, ?, ?;",
+                                -1, &prepared_sql_insert_promise_assoc2, NULL);
+
+    if (result != SQLITE_OK)
+        fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
+
+    result = sqlite3_prepare_v2(sqlite_database,
+                                "insert into promise_associations select ?, ?, ? union all select ?, ?, ? union all select ?, ?, ?;",
+                                -1, &prepared_sql_insert_promise_assoc3, NULL);
+
+    if (result != SQLITE_OK)
+        fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
+
+    result = sqlite3_prepare_v2(sqlite_database,
+                                "insert into promise_associations select ?, ?, ? union all select ?, ?, ? union all select ?, ?, ? union all select ?, ?, ?;",
+                                -1, &prepared_sql_insert_promise_assoc4, NULL);
+
+    if (result != SQLITE_OK)
+        fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
+
+    result = sqlite3_prepare_v2(sqlite_database,
+                                "insert into promise_associations select ?, ?, ? union all select ?, ?, ? union all select ?, ?, ? union all select ?, ?, ? union all select ?, ?, ?;",
+                                -1, &prepared_sql_insert_promise_assoc5, NULL);
+
+    if (result != SQLITE_OK)
+        fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
+
+    result = sqlite3_prepare_v2(sqlite_database,
                        "insert into promise_evaluations values (?, ?, ?, ?);",
                        -1, &prepared_sql_insert_promise_eval, NULL);
 
@@ -472,14 +490,11 @@ static inline void free_prepared_sql_statements() {
     sqlite3_finalize(prepared_sql_insert_call);
     sqlite3_finalize(prepared_sql_insert_promise);
     sqlite3_finalize(prepared_sql_insert_promise_assoc1);
+    sqlite3_finalize(prepared_sql_insert_promise_assoc2);
+    sqlite3_finalize(prepared_sql_insert_promise_assoc3);
+    sqlite3_finalize(prepared_sql_insert_promise_assoc4);
+    sqlite3_finalize(prepared_sql_insert_promise_assoc5);
     sqlite3_finalize(prepared_sql_insert_promise_eval);
-//    free(prepared_sql_insert_function);
-//    free(prepared_sql_insert_arguments1);
-//    free(prepared_sql_insert_arguments2);
-//    free(prepared_sql_insert_call);
-//    free(prepared_sql_insert_promise);
-//    free(prepared_sql_insert_promise_assoc1);
-//    free(prepared_sql_insert_promise_eval);
 }
 #endif
 
@@ -617,7 +632,7 @@ static inline void run_prep_sql_function(rid_t function_id, arglist_t const& arg
     sqlite3_reset(prepared_sql_insert_function);
 
     int num_of_arguments = arguments.size();
-    Rprintf("arguments no %i\n", num_of_arguments);
+//    Rprintf("arguments no %i\n", num_of_arguments);
     // Generate `arguments' update wrt function above.
     if (num_of_arguments > 1 && num_of_arguments <= 5) {
         int index = 0;
@@ -639,15 +654,15 @@ static inline void run_prep_sql_function(rid_t function_id, arglist_t const& arg
             sqlite3_bind_int(prepared_statement, offset + 3, index);
             sqlite3_bind_int(prepared_statement, offset + 4, function_id);
 
-            Rprintf("binding %i %i: %i\n", index, offset + 1, get<1>(argument));
-            Rprintf("binding %i %i: %s\n", index, offset + 2, get<0>(argument).c_str());
-            Rprintf("binding %i %i: %i\n", index, offset + 3, index);
-            Rprintf("binding %i %i: %i\n", index, offset + 4, function_id);
+//            Rprintf("binding %i %i: %i\n", index, offset + 1, get<1>(argument));
+//            Rprintf("binding %i %i: %s\n", index, offset + 2, get<0>(argument).c_str());
+//            Rprintf("binding %i %i: %i\n", index, offset + 3, index);
+//            Rprintf("binding %i %i: %i\n", index, offset + 4, function_id);
 
             index++;
         }
 
-        Rprintf("arguments%i: %s\n", num_of_arguments, sqlite3_sql(prepared_statement));
+//        Rprintf("arguments%i: %s\n", num_of_arguments, sqlite3_sql(prepared_statement));
 
         result = sqlite3_step(prepared_statement);
         sqlite3_reset(prepared_statement);
@@ -792,7 +807,43 @@ static inline string mk_sql_promise(rid_t prom_id) {
 }
 
 static inline void run_prep_sql_promise_assoc(arglist_t const& arguments, rid_t call_id) {
-    if (arguments.size() > 0) {
+    int num_of_arguments = arguments.size();
+
+    if (num_of_arguments > 1 && num_of_arguments <= 5) {
+        int index = 0;
+        sqlite3_stmt * prepared_statement;
+
+        switch (num_of_arguments) {
+            case 2: prepared_statement = prepared_sql_insert_promise_assoc2; break;
+            case 3: prepared_statement = prepared_sql_insert_promise_assoc3; break;
+            case 4: prepared_statement = prepared_sql_insert_promise_assoc4; break;
+            case 5: prepared_statement = prepared_sql_insert_promise_assoc5; break;
+        }
+
+        for (auto arg_ref : arguments.all()) {
+            const arg_t & argument = arg_ref.get();
+            sid_t arg_id = get<1>(argument);
+            rid_t promise = get<2>(argument);
+            int offset = index * 3;
+
+            sqlite3_bind_int(prepared_statement, offset + 1, promise);
+            sqlite3_bind_int(prepared_statement, offset + 2, call_id);
+            sqlite3_bind_int(prepared_statement, offset + 3, arg_id);
+
+            index++;
+        }
+
+        //Rprintf("promise assoc: %s\n", sqlite3_sql(prepared_statement));
+        int result = sqlite3_step(prepared_statement);
+        sqlite3_reset(prepared_statement);
+
+
+        if (result != SQLITE_DONE) {
+            Rprintf("Error executing compiled SQL expression: [%s/%i] %s\n", "promise assoc", num_of_arguments, sqlite3_errmsg(sqlite_database));
+            return;
+        }
+
+    } else if (num_of_arguments > 0) {
         int index = 0;
         for (auto arg_ref : arguments.all()) {
 
