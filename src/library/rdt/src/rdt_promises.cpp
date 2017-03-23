@@ -36,20 +36,23 @@ static std::string RDT_SQLITE_SCHEMA = "src/library/rdt/sql/schema.sql";
 static sqlite3 *sqlite_database;
 
 // Prepared statement objects.
-static sqlite3_stmt *prepared_sql_insert_function = NULL;
-static sqlite3_stmt *prepared_sql_insert_arguments1 = NULL;
-static sqlite3_stmt *prepared_sql_insert_arguments2 = NULL;
-static sqlite3_stmt *prepared_sql_insert_arguments3 = NULL;
-static sqlite3_stmt *prepared_sql_insert_arguments4 = NULL;
-static sqlite3_stmt *prepared_sql_insert_arguments5 = NULL;
-static sqlite3_stmt *prepared_sql_insert_call = NULL;
-static sqlite3_stmt *prepared_sql_insert_promise = NULL;
-static sqlite3_stmt *prepared_sql_insert_promise_assoc1 = NULL;
-static sqlite3_stmt *prepared_sql_insert_promise_assoc2 = NULL;
-static sqlite3_stmt *prepared_sql_insert_promise_assoc3 = NULL;
-static sqlite3_stmt *prepared_sql_insert_promise_assoc4 = NULL;
-static sqlite3_stmt *prepared_sql_insert_promise_assoc5 = NULL;
-static sqlite3_stmt *prepared_sql_insert_promise_eval = NULL;
+static sqlite3_stmt *prepared_sql_insert_function = nullptr;
+static sqlite3_stmt *prepared_sql_insert_arguments1 = nullptr;
+static sqlite3_stmt *prepared_sql_insert_arguments2 = nullptr;
+static sqlite3_stmt *prepared_sql_insert_arguments3 = nullptr;
+static sqlite3_stmt *prepared_sql_insert_arguments4 = nullptr;
+static sqlite3_stmt *prepared_sql_insert_arguments5 = nullptr;
+static sqlite3_stmt *prepared_sql_insert_call = nullptr;
+static sqlite3_stmt *prepared_sql_insert_promise = nullptr;
+static sqlite3_stmt *prepared_sql_insert_promise_assoc1 = nullptr;
+static sqlite3_stmt *prepared_sql_insert_promise_assoc2 = nullptr;
+static sqlite3_stmt *prepared_sql_insert_promise_assoc3 = nullptr;
+static sqlite3_stmt *prepared_sql_insert_promise_assoc4 = nullptr;
+static sqlite3_stmt *prepared_sql_insert_promise_assoc5 = nullptr;
+static sqlite3_stmt *prepared_sql_insert_promise_eval = nullptr;
+static sqlite3_stmt *prepared_sql_transaction_begin = nullptr;
+static sqlite3_stmt *prepared_sql_transaction_commit = nullptr;
+static sqlite3_stmt *prepared_sql_transaction_abort = nullptr;
 #endif
 
 //#include <Defn.h>
@@ -478,6 +481,27 @@ static void compile_prepared_sql_statements() {
     if (result != SQLITE_OK)
         fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
 
+    result = sqlite3_prepare_v2(sqlite_database,
+                                "begin transaction;",
+                                -1, &prepared_sql_transaction_begin, NULL);
+
+    if (result != SQLITE_OK)
+        fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
+
+    result = sqlite3_prepare_v2(sqlite_database,
+                                "commit;",
+                                -1, &prepared_sql_transaction_commit, NULL);
+
+    if (result != SQLITE_OK)
+        fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
+
+    result = sqlite3_prepare_v2(sqlite_database,
+                                "rollback;",
+                                -1, &prepared_sql_transaction_abort, NULL);
+
+    if (result != SQLITE_OK)
+        fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
+
 }
 
 static inline void free_prepared_sql_statements() {
@@ -495,6 +519,9 @@ static inline void free_prepared_sql_statements() {
     sqlite3_finalize(prepared_sql_insert_promise_assoc4);
     sqlite3_finalize(prepared_sql_insert_promise_assoc5);
     sqlite3_finalize(prepared_sql_insert_promise_eval);
+    sqlite3_finalize(prepared_sql_transaction_begin);
+    sqlite3_finalize(prepared_sql_transaction_commit);
+    sqlite3_finalize(prepared_sql_transaction_abort);
 }
 #endif
 
@@ -973,6 +1000,44 @@ static inline string print_function(const char *type, const char *loc, const cha
     return stream.str();
 }
 
+static inline void rdt_begin_transaction() {
+    if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
+        int result = sqlite3_step(prepared_sql_transaction_begin);
+        if (result != SQLITE_DONE) {
+            Rprintf("Error executing compiled SQL expression: [%s] %s\n", "begin transaction", sqlite3_errmsg(sqlite_database));
+            return;
+        }
+        sqlite3_reset(prepared_sql_transaction_begin);
+    } else {
+        rdt_print(RDT_OUTPUT_SQL, {"begin transaction;\n"});
+    }
+}
+
+static inline void rdt_commit_transaction() {
+    if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
+        int result = sqlite3_step(prepared_sql_transaction_commit);
+        if (result != SQLITE_DONE) {
+            Rprintf("Error executing compiled SQL expression: [%s] %s\n", "commit transaction", sqlite3_errmsg(sqlite_database));
+            return;
+        }
+        sqlite3_reset(prepared_sql_transaction_commit);
+    } else {
+        rdt_print(RDT_OUTPUT_SQL, {"commit;\n"});
+    }
+}
+
+static inline void rdt_abort_transaction() {
+    if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
+        int result = sqlite3_step(prepared_sql_transaction_abort);
+        if (result != SQLITE_DONE) {
+            Rprintf("Error executing compiled SQL expression: [%s] %s\n", "abort transaction", sqlite3_errmsg(sqlite_database));
+            return;
+        }
+        sqlite3_reset(prepared_sql_transaction_abort);
+    } else {
+        rdt_print(RDT_OUTPUT_SQL, {"rollback;\n"});
+    }
+}
 
 static inline int count_elements(SEXP list) {
     int counter = 0;
@@ -1530,6 +1595,10 @@ rdt_handler *setup_promise_tracing(SEXP options) {
     if (tracer_conf.output_type == RDT_SQLITE || tracer_conf.output_type == RDT_R_PRINT_AND_SQLITE)
         rdt_init_sqlite(tracer_conf.filename);
 
+
+    if (tracer_conf.output_type != RDT_OUTPUT_TRACE)
+        rdt_begin_transaction();
+
     rdt_handler *h = (rdt_handler *) malloc(sizeof(rdt_handler));
     //memcpy(h, &trace_promises_rdt_handler, sizeof(rdt_handler));
     //*h = trace_promises_rdt_handler; // This actually does the same thing as memcpy
@@ -1585,6 +1654,9 @@ rdt_handler *setup_promise_tracing(SEXP options) {
 }
 
 void cleanup_promise_tracing(/*rdt_handler *h,*/ SEXP options) {
+    if (tracer_conf.output_type != RDT_OUTPUT_TRACE)
+        rdt_commit_transaction();
+
     if (tracer_conf.output_type == RDT_SQLITE || tracer_conf.output_type == RDT_R_PRINT_AND_SQLITE)
         rdt_close_sqlite();
 }
