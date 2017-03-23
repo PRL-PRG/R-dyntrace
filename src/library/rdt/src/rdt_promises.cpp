@@ -128,6 +128,7 @@ static inline rid_t get_sexp_address(SEXP e) {
 
 static inline void prepend_prefix(stringstream *stream);
 static inline prom_id_t make_promise_id(SEXP promise);
+static inline string mk_sql_promise(prom_id_t prom_id);
 
 static inline string print_unwind(const char *type, call_id_t call_id) {
     stringstream stream;
@@ -226,6 +227,7 @@ struct tracer_state_t {
         prom_addr_t prom_addr = get_sexp_address(prom);
         prom_id_t prom_id = make_promise_id(prom);
         promise_origin[prom_id] = 0;
+        rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise(prom_id)});
     }
 
     void finish_pass() {
