@@ -25,7 +25,7 @@
 // probes
 // ----------------------------------------------------------------------------
 typedef struct rdt_handler {
-    void (*probe_begin)();
+    void (*probe_begin)(const SEXP prom);
     void (*probe_end)();
     void (*probe_function_entry)(const SEXP call, const SEXP op, const SEXP rho);
     void (*probe_function_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval);
@@ -49,7 +49,7 @@ typedef struct rdt_handler {
     void (*probe_S3_dispatch_exit)(const char *generic, const char *clazz, const SEXP method, const SEXP object, const SEXP retval);
 } rdt_handler;
 
-void rdt_start(const rdt_handler *handler);
+void rdt_start(const rdt_handler *handler, const SEXP prom);
 void rdt_stop();
 int rdt_is_running();
 

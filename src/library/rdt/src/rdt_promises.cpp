@@ -46,6 +46,7 @@ static sqlite3 *sqlite_database;
 
 extern "C" {
 #include "../../../main/inspect.h"
+#include "r.h"
 #include "rdt.h"
 }
 
@@ -126,6 +127,7 @@ static inline rid_t get_sexp_address(SEXP e) {
 }
 
 static inline void prepend_prefix(stringstream *stream);
+static inline prom_id_t make_promise_id(SEXP promise);
 
 static inline string print_unwind(const char *type, call_id_t call_id) {
     stringstream stream;
@@ -206,7 +208,7 @@ struct tracer_state_t {
     arg_id_t argument_id_sequence; // Should be globally unique (can reset between tracer calls if overwrite is true)
     map<arg_key_t, arg_id_t> argument_ids; // Should be kept across Rdt calls (unless overwrite is true)
 
-    void start_pass() {
+    void start_pass(const SEXP prom) {
         if (tracer_conf.overwrite) {
             reset();
         }
@@ -220,6 +222,10 @@ struct tracer_state_t {
 #ifdef RDT_CALL_ID
         curr_env_stack.push(0);
 #endif
+
+        prom_addr_t prom_addr = get_sexp_address(prom);
+        prom_id_t prom_id = make_promise_id(prom);
+        promise_origin[prom_id] = 0;
     }
 
     void finish_pass() {
@@ -757,8 +763,8 @@ static inline arglist_t get_arguments(SEXP op, SEXP rho) {
 // which is then used in the REGISTER_HOOKS macro to properly init rdt_handler.
 struct trace_promises {
     // ??? can we get metadata about the program we're analysing in here?
-    DECL_HOOK(begin)() {
-        tracer_state().start_pass();
+    DECL_HOOK(begin)(const SEXP prom) {
+        tracer_state().start_pass(prom);
     }
 
     DECL_HOOK(end)() {

@@ -5,7 +5,8 @@
 #ifndef INSPECT_H
 #define INSPECT_H
 
-#include <Rinternals.h>
+struct SEXPREC;
+typedef struct SEXPREC* SEXP;
 
 SEXP R_inspect(SEXP x);
 

@@ -3,8 +3,7 @@
 #endif
 
 #include <R.h>
-#include <Rinternals.h>
-
+#include "r.h"
 #include "rdt.h"
 #include <R_ext/Rdynload.h>
 

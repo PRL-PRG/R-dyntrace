@@ -2,14 +2,14 @@
 
 extern "C" {
 // If I don't include this before rdt.h, I get strange compiler errors...
-#include <Rinternals.h>
+#include "r.h"
 #include "rdt.h"
 }
 
 #include "rdt_register_hook.h"
 
 struct trace_noop {
-    DECL_HOOK(begin)() {
+    DECL_HOOK(begin)(const SEXP prom) {
     }
 
     DECL_HOOK(function_entry)(const SEXP call, const SEXP op, const SEXP rho) {

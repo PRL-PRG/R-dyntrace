@@ -6,7 +6,7 @@
 #include <inttypes.h>
 
 extern "C" {
-#include <Rinternals.h>
+#include "r.h"
 #include "rdt.h"
 }
 
@@ -30,7 +30,7 @@ static inline void compute_delta() {
 }
 
 struct trace_default {
-    DECL_HOOK(begin)() {
+    DECL_HOOK(begin)(const SEXP prom) {
         fprintf(output, "DELTA,TYPE,LOCATION,NAME\n");
         fflush(output);
 

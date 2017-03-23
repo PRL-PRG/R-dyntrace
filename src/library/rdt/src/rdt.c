@@ -46,13 +46,13 @@ SEXP Rdt(SEXP tracer, SEXP rho, SEXP options) {
         return R_FalseValue;
     }
 
-    rdt_start(handler);
-
     SEXP block = findVar(install("block"), rho);
     if (block == NULL || block == R_NilValue) {
         error("Unable to find 'block' variable");
         return R_FalseValue;
     }
+
+    rdt_start(handler, block);
 
     // this is to prevent long jumps return earlier than needed
     void *data[2] = {block, rho};

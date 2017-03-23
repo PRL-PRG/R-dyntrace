@@ -150,7 +150,7 @@ SEXP get_named_list_element(const SEXP list, const char *name) {
     return e;
 }
 
-void rdt_start(const rdt_handler *handler) {
+void rdt_start(const rdt_handler *handler, const SEXP prom) {
     if (handler == NULL) {
         REprintf("RDT: rdt_start() called with NULL handler\n");
         return;
@@ -162,7 +162,7 @@ void rdt_start(const rdt_handler *handler) {
 
     rdt_curr_handler = handler;
 
-    RDT_HOOK(probe_begin);
+    RDT_HOOK(probe_begin, prom);
 }
 
 void rdt_stop() {
