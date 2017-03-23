@@ -56,3 +56,15 @@ kw_inner <- function(x=0,y=0,z=0,v=0) x+y+z+v
 kw_outer <- function(a,b,...) a + kw_inner(z=b, ...)
 
 testKwDdd <- function() kw_outer(a=1, b=2, x=3, 4)
+
+promEsc <- function(x) {
+	function() x
+}
+
+makeGlobalProm <- function() {
+	get2 <<- promEsc(2)
+}
+
+outsideProm <-function() {
+	get2()
+}

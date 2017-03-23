@@ -61,11 +61,12 @@ using namespace std;
 #define RDT_FORCE_PROMISE 0xF
 
 typedef uintptr_t rid_t;
+typedef intptr_t rsid_t;
 
 typedef rid_t prom_addr_t;
 typedef rid_t env_addr_t;
 typedef rid_t fn_addr_t;
-typedef rid_t prom_id_t;
+typedef rsid_t prom_id_t;
 typedef rid_t call_id_t;
 
 typedef int arg_id_t;
@@ -127,7 +128,7 @@ static inline rid_t get_sexp_address(SEXP e) {
 }
 
 static inline void prepend_prefix(stringstream *stream);
-static inline prom_id_t make_promise_id(SEXP promise);
+static inline prom_id_t make_promise_id(SEXP promise, bool negative = false);
 static inline string mk_sql_promise(prom_id_t prom_id);
 
 static inline string print_unwind(const char *type, call_id_t call_id) {
@@ -204,6 +205,7 @@ struct tracer_state_t {
 
     call_id_t call_id_counter; // IDs assigned should be globally unique but we can reset it after each pass if overwrite is true)
     prom_id_t prom_id_counter; // IDs assigned should be globally unique but we can reset it after each pass if overwrite is true)
+    prom_id_t prom_neg_id_counter;
 
     unordered_set<fn_addr_t> already_inserted_functions; // Should be kept across Rdt calls (unless overwrite is true)
     arg_id_t argument_id_sequence; // Should be globally unique (can reset between tracer calls if overwrite is true)
@@ -274,15 +276,18 @@ private:
         indent = 0;
         call_id_counter = 0;
         prom_id_counter = 0;
+        prom_neg_id_counter = 0;
         argument_id_sequence = 0;
     }
 
     void reset() {
         call_id_counter = 0;
         prom_id_counter = 0;
+        prom_neg_id_counter = 0;
         argument_id_sequence = 0;
         already_inserted_functions.clear();
         argument_ids.clear();
+        promise_ids.clear();
     }
 };
 
@@ -433,7 +438,7 @@ static inline string print_builtin(const char *type, const char *loc, const char
         stream << call_id;
     }
 
-    stream << ") fun(" << CHKSTR(name) << "=" << hex << id << ")\n";
+    stream << ") fun(" << CHKSTR(name) << "=0x" << hex << id << ")\n";
 
     return stream.str();
 }
@@ -531,9 +536,8 @@ static inline string mk_sql_function_call(call_id_t call_id, env_addr_t call_ptr
 static inline string mk_sql_promise(prom_id_t prom_id) {
     std::stringstream promise_stream;
 
-    promise_stream << (tracer_conf.pretty_print ? "insert into promises  select"
-                                                : "insert into promises select");
-    promise_stream << " 0x" << hex << prom_id << ";\n";
+    promise_stream << "insert into promises select ";
+    promise_stream << prom_id << ";\n";
 
     return promise_stream.str();
 }
@@ -542,9 +546,7 @@ static inline string mk_sql_promise_assoc(arglist_t const& arguments, call_id_t 
     std::stringstream promise_association_stream;
 
     if (arguments.size() > 0) {
-        promise_association_stream << (
-                tracer_conf.pretty_print ? "insert into promise_associations select"
-                                         : "insert into promise_associations select");
+        promise_association_stream << "insert into promise_associations select";
         int index = 0;
         for (auto arg_ref : arguments.all()) {
             const arg_t & argument = arg_ref.get();
@@ -556,7 +558,7 @@ static inline string mk_sql_promise_assoc(arglist_t const& arguments, call_id_t 
                                            << "union all select";
 
             promise_association_stream << " "
-                           << "0x" << hex << promise << ","
+                           << promise << ","
                            << dec << call_id << ","
                            << dec << arg_id;
 
@@ -573,7 +575,7 @@ static inline string mk_sql_promise_evaluation(int event_type, prom_id_t promise
     stream << "insert into promise_evaluations values ("
            << "$next_id,"
            << "0x" << hex << event_type << ",";
-    stream << "0x" << hex << promise_id << ",";
+    stream << dec << promise_id << ",";
     stream << dec << call_id
            << ");\n";
     return stream.str();
@@ -636,15 +638,34 @@ static inline prom_id_t get_promise_id(SEXP promise) {
     // A new promise is always created for each argument.
     // Even if the argument is already a promise passed from the caller, it gets re-wrapped.
     prom_addr_t prom_addr = get_sexp_address(promise);
-    return STATE(promise_ids)[prom_addr];
+    prom_id_t prom_id;
+
+    auto & promise_ids = STATE(promise_ids);
+    auto it = promise_ids.find(prom_addr);
+    if (it != promise_ids.end()){
+        prom_id = it->second;
+    }
+    else {
+        prom_id = make_promise_id(promise, true);
+        rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise(prom_id)});
+    }
+
+    return prom_id;
 }
 
-static inline prom_id_t make_promise_id(SEXP promise) {
+static inline prom_id_t make_promise_id(SEXP promise, bool negative) {
     if (promise == R_NilValue)
         return RID_INVALID;
 
     prom_addr_t prom_addr = get_sexp_address(promise);
-    prom_id_t prom_id = ++STATE(prom_id_counter);
+    prom_id_t prom_id;
+
+    if (negative) {
+        prom_id = --STATE(prom_neg_id_counter);
+    }
+    else {
+        prom_id = STATE(prom_id_counter)++;
+    }
     STATE(promise_ids)[prom_addr] = prom_id;
 
     return prom_id;
