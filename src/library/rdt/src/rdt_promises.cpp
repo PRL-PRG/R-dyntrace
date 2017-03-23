@@ -447,7 +447,7 @@ static inline string print_promise(const char *type, const char *loc, const char
 
     stream << type << " "
            << "loc(" << CHKSTR(loc) << ") "
-           << "prom(" << CHKSTR(name) << id << ") ";
+           << "prom(" << CHKSTR(name) << "=" << id << ") ";
     stream << "in(" << num_pref << num_fmt << in_call_id << ") ";
     stream << "from(" << num_pref << num_fmt << from_call_id << ")\n";
 
@@ -604,7 +604,7 @@ static inline string print_function(const char *type, const char *loc, const cha
         const arg_t & argument = arg_ref.get();
         prom_id_t promise = get<2>(argument);
         //fprintf(output, "%s=%#x", get<0>(a).c_str(), p[0]);
-        stream << get<0>(argument).c_str() << promise;
+        stream << get<0>(argument).c_str() << "=" << promise;
 
         if (i < arguments.size() - 1)
             stream << ",";
@@ -1141,6 +1141,11 @@ tracer_conf_t get_config_from_R_options(SEXP options) {
     return conf;
 }
 
+static bool file_exists(const string & fname) {
+    ifstream f(fname);
+    return f.good();
+}
+
 rdt_handler *setup_promise_tracing(SEXP options) {
     tracer_conf_t new_conf = get_config_from_R_options(options);
     tracer_conf.update(new_conf);
@@ -1157,11 +1162,11 @@ rdt_handler *setup_promise_tracing(SEXP options) {
 //    call_id_counter = 0;
 //    already_inserted_functions.clear();
 //
-//    if(tracer_conf.overwrite && (tracer_conf.output_type == RDT_SQLITE || tracer_conf.output_type == RDT_R_PRINT_AND_SQLITE)) {
-//        remove(filename); // I wouldn't do this. Overwrite happens automatically when you actually open an existing file with "w".
-//        argument_id_sequence = 0;
-//        argument_ids.clear();
-//    }
+    if(tracer_conf.overwrite && (tracer_conf.output_type == RDT_SQLITE || tracer_conf.output_type == RDT_R_PRINT_AND_SQLITE)) {
+        if (file_exists(tracer_conf.filename)) {
+            remove(tracer_conf.filename);
+        }
+    }
 
     if (tracer_conf.output_type == RDT_SQLITE || tracer_conf.output_type == RDT_R_PRINT_AND_SQLITE)
         rdt_init_sqlite(tracer_conf.filename);
