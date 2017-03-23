@@ -39,6 +39,9 @@ static sqlite3 *sqlite_database;
 static sqlite3_stmt *prepared_sql_insert_function = NULL;
 static sqlite3_stmt *prepared_sql_insert_arguments1 = NULL;
 static sqlite3_stmt *prepared_sql_insert_arguments2 = NULL;
+static sqlite3_stmt *prepared_sql_insert_arguments3 = NULL;
+static sqlite3_stmt *prepared_sql_insert_arguments4 = NULL;
+static sqlite3_stmt *prepared_sql_insert_arguments5 = NULL;
 static sqlite3_stmt *prepared_sql_insert_call = NULL;
 static sqlite3_stmt *prepared_sql_insert_promise = NULL;
 static sqlite3_stmt *prepared_sql_insert_promise_assoc1 = NULL;
@@ -371,34 +374,91 @@ static inline void prepend_prefix(stringstream *stream) {
 
 
 #ifdef RDT_SQLITE_SUPPORT
-static inline void compile_prepared_sql_statements() {
-    sqlite3_prepare_v2(sqlite_database,
+static void compile_prepared_sql_statements() {
+    int result;
+    result = sqlite3_prepare_v2(sqlite_database,
                        "insert into functions values (?, ?, ?);",
                        -1, &prepared_sql_insert_function, NULL);
 
-    sqlite3_prepare_v2(sqlite_database,
-                       "insert into functions arguments values (?, ?, ?, ?);",
+    if (result != SQLITE_OK)
+        fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
+
+    result = sqlite3_prepare_v2(sqlite_database,
+                       "insert into arguments values (?, ?, ?, ?);",
                        -1, &prepared_sql_insert_arguments1, NULL);
 
-    sqlite3_prepare_v2(sqlite_database,
-                       "insert into functions arguments select ?, ?, ?, ? union all select ?, ?, ?, ?;",
+    if (result != SQLITE_OK)
+        fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
+
+    result = sqlite3_prepare_v2(sqlite_database,
+                       "insert into arguments "
+                               "select ?, ?, ?, ? union all "
+                               "select ?, ?, ?, ?;",
                        -1, &prepared_sql_insert_arguments2, NULL);
 
-    sqlite3_prepare_v2(sqlite_database,
+    if (result != SQLITE_OK)
+        fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
+
+    result = sqlite3_prepare_v2(sqlite_database,
+                       "insert into arguments "
+                               "select ?, ?, ?, ? union all "
+                               "select ?, ?, ?, ? union all "
+                               "select ?, ?, ?, ?;",
+                       -1, &prepared_sql_insert_arguments3, NULL);
+
+    if (result != SQLITE_OK)
+        fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
+
+    result = sqlite3_prepare_v2(sqlite_database,
+                       "insert into arguments "
+                               "select ?, ?, ?, ? union all "
+                               "select ?, ?, ?, ? union all "
+                               "select ?, ?, ?, ? union all "
+                               "select ?, ?, ?, ?;",
+                       -1, &prepared_sql_insert_arguments4, NULL);
+
+    if (result != SQLITE_OK)
+        fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
+
+    result = sqlite3_prepare_v2(sqlite_database,
+                       "insert into functions arguments "
+                               "select ?, ?, ?, ? union all "
+                               "select ?, ?, ?, ? union all "
+                               "select ?, ?, ?, ? union all "
+                               "select ?, ?, ?, ? union all "
+                               "select ?, ?, ?, ?;",
+                       -1, &prepared_sql_insert_arguments5, NULL);
+
+    if (result != SQLITE_OK)
+        fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
+
+    result = sqlite3_prepare_v2(sqlite_database,
                        "insert into calls values (?, ?, ?, ?, ?, ?);",
                        -1, &prepared_sql_insert_call, NULL);
 
-    sqlite3_prepare_v2(sqlite_database,
+    if (result != SQLITE_OK)
+        fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
+
+    result = sqlite3_prepare_v2(sqlite_database,
                        "insert into promises values (?);",
                        -1, &prepared_sql_insert_promise, NULL);
 
-    sqlite3_prepare_v2(sqlite_database,
+    if (result != SQLITE_OK)
+        fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
+
+    result = sqlite3_prepare_v2(sqlite_database,
                        "insert into promise_associations values (?, ?, ?);",
                        -1, &prepared_sql_insert_promise_assoc1, NULL);
 
-    sqlite3_prepare_v2(sqlite_database,
+    if (result != SQLITE_OK)
+        fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
+
+    result = sqlite3_prepare_v2(sqlite_database,
                        "insert into promise_evaluations values (?, ?, ?, ?);",
                        -1, &prepared_sql_insert_promise_eval, NULL);
+
+    if (result != SQLITE_OK)
+        fprintf(stderr, "SQLite cannot prepare statement: [%i] %s\n", result, sqlite3_errmsg(sqlite_database));
 
 }
 
@@ -406,6 +466,9 @@ static inline void free_prepared_sql_statements() {
     sqlite3_finalize(prepared_sql_insert_function);
     sqlite3_finalize(prepared_sql_insert_arguments1);
     sqlite3_finalize(prepared_sql_insert_arguments2);
+    sqlite3_finalize(prepared_sql_insert_arguments3);
+    sqlite3_finalize(prepared_sql_insert_arguments4);
+    sqlite3_finalize(prepared_sql_insert_arguments5);
     sqlite3_finalize(prepared_sql_insert_call);
     sqlite3_finalize(prepared_sql_insert_promise);
     sqlite3_finalize(prepared_sql_insert_promise_assoc1);
@@ -553,8 +616,48 @@ static inline void run_prep_sql_function(rid_t function_id, arglist_t const& arg
 
     sqlite3_reset(prepared_sql_insert_function);
 
+    int num_of_arguments = arguments.size();
+    Rprintf("arguments no %i\n", num_of_arguments);
     // Generate `arguments' update wrt function above.
-    if (arguments.size() > 0) {
+    if (num_of_arguments > 1 && num_of_arguments <= 5) {
+        int index = 0;
+        sqlite3_stmt * prepared_statement;
+
+        switch (num_of_arguments) {
+            case 2: prepared_statement = prepared_sql_insert_arguments2; break;
+            case 3: prepared_statement = prepared_sql_insert_arguments3; break;
+            case 4: prepared_statement = prepared_sql_insert_arguments4; break;
+            case 5: prepared_statement = prepared_sql_insert_arguments5; break;
+        }
+
+        for (auto arg_ref : arguments.all()) {
+            const arg_t & argument = arg_ref.get();
+            int offset = index * 4;
+
+            sqlite3_bind_int(prepared_statement, offset + 1, get<1>(argument));
+            sqlite3_bind_text(prepared_statement, offset + 2, get<0>(argument).c_str(), -1, SQLITE_STATIC);
+            sqlite3_bind_int(prepared_statement, offset + 3, index);
+            sqlite3_bind_int(prepared_statement, offset + 4, function_id);
+
+            Rprintf("binding %i %i: %i\n", index, offset + 1, get<1>(argument));
+            Rprintf("binding %i %i: %s\n", index, offset + 2, get<0>(argument).c_str());
+            Rprintf("binding %i %i: %i\n", index, offset + 3, index);
+            Rprintf("binding %i %i: %i\n", index, offset + 4, function_id);
+
+            index++;
+        }
+
+        Rprintf("arguments%i: %s\n", num_of_arguments, sqlite3_sql(prepared_statement));
+
+        result = sqlite3_step(prepared_statement);
+        sqlite3_reset(prepared_statement);
+
+        if (result != SQLITE_DONE) {
+            Rprintf("Error executing compiled SQL expression: [%s/%i] %s\n", "arguments", num_of_arguments, sqlite3_errmsg(sqlite_database));
+            return;
+        }
+
+    } else if (num_of_arguments > 0) {
         int index = 0;
         for (auto arg_ref : arguments.all()) {
             const arg_t & argument = arg_ref.get();
@@ -570,12 +673,12 @@ static inline void run_prep_sql_function(rid_t function_id, arglist_t const& arg
 
             result = sqlite3_step(prepared_sql_insert_arguments1);
 
+            sqlite3_reset(prepared_sql_insert_arguments1);
+
             if (result != SQLITE_DONE) {
                 Rprintf("Error executing compiled SQL expression: [%s] %s\n", "arguments", sqlite3_errmsg(sqlite_database));
                 return;
             }
-
-            sqlite3_reset(prepared_sql_insert_arguments1);
         }
     }
 
@@ -1010,16 +1113,17 @@ struct trace_promises {
 
         // TODO link with mk_sql
         // TODO rename to reflect non-printing nature
-        rdt_print(RDT_OUTPUT_TRACE, {print_function(type, loc, fqfn, fn_id, call_id, arguments)});
-
-        rdt_print(RDT_OUTPUT_SQL, {mk_sql_function(fn_id, arguments, loc, fn_definition),
-                                   mk_sql_function_call(call_id, call_ptr, fqfn, loc, call_type, fn_id),
-                                   mk_sql_promise_assoc(arguments, call_id)});
-
+        // TODO meh, ugly
         if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
             run_prep_sql_function(fn_id, arguments, loc, fn_definition);
             run_prep_sql_function_call(call_id, call_ptr, fqfn, loc, call_type, fn_id);
             run_prep_sql_promise_assoc(arguments, call_id);
+        } else {
+            rdt_print(RDT_OUTPUT_TRACE, {print_function(type, loc, fqfn, fn_id, call_id, arguments)});
+
+            rdt_print(RDT_OUTPUT_SQL, {mk_sql_function(fn_id, arguments, loc, fn_definition),
+                                       mk_sql_function_call(call_id, call_ptr, fqfn, loc, call_type, fn_id),
+                                       mk_sql_promise_assoc(arguments, call_id)});
         }
 
         if (tracer_conf.pretty_print)
@@ -1098,15 +1202,17 @@ struct trace_promises {
 
         arglist_t arguments;
 
-        rdt_print(RDT_OUTPUT_SQL, {mk_sql_function(fn_id, arguments, NULL, NULL),
-                                   mk_sql_function_call(call_id, call_ptr, name, NULL, 1, fn_id)});
-        // mk_sql_promises(promises, call_id, argument_ids)
-
         if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
             run_prep_sql_function(fn_id, arguments, NULL, NULL);
             run_prep_sql_function_call(call_id, call_ptr, name, NULL, 1, fn_id);
             //run_prep_sql_promise_assoc(arguments, call_id);
+        } else {
+            rdt_print(RDT_OUTPUT_SQL, {mk_sql_function(fn_id, arguments, NULL, NULL),
+                                       mk_sql_function_call(call_id, call_ptr, name, NULL, 1, fn_id)});
         }
+        // mk_sql_promises(promises, call_id, argument_ids)
+
+
 
         STATE(fun_stack).push(call_id);
 #ifdef RDT_CALL_ID
@@ -1137,10 +1243,10 @@ struct trace_promises {
         //TODO implement promise allocation pretty print
         //rdt_print(RDT_OUTPUT_TRACE, {print_promise_alloc(prom_id)});
 
-        rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise(prom_id)});
-
         if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
             run_prep_sql_promise(prom_id);
+        } else {
+            rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise(prom_id)});
         }
     }
 
@@ -1154,11 +1260,11 @@ struct trace_promises {
         rid_t from_call_id = STATE(promise_origin)[id];
 
         // in_call_id = current call
-        rdt_print(RDT_OUTPUT_TRACE, {print_promise("=> prom", NULL, name, id, in_call_id, from_call_id)});
-        rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise_evaluation(RDT_FORCE_PROMISE, id, from_call_id)});
-
         if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
             run_prep_sql_promise_evaluation(RDT_FORCE_PROMISE, id, from_call_id);
+        } else {
+            rdt_print(RDT_OUTPUT_TRACE, {print_promise("=> prom", NULL, name, id, in_call_id, from_call_id)});
+            rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise_evaluation(RDT_FORCE_PROMISE, id, from_call_id)});
         }
     }
 
@@ -1182,11 +1288,11 @@ struct trace_promises {
         rid_t from_call_id = STATE(promise_origin)[id];
 
         // TODO
-        rdt_print(RDT_OUTPUT_TRACE, {print_promise("<> lkup", NULL, name, id, in_call_id, from_call_id)});
-        rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise_evaluation(RDT_LOOKUP_PROMISE, id, from_call_id)});
-
         if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
             run_prep_sql_promise_evaluation(RDT_LOOKUP_PROMISE, id, from_call_id);
+        } else {
+            rdt_print(RDT_OUTPUT_TRACE, {print_promise("<> lkup", NULL, name, id, in_call_id, from_call_id)});
+            rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise_evaluation(RDT_LOOKUP_PROMISE, id, from_call_id)});
         }
     }
 
