@@ -53,6 +53,7 @@ static sqlite3_stmt *prepared_sql_insert_promise_eval = nullptr;
 static sqlite3_stmt *prepared_sql_transaction_begin = nullptr;
 static sqlite3_stmt *prepared_sql_transaction_commit = nullptr;
 static sqlite3_stmt *prepared_sql_transaction_abort = nullptr;
+static sqlite3_stmt *prepared_sql_init_db = nullptr;
 #endif
 
 //#include <Defn.h>
@@ -532,10 +533,10 @@ static inline void rdt_init_sqlite(const char *filename) {
     outcome = sqlite3_open(filename, &sqlite_database);
 
     if (outcome) {
-        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(sqlite_database));
+//        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(sqlite_database));
         return;
     } else {
-        fprintf(stderr, "Opening database: %s\n", filename);
+//        fprintf(stderr, "Opening database: %s\n", filename);
     }
 
     ifstream schema_file(RDT_SQLITE_SCHEMA);
@@ -558,6 +559,18 @@ static inline void rdt_init_sqlite(const char *filename) {
     compile_prepared_sql_statements();
 #else
     fprintf(stderr, "-- SQLite support is missing...?\n");
+#endif
+}
+
+static inline void rdt_configure_sqlite() {
+#ifdef RDT_SQLITE_SUPPORT
+    //PRAGMA synchronous = OFF and PRAGMA journal_mode = MEMORY
+    string config_query = "pragma synchronous = OFF;\n";
+    if (tracer_conf.output_format == RDT_OUTPUT_SQL)
+        rdt_print(RDT_OUTPUT_SQL, {config_query});
+    else
+        rdt_print(RDT_OUTPUT_COMPILED_SQLITE, {config_query});
+
 #endif
 }
 
@@ -1596,8 +1609,10 @@ rdt_handler *setup_promise_tracing(SEXP options) {
         rdt_init_sqlite(tracer_conf.filename);
 
 
-    if (tracer_conf.output_type != RDT_OUTPUT_TRACE)
+    if (tracer_conf.output_type != RDT_OUTPUT_TRACE) {
+        rdt_configure_sqlite();
         rdt_begin_transaction();
+    }
 
     rdt_handler *h = (rdt_handler *) malloc(sizeof(rdt_handler));
     //memcpy(h, &trace_promises_rdt_handler, sizeof(rdt_handler));
