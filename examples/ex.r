@@ -68,3 +68,11 @@ makeGlobalProm <- function() {
 outsideProm <-function() {
 	get2()
 }
+
+fact <- function(n){
+  if(n == 0){
+    return(1)
+  } else {
+    return(n*Recall(n-1))
+  }
+}
