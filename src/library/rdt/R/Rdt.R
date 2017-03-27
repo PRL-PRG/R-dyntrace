@@ -32,6 +32,21 @@ trace.promises.db <-trace.promises.compiled.db
 trace.promises.both <- function(expression, tracer="promises", output="R+DB", path="trace.sqlite", format="both", pretty.print=FALSE, overwrite=FALSE, synthetic.call.id=TRUE)
     Rdt(expression, tracer=tracer, output=output, path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite)
 
+run.all.vignettes.from.package <- function(package, executor = eval, ...) {
+    result.set <- vignette(package = package)
+    vignettes.in.package <- result.set$results[,3]
+    for (v in vignettes.in.package) {
+        one.vignette <- vignette(v, package = package)
+        R.code.path <- paste(one.vignette$Dir, "doc", one.vignette$R, sep="/")
+        R.code.source <- parse(R.code.path)
+        executor(R.code.source, ...)
+    }
+}
 
+run.all.vignettes.from.packages <- function(packages, executor = eval, ...)
+lapply(packages, function(x) run.all.vignettes.from.package(x, eval, ...))
+
+run.all.vignettes.from.all.packages <- function(executor = eval, ...)
+run.all.vignettes.from.packages(vignette()$results[,1], executor = eval, ...)
 
 # keep an empty line below this one
