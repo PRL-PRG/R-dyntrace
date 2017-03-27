@@ -1,11 +1,12 @@
 #ifndef	_RDT_H
 #define	_RDT_H
 
-#include <rdtrace.h>
-
 #ifdef __cplusplus
 extern "C" {
+#include "r.h"
 #endif
+
+#include <rdtrace.h>
 
 SEXP Rdt(SEXP tracer, SEXP rho, SEXP options);
 

@@ -5,10 +5,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 
-extern "C" {
-#include "r.h"
 #include "rdt.h"
-}
 
 #include "rdt_register_hook.h"
 

@@ -1,10 +1,6 @@
 #include <stdlib.h>
 
-extern "C" {
-// If I don't include this before rdt.h, I get strange compiler errors...
-#include "r.h"
 #include "rdt.h"
-}
 
 #include "rdt_register_hook.h"
 

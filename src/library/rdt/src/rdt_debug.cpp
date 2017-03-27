@@ -7,9 +7,9 @@
 
 extern "C" {
 #include "../../../main/inspect.h"
-#include "r.h"
-#include "rdt.h"
 }
+
+#include "rdt.h"
 
 #include "rdt_register_hook.h"
 

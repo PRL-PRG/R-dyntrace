@@ -7,6 +7,10 @@
 #include <config.h>
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <Defn.h>
 
 #define RDT_IS_ENABLED(name) (rdt_curr_handler->name != NULL)
@@ -61,10 +65,6 @@ extern const rdt_handler *rdt_curr_handler;
 // ----------------------------------------------------------------------------
 
 #define CHKSTR(s) ((s) == NULL ? "<unknown>" : (s))
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 const char *get_ns_name(SEXP op);
 const char *get_name(SEXP call);
