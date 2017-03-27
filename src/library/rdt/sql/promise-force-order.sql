@@ -7,7 +7,7 @@
 --     # run query
 --     <src/library/rdt/sql/promise-sforce-order.sql sqlite3 example.sqlite
 --
-.width 16, 16, 16, 32, 32, 64
+.width 16, 16, 16, 32, 32, 16, 64
 .mode column
 .headers on
 
@@ -15,6 +15,13 @@ select
     calls.id as call_id,
 	calls.function_id,
 	calls.function_name,
+
+	(select
+		group_concat(arguments.name, ",")
+		from arguments
+		where arguments.function_id = calls.function_id
+		group by arguments.function_id
+	) as arguments,
 
 	group_concat(
 	    (
