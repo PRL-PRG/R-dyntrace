@@ -848,8 +848,8 @@ static inline string mk_sql_function(fn_addr_t function_id, arglist_t const& arg
 }
 
 static inline void run_prep_sql_function_call(call_id_t call_id, env_addr_t call_ptr, const char *name, const char* location, int call_type, fn_addr_t function_id) {
-    sqlite3_bind_int(prepared_sql_insert_call, 1, call_id);
-    sqlite3_bind_int(prepared_sql_insert_call, 2, call_ptr);
+    sqlite3_bind_int(prepared_sql_insert_call, 1, (int)call_id);
+    sqlite3_bind_int(prepared_sql_insert_call, 2, (int)call_ptr);
 
     if (name == NULL)
         sqlite3_bind_null(prepared_sql_insert_call, 3);
@@ -862,7 +862,7 @@ static inline void run_prep_sql_function_call(call_id_t call_id, env_addr_t call
         sqlite3_bind_text(prepared_sql_insert_call, 4, location, -1, SQLITE_STATIC);
 
     sqlite3_bind_int(prepared_sql_insert_call, 5, call_type);
-    sqlite3_bind_int(prepared_sql_insert_call, 6, function_id);
+    sqlite3_bind_int(prepared_sql_insert_call, 6, (int)function_id);
 
     //Rprintf("call: %s\n", sqlite3_sql(prepared_sql_insert_call));
 
