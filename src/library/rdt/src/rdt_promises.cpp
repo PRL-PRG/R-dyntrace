@@ -88,45 +88,123 @@ static FILE *output = NULL;
 enum OutputFormat: char {RDT_OUTPUT_TRACE, RDT_OUTPUT_SQL, RDT_OUTPUT_BOTH, RDT_OUTPUT_COMPILED_SQLITE};
 enum Output: char {RDT_R_PRINT, RDT_FILE, RDT_SQLITE, RDT_R_PRINT_AND_SQLITE};
 
-struct tracer_conf_t {
-    const char * filename;
-    int output_type;
-    int output_format;
-    bool pretty_print;
-    bool overwrite;
-    int indent_width;
-    //static bool synthetic_call_id = true;
-    bool call_id_use_ptr_fmt;
-    bool first_update;
 
-    tracer_conf_t() {
-        // Config defaults
-        filename = NULL;
-        output_type = RDT_R_PRINT_AND_SQLITE;
-        output_format = RDT_OUTPUT_BOTH;
-        pretty_print = true;
-        overwrite = false;
-        indent_width = 4;
+template<typename T>
+class option {
+    bool is_supplied;
+    T value;
+
+public:
+    option(const T& val) {
+        value = val;
+        is_supplied = false;
+    }
+
+    option& operator=(const T& val) {
+        value = val;
+        is_supplied = true;
+        return *this;
+    }
+
+    bool operator==(const option& opt) const {
+        return value == opt.value;
+    }
+
+    bool operator!=(const option& opt) const {
+        return !operator==(opt);
+    }
+
+    bool operator==(const T& val) const {
+        return value == val;
+    }
+
+    bool operator!=(const T& val) const {
+        return !operator==(val);
+    }
+
+    T& operator*() {
+        return value;
+    }
+
+    T* operator->() {
+        return &value;
+    }
+
+    // Implicit cast to T
+    operator T() const {
+        return value;
+    }
+
+    bool supplied() const {
+        return is_supplied;
+    }
+};
+
+struct tracer_conf_t {
+    option<string> filename;
+    option<int> output_type;
+    option<int> output_format;
+    option<bool> pretty_print;
+    option<int> indent_width;
+    option<bool> call_id_use_ptr_fmt;
+
+    bool overwrite;
+
+    tracer_conf_t() :
+            // Config defaults
+            filename("tracer.db"),
+            output_type(RDT_R_PRINT),
+            output_format(RDT_OUTPUT_TRACE),
+            pretty_print(true),
+            overwrite(false),
+            indent_width(4),
 #ifdef RDT_CALL_ID
-        call_id_use_ptr_fmt = false;
+            call_id_use_ptr_fmt(false)
 #else
-        call_id_use_ptr_fmt = true;
+            call_id_use_prt_fmt(true)
 #endif
-        first_update = true;
+            {
+//        filename = NULL;
+//        output_type = RDT_R_PRINT_AND_SQLITE;
+//        output_format = RDT_OUTPUT_BOTH;
+//        pretty_print = true;
+//        overwrite = false;
+//        indent_width = 4;
+//#ifdef RDT_CALL_ID
+//        call_id_use_ptr_fmt = false;
+//#else
+//        call_id_use_ptr_fmt = true;
+//#endif
+//        first_update = true;
+    }
+
+    template<typename T>
+    static inline bool opt_changed(const T& old_opt, const T& new_opt) {
+        return new_opt.supplied() && old_opt != new_opt;
     }
 
     // Update configuration in a smart way
     // (e.g. ignore changes of output type/format if overwrite == false)
     void update(const tracer_conf_t & conf) {
-        if (first_update || conf.overwrite) {
-            *this = conf; // overwrites all members
-            first_update = false;
+#define OPT_CHANGED(opt) opt_changed(opt, conf.opt)
+
+        bool conf_changed =
+                OPT_CHANGED(filename) ||
+                OPT_CHANGED(output_type) ||
+                OPT_CHANGED(output_format) ||
+                OPT_CHANGED(pretty_print) ||
+                OPT_CHANGED(indent_width) ||
+                OPT_CHANGED(call_id_use_ptr_fmt);
+
+        if (conf.overwrite || conf_changed) {
+            *this = conf; // updates all members
+            overwrite = true;
         }
         else {
-            //overwrite = conf.overwrite;
-            // This is the same as the above line but we know conf.overwrite cannot be true (because we're in this branch)
             overwrite = false;
         }
+
+#undef OPT_CHANGED
     }
 };
 
@@ -546,11 +624,11 @@ static inline void free_prepared_sql_statements() {
 }
 #endif
 
-static inline void rdt_init_sqlite(const char *filename) {
+static inline void rdt_init_sqlite(const string& filename) {
 #ifdef RDT_SQLITE_SUPPORT
     int outcome;
     char *error_msg = NULL;
-    outcome = sqlite3_open(filename, &sqlite_database);
+    outcome = sqlite3_open(filename.c_str(), &sqlite_database);
 
     if (outcome) {
         fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(sqlite_database));
@@ -1476,64 +1554,62 @@ static void trace_promises_S3_dispatch_exit(const char *generic, const char *cla
 tracer_conf_t get_config_from_R_options(SEXP options) {
     tracer_conf_t conf;
 
-    conf.filename = get_string(get_named_list_element(options, "path"));
-    if (conf.filename == NULL)
-        conf.filename = "trace.db";
+    const char *filename_option = get_string(get_named_list_element(options, "path"));
+    if (filename_option != NULL)
+        conf.filename = filename_option;
 
     const char *output_format_option = get_string(get_named_list_element(options, "format"));
-    if (output_format_option == NULL || !strcmp(output_format_option, "trace"))
-        conf.output_format = RDT_OUTPUT_TRACE;
-    else if (!strcmp(output_format_option, "SQL") || !strcmp(output_format_option, "sql"))
-        conf.output_format = RDT_OUTPUT_SQL;
-    else if (!strcmp(output_format_option, "PSQL") || !strcmp(output_format_option, "psql"))
-        conf.output_format = RDT_OUTPUT_COMPILED_SQLITE;
-    else if (!strcmp(output_format_option, "both"))
-        conf.output_format = RDT_OUTPUT_BOTH;
-    else
-        error("Unknown format type: \"%s\"\n", output_format_option);
+    if (output_format_option != NULL) {
+        if (!strcmp(output_format_option, "trace"))
+            conf.output_format = RDT_OUTPUT_TRACE;
+        else if (!strcmp(output_format_option, "SQL") || !strcmp(output_format_option, "sql"))
+            conf.output_format = RDT_OUTPUT_SQL;
+	else if (!strcmp(output_format_option, "PSQL") || !strcmp(output_format_option, "psql"))
+            conf.output_format = RDT_OUTPUT_COMPILED_SQLITE;
+        else if (!strcmp(output_format_option, "both"))
+            conf.output_format = RDT_OUTPUT_BOTH;
+        else
+            error("Unknown format type: \"%s\"\n", output_format_option);
+    }
 
     //Rprintf("output_format_option=%s->%i\n", output_format_option,output_format);
 
     const char *output_type_option = get_string(get_named_list_element(options, "output"));
-    if (output_type_option == NULL || !strcmp(output_type_option, "R") || !strcmp(output_type_option, "r"))
-        conf.output_type = RDT_R_PRINT;
-    else if (!strcmp(output_type_option, "file"))
-        conf.output_type = RDT_FILE;
-    else if (!strcmp(output_type_option, "DB") || !strcmp(output_type_option, "db"))
-        conf.output_type = RDT_SQLITE;
-    else if (!strcmp(output_type_option, "R+DB") || !strcmp(output_type_option, "r+db") ||
-             !strcmp(output_type_option, "DB+R") || !strcmp(output_type_option, "db+r"))
-        conf.output_type = RDT_R_PRINT_AND_SQLITE;
-    else
-        error("Unknown format type: \"%s\"\n", output_type_option);
+    if (output_type_option != NULL) {
+        if (!strcmp(output_type_option, "R") || !strcmp(output_type_option, "r"))
+            conf.output_type = RDT_R_PRINT;
+        else if (!strcmp(output_type_option, "file"))
+            conf.output_type = RDT_FILE;
+        else if (!strcmp(output_type_option, "DB") || !strcmp(output_type_option, "db"))
+            conf.output_type = RDT_SQLITE;
+        else if (!strcmp(output_type_option, "R+DB") || !strcmp(output_type_option, "r+db") ||
+                 !strcmp(output_type_option, "DB+R") || !strcmp(output_type_option, "db+r"))
+            conf.output_type = RDT_R_PRINT_AND_SQLITE;
+        else
+            error("Unknown format type: \"%s\"\n", output_type_option);
+    }
 
     //Rprintf("output_type_option=%s->%i\n", output_type_option,output_type);
 
     SEXP pretty_print_option = get_named_list_element(options, "pretty.print");
-    if (pretty_print_option == NULL || TYPEOF(pretty_print_option) == NILSXP)
-        conf.pretty_print = true;
-    else
+    if (pretty_print_option != NULL && pretty_print_option != R_NilValue)
         conf.pretty_print = LOGICAL(pretty_print_option)[0] == TRUE;
     //Rprintf("pretty_print_option=%p->%i\n", (pretty_print_option), pretty_print);
 
     SEXP indent_width_option = get_named_list_element(options, "indent.width");
-    if (indent_width_option != NULL && TYPEOF(indent_width_option) != NILSXP)
+    if (indent_width_option != NULL && indent_width_option != R_NilValue)
         if (TYPEOF(indent_width_option) == REALSXP)
             conf.indent_width = (int) *REAL(indent_width_option);
     //Rprintf("indent_width_option=%p->%i\n", indent_width_option, indent_width);
 
     SEXP overwrite_option = get_named_list_element(options, "overwrite");
-    if (overwrite_option == NULL || TYPEOF(overwrite_option) == NILSXP)
-        conf.overwrite = false;
-    else
+    if (overwrite_option != NULL && overwrite_option != R_NilValue)
         conf.overwrite = LOGICAL(overwrite_option)[0] == TRUE;
     //Rprintf("overwrite_option=%p->%i\n", (overwrite_option), overwrite);
 
 #ifdef RDT_CALL_ID
     SEXP synthetic_call_id_option = get_named_list_element(options, "synthetic.call.id");
-    if (synthetic_call_id_option == NULL || TYPEOF(synthetic_call_id_option) == NILSXP)
-        conf.call_id_use_ptr_fmt = false;
-    else
+    if (synthetic_call_id_option != NULL && synthetic_call_id_option == R_NilValue)
         conf.call_id_use_ptr_fmt = LOGICAL(synthetic_call_id_option)[0] == FALSE;
     //Rprintf("call_id_use_ptr_fmt=%p->%i\n", (synthetic_call_id_option), call_id_use_ptr_fmt);
 #endif
@@ -1551,7 +1627,7 @@ rdt_handler *setup_promise_tracing(SEXP options) {
     tracer_conf.update(new_conf);
 
     if (tracer_conf.output_type != RDT_SQLITE && tracer_conf.output_type != RDT_R_PRINT_AND_SQLITE) {
-        output = fopen(tracer_conf.filename, tracer_conf.overwrite ? "w" : "a");
+        output = fopen(tracer_conf.filename->c_str(), tracer_conf.overwrite ? "w" : "a");
         if (!output) {
             error("Unable to open %s: %s\n", tracer_conf.filename, strerror(errno));
             return NULL;
@@ -1564,7 +1640,7 @@ rdt_handler *setup_promise_tracing(SEXP options) {
 //
     if(tracer_conf.overwrite && (tracer_conf.output_type == RDT_SQLITE || tracer_conf.output_type == RDT_R_PRINT_AND_SQLITE)) {
         if (file_exists(tracer_conf.filename)) {
-            remove(tracer_conf.filename);
+            remove(tracer_conf.filename->c_str());
         }
     }
 
