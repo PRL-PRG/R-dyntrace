@@ -8,11 +8,11 @@
 
 #include "../rdt.h"
 
-inline rid_t get_sexp_address(SEXP e) {
+rid_t get_sexp_address(SEXP e) {
     return (rid_t)e;
 }
 
-inline prom_id_t get_promise_id(SEXP promise) {
+prom_id_t get_promise_id(SEXP promise) {
     if (promise == R_NilValue)
         return RID_INVALID;
     if (TYPEOF(promise) != PROMSXP)
@@ -37,7 +37,7 @@ inline prom_id_t get_promise_id(SEXP promise) {
     return prom_id;
 }
 
-inline prom_id_t make_promise_id(SEXP promise, bool negative) {
+prom_id_t make_promise_id(SEXP promise, bool negative) {
     if (promise == R_NilValue)
         return RID_INVALID;
 
@@ -55,20 +55,20 @@ inline prom_id_t make_promise_id(SEXP promise, bool negative) {
     return prom_id;
 }
 
-inline fn_addr_t get_function_id(SEXP func) {
+fn_addr_t get_function_id(SEXP func) {
     assert(TYPEOF(func) == CLOSXP);
     return get_sexp_address(func);
 }
 
 #ifdef RDT_CALL_ID
-inline call_id_t make_funcall_id(SEXP function) {
+call_id_t make_funcall_id(SEXP function) {
     if (function == R_NilValue)
         return RID_INVALID;
 
     return ++STATE(call_id_counter);
 }
 #else
-inline call_id_t make_funcall_id(SEXP fn_env) {
+call_id_t make_funcall_id(SEXP fn_env) {
     assert(fn_env != NULL);
     return get_sexp_address(fn_env);
 }
@@ -88,7 +88,7 @@ SEXP get_promise(SEXP var, SEXP rho) {
     return prom;
 }
 
-inline arg_id_t get_argument_id(fn_addr_t function_id, const string & argument) {
+arg_id_t get_argument_id(fn_addr_t function_id, const string & argument) {
     arg_key_t key = make_pair(function_id, argument);
     auto iterator = STATE(argument_ids).find(key);
 
@@ -101,7 +101,7 @@ inline arg_id_t get_argument_id(fn_addr_t function_id, const string & argument) 
     return argument_id;
 }
 
-inline arglist_t get_arguments(SEXP op, SEXP rho) {
+arglist_t get_arguments(SEXP op, SEXP rho) {
     arglist_t arguments;
 
     for (SEXP formals = FORMALS(op); formals != R_NilValue; formals = CDR(formals)) {

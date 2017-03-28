@@ -16,7 +16,7 @@ using namespace std;
 
 FILE *output = NULL;
 
-inline void rdt_print(OutputFormat string_format, std::initializer_list<string> strings) {
+void rdt_print(OutputFormat string_format, std::initializer_list<string> strings) {
     if (tracer_conf.output_format != RDT_OUTPUT_BOTH && string_format != tracer_conf.output_format)
         return;
 
@@ -59,7 +59,7 @@ inline void rdt_print(OutputFormat string_format, std::initializer_list<string> 
     }
 }
 
-inline string print_unwind(const char *type, call_id_t call_id) {
+string print_unwind(const char *type, call_id_t call_id) {
     stringstream stream;
     prepend_prefix(&stream);
     stream << type << " "
@@ -68,7 +68,7 @@ inline string print_unwind(const char *type, call_id_t call_id) {
 }
 
 
-inline string print_builtin(const char *type, const char *loc, const char *name, fn_addr_t id, call_id_t call_id) {
+string print_builtin(const char *type, const char *loc, const char *name, fn_addr_t id, call_id_t call_id) {
     stringstream stream;
     prepend_prefix(&stream);
 
@@ -87,7 +87,7 @@ inline string print_builtin(const char *type, const char *loc, const char *name,
     return stream.str();
 }
 
-inline string print_promise(const char *type, const char *loc, const char *name, prom_id_t id, call_id_t in_call_id, call_id_t from_call_id) {
+string print_promise(const char *type, const char *loc, const char *name, prom_id_t id, call_id_t in_call_id, call_id_t from_call_id) {
     stringstream stream;
     prepend_prefix(&stream);
 
@@ -103,7 +103,7 @@ inline string print_promise(const char *type, const char *loc, const char *name,
     return stream.str();
 }
 
-inline void prepend_prefix(stringstream *stream) {
+void prepend_prefix(stringstream *stream) {
     if (tracer_conf.output_format == RDT_OUTPUT_TRACE) {
         if (tracer_conf.pretty_print)
             (*stream) << string(STATE(indent), ' ');
@@ -111,7 +111,7 @@ inline void prepend_prefix(stringstream *stream) {
         (*stream) << "-- ";
 }
 
-inline string print_function(const char *type, const char *loc, const char *name, fn_addr_t function_id, call_id_t call_id, arglist_t const& arguments) {
+string print_function(const char *type, const char *loc, const char *name, fn_addr_t function_id, call_id_t call_id, arglist_t const& arguments) {
     stringstream stream;
     prepend_prefix(&stream);
 
@@ -178,7 +178,7 @@ pstmt_cache prepared_sql_insert_arguments;
 
 
 // Internal functions
-static inline sqlite3_stmt *get_prepared_sql_insert_statement(string database_table, int num_columns, int num_values, pstmt_cache *cache) {
+static sqlite3_stmt *get_prepared_sql_insert_statement(string database_table, int num_columns, int num_values, pstmt_cache *cache) {
     sqlite3_stmt *statement;// = prepared_sql_insert_functions[num_values];
 
     // Statement already exists
@@ -302,13 +302,13 @@ static void compile_prepared_sql_statements() {
 
 }
 
-static inline void free_prepared_sql_statement_cache(pstmt_cache *cache) {
+static void free_prepared_sql_statement_cache(pstmt_cache *cache) {
     for(auto const &entry : (*cache))
         sqlite3_finalize(entry.second);
     cache->clear();
 }
 
-static inline void free_prepared_sql_statements() {
+static void free_prepared_sql_statements() {
     sqlite3_finalize(prepared_sql_insert_function);
     sqlite3_finalize(prepared_sql_insert_call);
     sqlite3_finalize(prepared_sql_insert_promise);
@@ -322,11 +322,11 @@ static inline void free_prepared_sql_statements() {
 }
 #endif
 
-static inline string wrap_nullable_string(const char* s) {
+static string wrap_nullable_string(const char* s) {
     return s == NULL ? "NULL" : "'" + string(s) + "'";
 }
 
-static inline string escape_sql_quote_string(string s) {
+static string escape_sql_quote_string(string s) {
     size_t position = 0;
     while ((position = s.find("'", position)) != string::npos) {
         s.replace(position, 1, "''");
@@ -336,16 +336,16 @@ static inline string escape_sql_quote_string(string s) {
 }
 
 // I'm not using prepared statements, since we have to escape in the case of SQL script files, so: two birds with one stone.
-static inline string wrap_and_escape_nullable_string(const char* s) {
+static string wrap_and_escape_nullable_string(const char* s) {
     return s == NULL ? "NULL" : "'" +
                                 escape_sql_quote_string(string(s)) + "'";
 }
 
-static inline string wrap_string(const string & s) {
+static string wrap_string(const string & s) {
     return "'" + s + "'";
 }
 
-static inline bool execute_prepared_sql_statement(sqlite3_stmt *statement) {
+static bool execute_prepared_sql_statement(sqlite3_stmt *statement) {
 
     int result = sqlite3_step(statement);
     sqlite3_reset(statement);
@@ -361,7 +361,7 @@ static inline bool execute_prepared_sql_statement(sqlite3_stmt *statement) {
 
 
 // Exported functions
-inline void rdt_init_sqlite(const string& filename) {
+void rdt_init_sqlite(const string& filename) {
 #ifdef RDT_SQLITE_SUPPORT
     int outcome;
     char *error_msg = NULL;
@@ -397,7 +397,7 @@ inline void rdt_init_sqlite(const string& filename) {
 #endif
 }
 
-inline void rdt_configure_sqlite() {
+void rdt_configure_sqlite() {
 #ifdef RDT_SQLITE_SUPPORT
     //PRAGMA synchronous = OFF and PRAGMA journal_mode = MEMORY
     string config_query = "pragma synchronous = OFF;\n";
@@ -409,7 +409,7 @@ inline void rdt_configure_sqlite() {
 #endif
 }
 
-inline void rdt_close_sqlite() {
+void rdt_close_sqlite() {
 #ifdef RDT_SQLITE_SUPPORT
     free_prepared_sql_statements();
     sqlite3_close(sqlite_database);
@@ -417,7 +417,7 @@ inline void rdt_close_sqlite() {
 }
 
 
-inline void run_prep_sql_function(fn_addr_t function_id, arglist_t const& arguments, const char* location, const char* definition) {
+void run_prep_sql_function(fn_addr_t function_id, arglist_t const& arguments, const char* location, const char* definition) {
     // Don't run anything if one was previously generated.
     if(STATE(already_inserted_functions).count(function_id))
         return;
@@ -475,7 +475,7 @@ inline void run_prep_sql_function(fn_addr_t function_id, arglist_t const& argume
     STATE(already_inserted_functions).insert(function_id);
 }
 
-inline string mk_sql_function(fn_addr_t function_id, arglist_t const& arguments, const char* location, const char* definition) {
+string mk_sql_function(fn_addr_t function_id, arglist_t const& arguments, const char* location, const char* definition) {
     stringstream stream;
     // Don't generate anything if one was previously generated.
     if(STATE(already_inserted_functions).count(function_id))
@@ -513,7 +513,7 @@ inline string mk_sql_function(fn_addr_t function_id, arglist_t const& arguments,
     return stream.str();
 }
 
-inline void run_prep_sql_function_call(call_id_t call_id, env_addr_t call_ptr, const char *name, const char* location, int call_type, fn_addr_t function_id) {
+void run_prep_sql_function_call(call_id_t call_id, env_addr_t call_ptr, const char *name, const char* location, int call_type, fn_addr_t function_id) {
     sqlite3_bind_int(prepared_sql_insert_call, 1, (int)call_id);
     sqlite3_bind_int(prepared_sql_insert_call, 2, (int)call_ptr);
 
@@ -543,7 +543,7 @@ inline void run_prep_sql_function_call(call_id_t call_id, env_addr_t call_ptr, c
     sqlite3_reset(prepared_sql_insert_call);
 }
 
-inline string mk_sql_function_call(call_id_t call_id, env_addr_t call_ptr, const char *name, const char* location, int call_type, fn_addr_t function_id) {
+string mk_sql_function_call(call_id_t call_id, env_addr_t call_ptr, const char *name, const char* location, int call_type, fn_addr_t function_id) {
     std::stringstream stream;
     stream << "insert into calls values ("
            << dec << call_id << ","
@@ -556,7 +556,7 @@ inline string mk_sql_function_call(call_id_t call_id, env_addr_t call_ptr, const
     return stream.str();
 }
 
-inline void run_prep_sql_promise(prom_id_t prom_id) {
+void run_prep_sql_promise(prom_id_t prom_id) {
     std::stringstream promise_stream;
 
     sqlite3_bind_int(prepared_sql_insert_promise, 1, prom_id);
@@ -573,7 +573,7 @@ inline void run_prep_sql_promise(prom_id_t prom_id) {
     sqlite3_reset(prepared_sql_insert_promise);
 }
 
-inline string mk_sql_promise(prom_id_t prom_id) {
+string mk_sql_promise(prom_id_t prom_id) {
     std::stringstream promise_stream;
 
     promise_stream << "insert into promises values (";
@@ -582,7 +582,7 @@ inline string mk_sql_promise(prom_id_t prom_id) {
     return promise_stream.str();
 }
 
-inline void run_prep_sql_promise_assoc(arglist_t const& arguments, call_id_t call_id) {
+void run_prep_sql_promise_assoc(arglist_t const& arguments, call_id_t call_id) {
     int num_of_arguments = arguments.size();
     if (num_of_arguments == 0)
         return;
@@ -605,7 +605,7 @@ inline void run_prep_sql_promise_assoc(arglist_t const& arguments, call_id_t cal
     execute_prepared_sql_statement(prepared_statement);
 }
 
-inline string mk_sql_promise_assoc(arglist_t const& arguments, call_id_t call_id) {
+string mk_sql_promise_assoc(arglist_t const& arguments, call_id_t call_id) {
     std::stringstream promise_association_stream;
 
     if (arguments.size() > 0) {
@@ -634,7 +634,7 @@ inline string mk_sql_promise_assoc(arglist_t const& arguments, call_id_t call_id
 }
 
 
-inline void run_prep_sql_promise_evaluation(int event_type, prom_id_t promise_id, call_id_t call_id) {
+void run_prep_sql_promise_evaluation(int event_type, prom_id_t promise_id, call_id_t call_id) {
     sqlite3_bind_int(prepared_sql_insert_promise_eval, 1, STATE(clock_id));
     sqlite3_bind_int(prepared_sql_insert_promise_eval, 2, event_type);
     sqlite3_bind_int(prepared_sql_insert_promise_eval, 3, promise_id);
@@ -655,7 +655,7 @@ inline void run_prep_sql_promise_evaluation(int event_type, prom_id_t promise_id
 }
 
 
-inline string mk_sql_promise_evaluation(int event_type, prom_id_t promise_id, call_id_t call_id) {
+string mk_sql_promise_evaluation(int event_type, prom_id_t promise_id, call_id_t call_id) {
     std::stringstream stream;
     stream << "insert into promise_evaluations values ("
            << "$next_id,"
@@ -667,7 +667,7 @@ inline string mk_sql_promise_evaluation(int event_type, prom_id_t promise_id, ca
 }
 
 
-inline void rdt_begin_transaction() {
+void rdt_begin_transaction() {
     if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
         int result = sqlite3_step(prepared_sql_transaction_begin);
         if (result != SQLITE_DONE) {
@@ -680,7 +680,7 @@ inline void rdt_begin_transaction() {
     }
 }
 
-inline void rdt_commit_transaction() {
+void rdt_commit_transaction() {
     if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
         int result = sqlite3_step(prepared_sql_transaction_commit);
         if (result != SQLITE_DONE) {
@@ -693,7 +693,7 @@ inline void rdt_commit_transaction() {
     }
 }
 
-inline void rdt_abort_transaction() {
+void rdt_abort_transaction() {
     if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
         int result = sqlite3_step(prepared_sql_transaction_abort);
         if (result != SQLITE_DONE) {
