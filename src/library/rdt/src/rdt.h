@@ -14,6 +14,7 @@ rdt_handler *setup_default_tracing(SEXP options);
 rdt_handler *setup_noop_tracing(SEXP options);
 rdt_handler *setup_promise_tracing(SEXP options);
 rdt_handler *setup_debug_tracing(SEXP options);
+rdt_handler *setup_specialsxp_tracing(SEXP options);
 
 void cleanup_promise_tracing(/* rdt_handler *handler */ SEXP options);
 

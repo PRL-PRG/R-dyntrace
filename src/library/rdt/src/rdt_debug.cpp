@@ -134,6 +134,42 @@ struct trace_debug {
         last = timestamp();
     }
 
+    DECL_HOOK(specialsxp_entry)(const SEXP call, const SEXP op, const SEXP rho) {
+        compute_delta();
+
+        const char *name = get_name(call);
+
+        Rprintf("-------------------------------------------------------------------------------\n");
+        print("specialsxp-entry", NULL, name);
+        Rprintf("call:\n");
+        R_inspect(call);
+        Rprintf("op:\n");
+        R_inspect(op);
+        Rprintf("rho:\n");
+        R_inspect(rho);
+
+        last = timestamp();
+    }
+
+    DECL_HOOK(specialsxp_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
+        compute_delta();
+
+        const char *name = get_name(call);
+
+        Rprintf("-------------------------------------------------------------------------------\n");
+        print("specialsxp-exit", NULL, name);
+        Rprintf("call:\n");
+        R_inspect(call);
+        Rprintf("op:\n");
+        R_inspect(op);
+        Rprintf("rho:\n");
+        R_inspect(rho);
+        Rprintf("retval:\n");
+        R_inspect(retval);
+
+        last = timestamp();
+    }
+
     DECL_HOOK(force_promise_entry)(const SEXP symbol, const SEXP rho) {
         compute_delta();
 
@@ -304,6 +340,8 @@ rdt_handler *setup_debug_tracing(SEXP options) {
                         tr::function_exit,
                         tr::builtin_entry,
                         tr::builtin_exit,
+                        tr::specialsxp_entry,
+                        tr::specialsxp_exit,
                         tr::force_promise_entry,
                         tr::force_promise_exit,
                         tr::promise_lookup,

@@ -696,7 +696,7 @@ SEXP eval(SEXP e, SEXP rho)
 	    PrintValue(e);
 	}
 	if (TYPEOF(op) == SPECIALSXP) {
-	    RDT_HOOK(probe_builtin_entry, e, op, rho); // XXX
+	    RDT_HOOK(probe_specialsxp_entry, e, op, rho); // XXX
 
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
 	    const void *vmax = vmaxget();
@@ -717,7 +717,7 @@ SEXP eval(SEXP e, SEXP rho)
 	    check_stack_balance(op, save);
 	    vmaxset(vmax);
 
-	    RDT_HOOK(probe_builtin_exit, e, op, rho, tmp); // XXX
+	    RDT_HOOK(probe_specialsxp_exit, e, op, rho, tmp); // XXX
 	}
 	else if (TYPEOF(op) == BUILTINSXP) {
 	    RDT_HOOK(probe_builtin_entry, e, op, rho); // XXX

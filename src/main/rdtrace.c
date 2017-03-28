@@ -39,6 +39,7 @@ const char *get_name(SEXP sexp) {
             s = get_name(CAR(sexp));
             break;
         case BUILTINSXP:
+        case SPECIALSXP:
             s = CHAR(PRIMNAME(sexp));
             break;
         case SYMSXP:

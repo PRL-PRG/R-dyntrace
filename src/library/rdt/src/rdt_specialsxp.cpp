@@ -1,11 +1,29 @@
 #include <stdlib.h>
+#include <map>
+#include <sstream>
 
+extern "C" {
+// If I don't include this before rdt.h, I get strange compiler errors...
+#include "r.h"
 #include "rdt.h"
+}
 
 #include "rdt_register_hook.h"
 
-struct trace_noop {
+#include "rdt_promises/tracer_conf.h"
+#include "rdt_promises/tracer_output.h"
+
+static std::map<std::string, uint64_t> specialsxp_count;
+
+struct trace_specialsxp {
+
     DECL_HOOK(begin)(const SEXP prom) {
+    }
+
+    DECL_HOOK(end)() {
+        for (auto &pair : specialsxp_count) {
+            Rprintf("%s : %llu\n", pair.first.c_str(), pair.second);
+        }
     }
 
     DECL_HOOK(function_entry)(const SEXP call, const SEXP op, const SEXP rho) {
@@ -21,6 +39,14 @@ struct trace_noop {
     }
 
     DECL_HOOK(specialsxp_entry)(const SEXP call, const SEXP op, const SEXP rho) {
+
+        std::string call_name = std::string(get_name(call));
+
+        if (specialsxp_count.find(call_name) == specialsxp_count.end()) {
+            specialsxp_count[call_name] = 1;
+        } else {
+            specialsxp_count[call_name]++;
+        }
     }
 
     DECL_HOOK(specialsxp_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
@@ -60,24 +86,12 @@ struct trace_noop {
     }
 };
 
-// static void noop_eval_entry(SEXP e, SEXP rho) {
-//     switch(TYPEOF(e)) {
-//         case LANGSXP:
-//             fprintf(output, "%s\n");
-//             PrintValue
-//         break;
-//     }
-// }
 
-// static void noop_eval_exit(SEXP e, SEXP rho, SEXP retval) {
-//     printf("");
-// }
-
-rdt_handler *setup_noop_tracing(SEXP options) {
+rdt_handler *setup_specialsxp_tracing(SEXP options) {
     rdt_handler *h = (rdt_handler *)  malloc(sizeof(rdt_handler));
-    //memcpy(h, &noop_rdt_handler, sizeof(rdt_handler));
-    *h = REGISTER_HOOKS(trace_noop,
+    *h = REGISTER_HOOKS(trace_specialsxp,
                         tr::begin,
+                        tr::end,
                         tr::function_entry,
                         tr::function_exit,
                         tr::builtin_entry,
@@ -95,6 +109,5 @@ rdt_handler *setup_noop_tracing(SEXP options) {
                         tr::S3_generic_exit,
                         tr::S3_dispatch_entry,
                         tr::S3_dispatch_exit);
-
     return h;
 }

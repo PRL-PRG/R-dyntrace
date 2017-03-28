@@ -164,8 +164,7 @@ struct trace_promises {
             free(fqfn);
     }
 
-    // TODO retrieve arguments
-    DECL_HOOK(builtin_entry)(const SEXP call, const SEXP op, const SEXP rho) {
+    static void printEntryInfo(const SEXP call, const SEXP op, const SEXP rho, const char * msg) {
         const char *name = get_name(call);
         fn_addr_t fn_id = get_function_id(op);
 
@@ -180,7 +179,7 @@ struct trace_promises {
 #endif
 
         // TODO merge rdt_print_calls
-        rdt_print(RDT_OUTPUT_TRACE, {print_builtin("=> b-in", NULL, name, fn_id, call_id)});
+        rdt_print(RDT_OUTPUT_TRACE, {print_builtin(msg, NULL, name, fn_id, call_id)});
 
         arglist_t arguments;
 
@@ -203,7 +202,16 @@ struct trace_promises {
             STATE(indent) += tracer_conf.indent_width;
     }
 
-    DECL_HOOK(builtin_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
+    // TODO retrieve arguments
+    DECL_HOOK(builtin_entry)(const SEXP call, const SEXP op, const SEXP rho) {
+        printEntryInfo(call, op, rho, "=> b-in");
+    }
+
+    DECL_HOOK(specialsxp_entry)(const SEXP call, const SEXP op, const SEXP rho) {
+        printEntryInfo(call, op, rho, "=> specialsxp");
+    }
+
+    static void printExitInfo(const SEXP call, const SEXP op, const SEXP rho, const char * msg) {
         const char *name = get_name(call);
         fn_addr_t id = get_function_id(op);
         call_id_t call_id = STATE(fun_stack).top();
@@ -215,7 +223,15 @@ struct trace_promises {
         if (tracer_conf.pretty_print)
             STATE(indent) -= tracer_conf.indent_width;
 
-        rdt_print(RDT_OUTPUT_TRACE, {print_builtin("<= b-in", NULL, name, id, call_id)});
+        rdt_print(RDT_OUTPUT_TRACE, {print_builtin(msg, NULL, name, id, call_id)});
+    }
+
+    DECL_HOOK(builtin_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
+        printExitInfo(call, op, rho, "<= b-in");
+    }
+
+    DECL_HOOK(specialsxp_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
+        printExitInfo(call, op, rho, "<= specialsxp");
     }
 
     DECL_HOOK(promise_created)(const SEXP prom) {
@@ -392,6 +408,8 @@ rdt_handler *setup_promise_tracing(SEXP options) {
                         tr::function_exit,
                         tr::builtin_entry,
                         tr::builtin_exit,
+                        tr::specialsxp_entry,
+                        tr::specialsxp_exit,
                         tr::force_promise_entry,
                         tr::force_promise_exit,
                         tr::promise_lookup,
