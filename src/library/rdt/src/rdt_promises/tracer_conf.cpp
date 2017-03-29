@@ -8,8 +8,8 @@
 tracer_conf_t::tracer_conf_t() :
 // Config defaults
         filename("tracer.db"),
-        output_type(RDT_R_PRINT),
-        output_format(RDT_OUTPUT_TRACE),
+        output_type(OutputType::RDT_R_PRINT),
+        output_format(OutputFormat::RDT_OUTPUT_TRACE),
         pretty_print(true),
         overwrite(false),
         indent_width(4),
@@ -55,13 +55,13 @@ tracer_conf_t get_config_from_R_options(SEXP options) {
     const char *output_format_option = get_string(get_named_list_element(options, "format"));
     if (output_format_option != NULL) {
         if (!strcmp(output_format_option, "trace"))
-            conf.output_format = RDT_OUTPUT_TRACE;
+            conf.output_format = OutputFormat::RDT_OUTPUT_TRACE;
         else if (!strcmp(output_format_option, "SQL") || !strcmp(output_format_option, "sql"))
-            conf.output_format = RDT_OUTPUT_SQL;
+            conf.output_format = OutputFormat::RDT_OUTPUT_SQL;
         else if (!strcmp(output_format_option, "PSQL") || !strcmp(output_format_option, "psql"))
-            conf.output_format = RDT_OUTPUT_COMPILED_SQLITE;
+            conf.output_format = OutputFormat::RDT_OUTPUT_COMPILED_SQLITE;
         else if (!strcmp(output_format_option, "both"))
-            conf.output_format = RDT_OUTPUT_BOTH;
+            conf.output_format = OutputFormat::RDT_OUTPUT_BOTH;
         else
             error("Unknown format type: \"%s\"\n", output_format_option);
     }
@@ -71,14 +71,14 @@ tracer_conf_t get_config_from_R_options(SEXP options) {
     const char *output_type_option = get_string(get_named_list_element(options, "output"));
     if (output_type_option != NULL) {
         if (!strcmp(output_type_option, "R") || !strcmp(output_type_option, "r"))
-            conf.output_type = RDT_R_PRINT;
+            conf.output_type = OutputType::RDT_R_PRINT;
         else if (!strcmp(output_type_option, "file"))
-            conf.output_type = RDT_FILE;
+            conf.output_type = OutputType::RDT_FILE;
         else if (!strcmp(output_type_option, "DB") || !strcmp(output_type_option, "db"))
-            conf.output_type = RDT_SQLITE;
+            conf.output_type = OutputType::RDT_SQLITE;
         else if (!strcmp(output_type_option, "R+DB") || !strcmp(output_type_option, "r+db") ||
                  !strcmp(output_type_option, "DB+R") || !strcmp(output_type_option, "db+r"))
-            conf.output_type = RDT_R_PRINT_AND_SQLITE;
+            conf.output_type = OutputType::RDT_R_PRINT_AND_SQLITE;
         else
             error("Unknown format type: \"%s\"\n", output_type_option);
     }

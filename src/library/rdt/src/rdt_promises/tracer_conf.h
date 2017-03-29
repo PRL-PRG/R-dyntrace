@@ -8,6 +8,7 @@
 #include <string>
 
 #include "../rdt.h"
+#include "tracer_output.h"
 
 using namespace std;
 
@@ -64,8 +65,8 @@ public:
 
 struct tracer_conf_t {
     option<string> filename;
-    option<int> output_type;
-    option<int> output_format;
+    option<OutputType> output_type;
+    option<OutputFormat> output_format;
     option<bool> pretty_print;
     option<int> indent_width;
     option<bool> call_id_use_ptr_fmt;
