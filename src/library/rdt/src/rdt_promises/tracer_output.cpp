@@ -368,10 +368,10 @@ void rdt_init_sqlite(const string& filename) {
     outcome = sqlite3_open(filename.c_str(), &sqlite_database);
 
     if (outcome) {
-        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(sqlite_database));
+        //fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(sqlite_database));
         return;
     } else {
-        fprintf(stderr, "Opening database: %s\n", filename);
+        //fprintf(stderr, "Opening database: %s\n", filename);
     }
 
     ifstream schema_file(RDT_SQLITE_SCHEMA);
@@ -441,7 +441,9 @@ void run_prep_sql_function(fn_addr_t function_id, arglist_t const& arguments, co
     auto result = sqlite3_step(prepared_sql_insert_function);
 
     if (result != SQLITE_DONE) {
-        Rprintf("Error executing compiled SQL expression: [%s] %s\n", "function", sqlite3_errmsg(sqlite_database));
+        Rprintf("Error executing compiled SQL expression: [%s] -- %s\n", "function", sqlite3_errmsg(sqlite_database));
+        //Rprintf("Error executing compiled SQL expression: [%s] -- %s (%p, %s, %s) -- %s\n", "function", sqlite3_sql(prepared_sql_insert_function), function_id, location, definition, sqlite3_errmsg(sqlite_database));
+        sqlite3_reset(prepared_sql_insert_function);
         return;
     }
 
@@ -641,6 +643,7 @@ void run_prep_sql_promise_evaluation(int event_type, prom_id_t promise_id, call_
     sqlite3_bind_int(prepared_sql_insert_promise_eval, 4, call_id);
 
     STATE(clock_id)++;
+    Rprintf("clock %i\n", STATE(clock_id));
 
     //Rprintf("promise eval: %s %d %d %d\n", sqlite3_sql(prepared_sql_insert_promise_eval), event_type, promise_id, call_id);
 
