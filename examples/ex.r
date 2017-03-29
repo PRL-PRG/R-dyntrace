@@ -85,4 +85,5 @@ specialsxpTest <- function() {
     } else {
         b = a - 1;
     }
+	print({x<-2+2/2;x})
 }

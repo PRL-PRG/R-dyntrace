@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <map>
-#include <sstream>
+#include <fstream>
 
 extern "C" {
 // If I don't include this before rdt.h, I get strange compiler errors...
@@ -21,9 +21,13 @@ struct trace_specialsxp {
     }
 
     DECL_HOOK(end)() {
+        ofstream myfile;
+        myfile.open ("specialsxp_analysis.txt");
         for (auto &pair : specialsxp_count) {
             Rprintf("%s : %llu\n", pair.first.c_str(), pair.second);
+            myfile << pair.first << " : " << pair.second << "\n";
         }
+        myfile.close();
     }
 
     DECL_HOOK(function_entry)(const SEXP call, const SEXP op, const SEXP rho) {
