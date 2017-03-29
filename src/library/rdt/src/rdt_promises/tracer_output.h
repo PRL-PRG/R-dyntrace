@@ -25,6 +25,7 @@ string print_unwind(const char *type, call_id_t call_id);
 string print_builtin(const char *type, const char *loc, const char *name, fn_addr_t id, call_id_t call_id);
 string print_promise(const char *type, const char *loc, const char *name, prom_id_t id, call_id_t in_call_id, call_id_t from_call_id);
 string print_function(const char *type, const char *loc, const char *name, fn_addr_t function_id, call_id_t call_id, arglist_t const& arguments);
+//string print_function(const string & type, const string & loc, const string & name, fn_addr_t function_id, call_id_t call_id, arglist_t const& arguments);
 
 /*
  * ===========================================================

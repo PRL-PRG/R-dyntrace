@@ -108,6 +108,17 @@ public:
     }
 };
 
+struct call_info_t {
+    string type;
+    int call_type;
+    fn_addr_t fn_id;
+    string fqfn;
+    string fn_definition;
+    string loc;
+    call_id_t call_id;
+    env_addr_t call_ptr;
+    arglist_t arguments;
+};
 
 prom_id_t get_promise_id(SEXP promise);
 prom_id_t make_promise_id(SEXP promise, bool negative = false);
