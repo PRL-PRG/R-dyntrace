@@ -644,7 +644,7 @@ void run_prep_sql_promise_evaluation(int event_type, prom_id_t promise_id, call_
     sqlite3_bind_int(prepared_sql_insert_promise_eval, 4, call_id);
 
     STATE(clock_id)++;
-    Rprintf("clock %i\n", STATE(clock_id));
+    //Rprintf("clock %i\n", STATE(clock_id));
 
     //Rprintf("promise eval: %s %d %d %d\n", sqlite3_sql(prepared_sql_insert_promise_eval), event_type, promise_id, call_id);
 
