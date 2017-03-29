@@ -17,16 +17,16 @@ using namespace std;
 FILE *output = NULL;
 
 void rdt_print(OutputFormat string_format, std::initializer_list<string> strings) {
-    if (tracer_conf.output_format != RDT_OUTPUT_BOTH && string_format != tracer_conf.output_format)
+    if (tracer_conf.output_format != OutputFormat::RDT_OUTPUT_BOTH && string_format != tracer_conf.output_format)
         return;
 
-    switch (tracer_conf.output_type) {
-        case RDT_FILE:
+    switch (*tracer_conf.output_type) {
+        case OutputType::RDT_FILE:
             for (auto string : strings)
                 fprintf(output, "%s", string.c_str());
             break;
-        case RDT_R_PRINT_AND_SQLITE:
-        case RDT_SQLITE: {
+        case OutputType::RDT_R_PRINT_AND_SQLITE:
+        case OutputType::RDT_SQLITE: {
             // If R is compiled without RDT_SQLITE_SUPPORT then this will print a warning and print out SQL to
             // Rprintf instead.
 #ifdef RDT_SQLITE_SUPPORT
@@ -37,7 +37,7 @@ void rdt_print(OutputFormat string_format, std::initializer_list<string> strings
 
             string sql_string = sql.str();
 
-            if (tracer_conf.output_type == RDT_R_PRINT_AND_SQLITE)
+            if (tracer_conf.output_type == OutputType::RDT_R_PRINT_AND_SQLITE)
                 Rprintf("%s", sql_string.c_str());
 
             int outcome = sqlite3_exec(sqlite_database, sql_string.c_str(), NULL, 0, &error_msg);
@@ -52,7 +52,7 @@ void rdt_print(OutputFormat string_format, std::initializer_list<string> strings
 #else
             fprintf(stderr, "-- SQLite support is missing, printing SQL to console:\n");
 #endif
-        } case RDT_R_PRINT:
+        } case OutputType::RDT_R_PRINT:
             for (auto string : strings)
                 Rprintf(string.c_str());
             break;
@@ -104,7 +104,7 @@ string print_promise(const char *type, const char *loc, const char *name, prom_i
 }
 
 void prepend_prefix(stringstream *stream) {
-    if (tracer_conf.output_format == RDT_OUTPUT_TRACE) {
+    if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_TRACE) {
         if (tracer_conf.pretty_print)
             (*stream) << string(STATE(indent), ' ');
     } else
@@ -402,10 +402,10 @@ void rdt_configure_sqlite() {
 #ifdef RDT_SQLITE_SUPPORT
     //PRAGMA synchronous = OFF and PRAGMA journal_mode = MEMORY
     string config_query = "pragma synchronous = OFF;\n";
-    if (tracer_conf.output_format == RDT_OUTPUT_SQL)
-        rdt_print(RDT_OUTPUT_SQL, {config_query});
+    if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_SQL)
+        rdt_print(OutputFormat::RDT_OUTPUT_SQL, {config_query});
     else
-        rdt_print(RDT_OUTPUT_COMPILED_SQLITE, {config_query});
+        rdt_print(OutputFormat::RDT_OUTPUT_COMPILED_SQLITE, {config_query});
 
 #endif
 }
@@ -672,7 +672,7 @@ string mk_sql_promise_evaluation(int event_type, prom_id_t promise_id, call_id_t
 
 
 void rdt_begin_transaction() {
-    if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
+    if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == OutputType::RDT_SQLITE) {
         int result = sqlite3_step(prepared_sql_transaction_begin);
         if (result != SQLITE_DONE) {
             Rprintf("Error executing compiled SQL expression: [%s] %s\n", "begin transaction", sqlite3_errmsg(sqlite_database));
@@ -680,12 +680,12 @@ void rdt_begin_transaction() {
         }
         sqlite3_reset(prepared_sql_transaction_begin);
     } else {
-        rdt_print(RDT_OUTPUT_SQL, {"begin transaction;\n"});
+        rdt_print(OutputFormat::RDT_OUTPUT_SQL, {"begin transaction;\n"});
     }
 }
 
 void rdt_commit_transaction() {
-    if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
+    if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == OutputType::RDT_SQLITE) {
         int result = sqlite3_step(prepared_sql_transaction_commit);
         if (result != SQLITE_DONE) {
             Rprintf("Error executing compiled SQL expression: [%s] %s\n", "commit transaction", sqlite3_errmsg(sqlite_database));
@@ -693,12 +693,12 @@ void rdt_commit_transaction() {
         }
         sqlite3_reset(prepared_sql_transaction_commit);
     } else {
-        rdt_print(RDT_OUTPUT_SQL, {"commit;\n"});
+        rdt_print(OutputFormat::RDT_OUTPUT_SQL, {"commit;\n"});
     }
 }
 
 void rdt_abort_transaction() {
-    if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
+    if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == OutputType::RDT_SQLITE) {
         int result = sqlite3_step(prepared_sql_transaction_abort);
         if (result != SQLITE_DONE) {
             Rprintf("Error executing compiled SQL expression: [%s] %s\n", "abort transaction", sqlite3_errmsg(sqlite_database));
@@ -706,6 +706,6 @@ void rdt_abort_transaction() {
         }
         sqlite3_reset(prepared_sql_transaction_abort);
     } else {
-        rdt_print(RDT_OUTPUT_SQL, {"rollback;\n"});
+        rdt_print(OutputFormat::RDT_OUTPUT_SQL, {"rollback;\n"});
     }
 }
