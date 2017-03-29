@@ -8,7 +8,9 @@
 #include <tuple>
 #include "tuple_for_each.h"
 
+#include "../rdt.h"
 #include "tracer_sexpinfo.h"
+#include "tracer_state.h"
 
 template<typename Impl>
 class recorder_t {
@@ -49,10 +51,6 @@ public:
         return info;
     }
 
-    void function_entry_process(const call_info_t & info) {
-        impl().function_entry(info);
-    }
-
     // TODO: merge duplicate code from function_entry/exit
     call_info_t function_exit_get_info(const SEXP call, const SEXP op, const SEXP rho) {
         call_info_t info;
@@ -79,70 +77,107 @@ public:
         return info;
     }
 
-    void function_exit_process(const call_info_t & info) {
-        impl().function_exit(info);
+    call_info_t builtin_entry_get_info(const SEXP call, const SEXP op, const SEXP rho) {
+        call_info_t info;
+
+        const char *name = get_name(call);
+        info.name = CHKSTR(name);
+        info.fn_id = get_function_id(op);
+
+        info.call_ptr = get_sexp_address(rho);
+#ifdef RDT_CALL_ID
+        info.call_id = make_funcall_id(op);
+#else
+        // Builtins have no environment of their own
+        // we take the parent env rho and add 1 to it to create a new pseudo-address
+        // it will be unique because real pointers are aligned (no odd addresses)
+        info.call_id = make_funcall_id(rho) | 1;
+#endif
+
+        return info;
     }
-};
 
+    call_info_t builtin_exit_get_info(const SEXP call, const SEXP op, const SEXP rho) {
+        call_info_t info;
 
+        const char *name = get_name(call);
+        info.name = CHKSTR(name);
+        info.fn_id = get_function_id(op);
+        info.call_id = STATE(fun_stack).top();
 
+        return info;
+    }
 
-// TODO: Move individual recorder classes to separate headers
-class trace_recorder_t : public recorder_t<trace_recorder_t> {
+//    prom_id_t promise_created_get_info(const SEXP prom) {
+//
+//    }
+
+private:
+    prom_info_t promise_get_info(const SEXP symbol, const SEXP rho) {
+        prom_info_t info;
+
+        const char *name = get_name(symbol);
+        info.name = CHKSTR(name);
+
+        SEXP promise_expression = get_promise(symbol, rho);
+        info.prom_id = get_promise_id(promise_expression);
+        info.in_call_id = STATE(fun_stack).top();
+        info.from_call_id = STATE(promise_origin)[info.prom_id];
+
+        return info;
+    }
+
 public:
-    // TODO: Move these function definitions to .cpp files
-    void function_entry(const call_info_t & info) {
-        // TODO: this can be simplified - we don't need to check output format inside rdt_print
-        rdt_print(RDT_OUTPUT_TRACE, {print_function(info.type.c_str(), info.loc.c_str(), info.fqfn.c_str(), info.fn_id, info.call_id, info.arguments)});
-
-        if (tracer_conf.pretty_print)
-            STATE(indent) += tracer_conf.indent_width;
-
+    prom_info_t force_promise_entry_get_info(const SEXP symbol, const SEXP rho) {
+        return promise_get_info(symbol, rho);
     }
 
-    void function_exit(const call_info_t & info) {
-        if (tracer_conf.pretty_print)
-            STATE(indent) -= tracer_conf.indent_width;
-
-        rdt_print(RDT_OUTPUT_TRACE, {print_function(info.type.c_str(), info.loc.c_str(), info.fqfn.c_str(), info.fn_id, info.call_id, info.arguments)});
+    prom_info_t force_promise_exit_get_info(const SEXP symbol, const SEXP rho) {
+        return promise_get_info(symbol, rho);
     }
+
+    prom_info_t promise_lookup_get_info(const SEXP symbol, const SEXP rho) {
+        return promise_get_info(symbol, rho);
+    }
+
+#define DELEGATE(func, info_struct) \
+    void func##_process(const info_struct & info) { \
+        impl().func(info); \
+    }
+
+    DELEGATE(function_entry, call_info_t)
+    DELEGATE(function_exit, call_info_t)
+    DELEGATE(builtin_entry, call_info_t)
+    DELEGATE(builtin_exit, call_info_t)
+    DELEGATE(force_promise_entry, prom_info_t)
+    DELEGATE(force_promise_exit, prom_info_t)
+    DELEGATE(promise_created, prom_id_t)
+    DELEGATE(promise_lookup, prom_info_t)
+
+#undef DELEGATE
 };
 
-class sql_recorder_t : public recorder_t<sql_recorder_t> {
-public:
-    void function_entry(const call_info_t & info) {
-        // TODO link with mk_sql
-        // TODO rename to reflect non-printing nature
-        // TODO meh, ugly
-        if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
-            // TODO: Change function signatures to accept std::string instead of const char*
-            run_prep_sql_function(info.fn_id, info.arguments, info.loc.c_str(), info.fn_definition.c_str());
-            run_prep_sql_function_call(info.call_id, info.call_ptr, info.fqfn.c_str(), info.loc.c_str(), info.call_type, info.fn_id);
-            run_prep_sql_promise_assoc(info.arguments, info.call_id);
-        } else {
-            rdt_print(RDT_OUTPUT_SQL, {mk_sql_function(info.fn_id, info.arguments, info.loc.c_str(), info.fn_definition.c_str()),
-                                       mk_sql_function_call(info.call_id, info.call_ptr, info.fqfn.c_str(), info.loc.c_str(), info.call_type, info.fn_id),
-                                       mk_sql_promise_assoc(info.arguments, info.call_id)});
-        }
-    }
-
-    void function_exit(const call_info_t & info) {}
-};
 
 template<typename ...Rec>
 class compose : public recorder_t<compose<Rec...>> {
     std::tuple<Rec...> rec;
 
 public:
-#define COMPOSE(func) \
-    void func(const call_info_t & info) { \
+#define COMPOSE(func, info_struct) \
+    void func(const info_struct & info) { \
         tuple_for_each(rec, [&info](auto & r) { \
             r.func(info); \
         }); \
     }
 
-    COMPOSE(function_entry)
-    COMPOSE(function_exit)
+    COMPOSE(function_entry, call_info_t)
+    COMPOSE(function_exit, call_info_t)
+    COMPOSE(builtin_entry, call_info_t)
+    COMPOSE(builtin_exit, call_info_t)
+    COMPOSE(force_promise_entry, prom_info_t)
+    COMPOSE(force_promise_exit, prom_info_t)
+    COMPOSE(promise_created, prom_id_t)
+    COMPOSE(promise_lookup, prom_info_t)
 
 #undef COMPOSE
 };

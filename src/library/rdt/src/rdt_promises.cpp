@@ -21,6 +21,8 @@
 
 #include "rdt.h"
 #include "rdt_promises/recorder.h"
+#include "rdt_promises/trace_recorder.h"
+#include "rdt_promises/sql_recorder.h"
 
 using namespace std;
 
@@ -97,123 +99,53 @@ struct trace_promises {
 
     // TODO retrieve arguments
     DECL_HOOK(builtin_entry)(const SEXP call, const SEXP op, const SEXP rho) {
-        const char *name = get_name(call);
-        fn_addr_t fn_id = get_function_id(op);
+        call_info_t info = rec.builtin_entry_get_info(call, op, rho);
+        rec.builtin_entry_process(info);
 
-        env_addr_t call_ptr = get_sexp_address(rho);
+        STATE(fun_stack).push(info.call_id);
 #ifdef RDT_CALL_ID
-        call_id_t call_id = make_funcall_id(op);
-#else
-        // Builtins have no environment of their own
-        // we take the parent env rho and add 1 to it to create a new pseudo-address
-        // it will be unique because real pointers are aligned (no odd addresses)
-        call_id_t call_id = make_funcall_id(rho) | 1;
+        STATE(curr_env_stack).push(info.call_ptr | 1);
 #endif
-
-        // TODO merge rdt_print_calls
-        rdt_print(RDT_OUTPUT_TRACE, {print_builtin("=> b-in", NULL, name, fn_id, call_id)});
-
-        arglist_t arguments;
-
-        if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
-            run_prep_sql_function(fn_id, arguments, NULL, NULL);
-            run_prep_sql_function_call(call_id, call_ptr, name, NULL, 1, fn_id);
-            //run_prep_sql_promise_assoc(arguments, call_id);
-        } else {
-            rdt_print(RDT_OUTPUT_SQL, {mk_sql_function(fn_id, arguments, NULL, NULL),
-                                       mk_sql_function_call(call_id, call_ptr, name, NULL, 1, fn_id)});
-        }
-        // mk_sql_promises(promises, call_id, argument_ids)
-
-        STATE(fun_stack).push(call_id);
-#ifdef RDT_CALL_ID
-        STATE(curr_env_stack).push(call_ptr | 1);
-#endif
-
-        if (tracer_conf.pretty_print)
-            STATE(indent) += tracer_conf.indent_width;
     }
 
     DECL_HOOK(builtin_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
-        const char *name = get_name(call);
-        fn_addr_t id = get_function_id(op);
-        call_id_t call_id = STATE(fun_stack).top();
+        call_info_t info = rec.builtin_exit_get_info(call, op, rho);
+        rec.builtin_exit_process(info);
 
         STATE(fun_stack).pop();
 #ifdef RDT_CALL_ID
         STATE(curr_env_stack).pop();
 #endif
-        if (tracer_conf.pretty_print)
-            STATE(indent) -= tracer_conf.indent_width;
-
-        rdt_print(RDT_OUTPUT_TRACE, {print_builtin("<= b-in", NULL, name, id, call_id)});
     }
 
     DECL_HOOK(promise_created)(const SEXP prom) {
         prom_id_t prom_id = make_promise_id(prom);
         STATE(fresh_promises).insert(prom_id);
 
-        //Rprintf("PROMISE CREATED at %p\n", get_sexp_address(prom));
-        //TODO implement promise allocation pretty print
-        //rdt_print(RDT_OUTPUT_TRACE, {print_promise_alloc(prom_id)});
-
-        if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
-            run_prep_sql_promise(prom_id);
-        } else {
-            rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise(prom_id)});
-        }
+        rec.promise_created_process(prom_id);
     }
 
     // Promise is being used inside a function body for the first time.
     DECL_HOOK(force_promise_entry)(const SEXP symbol, const SEXP rho) {
-        const char *name = get_name(symbol);
-
-        SEXP promise_expression = get_promise(symbol, rho);
-        prom_id_t id = get_promise_id(promise_expression);
-        call_id_t in_call_id = STATE(fun_stack).top();
-        call_id_t from_call_id = STATE(promise_origin)[id];
-
-        // in_call_id = current call
-        if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
-            run_prep_sql_promise_evaluation(RDT_FORCE_PROMISE, id, from_call_id);
-        } else {
-            rdt_print(RDT_OUTPUT_TRACE, {print_promise("=> prom", NULL, name, id, in_call_id, from_call_id)});
-            rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise_evaluation(RDT_FORCE_PROMISE, id, from_call_id)});
-        }
+        prom_info_t info = rec.force_promise_entry_get_info(symbol, rho);
+        rec.force_promise_entry_process(info);
     }
 
     DECL_HOOK(force_promise_exit)(const SEXP symbol, const SEXP rho, const SEXP val) {
-        const char *name = get_name(symbol);
-
-        SEXP promise_expression = get_promise(symbol, rho);
-        prom_id_t id = get_promise_id(promise_expression);
-        call_id_t in_call_id = STATE(fun_stack).top();
-        call_id_t from_call_id = STATE(promise_origin)[id];
-
-        rdt_print(RDT_OUTPUT_TRACE, {print_promise("<= prom", NULL, name, id, in_call_id, from_call_id)});
+        prom_info_t info = rec.force_promise_exit_get_info(symbol, rho);
+        rec.force_promise_exit_process(info);
     }
 
     DECL_HOOK(promise_lookup)(const SEXP symbol, const SEXP rho, const SEXP val) {
-        const char *name = get_name(symbol);
-
-        SEXP promise_expression = get_promise(symbol, rho);
-        prom_id_t id = get_promise_id(promise_expression);
-        call_id_t in_call_id = STATE(fun_stack).top();
-        call_id_t from_call_id = STATE(promise_origin)[id];
-
-        // TODO
-        if (tracer_conf.output_format == RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == RDT_SQLITE) {
-            run_prep_sql_promise_evaluation(RDT_LOOKUP_PROMISE, id, from_call_id);
-        } else {
-            rdt_print(RDT_OUTPUT_TRACE, {print_promise("<> lkup", NULL, name, id, in_call_id, from_call_id)});
-            rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise_evaluation(RDT_LOOKUP_PROMISE, id, from_call_id)});
-        }
+        prom_info_t info = rec.promise_lookup_get_info(symbol, rho);
+        rec.promise_lookup_process(info);
     }
 
     DECL_HOOK(error)(const SEXP call, const char* message) {
         char *call_str = NULL;
         char *loc = get_location(call);
 
+        // FIXME: Shouldn't we use `call_str`?
         asprintf(&call_str, "\"%s\"", get_call(call));
 
         if (loc) free(loc);
@@ -222,19 +154,6 @@ struct trace_promises {
 
     DECL_HOOK(vector_alloc)(int sexptype, long length, long bytes, const char* srcref) {
     }
-
-//    DECL_HOOK(eval_entry)(SEXP e, SEXP rho) {
-//        switch(TYPEOF(e)) {
-//            case LANGSXP:
-//                fprintf(output, "%s\n");
-//                PrintValue
-//            break;
-//        }
-//    }
-//
-//    DECL_HOOK(eval_exit)(SEXP e, SEXP rho, SEXP retval) {
-//        printf("");
-//    }
 
     DECL_HOOK(gc_promise_unmarked)(const SEXP promise) {
         prom_addr_t addr = get_sexp_address(promise);
@@ -255,29 +174,27 @@ struct trace_promises {
     DECL_HOOK(jump_ctxt)(const SEXP rho, const SEXP val) {
         tracer_state().adjust_fun_stack(rho);
     }
+
+    //    DECL_HOOK(eval_entry)(SEXP e, SEXP rho) {
+    //        switch(TYPEOF(e)) {
+    //            case LANGSXP:
+    //                fprintf(output, "%s\n");
+    //                PrintValue
+    //            break;
+    //        }
+    //    }
+    //
+    //    DECL_HOOK(eval_exit)(SEXP e, SEXP rho, SEXP retval) {
+    //        printf("");
+    //    }
 };
+
+// Static member initialization
+template<typename Rec>
+Rec trace_promises<Rec>::rec_impl;
 
 template<typename Rec>
 recorder_t<Rec>& trace_promises<Rec>::rec = rec_impl;
-
-// TODO: move to trace_promises struct and add DECL_HOOK macro, if we need these
-static void trace_promises_gc_entry(R_size_t size_needed) {
-}
-
-static void trace_promises_gc_exit(int gc_count, double vcells, double ncells) {
-}
-
-static void trace_promises_S3_generic_entry(const char *generic, const SEXP object) {
-}
-
-static void trace_promises_S3_generic_exit(const char *generic, const SEXP object, const SEXP retval) {
-}
-
-static void trace_promises_S3_dispatch_entry(const char *generic, const char *clazz, const SEXP method, const SEXP object) {
-}
-
-static void trace_promises_S3_dispatch_exit(const char *generic, const char *clazz, const SEXP method, const SEXP object, const SEXP retval) {
-}
 
 
 static bool file_exists(const string & fname) {

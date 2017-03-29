@@ -113,11 +113,19 @@ struct call_info_t {
     int call_type;
     fn_addr_t fn_id;
     string fqfn;
+    string name; // For builtins
     string fn_definition;
     string loc;
     call_id_t call_id;
     env_addr_t call_ptr;
     arglist_t arguments;
+};
+
+struct prom_info_t {
+    string name;
+    prom_id_t prom_id;
+    call_id_t in_call_id;
+    call_id_t from_call_id;
 };
 
 prom_id_t get_promise_id(SEXP promise);

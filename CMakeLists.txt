@@ -741,7 +741,11 @@ set(SOURCE_FILES
         src/library/rdt/src/rdt_promises/tracer_sexpinfo.cpp
         src/library/rdt/src/rdt_promises/tracer_conf.cpp
         src/library/rdt/src/rdt_promises/recorder.h
-        src/library/rdt/src/rdt_promises/tuple_for_each.h)
+        src/library/rdt/src/rdt_promises/tuple_for_each.h
+        src/library/rdt/src/rdt_promises/trace_recorder.h
+        src/library/rdt/src/rdt_promises/trace_recorder.cpp
+        src/library/rdt/src/rdt_promises/sql_recorder.h
+        src/library/rdt/src/rdt_promises/sql_recorder.cpp)
 
 include_directories(include)
 include_directories(include/R_ext)
