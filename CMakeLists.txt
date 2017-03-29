@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.6)
 project(R_3_3_1)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 
 add_definitions(-DHAVE_CONFIG_H)
 
@@ -732,7 +732,20 @@ set(SOURCE_FILES
         src/unix/sys-unix.c
         src/unix/system.c
         src/library/rdt/src/rdt_register_hook.h
-        src/library/rdt/src/r.h src/library/rdt/src/rdt_promises/tracer_conf.h src/library/rdt/src/rdt_promises/tracer_state.h src/library/rdt/src/rdt_promises/tracer_output.h src/library/rdt/src/rdt_promises/tracer_sexpinfo.h src/library/rdt/src/rdt_promises/tracer_state.cpp src/library/rdt/src/rdt_promises/tracer_output.cpp src/library/rdt/src/rdt_promises/tracer_sexpinfo.cpp src/library/rdt/src/rdt_promises/tracer_conf.cpp)
+        src/library/rdt/src/r.h src/library/rdt/src/rdt_promises/tracer_conf.h
+        src/library/rdt/src/rdt_promises/tracer_state.h
+        src/library/rdt/src/rdt_promises/tracer_output.h
+        src/library/rdt/src/rdt_promises/tracer_sexpinfo.h
+        src/library/rdt/src/rdt_promises/tracer_state.cpp
+        src/library/rdt/src/rdt_promises/tracer_output.cpp
+        src/library/rdt/src/rdt_promises/tracer_sexpinfo.cpp
+        src/library/rdt/src/rdt_promises/tracer_conf.cpp
+        src/library/rdt/src/rdt_promises/recorder.h
+        src/library/rdt/src/rdt_promises/tuple_for_each.h
+        src/library/rdt/src/rdt_promises/trace_recorder.h
+        src/library/rdt/src/rdt_promises/trace_recorder.cpp
+        src/library/rdt/src/rdt_promises/sql_recorder.h
+        src/library/rdt/src/rdt_promises/sql_recorder.cpp)
 
 include_directories(include)
 include_directories(include/R_ext)

@@ -1,0 +1,185 @@
+//
+// Created by nohajc on 28.3.17.
+//
+
+#ifndef R_3_3_1_RECORDER_H
+#define R_3_3_1_RECORDER_H
+
+#include <tuple>
+#include "tuple_for_each.h"
+
+#include "../rdt.h"
+#include "tracer_sexpinfo.h"
+#include "tracer_state.h"
+
+template<typename Impl>
+class recorder_t {
+private:
+    Impl& impl() {
+        return *static_cast<Impl*>(this);
+    }
+
+public:
+    call_info_t function_entry_get_info(const SEXP call, const SEXP op, const SEXP rho) {
+        call_info_t info;
+
+        const char *name = get_name(call);
+        const char *ns = get_ns_name(op);
+
+        info.type = is_byte_compiled(call) ? "=> bcod" : "=> func";
+        info.call_type = is_byte_compiled(call) ? 1 : 0;
+        info.fn_id = get_function_id(op);
+        info.call_ptr = get_sexp_address(rho);
+#ifdef RDT_CALL_ID
+        info.call_id = make_funcall_id(op);
+#else
+        info.call_id = make_funcall_id(rho);
+#endif
+        char *location = get_location(op);
+        info.loc = CHKSTR(location);
+        free(location);
+
+        if (ns) {
+            info.fqfn = string(ns) + "::" + CHKSTR(name);
+        } else {
+            info.fqfn = CHKSTR(name);
+        }
+
+        info.arguments = get_arguments(op, rho);
+        info.fn_definition = get_expression(op);
+
+        return info;
+    }
+
+    // TODO: merge duplicate code from function_entry/exit
+    call_info_t function_exit_get_info(const SEXP call, const SEXP op, const SEXP rho) {
+        call_info_t info;
+
+        const char *name = get_name(call);
+        const char *ns = get_ns_name(op);
+
+        info.type = is_byte_compiled(call) ? "<= bcod" : "<= func";
+        info.fn_id = get_function_id(op);
+        info.call_id = STATE(fun_stack).top();
+
+        char *location = get_location(op);
+        info.loc = CHKSTR(location);
+        free(location);
+
+        if (ns) {
+            info.fqfn = string(ns) + "::" + CHKSTR(name);
+        } else {
+            info.fqfn = CHKSTR(name);
+        }
+
+        info.arguments = get_arguments(op, rho);
+
+        return info;
+    }
+
+    call_info_t builtin_entry_get_info(const SEXP call, const SEXP op, const SEXP rho) {
+        call_info_t info;
+
+        const char *name = get_name(call);
+        info.name = CHKSTR(name);
+        info.fn_id = get_function_id(op);
+
+        info.call_ptr = get_sexp_address(rho);
+#ifdef RDT_CALL_ID
+        info.call_id = make_funcall_id(op);
+#else
+        // Builtins have no environment of their own
+        // we take the parent env rho and add 1 to it to create a new pseudo-address
+        // it will be unique because real pointers are aligned (no odd addresses)
+        info.call_id = make_funcall_id(rho) | 1;
+#endif
+
+        return info;
+    }
+
+    call_info_t builtin_exit_get_info(const SEXP call, const SEXP op, const SEXP rho) {
+        call_info_t info;
+
+        const char *name = get_name(call);
+        info.name = CHKSTR(name);
+        info.fn_id = get_function_id(op);
+        info.call_id = STATE(fun_stack).top();
+
+        return info;
+    }
+
+//    prom_id_t promise_created_get_info(const SEXP prom) {
+//
+//    }
+
+private:
+    prom_info_t promise_get_info(const SEXP symbol, const SEXP rho) {
+        prom_info_t info;
+
+        const char *name = get_name(symbol);
+        info.name = CHKSTR(name);
+
+        SEXP promise_expression = get_promise(symbol, rho);
+        info.prom_id = get_promise_id(promise_expression);
+        info.in_call_id = STATE(fun_stack).top();
+        info.from_call_id = STATE(promise_origin)[info.prom_id];
+
+        return info;
+    }
+
+public:
+    prom_info_t force_promise_entry_get_info(const SEXP symbol, const SEXP rho) {
+        return promise_get_info(symbol, rho);
+    }
+
+    prom_info_t force_promise_exit_get_info(const SEXP symbol, const SEXP rho) {
+        return promise_get_info(symbol, rho);
+    }
+
+    prom_info_t promise_lookup_get_info(const SEXP symbol, const SEXP rho) {
+        return promise_get_info(symbol, rho);
+    }
+
+#define DELEGATE(func, info_struct) \
+    void func##_process(const info_struct & info) { \
+        impl().func(info); \
+    }
+
+    DELEGATE(function_entry, call_info_t)
+    DELEGATE(function_exit, call_info_t)
+    DELEGATE(builtin_entry, call_info_t)
+    DELEGATE(builtin_exit, call_info_t)
+    DELEGATE(force_promise_entry, prom_info_t)
+    DELEGATE(force_promise_exit, prom_info_t)
+    DELEGATE(promise_created, prom_id_t)
+    DELEGATE(promise_lookup, prom_info_t)
+
+#undef DELEGATE
+};
+
+
+template<typename ...Rec>
+class compose : public recorder_t<compose<Rec...>> {
+    std::tuple<Rec...> rec;
+
+public:
+#define COMPOSE(func, info_struct) \
+    void func(const info_struct & info) { \
+        tuple_for_each(rec, [&info](auto & r) { \
+            r.func(info); \
+        }); \
+    }
+
+    COMPOSE(function_entry, call_info_t)
+    COMPOSE(function_exit, call_info_t)
+    COMPOSE(builtin_entry, call_info_t)
+    COMPOSE(builtin_exit, call_info_t)
+    COMPOSE(force_promise_entry, prom_info_t)
+    COMPOSE(force_promise_exit, prom_info_t)
+    COMPOSE(promise_created, prom_id_t)
+    COMPOSE(promise_lookup, prom_info_t)
+
+#undef COMPOSE
+};
+
+#endif //R_3_3_1_RECORDER_H

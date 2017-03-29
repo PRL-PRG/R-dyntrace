@@ -115,6 +115,7 @@ string print_function(const char *type, const char *loc, const char *name, fn_ad
     stringstream stream;
     prepend_prefix(&stream);
 
+    // TODO: remove CHKSTR (this should be caught earlier in the info extraction phase
     stream << type << " "
            << "loc(" << CHKSTR(loc) << ") ";
 
