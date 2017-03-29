@@ -26,7 +26,7 @@ void tracer_state_t::start_pass(const SEXP prom) {
     prom_addr_t prom_addr = get_sexp_address(prom);
     prom_id_t prom_id = make_promise_id(prom);
     promise_origin[prom_id] = 0;
-    rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise(prom_id)});
+    rdt_print(OutputFormat::RDT_OUTPUT_SQL, {mk_sql_promise(prom_id)});
 }
 
 void tracer_state_t::finish_pass() {
@@ -57,7 +57,7 @@ void tracer_state_t::adjust_fun_stack(SEXP rho) {
 
         if (tracer_conf.pretty_print)
             indent -= tracer_conf.indent_width;
-        rdt_print(RDT_OUTPUT_TRACE, {print_unwind("<=", call_id)});
+        rdt_print(OutputFormat::RDT_OUTPUT_TRACE, {print_unwind("<=", call_id)});
     }
 }
 
