@@ -7,11 +7,11 @@
 #include <config.h>
 #endif
 
+#include <Defn.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <Defn.h>
 
 #define RDT_IS_ENABLED(name) (rdt_curr_handler->name != NULL)
 #define RDT_FIRE_PROBE(name, ...) (rdt_curr_handler->name(__VA_ARGS__))
