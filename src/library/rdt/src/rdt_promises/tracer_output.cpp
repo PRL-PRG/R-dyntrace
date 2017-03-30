@@ -670,7 +670,7 @@ string mk_sql_promise_evaluation(int event_type, prom_id_t promise_id, call_id_t
     return stream.str();
 }
 
-
+// FIXME deprecated
 void rdt_begin_transaction() {
     if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == OutputType::RDT_SQLITE) {
         int result = sqlite3_step(prepared_sql_transaction_begin);
@@ -684,6 +684,7 @@ void rdt_begin_transaction() {
     }
 }
 
+// FIXME deprecated
 void rdt_commit_transaction() {
     if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == OutputType::RDT_SQLITE) {
         int result = sqlite3_step(prepared_sql_transaction_commit);
@@ -697,6 +698,7 @@ void rdt_commit_transaction() {
     }
 }
 
+// FIXME deprecated
 void rdt_abort_transaction() {
     if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == OutputType::RDT_SQLITE) {
         int result = sqlite3_step(prepared_sql_transaction_abort);

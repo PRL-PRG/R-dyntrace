@@ -34,8 +34,6 @@ using namespace std;
 //    return counter;
 //}
 
-
-
 // All the interpreter hooks go here
 // DECL_HOOK macro generates an initializer for each function
 // which is then used in the REGISTER_HOOKS macro to properly init rdt_handler.
@@ -196,7 +194,6 @@ Rec trace_promises<Rec>::rec_impl;
 template<typename Rec>
 recorder_t<Rec>& trace_promises<Rec>::rec = rec_impl;
 
-
 static bool file_exists(const string & fname) {
     ifstream f(fname);
     return f.good();
@@ -228,6 +225,9 @@ rdt_handler register_hooks_with() {
 rdt_handler *setup_promise_tracing(SEXP options) {
     tracer_conf_t new_conf = get_config_from_R_options(options);
     tracer_conf.update(new_conf);
+
+
+
 
     // TODO: can we move these into `begin` hook or possibly trace/sql_recorder implementations?
     if (tracer_conf.output_type != OutputType::RDT_SQLITE && tracer_conf.output_type != OutputType::RDT_R_PRINT_AND_SQLITE) {
