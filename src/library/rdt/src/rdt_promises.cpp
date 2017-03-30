@@ -233,7 +233,7 @@ rdt_handler *setup_promise_tracing(SEXP options) {
     if (tracer_conf.output_type != OutputType::RDT_SQLITE && tracer_conf.output_type != OutputType::RDT_R_PRINT_AND_SQLITE) {
         output = fopen(tracer_conf.filename->c_str(), tracer_conf.overwrite ? "w" : "a");
         if (!output) {
-            error("Unable to open %s: %s\n", tracer_conf.filename, strerror(errno));
+            error("Unable to open %s: %s\n", tracer_conf.filename->c_str(), strerror(errno));
             return NULL;
         }
     }
