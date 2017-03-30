@@ -7,6 +7,10 @@
 #include <config.h>
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <Defn.h>
 
 #define RDT_IS_ENABLED(name) (rdt_curr_handler->name != NULL)
@@ -31,6 +35,8 @@ typedef struct rdt_handler {
     void (*probe_function_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval);
     void (*probe_builtin_entry)(const SEXP call, const SEXP op, const SEXP rho);
     void (*probe_builtin_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval);
+    void (*probe_specialsxp_entry)(const SEXP call, const SEXP op, const SEXP rho);
+    void (*probe_specialsxp_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval);
     void (*probe_promise_created)(const SEXP prom);
     void (*probe_force_promise_entry)(const SEXP symbol, const SEXP rho);
     void (*probe_force_promise_exit)(const SEXP symbol, const SEXP rho, const SEXP val);
@@ -61,10 +67,6 @@ extern const rdt_handler *rdt_curr_handler;
 // ----------------------------------------------------------------------------
 
 #define CHKSTR(s) ((s) == NULL ? "<unknown>" : (s))
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 const char *get_ns_name(SEXP op);
 const char *get_name(SEXP call);

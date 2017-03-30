@@ -39,6 +39,8 @@ SEXP Rdt(SEXP tracer, SEXP rho, SEXP options) {
         handler = setup_promise_tracing(options);
     } else if (!strcmp("debug", sys)) {
         handler = setup_debug_tracing(options);
+    } else if (!strcmp("specialsxp", sys)) {
+        handler = setup_specialsxp_tracing(options);
     }
 
     if (!handler) {

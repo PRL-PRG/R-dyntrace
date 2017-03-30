@@ -6,7 +6,7 @@
 #define R_3_3_1_RDT_REGISTER_HOOK_H
 
 #include <utility>
-#include <rdtrace.h>
+#include "rdt.h"
 
 #define DECL_HOOK(hook_name) \
     struct hook_name { \

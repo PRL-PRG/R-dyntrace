@@ -76,3 +76,14 @@ fact <- function(n){
     return(n*Recall(n-1))
   }
 }
+
+specialsxpTest <- function() {
+    a = 5;
+    b = a + 4;
+    if (a < b) {
+        a = b + 3;
+    } else {
+        b = a - 1;
+    }
+	print({x<-2+2/2;x})
+}
