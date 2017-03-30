@@ -2,11 +2,12 @@
 // Created by nohajc on 29.3.17.
 //
 
+#include <cstring>
+
 #include "trace_recorder.h"
 #include "tracer_output.h"
 #include "tracer_conf.h"
 #include "tracer_state.h"
-
 
 void trace_recorder_t::function_entry(const call_info_t & info) {
     // TODO: this can be simplified - we don't need to check output format inside rdt_print

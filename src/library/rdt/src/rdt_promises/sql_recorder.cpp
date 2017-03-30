@@ -2,6 +2,8 @@
 // Created by nohajc on 29.3.17.
 //
 
+#include <cstring>
+
 #include "sql_recorder.h"
 #include "tracer_conf.h"
 #include "tracer_output.h"

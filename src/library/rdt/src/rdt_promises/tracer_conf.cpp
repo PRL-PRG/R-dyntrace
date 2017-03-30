@@ -2,6 +2,8 @@
 // Created by nohajc on 27.3.17.
 //
 
+#include <cstring>
+
 #include "tracer_conf.h"
 #include "tracer_output.h"
 

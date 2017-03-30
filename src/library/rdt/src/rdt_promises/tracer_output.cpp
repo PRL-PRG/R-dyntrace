@@ -369,10 +369,10 @@ void rdt_init_sqlite(const string& filename) {
     outcome = sqlite3_open(filename.c_str(), &sqlite_database);
 
     if (outcome) {
-        //fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(sqlite_database));
+        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(sqlite_database));
         return;
     } else {
-        //fprintf(stderr, "Opening database: %s\n", filename);
+        fprintf(stderr, "Opening database: %s\n", filename.c_str());
     }
 
     ifstream schema_file(RDT_SQLITE_SCHEMA);
