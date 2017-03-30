@@ -1,7 +1,7 @@
-#include <stdlib.h>
+#include <cstdlib>
+#include <cstring>
 
 #include "rdt.h"
-
 #include "rdt_register_hook.h"
 
 struct trace_noop {
