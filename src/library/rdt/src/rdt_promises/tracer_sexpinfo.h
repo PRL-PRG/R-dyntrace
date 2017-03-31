@@ -121,6 +121,7 @@ struct call_info_t {
     arglist_t arguments;
 };
 
+// FIXME would it make sense to add type of action here?
 struct prom_info_t {
     string name;
     prom_id_t prom_id;

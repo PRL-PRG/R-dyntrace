@@ -3,7 +3,7 @@
 //
 
 #include "tracer_sexpinfo.h"
-#include "tracer_output.h"
+//#include "tracer_output.h"
 #include "tracer_state.h"
 
 #include "../rdt.h"
@@ -31,7 +31,7 @@ prom_id_t get_promise_id(SEXP promise) {
     else {
         prom_id = make_promise_id(promise, true);
         // FIXME: prepared SQL statements
-        rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise(prom_id)});
+        //rdt_print(RDT_OUTPUT_SQL, {mk_sql_promise(prom_id)}); FIXME what do?!
     }
 
     return prom_id;

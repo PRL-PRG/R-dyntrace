@@ -9,6 +9,7 @@
 
 #include "../rdt.h"
 #include "tracer_output.h"
+#include "multiplexer.h"
 
 using namespace std;
 
@@ -70,6 +71,7 @@ struct tracer_conf_t {
     option<bool> pretty_print;
     option<int> indent_width;
     option<bool> call_id_use_ptr_fmt;
+    option<multiplexer::sink_arr_t> outputs;
 
     bool overwrite;
 

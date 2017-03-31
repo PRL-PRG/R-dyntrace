@@ -36,13 +36,15 @@ public:
         info.call_id = make_funcall_id(rho);
 #endif
         char *location = get_location(op);
-        info.loc = CHKSTR(location);
+        if (location != NULL)
+            info.loc = location;
         free(location);
 
         if (ns) {
             info.fqfn = string(ns) + "::" + CHKSTR(name);
         } else {
-            info.fqfn = CHKSTR(name);
+            if (name != NULL)
+                info.fqfn = name;
         }
 
         info.arguments = get_arguments(op, rho);
@@ -63,13 +65,15 @@ public:
         info.call_id = STATE(fun_stack).top();
 
         char *location = get_location(op);
-        info.loc = CHKSTR(location);
+        if (location != NULL)
+            info.loc = location;
         free(location);
 
         if (ns) {
             info.fqfn = string(ns) + "::" + CHKSTR(name);
         } else {
-            info.fqfn = CHKSTR(name);
+            if (name != NULL)
+                info.fqfn = name;
         }
 
         info.arguments = get_arguments(op, rho);
@@ -81,8 +85,11 @@ public:
         call_info_t info;
 
         const char *name = get_name(call);
-        info.name = CHKSTR(name);
+        if (name != NULL)
+            info.name = name;
         info.fn_id = get_function_id(op);
+        info.fqfn = info.name;
+        info.call_type = 2;
 
         info.call_ptr = get_sexp_address(rho);
 #ifdef RDT_CALL_ID
@@ -101,9 +108,13 @@ public:
         call_info_t info;
 
         const char *name = get_name(call);
-        info.name = CHKSTR(name);
+        if (name != NULL)
+            info.name = name;
         info.fn_id = get_function_id(op);
         info.call_id = STATE(fun_stack).top();
+        if (name != NULL)
+            info.fqfn = name;
+        info.call_type = 2;
 
         return info;
     }
@@ -117,7 +128,8 @@ private:
         prom_info_t info;
 
         const char *name = get_name(symbol);
-        info.name = CHKSTR(name);
+        if (name != NULL)
+            info.name = name;
 
         SEXP promise_expression = get_promise(symbol, rho);
         info.prom_id = get_promise_id(promise_expression);

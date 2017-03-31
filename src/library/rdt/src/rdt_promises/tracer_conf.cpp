@@ -3,7 +3,8 @@
 //
 
 #include "tracer_conf.h"
-#include "tracer_output.h"
+//#include "tracer_output.h"
+#include "multiplexer.h"
 
 tracer_conf_t::tracer_conf_t() :
 // Config defaults
@@ -14,10 +15,11 @@ tracer_conf_t::tracer_conf_t() :
         overwrite(false),
         indent_width(4),
 #ifdef RDT_CALL_ID
-        call_id_use_ptr_fmt(false)
+        call_id_use_ptr_fmt(false),
 #else
-        call_id_use_ptr_fmt(true)
+        call_id_use_ptr_fmt(true),
 #endif
+        outputs(string({multiplexer::Sink::PRINT}))
 {}
 
 // Update configuration in a smart way
@@ -31,7 +33,8 @@ void tracer_conf_t::update(const tracer_conf_t & conf) {
             OPT_CHANGED(output_format) ||
             OPT_CHANGED(pretty_print) ||
             OPT_CHANGED(indent_width) ||
-            OPT_CHANGED(call_id_use_ptr_fmt);
+            OPT_CHANGED(call_id_use_ptr_fmt) ||
+            OPT_CHANGED(outputs);
 
     if (conf.overwrite || conf_changed) {
         *this = conf; // updates all members
@@ -51,6 +54,8 @@ tracer_conf_t get_config_from_R_options(SEXP options) {
     const char *filename_option = get_string(get_named_list_element(options, "path"));
     if (filename_option != NULL)
         conf.filename = filename_option;
+
+    conf.outputs = "pfdp";
 
     const char *output_format_option = get_string(get_named_list_element(options, "format"));
     if (output_format_option != NULL) {

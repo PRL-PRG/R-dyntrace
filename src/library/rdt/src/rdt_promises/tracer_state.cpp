@@ -4,7 +4,7 @@
 
 #include "tracer_state.h"
 #include "tracer_conf.h"
-#include "tracer_output.h"
+//#include "tracer_output.h"
 #include "tracer_sexpinfo.h"
 
 void tracer_state_t::start_pass(const SEXP prom) {

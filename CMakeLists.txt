@@ -745,7 +745,7 @@ set(SOURCE_FILES
         src/library/rdt/src/rdt_promises/trace_recorder.h
         src/library/rdt/src/rdt_promises/trace_recorder.cpp
         src/library/rdt/src/rdt_promises/sql_recorder.h
-        src/library/rdt/src/rdt_promises/sql_recorder.cpp src/library/rdt/src/rdt_promises/sql_generator.cpp src/library/rdt/src/rdt_promises/sql_generator.h)
+        src/library/rdt/src/rdt_promises/sql_recorder.cpp src/library/rdt/src/rdt_promises/sql_generator.cpp src/library/rdt/src/rdt_promises/sql_generator.h src/library/rdt/src/rdt_promises/multiplexer.cpp src/library/rdt/src/rdt_promises/multiplexer.h)
 
 include_directories(include)
 include_directories(include/R_ext)

@@ -16,7 +16,7 @@
 #include "rdt_register_hook.h"
 
 #include "rdt_promises/tracer_conf.h"
-#include "rdt_promises/tracer_output.h"
+//#include "rdt_promises/tracer_output.h"
 #include "rdt_promises/tracer_state.h"
 
 #include "rdt.h"
@@ -51,10 +51,11 @@ struct trace_promises {
     DECL_HOOK(end)() {
         tracer_state().finish_pass();
 
-        if (output) {
-            fclose(output);
-            output = NULL;
-        }
+        // FIXME
+//        if (output) {
+//            fclose(output);
+//            output = NULL;
+//        }
     }
 
     // Triggered when entering function evaluation.
@@ -227,32 +228,35 @@ rdt_handler *setup_promise_tracing(SEXP options) {
     tracer_conf.update(new_conf);
 
 
-
-
     // TODO: can we move these into `begin` hook or possibly trace/sql_recorder implementations?
-    if (tracer_conf.output_type != OutputType::RDT_SQLITE && tracer_conf.output_type != OutputType::RDT_R_PRINT_AND_SQLITE) {
-        output = fopen(tracer_conf.filename->c_str(), tracer_conf.overwrite ? "w" : "a");
-        if (!output) {
-            error("Unable to open %s: %s\n", tracer_conf.filename, strerror(errno));
-            return NULL;
-        }
-    }
+//    if (tracer_conf.output_type != OutputType::RDT_SQLITE && tracer_conf.output_type != OutputType::RDT_R_PRINT_AND_SQLITE) {
+//        output = fopen(tracer_conf.filename->c_str(), tracer_conf.overwrite ? "w" : "a");
+//        if (!output) {
+//            error("Unable to open %s: %s\n", tracer_conf.filename, strerror(errno));
+//            return NULL;
+//        }
+//    }
+    // FIXME moved to multiplexer::init
 
 //    THIS IS DONE IN tracer_state().start_pass() (called from trace_promises_begin()) if the overwrite flag is set
 //    call_id_counter = 0;
 //    already_inserted_functions.clear();
 
-    if (tracer_conf.output_type == OutputType::RDT_SQLITE || tracer_conf.output_type == OutputType::RDT_R_PRINT_AND_SQLITE) {
-        if(tracer_conf.overwrite) {
-            if (file_exists(tracer_conf.filename)) {
-                remove(tracer_conf.filename->c_str());
-            }
-        }
-        rdt_init_sqlite(tracer_conf.filename);
-    }
+//    if (tracer_conf.output_type == OutputType::RDT_SQLITE || tracer_conf.output_type == OutputType::RDT_R_PRINT_AND_SQLITE) {
+//        if(tracer_conf.overwrite) {
+//            if (file_exists(tracer_conf.filename)) {
+//                remove(tracer_conf.filename->c_str());
+//            }
+//        }
+//        rdt_init_sqlite(tracer_conf.filename);
+//    }
+    // FIXME MOVED TO multiplexer::init
+
+    // FIXME CALL FUNCTIONS FROM MULTIPLEXER INIT!!!!!
 
     if (tracer_conf.output_format != OutputFormat::RDT_OUTPUT_TRACE) {
         rdt_configure_sqlite();
+        // FIXME ALSO CALL STH TO LOAD SCHEMA
         rdt_begin_transaction();
     }
 
@@ -260,12 +264,15 @@ rdt_handler *setup_promise_tracing(SEXP options) {
     //memcpy(h, &trace_promises_rdt_handler, sizeof(rdt_handler));
     //*h = trace_promises_rdt_handler; // This actually does the same thing as memcpy
     if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_TRACE) {
+        Rprintf("1\n");
         *h = register_hooks_with<trace_recorder_t>();
     }
     else if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_SQL || tracer_conf.output_format == OutputFormat::RDT_OUTPUT_COMPILED_SQLITE) {
+        Rprintf("2\n");
         *h = register_hooks_with<sql_recorder_t>();
     }
     else { // RDT_OUTPUT_BOTH
+        Rprintf("3\n");
         *h = register_hooks_with<compose<trace_recorder_t, sql_recorder_t>>();
     }
 

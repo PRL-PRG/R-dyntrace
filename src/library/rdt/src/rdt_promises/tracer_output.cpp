@@ -240,8 +240,6 @@ static sqlite3_stmt *get_prepared_sql_insert_argument(int num_values) {
     return get_prepared_sql_insert_statement("arguments", 4, num_values, &prepared_sql_insert_arguments);
 }
 
-
-
 static void compile_prepared_sql_statements() {
     int result;
     result = sqlite3_prepare_v2(sqlite_database,
