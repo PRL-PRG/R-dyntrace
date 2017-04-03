@@ -28,12 +28,12 @@ void sql_recorder_t::function_entry(const call_info_t & info) {
 
 void sql_recorder_t::builtin_entry(const call_info_t & info) {
     if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == OutputType::RDT_SQLITE) {
-        run_prep_sql_function(info.fn_id, info.arguments, NULL, NULL);
-        run_prep_sql_function_call(info.call_id, info.call_ptr, info.name.c_str(), NULL, 1, info.fn_id);
+        run_prep_sql_function(info.fn_id, info.arguments, info.loc.c_str(), info.fn_definition.c_str());
+        run_prep_sql_function_call(info.call_id, info.call_ptr, info.name.c_str(), info.loc.c_str(), 1, info.fn_id);
         //run_prep_sql_promise_assoc(arguments, call_id);
     } else {
-        rdt_print(OutputFormat::RDT_OUTPUT_SQL, {mk_sql_function(info.fn_id, info.arguments, NULL, NULL),
-                                   mk_sql_function_call(info.call_id, info.call_ptr, info.name.c_str(), NULL, 1, info.fn_id)});
+        rdt_print(OutputFormat::RDT_OUTPUT_SQL, {mk_sql_function(info.fn_id, info.arguments, info.loc.c_str(), info.fn_definition.c_str()),
+                                   mk_sql_function_call(info.call_id, info.call_ptr, info.name.c_str(), info.loc.c_str(), 1, info.fn_id)});
     }
 }
 

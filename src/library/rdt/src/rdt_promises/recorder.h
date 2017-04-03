@@ -84,6 +84,12 @@ public:
         info.name = CHKSTR(name);
         info.fn_id = get_function_id(op);
 
+        char *location = get_location(op);
+        info.loc = CHKSTR(location);
+        free(location);
+
+        info.fn_definition = get_expression(op);
+
         info.call_ptr = get_sexp_address(rho);
 #ifdef RDT_CALL_ID
         info.call_id = make_funcall_id(op);
@@ -104,6 +110,10 @@ public:
         info.name = CHKSTR(name);
         info.fn_id = get_function_id(op);
         info.call_id = STATE(fun_stack).top();
+
+        char *location = get_location(op);
+        info.loc = CHKSTR(location);
+        free(location);
 
         return info;
     }
