@@ -255,9 +255,9 @@ rdt_handler *setup_promise_tracing(SEXP options) {
     // FIXME CALL FUNCTIONS FROM MULTIPLEXER INIT!!!!!
 
     if (tracer_conf.output_format != OutputFormat::RDT_OUTPUT_TRACE) {
-        rdt_configure_sqlite();
+        // rdt_configure_sqlite(); FIXME NEW API
         // FIXME ALSO CALL STH TO LOAD SCHEMA
-        rdt_begin_transaction();
+        // rdt_begin_transaction(); FIXME NEW API
     }
 
     rdt_handler *h = (rdt_handler *) malloc(sizeof(rdt_handler));
@@ -312,9 +312,9 @@ rdt_handler *setup_promise_tracing(SEXP options) {
 }
 
 void cleanup_promise_tracing(/*rdt_handler *h,*/ SEXP options) {
-    if (tracer_conf.output_format != OutputFormat::RDT_OUTPUT_TRACE)
-        rdt_commit_transaction();
+    //if (tracer_conf.output_format != OutputFormat::RDT_OUTPUT_TRACE)
+        //rdt_commit_transaction(); //FIXME implement this using new functions
 
-    if (tracer_conf.output_type == OutputType::RDT_SQLITE || tracer_conf.output_type == OutputType::RDT_R_PRINT_AND_SQLITE)
-        rdt_close_sqlite();
+    //if (tracer_conf.output_type == OutputType::RDT_SQLITE || tracer_conf.output_type == OutputType::RDT_R_PRINT_AND_SQLITE)
+        //rdt_close_sqlite(); //FIXME implement this using new functions
 }

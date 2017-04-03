@@ -31,7 +31,7 @@ namespace multiplexer {
     enum Sink {PRINT = 'p', FILE = 'f', DATABASE = 'd'};
     enum class Payload {TEXT, PREPARED_STATEMENT};
 
-    typedef struct {
+    /*typedef*/ struct payload_t {
         Payload type;
         union {
             std::string * text;
@@ -39,19 +39,51 @@ namespace multiplexer {
             sqlite3_stmt * prepared_statement;
 #endif
         };
-    } payload_t;
+
+        payload_t(std::string & s) {
+            text = new std::string(s);
+            type = Payload::TEXT;
+        }
+
+        payload_t(sqlite3_stmt * s) {
+            prepared_statement = s;
+            type = Payload::PREPARED_STATEMENT;
+        }
+
+        payload_t(payload_t && payload) {
+            type = payload.type;
+            if (payload.type == Payload::TEXT)
+                text = payload.text;
+
+#ifdef RDT_SQLITE_SUPPORT
+            else
+                //if (payload.type == Payload::PREPARED_STATEMENT)
+                prepared_statement = payload.prepared_statement;
+#endif
+        }
+
+        payload_t(payload_t & payload) {
+            type = payload.type;
+            if (payload.type == Payload::TEXT)
+                text = new std::string(*payload.text);
+
+#ifdef RDT_SQLITE_SUPPORT
+            else
+            //if (payload.type == Payload::PREPARED_STATEMENT)
+                prepared_statement = payload.prepared_statement;
+#endif
+        }
+        ~payload_t() {
+            if (type == Payload::TEXT)
+                delete text;
+        }
+    };
 
     typedef std::string sink_arr_t;
 
-    payload_t & text(std::string *);
-
-#ifdef RDT_SQLITE_SUPPORT
-    payload_t & prepared_sql(sqlite3_stmt *);
-#endif
-
     // Functions for configuring outputs and outputting stuff.
     bool init(Sink output, std::string file_path, bool overwrite);
-    bool output(payload_t payload, sink_arr_t outputs);
+    bool output(payload_t && payload, sink_arr_t outputs);
 }
 
 #endif //R_3_3_1_OUTPUT_MULTIPLEXER_H

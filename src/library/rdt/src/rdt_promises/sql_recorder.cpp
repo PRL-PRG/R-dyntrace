@@ -108,21 +108,21 @@ void sql_recorder_t::function_entry(const call_info_t & info) {
     if (STATE(already_inserted_functions).count(info.fn_id) == 0) {
         sql_stmt_t statement = insert_function_statement(info);
         multiplexer::output(
-                multiplexer::text(&statement),
+                multiplexer::payload_t(statement),
                 tracer_conf.outputs);
     }
 
     if (info.arguments.size() > 0) {
         sql_stmt_t statement = insert_arguments_statement(info, align_statements);
         multiplexer::output(
-                multiplexer::text(&statement),
+                multiplexer::payload_t(statement),
                 tracer_conf.outputs);
     }
 
     {
         sql_stmt_t statement = insert_call_statement(info);
         multiplexer::output(
-                multiplexer::text(&statement),
+                multiplexer::payload_t(statement),
                 tracer_conf.outputs);
     }
 
@@ -130,7 +130,7 @@ void sql_recorder_t::function_entry(const call_info_t & info) {
     if (info.arguments.size() > 0) {
         sql_stmt_t statement = insert_promise_association_statement(info, align_statements);
         multiplexer::output(
-                multiplexer::text(&statement),
+                multiplexer::payload_t(statement),
                 tracer_conf.outputs);
     }
 
@@ -153,15 +153,15 @@ void sql_recorder_t::builtin_entry(const call_info_t & info) {
     if (STATE(already_inserted_functions).count(info.fn_id) == 0) {
         sql_stmt_t statement = insert_function_statement(info);
                 multiplexer::output(
-                        multiplexer::text(&statement),
-                tracer_conf.outputs);
+                        multiplexer::payload_t(statement),
+                        tracer_conf.outputs);
     }
 
     {
         sql_stmt_t statement = insert_call_statement(info);
                 multiplexer::output(
-                        multiplexer::text(&statement),
-                tracer_conf.outputs);
+                        multiplexer::payload_t(statement),
+                        tracer_conf.outputs);
     }
 
     // We do not handle arguments for built-ins.
@@ -181,7 +181,7 @@ void sql_recorder_t::force_promise_entry(const prom_info_t & info) {
 
     sql_stmt_t statement = insert_promise_evaluation_statement(RDT_SQL_FORCE_PROMISE, info);
     multiplexer::output(
-            multiplexer::text(&statement),
+            multiplexer::payload_t(statement),
             tracer_conf.outputs);
 
     // TODO remove
@@ -196,7 +196,7 @@ void sql_recorder_t::force_promise_entry(const prom_info_t & info) {
 void sql_recorder_t::promise_created(const prom_id_t & prom_id) {
     sql_stmt_t statement = insert_promise_statement(prom_id);
     multiplexer::output(
-            multiplexer::text(&statement),
+            multiplexer::payload_t(statement),
             tracer_conf.outputs);
 
     // TODO remove
@@ -210,7 +210,7 @@ void sql_recorder_t::promise_created(const prom_id_t & prom_id) {
 void sql_recorder_t::promise_lookup(const prom_info_t & info) {
     sql_stmt_t statement = insert_promise_evaluation_statement(RDT_SQL_LOOKUP_PROMISE, info);
     multiplexer::output(
-            multiplexer::text(&statement),
+            multiplexer::payload_t(statement),
             tracer_conf.outputs);
 
     // TODO

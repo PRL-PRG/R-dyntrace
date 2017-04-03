@@ -61,13 +61,13 @@ namespace multiplexer {
 #endif
             }
             default:
-                fprintf(stderr, "Unknown output sink type: %s\n", output);
+                fprintf(stderr, "Unknown output sink type: %i\n", output);
         }
     }
 
     // FIXME finalize: close Db, close file etc.
 
-    bool output(payload_t & payload, sink_arr_t outputs) {
+    bool output(payload_t && payload, sink_arr_t outputs) {
         bool ok = true;
 
         for (auto output : outputs)
@@ -76,14 +76,17 @@ namespace multiplexer {
                     if (payload.type == Payload::TEXT)
                         Rprintf(payload.text->c_str());
                     else
-                        fprintf(stderr, "Warning: cannot print non-text payload (%i), ignoring.\n", payload.type);
+                        fprintf(stderr, "Warning: cannot print non-text payload (%i), ignoring.\n",
+                                static_cast<std::underlying_type<Payload>::type>(payload.type));
+
                     break;
 
                 case Sink::FILE:
                     if (payload.type == Payload::TEXT)
                         fprintf(rdt_mux_output_file, "%s", payload.text->c_str());
                     else
-                        fprintf(stderr, "Warning: cannot print non-text payload to file (%i), ignoring.\n", payload.type);
+                        fprintf(stderr, "Warning: cannot print non-text payload to file (%i), ignoring.\n",
+                                static_cast<std::underlying_type<Payload>::type>(payload.type));
                     break;
 
                 case Sink::DATABASE:
@@ -114,7 +117,7 @@ namespace multiplexer {
                         sqlite3_reset(payload.prepared_statement);
                     } else {
                         fprintf(stderr, "Warning: cannot execute query from unknown payload to DB (%i), ignoring.\n",
-                                payload.type);
+                                static_cast<std::underlying_type<Payload>::type>(payload.type));
                     }
                     break;
 #else
@@ -125,7 +128,7 @@ namespace multiplexer {
 #endif
 
                 default:
-                    fprintf(stderr, "Unknown output sink type: %s\n", output);
+                    fprintf(stderr, "Unknown output sink type: %i\n", output);
 
                     ok = false;
             }
@@ -139,5 +142,14 @@ namespace multiplexer {
         return f.good();
     }
 
+//    payload_t text(std::string & text) {
+//        return payload_t {Payload::TEXT, new std::string(text)};
+//    }
+//
+//#ifdef RDT_SQLITE_SUPPORT
+//    payload_t prepared_sql(sqlite3_stmt * statement) {
+//        return payload_t {Payload::PREPARED_STATEMENT, {.prepared_statement = statement}};
+//    }
+//#endif
 
 }

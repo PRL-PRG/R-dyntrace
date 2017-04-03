@@ -6,7 +6,6 @@
 
 #include "psql_recorder.h"
 #include "tracer_conf.h"
-//#include "tracer_output.h"
 
 #include "sql_generator.h"
 #include "multiplexer.h"
@@ -183,28 +182,28 @@ void psql_recorder_t::function_entry(const call_info_t & info) {
     if (STATE(already_inserted_functions).count(info.fn_id) == 0) {
         sqlite3_stmt *statement = populate_function_statement(info);
         multiplexer::output(
-                multiplexer::prepared_sql(statement),
+                multiplexer::payload_t(statement),
                 tracer_conf.outputs);
     }
 
     if (info.arguments.size() > 0) {
         sqlite3_stmt *statement = populate_arguments_statement(info);
         multiplexer::output(
-                multiplexer::prepared_sql(statement),
+                multiplexer::payload_t(statement),
                 tracer_conf.outputs);
     }
 
     {
         sqlite3_stmt *statement = populate_call_statement(info);
         multiplexer::output(
-                multiplexer::prepared_sql(statement),
+                multiplexer::payload_t(statement),
                 tracer_conf.outputs);
     }
 
     if (info.arguments.size() > 0) {
         sqlite3_stmt *statement = populate_promise_association_statement(info);
         multiplexer::output(
-                multiplexer::prepared_sql(statement),
+                multiplexer::payload_t(statement),
                 tracer_conf.outputs);
     }
 #else
@@ -217,14 +216,14 @@ void psql_recorder_t::builtin_entry(const call_info_t & info) {
     if (STATE(already_inserted_functions).count(info.fn_id) == 0) {
         sqlite3_stmt *statement = populate_function_statement(info);
         multiplexer::output(
-                multiplexer::prepared_sql(statement),
+                multiplexer::payload_t(statement),
                 tracer_conf.outputs);
     }
 
     {
         sqlite3_stmt *statement = populate_call_statement(info);
         multiplexer::output(
-                multiplexer::prepared_sql(statement),
+                multiplexer::payload_t(statement),
                 tracer_conf.outputs);
     }
 
@@ -238,7 +237,7 @@ void psql_recorder_t::force_promise_entry(const prom_info_t & info) {
 #ifdef RDT_SQLITE_SUPPORT
     sqlite3_stmt *statement = populate_promise_evaluation_statement(RDT_SQL_FORCE_PROMISE, info);
     multiplexer::output(
-            multiplexer::prepared_sql(statement),
+            multiplexer::payload_t(statement),
             tracer_conf.outputs);
 #else
     // FIXME
@@ -249,7 +248,7 @@ void psql_recorder_t::promise_created(const prom_id_t & prom_id) {
 #ifdef RDT_SQLITE_SUPPORT
     sqlite3_stmt *statement = populate_promise_statement(prom_id);
     multiplexer::output(
-            multiplexer::prepared_sql(statement),
+            multiplexer::payload_t(statement),
             tracer_conf.outputs);
 #else
     // FIXME
@@ -260,7 +259,7 @@ void psql_recorder_t::promise_lookup(const prom_info_t & info) {
 #ifdef RDT_SQLITE_SUPPORT
     sqlite3_stmt *statement = populate_promise_evaluation_statement(RDT_SQL_LOOKUP_PROMISE, info);
     multiplexer::output(
-            multiplexer::prepared_sql(statement),
+            multiplexer::payload_t(statement),
             tracer_conf.outputs);
 #else
     // FIXME
