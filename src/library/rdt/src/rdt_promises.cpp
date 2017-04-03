@@ -23,6 +23,7 @@
 #include "rdt_promises/recorder.h"
 #include "rdt_promises/trace_recorder.h"
 #include "rdt_promises/sql_recorder.h"
+#include "rdt_promises/psql_recorder.h"
 
 using namespace std;
 
@@ -51,7 +52,7 @@ struct trace_promises {
     DECL_HOOK(end)() {
         tracer_state().finish_pass();
 
-        // FIXME
+        // FIXME new API
 //        if (output) {
 //            fclose(output);
 //            output = NULL;
@@ -264,15 +265,19 @@ rdt_handler *setup_promise_tracing(SEXP options) {
     //memcpy(h, &trace_promises_rdt_handler, sizeof(rdt_handler));
     //*h = trace_promises_rdt_handler; // This actually does the same thing as memcpy
     if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_TRACE) {
-        Rprintf("1\n");
+        Rprintf("1\n"); // TODO cleanup debug
         *h = register_hooks_with<trace_recorder_t>();
     }
-    else if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_SQL || tracer_conf.output_format == OutputFormat::RDT_OUTPUT_COMPILED_SQLITE) {
-        Rprintf("2\n");
+    else if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_SQL) {
+        Rprintf("2\n");// TODO cleanup debug
         *h = register_hooks_with<sql_recorder_t>();
     }
-    else { // RDT_OUTPUT_BOTH
-        Rprintf("3\n");
+    else if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_COMPILED_SQLITE) {
+        Rprintf("2b\n");// TODO cleanup debug
+        *h = register_hooks_with<psql_recorder_t>();
+    }
+    else { // RDT_OUTPUT_BOTH // FIXME need a better way to compose outputs
+        Rprintf("3\n");// TODO cleanup debug
         *h = register_hooks_with<compose<trace_recorder_t, sql_recorder_t>>();
     }
 

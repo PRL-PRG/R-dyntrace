@@ -2,8 +2,8 @@
 // Created by nohajc on 29.3.17.
 //
 
-#ifndef R_3_3_1_SQL_RECORDER_H
-#define R_3_3_1_SQL_RECORDER_H
+#ifndef R_3_3_1_PSQL_RECORDER_H
+#define R_3_3_1_PSQL_RECORDER_H
 
 #include "recorder.h"
 

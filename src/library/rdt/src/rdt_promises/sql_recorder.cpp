@@ -213,7 +213,7 @@ void sql_recorder_t::promise_lookup(const prom_info_t & info) {
             multiplexer::payload_t(statement),
             tracer_conf.outputs);
 
-    // TODO
+    // TODO rem
     //    if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == OutputType::RDT_SQLITE) {
     //        run_prep_sql_promise_evaluation(RDT_LOOKUP_PROMISE, info.prom_id, info.from_call_id);
     //    } else {
