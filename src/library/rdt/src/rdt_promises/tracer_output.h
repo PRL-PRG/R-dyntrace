@@ -38,7 +38,7 @@ string print_function(const char *type, const char *loc, const char *name, fn_ad
 #ifdef RDT_SQLITE_SUPPORT
 #include <sqlite3.h>
 
-extern sqlite3 *sqlite_database; // TODO does not need to be global maybe?
+//extern sqlite3 *sqlite_database; // TODO does not need to be global maybe?
 #endif
 
 

@@ -7,7 +7,7 @@
 
 #include "recorder.h"
 
-class sql_recorder_t : public recorder_t<sql_recorder_t> {
+class psql_recorder_t : public recorder_t<psql_recorder_t> {
 public:
     void init_recorder();
     void start_trace();

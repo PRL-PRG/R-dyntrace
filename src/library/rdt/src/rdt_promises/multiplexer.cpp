@@ -10,9 +10,15 @@
 
 #include "../rdt.h"
 
+FILE *rdt_mux_output_file = NULL;
+
 using namespace std;
 
 namespace multiplexer {
+#ifdef RDT_SQLITE_SUPPORT
+    sqlite3 *sqlite_database;
+#endif
+
     static bool file_exists(const string &);
 
     bool init(Sink output, string file_path, bool overwrite) {
@@ -132,4 +138,6 @@ namespace multiplexer {
         ifstream f(fname);
         return f.good();
     }
+
+
 }

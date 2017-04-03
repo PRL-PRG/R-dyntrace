@@ -158,7 +158,7 @@ string print_function(const char *type, const char *loc, const char *name, fn_ad
 
 #ifdef RDT_SQLITE_SUPPORT
 static std::string RDT_SQLITE_SCHEMA = "src/library/rdt/sql/schema.sql";
-sqlite3 *sqlite_database;
+//sqlite3 *sqlite_database;
 
 // Prepared statement objects.
 static sqlite3_stmt *prepared_sql_insert_function = nullptr;

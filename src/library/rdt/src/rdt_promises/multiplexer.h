@@ -19,12 +19,12 @@
 //#include <cstdio>
 
 // Output destinations: global variables.
-FILE *rdt_mux_output_file = NULL; // FIXME I can't put this stupid thing into a namespace? Fuck off. Can't we use a C++ file type? The plan is to only use it in C++ anyway...
+extern FILE *rdt_mux_output_file; // FIXME I can't put this stupid thing into a namespace? Fuck off. Can't we use a C++ file type? The plan is to only use it in C++ anyway...
 
 namespace multiplexer {
 
 #ifdef RDT_SQLITE_SUPPORT
-    sqlite3 *sqlite_database;
+    extern sqlite3 *sqlite_database;
 #endif
 
     // Structures and helper functions for wrappping data.
