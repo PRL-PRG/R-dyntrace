@@ -6,7 +6,9 @@
 #include "r.h"
 #include "rdt.h"
 #include <R_ext/Rdynload.h>
+#include <Rdynpriv.h>
 
+#include "dyn_fn_lookup.h"
 
 #define CALLDEF(name, n)  {#name, (DL_FUNC) &name, n}
 
@@ -24,4 +26,7 @@ R_init_rdt(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
     R_forceSymbols(dll, TRUE);
+
+    // Store dll handle for dynamic function lookup (used in rdt.c)
+    init_dll_handle(dll->handle);
 }

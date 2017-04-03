@@ -225,7 +225,7 @@ rdt_handler register_hooks_with() {
 #undef tp
 }
 
-rdt_handler *setup_promise_tracing(SEXP options) {
+rdt_handler *setup_promises_tracing(SEXP options) {
     tracer_conf_t new_conf = get_config_from_R_options(options);
     tracer_conf.update(new_conf);
 
@@ -304,7 +304,7 @@ rdt_handler *setup_promise_tracing(SEXP options) {
     return h;
 }
 
-void cleanup_promise_tracing(/*rdt_handler *h,*/ SEXP options) {
+void cleanup_promises_tracing(/*rdt_handler *h,*/ SEXP options) {
     if (tracer_conf.output_format != OutputFormat::RDT_OUTPUT_TRACE)
         rdt_commit_transaction();
 

@@ -745,7 +745,9 @@ set(SOURCE_FILES
         src/library/rdt/src/rdt_promises/trace_recorder.h
         src/library/rdt/src/rdt_promises/trace_recorder.cpp
         src/library/rdt/src/rdt_promises/sql_recorder.h
-        src/library/rdt/src/rdt_promises/sql_recorder.cpp)
+        src/library/rdt/src/rdt_promises/sql_recorder.cpp
+        src/library/rdt/src/dyn_fn_lookup.h
+        src/library/rdt/src/dyn_fn_lookup.c)
 
 include_directories(include)
 include_directories(include/R_ext)

@@ -6,6 +6,7 @@
 //#include <Defn.h>
 
 #include "rdt.h"
+#include "dyn_fn_lookup.h"
 
 static rdt_handler *handler = NULL;
 
@@ -30,17 +31,15 @@ SEXP Rdt(SEXP tracer, SEXP rho, SEXP options) {
         return R_FalseValue;
     }
 
-    const char *sys = get_string(tracer);    
-    if (!strcmp("default", sys)) {
-        handler = setup_default_tracing(options);
-    } else if (!strcmp("noop", sys)) {
-        handler = setup_noop_tracing(options);
-    } else if (!strcmp("promises", sys)) {
-        handler = setup_promise_tracing(options);
-    } else if (!strcmp("debug", sys)) {
-        handler = setup_debug_tracing(options);
+    const char *sys = get_string(tracer);
+    tracer_setup_ptr_t setup_tracing = find_fn_by_name("setup_%s_tracing", sys);
+
+    if (!setup_tracing) {
+        error("Tracer %s not found", sys);
+        return R_FalseValue;
     }
 
+    handler = setup_tracing(options);
     if (!handler) {
         error("Unable to initialize dynamic tracing");
         return R_FalseValue;
@@ -58,9 +57,11 @@ SEXP Rdt(SEXP tracer, SEXP rho, SEXP options) {
     void *data[2] = {block, rho};
     R_ToplevelExec(&internal_eval, (void *)data);
 
-    if (!strcmp("promises", sys)) {
-        cleanup_promise_tracing(options);
+    tracer_cleanup_ptr_t cleanup_tracing = find_fn_by_name("cleanup_%s_tracing", sys);
+    if (cleanup_tracing) {
+        cleanup_promises_tracing(options);
     }
+    // Missing cleanup_tracing function is not an error
 
     rdt_stop();
     return R_TrueValue; // TODO Why does this return TRUE and not the return value of the expression anyway?
