@@ -152,10 +152,19 @@ public:
         return promise_get_info(symbol, rho);
     }
 
-#define DELEGATE(func, info_struct) \
+#define DELEGATE2(func, info_struct) \
     void func##_process(const info_struct & info) { \
         impl().func(info); \
     }
+
+#define DELEGATE1(func) \
+    void func##_process() { \
+        impl().func(); \
+    }
+
+    // Macro overloading trick: http://stackoverflow.com/a/11763277/6846474
+#define GET_MACRO(_1, _2, NAME, ...) NAME
+#define DELEGATE(...) GET_MACRO(__VA_ARGS__, DELEGATE2, DELEGATE1)(__VA_ARGS__)
 
     DELEGATE(function_entry, call_info_t)
     DELEGATE(function_exit, call_info_t)
@@ -166,12 +175,14 @@ public:
     DELEGATE(promise_created, prom_id_t)
     DELEGATE(promise_lookup, prom_info_t)
 
-    DELEGATE(init_recorder, void)
-    DELEGATE(start_trace, void)
-    DELEGATE(finish_trace, void)
+    DELEGATE(init_recorder)
+    DELEGATE(start_trace)
+    DELEGATE(finish_trace)
     DELEGATE(unwind, vector<call_id_t>)
 
 #undef DELEGATE
+#undef DELEGATE1
+#undef DELEGATE2
 };
 
 
@@ -180,12 +191,21 @@ class compose : public recorder_t<compose<Rec...>> {
     std::tuple<Rec...> rec;
 
 public:
-#define COMPOSE(func, info_struct) \
+#define COMPOSE2(func, info_struct) \
     void func(const info_struct & info) { \
         tuple_for_each(rec, [&info](auto & r) { \
             r.func(info); \
         }); \
     }
+
+#define COMPOSE1(func) \
+    void func() { \
+        tuple_for_each(rec, [](auto & r) { \
+            r.func(); \
+        }); \
+    }
+
+#define COMPOSE(...) GET_MACRO(__VA_ARGS__, COMPOSE2, COMPOSE1)(__VA_ARGS__)
 
     COMPOSE(function_entry, call_info_t)
     COMPOSE(function_exit, call_info_t)
@@ -196,12 +216,15 @@ public:
     COMPOSE(promise_created, prom_id_t)
     COMPOSE(promise_lookup, prom_info_t)
 
-    COMPOSE(init_recorder, void)
-    COMPOSE(start_trace, void)
-    COMPOSE(finish_trace, void)
+    COMPOSE(init_recorder)
+    COMPOSE(start_trace)
+    COMPOSE(finish_trace)
     COMPOSE(unwind, vector<call_id_t>)
 
 #undef COMPOSE
+#undef COMPOSE1
+#undef COMPOSE2
+#undef GET_MACRO
 };
 
 #endif //R_3_3_1_RECORDER_H

@@ -309,7 +309,7 @@ void trace_recorder_t::finish_trace() {
     multiplexer::finish(tracer_conf.outputs);
 }
 
-void trace_recorder_t::unwind(vector<call_id_t> & unwound_calls) {
+void trace_recorder_t::unwind(const vector<call_id_t> & unwound_calls) {
     stringstream statement;
 
     for (call_id_t call_id : unwound_calls)

@@ -20,7 +20,7 @@ public:
     void force_promise_exit(const prom_info_t &) {}
     void promise_created(const prom_id_t &);
     void promise_lookup(const prom_info_t &);
-    void unwind(vector<call_id_t> &) {};
+    void unwind(const vector<call_id_t> &) {};
 };
 
 #endif //R_3_3_1_SQL_RECORDER_H

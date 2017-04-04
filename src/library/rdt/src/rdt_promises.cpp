@@ -48,13 +48,13 @@ struct trace_promises {
     DECL_HOOK(begin)(const SEXP prom) {
         tracer_state().start_pass(prom);
 
-        rec.start_trace();
+        rec.start_trace_process();
     }
 
     DECL_HOOK(end)() {
         tracer_state().finish_pass();
 
-        rec.finish_trace();
+        rec.finish_trace_process();
         // FIXME new API
 //        if (output) {
 //            fclose(output);
@@ -177,7 +177,7 @@ struct trace_promises {
     DECL_HOOK(jump_ctxt)(const SEXP rho, const SEXP val) {
         vector<call_id_t> unwound_calls;
         tracer_state().adjust_fun_stack(rho, unwound_calls);
-        rec.unwind(unwound_calls);
+        rec.unwind_process(unwound_calls);
     }
 
     //    DECL_HOOK(eval_entry)(SEXP e, SEXP rho) {
