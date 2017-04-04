@@ -158,7 +158,7 @@ void trace_recorder_t::function_entry(const call_info_t & info) {
             TraceLinePrefix::ENTER,
             info,
             /*indent=*/tracer_conf.pretty_print,
-            /*as_sql_comment=*/false, // TODO
+            /*as_sql_comment=*/commented,
             /*call_id_as_pointer=*/tracer_conf.call_id_use_ptr_fmt);
 
     multiplexer::output(
@@ -177,7 +177,7 @@ void trace_recorder_t::function_exit(const call_info_t & info) {
             TraceLinePrefix::EXIT,
             info,
             tracer_conf.pretty_print,
-            /*as_sql_comment=*/false, // TODO
+            /*as_sql_comment=*/commented,
             /*call_id_as_pointer=*/tracer_conf.call_id_use_ptr_fmt);
 
     multiplexer::output(
@@ -190,7 +190,7 @@ void trace_recorder_t::builtin_entry(const call_info_t & info) {
             TraceLinePrefix::ENTER,
             info,
             tracer_conf.pretty_print,
-            /*as_sql_comment=*/false, // TODO
+            /*as_sql_comment=*/commented,
             /*call_id_as_pointer=*/tracer_conf.call_id_use_ptr_fmt);
 
     multiplexer::output(
@@ -209,7 +209,7 @@ void trace_recorder_t::builtin_exit(const call_info_t & info) {
             TraceLinePrefix::EXIT,
             info,
             tracer_conf.pretty_print,
-            /*as_sql_comment=*/false, // TODO
+            /*as_sql_comment=*/commented,
             /*call_id_as_pointer=*/tracer_conf.call_id_use_ptr_fmt);
 
     multiplexer::output(
@@ -222,7 +222,7 @@ void trace_recorder_t::promise_created(const prom_id_t & prom_id) {
             TraceLinePrefix::ENTER_AND_EXIT,
             prom_id,
             tracer_conf.pretty_print,
-            /*as_sql_comment=*/false); // TODO
+            /*as_sql_comment=*/commented);
 
     multiplexer::output(
             multiplexer::payload_t(statement),
@@ -235,7 +235,7 @@ void trace_recorder_t::force_promise_entry(const prom_info_t & info) {
             PromiseEvaluationEvent::FORCE,
             info,
             tracer_conf.pretty_print,
-            /*as_sql_comment=*/false, // TODO
+            /*as_sql_comment=*/commented,
             /*call_id_as_pointer=*/tracer_conf.call_id_use_ptr_fmt);
 
     multiplexer::output(
@@ -249,7 +249,7 @@ void trace_recorder_t::force_promise_exit(const prom_info_t & info) {
             PromiseEvaluationEvent::FORCE,
             info,
             tracer_conf.pretty_print,
-            /*as_sql_comment=*/false, // TODO
+            /*as_sql_comment=*/commented,
             /*call_id_as_pointer=*/tracer_conf.call_id_use_ptr_fmt);
 
     multiplexer::output(
@@ -263,7 +263,7 @@ void trace_recorder_t::promise_lookup(const prom_info_t & info) {
             PromiseEvaluationEvent::LOOKUP,
             info,
             tracer_conf.pretty_print,
-            /*as_sql_comment=*/false, // TODO
+            /*as_sql_comment=*/commented,
             /*call_id_as_pointer=*/tracer_conf.call_id_use_ptr_fmt);
 
     multiplexer::output(
@@ -291,7 +291,7 @@ void trace_recorder_t::unwind(const vector<call_id_t> & unwound_calls) {
                 TraceLinePrefix::EXIT,
                 call_id,
                 tracer_conf.pretty_print,
-                /*as_sql_comment=*/false, // TODO
+                /*as_sql_comment=*/commented,
                 /*call_id_as_pointer=*/tracer_conf.call_id_use_ptr_fmt);
 
     string s = statement.str();

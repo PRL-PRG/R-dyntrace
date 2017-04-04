@@ -14,7 +14,7 @@
 
 template<typename Impl>
 class recorder_t {
-private:
+protected:
     Impl& impl() {
         return *static_cast<Impl*>(this);
     }
@@ -185,22 +185,32 @@ public:
 #undef DELEGATE2
 };
 
+template<typename ...Rec>
+class compose_impl;
 
 template<typename ...Rec>
-class compose : public recorder_t<compose<Rec...>> {
+class compose : public compose_impl<Rec...> {
+public:
     std::tuple<Rec...> rec;
+};
 
+
+template<typename ...Rec>
+class compose_impl : public recorder_t<compose<Rec...>> {
+protected:
+    // Make sure no one can create an instance of compose_impl
+    compose_impl() = default;
 public:
 #define COMPOSE2(func, info_struct) \
     void func(const info_struct & info) { \
-        tuple_for_each(rec, [&info](auto & r) { \
+        tuple_for_each(this->impl().rec, [&info](auto & r) { \
             r.func(info); \
         }); \
     }
 
 #define COMPOSE1(func) \
     void func() { \
-        tuple_for_each(rec, [](auto & r) { \
+        tuple_for_each(this->impl().rec, [](auto & r) { \
             r.func(); \
         }); \
     }
