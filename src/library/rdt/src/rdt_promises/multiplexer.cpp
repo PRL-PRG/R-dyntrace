@@ -7,6 +7,7 @@
 
 //#include <string>
 #include <fstream>
+#include <set>
 
 #include "../rdt.h"
 
@@ -21,47 +22,59 @@ namespace multiplexer {
 
     static bool file_exists(const string &);
 
-    bool init(Sink output, string file_path, bool overwrite) {
-        switch (output) {
-            case Sink::PRINT:
-                return true;
+    bool init(sink_arr_t outputs, string file_path, bool overwrite) {
+        set<Sink> already_initialized;
 
-            case Sink::FILE:
-                rdt_mux_output_file = fopen(file_path.c_str(), overwrite ? "w" : "a");
-                if (!rdt_mux_output_file) {
-                    error("Error: could not open file \"%s\", message (%i): %s\n", file_path, errno, strerror(errno));
-                    return NULL;
-                }
-                return true;
+        for (auto output_as_wrong_type : outputs) {
+            Sink output = (Sink) output_as_wrong_type;
 
-            case Sink::DATABASE: {
+            if (already_initialized.count(output))
+                continue;
+            else
+                already_initialized.insert(output);
+
+            switch (output) {
+                case Sink::PRINT:
+                    return true;
+
+                case Sink::FILE:
+                    rdt_mux_output_file = fopen(file_path.c_str(), overwrite ? "w" : "a");
+                    if (!rdt_mux_output_file) {
+                        error("Error: could not open file \"%s\", message (%i): %s\n", file_path, errno,
+                              strerror(errno));
+                        return NULL;
+                    }
+                    return true;
+
+                case Sink::DATABASE: {
 #ifdef RDT_SQLITE_SUPPORT
-                // Remove old DB if necessary.
-                if (overwrite && file_exists(file_path))
-                    remove(file_path.c_str());
+                    // Remove old DB if necessary.
+                    if (overwrite && file_exists(file_path))
+                        remove(file_path.c_str());
 
-                // Open DB connection.
-                int outcome = sqlite3_open(file_path.c_str(), &sqlite_database);
+                    // Open DB connection.
+                    int outcome = sqlite3_open(file_path.c_str(), &sqlite_database);
 
-                // FIXME load schema somehow... although i guess in a separate call
+                    // FIXME load schema somehow... although i guess in a separate call
 
-                if (outcome != SQLITE_OK) {
-                    fprintf(stderr, "Error: could not open DB connection, message (%i) %s\n",
-                            outcome,
-                            sqlite3_errmsg(sqlite_database));
+                    if (outcome != SQLITE_OK) {
+                        fprintf(stderr, "Error: could not open DB connection, message (%i) %s\n",
+                                outcome,
+                                sqlite3_errmsg(sqlite_database));
 
-                    return false;
-                }
+                        return false;
+                    }
 
-                return true;
+                    return true;
 
 #else
-                fprintf(stderr, "Warning: cannot initialize database connection: no SQLite3 support.\n");
-                return false;
+                    fprintf(stderr, "Warning: cannot initialize database connection: no SQLite3 support.\n");
+                    return false;
 #endif
+                }
+                default:
+                    fprintf(stderr, "Unknown output sink type: %i\n", output);
             }
-            default:
-                fprintf(stderr, "Unknown output sink type: %i\n", output);
         }
     }
 

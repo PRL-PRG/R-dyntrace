@@ -298,15 +298,15 @@ void trace_recorder_t::promise_lookup(const prom_info_t & info) {
 }
 
 void trace_recorder_t::init_recorder() {
-
+    multiplexer::init(tracer_conf.outputs);
 }
 
 void trace_recorder_t::start_trace() {
-
+    multiplexer::start(tracer_conf.outputs);
 }
 
 void trace_recorder_t::finish_trace() {
-
+    multiplexer::finish(tracer_conf.outputs);
 }
 
 void trace_recorder_t::unwind(vector<call_id_t> & unwound_calls) {
