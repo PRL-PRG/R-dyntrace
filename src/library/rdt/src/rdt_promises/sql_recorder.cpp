@@ -99,12 +99,9 @@ sql_stmt_t insert_promise_evaluation_statement(prom_eval_t type, const prom_info
 
 /* Functions connecting to the outside world, create SQL and multiplex output. */
 
-
-
 void sql_recorder_t::function_entry(const call_info_t & info) {
     bool align_statements = tracer_conf.pretty_print;
 
-    // TODO multiplex to other outputs (file etc).
     if (STATE(already_inserted_functions).count(info.fn_id) == 0) {
         sql_stmt_t statement = insert_function_statement(info);
         multiplexer::output(
@@ -135,13 +132,13 @@ void sql_recorder_t::function_entry(const call_info_t & info) {
     }
 
     // TODO remove
-    //    if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == OutputType::RDT_SQLITE) {
+    //    if (tracer_conf.output_format == OutputFormat::PREPARED_SQL && tracer_conf.output_type == OutputDestination::SQLITE) {
     //        // TODO: Change function signatures to accept std::string instead of const char*
     //        run_prep_sql_function(info.fn_id, info.arguments, info.loc.c_str(), info.fn_definition.c_str());
     //        run_prep_sql_function_call(info.call_id, info.call_ptr, info.fqfn.c_str(), info.loc.c_str(), info.call_type, info.fn_id);
     //        run_prep_sql_promise_assoc(info.arguments, info.call_id);
     //    } else {
-    //        rdt_print(OutputFormat::RDT_OUTPUT_SQL, {mk_sql_function(info.fn_id, info.arguments, info.loc.c_str(), info.fn_definition.c_str()),
+    //        rdt_print(OutputFormat::SQL, {mk_sql_function(info.fn_id, info.arguments, info.loc.c_str(), info.fn_definition.c_str()),
     //                                   mk_sql_function_call(info.call_id, info.call_ptr, info.fqfn.c_str(), info.loc.c_str(), info.call_type, info.fn_id),
     //                                   mk_sql_promise_assoc(info.arguments, info.call_id)});
     //    }
@@ -149,30 +146,29 @@ void sql_recorder_t::function_entry(const call_info_t & info) {
 
 void sql_recorder_t::builtin_entry(const call_info_t & info) {
 
-    // TODO multiplex to other outputs (file etc).
     if (STATE(already_inserted_functions).count(info.fn_id) == 0) {
         sql_stmt_t statement = insert_function_statement(info);
                 multiplexer::output(
-                        multiplexer::payload_t(statement),
-                        tracer_conf.outputs);
+                multiplexer::payload_t(statement),
+                tracer_conf.outputs);
     }
 
     {
         sql_stmt_t statement = insert_call_statement(info);
                 multiplexer::output(
-                        multiplexer::payload_t(statement),
-                        tracer_conf.outputs);
+                multiplexer::payload_t(statement),
+                tracer_conf.outputs);
     }
 
     // We do not handle arguments for built-ins.
 
     // TODO remove
-    //    if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == OutputType::RDT_SQLITE) {
+    //    if (tracer_conf.output_format == OutputFormat::PREPARED_SQL && tracer_conf.output_type == OutputDestination::SQLITE) {
     //        run_prep_sql_function(info.fn_id, info.arguments, NULL, NULL);
     //        run_prep_sql_function_call(info.call_id, info.call_ptr, info.name.c_str(), NULL, 1, info.fn_id);
     //        //run_prep_sql_promise_assoc(arguments, call_id);
     //    } else {
-    //        rdt_print(OutputFormat::RDT_OUTPUT_SQL, {mk_sql_function(info.fn_id, info.arguments, NULL, NULL),
+    //        rdt_print(OutputFormat::SQL, {mk_sql_function(info.fn_id, info.arguments, NULL, NULL),
     //                                   mk_sql_function_call(info.call_id, info.call_ptr, info.name.c_str(), NULL, 1, info.fn_id)});
     //    }
 }
@@ -186,10 +182,10 @@ void sql_recorder_t::force_promise_entry(const prom_info_t & info) {
 
     // TODO remove
     // in_call_id = current call
-    //    if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == OutputType::RDT_SQLITE) {
+    //    if (tracer_conf.output_format == OutputFormat::PREPARED_SQL && tracer_conf.output_type == OutputDestination::SQLITE) {
     //        run_prep_sql_promise_evaluation(RDT_FORCE_PROMISE, info.prom_id, info.from_call_id);
     //    } else {
-    //        rdt_print(OutputFormat::RDT_OUTPUT_SQL, {mk_sql_promise_evaluation(RDT_FORCE_PROMISE, info.prom_id, info.from_call_id)});
+    //        rdt_print(OutputFormat::SQL, {mk_sql_promise_evaluation(RDT_FORCE_PROMISE, info.prom_id, info.from_call_id)});
     //    }
 }
 
@@ -200,10 +196,10 @@ void sql_recorder_t::promise_created(const prom_id_t & prom_id) {
             tracer_conf.outputs);
 
     // TODO remove
-    //    if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == OutputType::RDT_SQLITE) {
+    //    if (tracer_conf.output_format == OutputFormat::PREPARED_SQL && tracer_conf.output_type == OutputDestination::SQLITE) {
     //        run_prep_sql_promise(prom_id);
     //    } else {
-    //        rdt_print(OutputFormat::RDT_OUTPUT_SQL, {mk_sql_promise(prom_id)});
+    //        rdt_print(OutputFormat::SQL, {mk_sql_promise(prom_id)});
     //    }
 }
 
@@ -214,9 +210,21 @@ void sql_recorder_t::promise_lookup(const prom_info_t & info) {
             tracer_conf.outputs);
 
     // TODO rem
-    //    if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_COMPILED_SQLITE && tracer_conf.output_type == OutputType::RDT_SQLITE) {
+    //    if (tracer_conf.output_format == OutputFormat::PREPARED_SQL && tracer_conf.output_type == OutputDestination::SQLITE) {
     //        run_prep_sql_promise_evaluation(RDT_LOOKUP_PROMISE, info.prom_id, info.from_call_id);
     //    } else {
-    //        rdt_print(OutputFormat::RDT_OUTPUT_SQL, {mk_sql_promise_evaluation(RDT_LOOKUP_PROMISE, info.prom_id, info.from_call_id)});
+    //        rdt_print(OutputFormat::SQL, {mk_sql_promise_evaluation(RDT_LOOKUP_PROMISE, info.prom_id, info.from_call_id)});
     //    }
+}
+
+void sql_recorder_t::init_recorder() {
+
+}
+
+void sql_recorder_t::start_trace() {
+
+}
+
+void sql_recorder_t::finish_trace() {
+
 }

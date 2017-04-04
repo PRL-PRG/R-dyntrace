@@ -266,6 +266,30 @@ void psql_recorder_t::promise_lookup(const prom_info_t & info) {
 #endif
 }
 
+void psql_recorder_t::init_recorder() {
+#ifdef RDT_SQLITE_SUPPORT
+
+#else
+    // FIXME
+#endif
+}
+
+void psql_recorder_t::start_trace() {
+#ifdef RDT_SQLITE_SUPPORT
+
+#else
+    // FIXME
+#endif
+}
+
+void psql_recorder_t::finish_trace() {
+#ifdef RDT_SQLITE_SUPPORT
+
+#else
+    // FIXME
+#endif
+}
+
 #ifdef RDT_SQLITE_SUPPORT
 sqlite3_stmt* compile_sql_statement(sql_stmt_t statement) {
     sqlite3_stmt *prepared_statement;

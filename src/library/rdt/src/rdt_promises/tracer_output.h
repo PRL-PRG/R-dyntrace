@@ -13,8 +13,8 @@
 
 using namespace std;
 
-enum class OutputFormat: char {RDT_OUTPUT_TRACE, RDT_OUTPUT_SQL, RDT_OUTPUT_BOTH, RDT_OUTPUT_COMPILED_SQLITE};
-enum class OutputType: char {RDT_R_PRINT, RDT_FILE, RDT_SQLITE, RDT_R_PRINT_AND_SQLITE};
+enum class OutputFormat: char {TRACE, SQL, TRACE_AND_SQL, PREPARED_SQL};
+//enum class OutputDestination: char {CONSOLE, FILE, SQLITE, CONSOLE_AND_SQLITE};
 
 //extern FILE *output;
 

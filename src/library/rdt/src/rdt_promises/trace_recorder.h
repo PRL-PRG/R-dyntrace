@@ -9,6 +9,9 @@
 
 class trace_recorder_t : public recorder_t<trace_recorder_t> {
 public:
+    void init_recorder();
+    void start_trace();
+    void finish_trace();
     void function_entry(const call_info_t & info);
     void function_exit(const call_info_t & info);
     void builtin_entry(const call_info_t & info);
@@ -17,6 +20,7 @@ public:
     void force_promise_exit(const prom_info_t & info);
     void promise_created(const prom_id_t & prom_id);
     void promise_lookup(const prom_info_t & info);
+    void unwind(vector<call_id_t> &);
 };
 
 #endif //R_3_3_1_TRACEPR_H

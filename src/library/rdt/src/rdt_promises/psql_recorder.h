@@ -12,14 +12,15 @@ public:
     void init_recorder();
     void start_trace();
     void finish_trace();
-    void function_entry(const call_info_t & info);
-    void function_exit(const call_info_t & info) {}
-    void builtin_entry(const call_info_t & info);
-    void builtin_exit(const call_info_t & info) {};
-    void force_promise_entry(const prom_info_t & info);
-    void force_promise_exit(const prom_info_t & info) {}
-    void promise_created(const prom_id_t & prom_id);
-    void promise_lookup(const prom_info_t & info);
+    void function_entry(const call_info_t &);
+    void function_exit(const call_info_t &) {}
+    void builtin_entry(const call_info_t &);
+    void builtin_exit(const call_info_t &) {};
+    void force_promise_entry(const prom_info_t &);
+    void force_promise_exit(const prom_info_t &) {}
+    void promise_created(const prom_id_t &);
+    void promise_lookup(const prom_info_t &);
+    void unwind(vector<call_id_t> &) {};
 };
 
 #endif //R_3_3_1_SQL_RECORDER_H

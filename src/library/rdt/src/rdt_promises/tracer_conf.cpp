@@ -9,8 +9,8 @@
 tracer_conf_t::tracer_conf_t() :
 // Config defaults
         filename("tracer.db"),
-        output_type(OutputType::RDT_R_PRINT),
-        output_format(OutputFormat::RDT_OUTPUT_TRACE),
+        //output_type(OutputDestination::CONSOLE), TODO rem
+        output_format(OutputFormat::TRACE),
         pretty_print(true),
         overwrite(false),
         indent_width(4),
@@ -29,7 +29,7 @@ void tracer_conf_t::update(const tracer_conf_t & conf) {
 
     bool conf_changed =
             OPT_CHANGED(filename) ||
-            OPT_CHANGED(output_type) ||
+            // OPT_CHANGED(output_type) || TODO rem
             OPT_CHANGED(output_format) ||
             OPT_CHANGED(pretty_print) ||
             OPT_CHANGED(indent_width) ||
@@ -55,38 +55,39 @@ tracer_conf_t get_config_from_R_options(SEXP options) {
     if (filename_option != NULL)
         conf.filename = filename_option;
 
-    conf.outputs = "pfdp";
-
     const char *output_format_option = get_string(get_named_list_element(options, "format"));
     if (output_format_option != NULL) {
         if (!strcmp(output_format_option, "trace"))
-            conf.output_format = OutputFormat::RDT_OUTPUT_TRACE;
+            conf.output_format = OutputFormat::TRACE;
         else if (!strcmp(output_format_option, "SQL") || !strcmp(output_format_option, "sql"))
-            conf.output_format = OutputFormat::RDT_OUTPUT_SQL;
+            conf.output_format = OutputFormat::SQL;
         else if (!strcmp(output_format_option, "PSQL") || !strcmp(output_format_option, "psql"))
-            conf.output_format = OutputFormat::RDT_OUTPUT_COMPILED_SQLITE;
-        else if (!strcmp(output_format_option, "both"))
-            conf.output_format = OutputFormat::RDT_OUTPUT_BOTH;
+            conf.output_format = OutputFormat::PREPARED_SQL;
+        else if (!strcmp(output_format_option, "trace+sql") || !strcmp(output_format_option, "trace+SQL"))
+            conf.output_format = OutputFormat::TRACE_AND_SQL;
+        //else if (!strcmp(output_format_option, "trace+psql") || !strcmp(output_format_option, "trace+PSQL")) // TODO
         else
             error("Unknown format type: \"%s\"\n", output_format_option);
     }
 
     //Rprintf("output_format_option=%s->%i\n", output_format_option,output_format);
 
-    const char *output_type_option = get_string(get_named_list_element(options, "output"));
-    if (output_type_option != NULL) {
-        if (!strcmp(output_type_option, "R") || !strcmp(output_type_option, "r"))
-            conf.output_type = OutputType::RDT_R_PRINT;
-        else if (!strcmp(output_type_option, "file"))
-            conf.output_type = OutputType::RDT_FILE;
-        else if (!strcmp(output_type_option, "DB") || !strcmp(output_type_option, "db"))
-            conf.output_type = OutputType::RDT_SQLITE;
-        else if (!strcmp(output_type_option, "R+DB") || !strcmp(output_type_option, "r+db") ||
-                 !strcmp(output_type_option, "DB+R") || !strcmp(output_type_option, "db+r"))
-            conf.output_type = OutputType::RDT_R_PRINT_AND_SQLITE;
-        else
-            error("Unknown format type: \"%s\"\n", output_type_option);
-    }
+//    const char *output_type_option = get_string(get_named_list_element(options, "output"));
+//    if (output_type_option != NULL) {
+//        if (!strcmp(output_type_option, "R") || !strcmp(output_type_option, "r"))
+//            conf.output_type = OutputDestination::CONSOLE;
+//        else if (!strcmp(output_type_option, "file"))
+//            conf.output_type = OutputDestination::FILE;
+//        else if (!strcmp(output_type_option, "DB") || !strcmp(output_type_option, "db"))
+//            conf.output_type = OutputDestination::SQLITE;
+//        else if (!strcmp(output_type_option, "R+DB") || !strcmp(output_type_option, "r+db") ||
+//                 !strcmp(output_type_option, "DB+R") || !strcmp(output_type_option, "db+r"))
+//            conf.output_type = OutputDestination::CONSOLE_AND_SQLITE;
+//        else
+//            error("Unknown format type: \"%s\"\n", output_type_option);
+//    }
+    const char *output_type_options = get_string(get_named_list_element(options, "output"));
+    conf.outputs = string(output_type_options);
 
     //Rprintf("output_type_option=%s->%i\n", output_type_option,output_type);
 

@@ -47,11 +47,14 @@ struct trace_promises {
     // TODO: also pass environment
     DECL_HOOK(begin)(const SEXP prom) {
         tracer_state().start_pass(prom);
+
+        rec.start_trace();
     }
 
     DECL_HOOK(end)() {
         tracer_state().finish_pass();
 
+        rec.finish_trace();
         // FIXME new API
 //        if (output) {
 //            fclose(output);
@@ -172,7 +175,9 @@ struct trace_promises {
     }
 
     DECL_HOOK(jump_ctxt)(const SEXP rho, const SEXP val) {
-        tracer_state().adjust_fun_stack(rho);
+        vector<call_id_t> unwound_calls;
+        tracer_state().adjust_fun_stack(rho, unwound_calls);
+        rec.unwind(unwound_calls);
     }
 
     //    DECL_HOOK(eval_entry)(SEXP e, SEXP rho) {
@@ -230,7 +235,7 @@ rdt_handler *setup_promise_tracing(SEXP options) {
 
 
     // TODO: can we move these into `begin` hook or possibly trace/sql_recorder implementations?
-//    if (tracer_conf.output_type != OutputType::RDT_SQLITE && tracer_conf.output_type != OutputType::RDT_R_PRINT_AND_SQLITE) {
+//    if (tracer_conf.output_type != OutputDestination::SQLITE && tracer_conf.output_type != OutputDestination::CONSOLE_AND_SQLITE) {
 //        output = fopen(tracer_conf.filename->c_str(), tracer_conf.overwrite ? "w" : "a");
 //        if (!output) {
 //            error("Unable to open %s: %s\n", tracer_conf.filename, strerror(errno));
@@ -243,7 +248,7 @@ rdt_handler *setup_promise_tracing(SEXP options) {
 //    call_id_counter = 0;
 //    already_inserted_functions.clear();
 
-//    if (tracer_conf.output_type == OutputType::RDT_SQLITE || tracer_conf.output_type == OutputType::RDT_R_PRINT_AND_SQLITE) {
+//    if (tracer_conf.output_type == OutputDestination::SQLITE || tracer_conf.output_type == OutputDestination::CONSOLE_AND_SQLITE) {
 //        if(tracer_conf.overwrite) {
 //            if (file_exists(tracer_conf.filename)) {
 //                remove(tracer_conf.filename->c_str());
@@ -255,7 +260,7 @@ rdt_handler *setup_promise_tracing(SEXP options) {
 
     // FIXME CALL FUNCTIONS FROM MULTIPLEXER INIT!!!!!
 
-    if (tracer_conf.output_format != OutputFormat::RDT_OUTPUT_TRACE) {
+    if (tracer_conf.output_format != OutputFormat::TRACE) {
         // rdt_configure_sqlite(); FIXME NEW API
         // FIXME ALSO CALL STH TO LOAD SCHEMA
         // rdt_begin_transaction(); FIXME NEW API
@@ -264,19 +269,19 @@ rdt_handler *setup_promise_tracing(SEXP options) {
     rdt_handler *h = (rdt_handler *) malloc(sizeof(rdt_handler));
     //memcpy(h, &trace_promises_rdt_handler, sizeof(rdt_handler));
     //*h = trace_promises_rdt_handler; // This actually does the same thing as memcpy
-    if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_TRACE) {
+    if (tracer_conf.output_format == OutputFormat::TRACE) {
         Rprintf("1\n"); // TODO cleanup debug
         *h = register_hooks_with<trace_recorder_t>();
     }
-    else if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_SQL) {
+    else if (tracer_conf.output_format == OutputFormat::SQL) {
         Rprintf("2\n");// TODO cleanup debug
         *h = register_hooks_with<sql_recorder_t>();
     }
-    else if (tracer_conf.output_format == OutputFormat::RDT_OUTPUT_COMPILED_SQLITE) {
+    else if (tracer_conf.output_format == OutputFormat::PREPARED_SQL) {
         Rprintf("2b\n");// TODO cleanup debug
         *h = register_hooks_with<psql_recorder_t>();
     }
-    else { // RDT_OUTPUT_BOTH // FIXME need a better way to compose outputs
+    else { // TRACE_AND_SQL
         Rprintf("3\n");// TODO cleanup debug
         *h = register_hooks_with<compose<trace_recorder_t, sql_recorder_t>>();
     }
@@ -317,9 +322,9 @@ rdt_handler *setup_promise_tracing(SEXP options) {
 }
 
 void cleanup_promise_tracing(/*rdt_handler *h,*/ SEXP options) {
-    //if (tracer_conf.output_format != OutputFormat::RDT_OUTPUT_TRACE)
+    //if (tracer_conf.output_format != OutputFormat::TRACE)
         //rdt_commit_transaction(); //FIXME implement this using new functions
 
-    //if (tracer_conf.output_type == OutputType::RDT_SQLITE || tracer_conf.output_type == OutputType::RDT_R_PRINT_AND_SQLITE)
+    //if (tracer_conf.output_type == OutputDestination::SQLITE || tracer_conf.output_type == OutputDestination::CONSOLE_AND_SQLITE)
         //rdt_close_sqlite(); //FIXME implement this using new functions
 }

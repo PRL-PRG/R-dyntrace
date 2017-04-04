@@ -4,7 +4,6 @@
 
 #include <sstream>
 #include "trace_recorder.h"
-//#include "tracer_output.h"
 #include "tracer_conf.h"
 #include "tracer_state.h"
 
@@ -107,6 +106,18 @@ string builtin_info_line(TraceLinePrefix prefix, const call_info_t & info, bool 
     return stream.str();
 }
 
+string unwind_info_line(TraceLinePrefix prefix, const call_id_t call_id, bool indent, bool as_sql_comment, bool call_id_is_pointer) {
+    stringstream stream;
+    prepend_prefix(stream, prefix, indent, as_sql_comment);
+
+    auto num_fmt = call_id_is_pointer ? hex : dec;
+    string num_pref =  call_id_is_pointer ? "0x" : "";
+
+    stream << "unwind call_id=" << (tracer_conf.call_id_use_ptr_fmt ? hex : dec) << call_id << "\n";
+
+    return stream.str();
+}
+
 string promise_creation_info_line(TraceLinePrefix prefix, const prom_id_t & prom_id, bool indent, bool as_sql_comment) {
     stringstream stream;
     prepend_prefix(stream, prefix, indent, as_sql_comment);
@@ -142,7 +153,7 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
 
 void trace_recorder_t::function_entry(const call_info_t & info) {
     // TODO: rem
-    //rdt_print(RDT_OUTPUT_TRACE, {print_function(info.type.c_str(), info.loc.c_str(), info.fqfn.c_str(), info.fn_id, info.call_id, info.arguments)});
+    //rdt_print(TRACE, {print_function(info.type.c_str(), info.loc.c_str(), info.fqfn.c_str(), info.fn_id, info.call_id, info.arguments)});
 
     string statement = function_info_line(
             TraceLinePrefix::ENTER,
@@ -175,7 +186,7 @@ void trace_recorder_t::function_exit(const call_info_t & info) {
             tracer_conf.outputs);
 
     // TODO rem
-    //rdt_print(RDT_OUTPUT_TRACE, {print_function(info.type.c_str(), info.loc.c_str(), info.fqfn.c_str(), info.fn_id, info.call_id, info.arguments)});
+    //rdt_print(TRACE, {print_function(info.type.c_str(), info.loc.c_str(), info.fqfn.c_str(), info.fn_id, info.call_id, info.arguments)});
 }
 
 void trace_recorder_t::builtin_entry(const call_info_t & info) {
@@ -193,7 +204,7 @@ void trace_recorder_t::builtin_entry(const call_info_t & info) {
         STATE(indent) -= tracer_conf.indent_width;
 
     // TODO rem
-    //rdt_print(RDT_OUTPUT_TRACE, {print_builtin("=> b-in", NULL, info.name.c_str(), info.fn_id, info.call_id)});
+    //rdt_print(TRACE, {print_builtin("=> b-in", NULL, info.name.c_str(), info.fn_id, info.call_id)});
 
     if (tracer_conf.pretty_print)
         STATE(indent) += tracer_conf.indent_width;
@@ -215,7 +226,7 @@ void trace_recorder_t::builtin_exit(const call_info_t & info) {
             tracer_conf.outputs);
 
     // TODO rem
-    //rdt_print(RDT_OUTPUT_TRACE, {print_builtin("<= b-in", NULL, info.name.c_str(), info.fn_id, info.call_id)});
+    //rdt_print(TRACE, {print_builtin("<= b-in", NULL, info.name.c_str(), info.fn_id, info.call_id)});
 }
 
 void trace_recorder_t::promise_created(const prom_id_t & prom_id) {
@@ -232,7 +243,7 @@ void trace_recorder_t::promise_created(const prom_id_t & prom_id) {
     // TODO rem
     //Rprintf("PROMISE CREATED at %p\n", get_sexp_address(prom));
     //TODO implement promise allocation pretty print
-    //rdt_print(RDT_OUTPUT_TRACE, {print_promise_alloc(prom_id)});
+    //rdt_print(TRACE, {print_promise_alloc(prom_id)});
 }
 
 void trace_recorder_t::force_promise_entry(const prom_info_t & info) {
@@ -249,7 +260,7 @@ void trace_recorder_t::force_promise_entry(const prom_info_t & info) {
             tracer_conf.outputs);
 
     // TODO rem
-    //rdt_print(RDT_OUTPUT_TRACE, {print_promise("=> prom", NULL, info.name.c_str(), info.prom_id, info.in_call_id, info.from_call_id)});
+    //rdt_print(TRACE, {print_promise("=> prom", NULL, info.name.c_str(), info.prom_id, info.in_call_id, info.from_call_id)});
 }
 
 void trace_recorder_t::force_promise_exit(const prom_info_t & info) {
@@ -266,7 +277,7 @@ void trace_recorder_t::force_promise_exit(const prom_info_t & info) {
             tracer_conf.outputs);
 
     // TODO rem
-    //rdt_print(RDT_OUTPUT_TRACE, {print_promise("<= prom", NULL, info.name.c_str(), info.prom_id, info.in_call_id, info.from_call_id)});
+    //rdt_print(TRACE, {print_promise("<= prom", NULL, info.name.c_str(), info.prom_id, info.in_call_id, info.from_call_id)});
 }
 
 void trace_recorder_t::promise_lookup(const prom_info_t & info) {
@@ -283,5 +294,36 @@ void trace_recorder_t::promise_lookup(const prom_info_t & info) {
             tracer_conf.outputs);
 
     // TODO remove
-    //rdt_print(RDT_OUTPUT_TRACE, {print_promise("<> lkup", NULL, info.name.c_str(), info.prom_id, info.in_call_id, info.from_call_id)});
+    //rdt_print(TRACE, {print_promise("<> lkup", NULL, info.name.c_str(), info.prom_id, info.in_call_id, info.from_call_id)});
 }
+
+void trace_recorder_t::init_recorder() {
+
+}
+
+void trace_recorder_t::start_trace() {
+
+}
+
+void trace_recorder_t::finish_trace() {
+
+}
+
+void trace_recorder_t::unwind(vector<call_id_t> & unwound_calls) {
+    stringstream statement;
+
+    for (call_id_t call_id : unwound_calls)
+        statement << unwind_info_line(
+                TraceLinePrefix::EXIT,
+                call_id,
+                tracer_conf.pretty_print,
+                /*as_sql_comment=*/false, // TODO
+                /*call_id_as_pointer=*/tracer_conf.call_id_use_ptr_fmt);
+
+    string s = statement.str();
+    multiplexer::output(
+            multiplexer::payload_t(s),
+            tracer_conf.outputs);
+}
+
+// TODO rename all `statement`s to something more suitable.

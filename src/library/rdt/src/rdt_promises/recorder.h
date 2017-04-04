@@ -60,7 +60,7 @@ public:
         const char *name = get_name(call);
         const char *ns = get_ns_name(op);
 
-        info.type = is_byte_compiled(call) ? "<= bcod" : "<= func";
+        info.type = is_byte_compiled(call) ? "<= bcod" : "<= func"; // FIXME this seems... inelegant now
         info.fn_id = get_function_id(op);
         info.call_id = STATE(fun_stack).top();
 
@@ -166,6 +166,11 @@ public:
     DELEGATE(promise_created, prom_id_t)
     DELEGATE(promise_lookup, prom_info_t)
 
+    DELEGATE(init_recorder, void)
+    DELEGATE(start_trace, void)
+    DELEGATE(finish_trace, void)
+    DELEGATE(unwind, vector<call_id_t>)
+
 #undef DELEGATE
 };
 
@@ -190,6 +195,11 @@ public:
     COMPOSE(force_promise_exit, prom_info_t)
     COMPOSE(promise_created, prom_id_t)
     COMPOSE(promise_lookup, prom_info_t)
+
+    COMPOSE(init_recorder, void)
+    COMPOSE(start_trace, void)
+    COMPOSE(finish_trace, void)
+    COMPOSE(unwind, vector<call_id_t>)
 
 #undef COMPOSE
 };
