@@ -71,7 +71,8 @@ tracer_conf_t get_config_from_R_options(SEXP options) {
     }
 
     const char *output_type_options = get_string(get_named_list_element(options, "output"));
-    conf.outputs = string(output_type_options); // FIXME better format for outputs on the R side?
+    if (output_type_options != NULL)
+        conf.outputs = string(output_type_options); // FIXME better format for outputs on the R side?
 
     //Rprintf("output_type_option=%s->%i\n", output_type_option,output_type);
 

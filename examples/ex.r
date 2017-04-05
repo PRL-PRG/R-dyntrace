@@ -88,6 +88,6 @@ specialsxpTest <- function() {
 	print({x<-2+2/2;x})
 }
 
-test_if <- function(cond) {
-	if (cond) 1 else 0
+test_if <- function(cond, a, b) {
+	if (cond) a else b
 }
