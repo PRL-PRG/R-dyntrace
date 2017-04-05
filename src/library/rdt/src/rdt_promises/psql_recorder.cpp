@@ -389,7 +389,7 @@ sqlite3_stmt * get_prepared_sql_insert_argument(int values) {
         return prepared_sql_insert_arguments[values];
 
     vector<sql_val_cell_t> arguments;
-    for (int i = 0 ; i < values; i ++)
+    for (int i = 0 ; i < values; i++)
         arguments.push_back(join({"?", "?", "?", "?"}));
 
     sql_stmt_t statement = make_insert_arguments_statement(arguments, false);
@@ -404,12 +404,12 @@ sqlite3_stmt * get_prepared_sql_insert_promise_assoc(int values) {
         return prepared_sql_insert_promise_assocs[values];
 
     vector<sql_val_cell_t> associations;
-    for (int i = 0 ; i < values; i ++)
+    for (int i = 0 ; i < values; i++)
         associations.push_back(join({"?", "?", "?"}));
 
     sql_stmt_t statement = make_insert_promise_associations_statement(associations, false);
     sqlite3_stmt *prepared_statement = compile_sql_statement(statement);
-    prepared_sql_insert_arguments[values] = prepared_statement;
+    prepared_sql_insert_promise_assocs[values] = prepared_statement;
 
     return prepared_statement;
 }
