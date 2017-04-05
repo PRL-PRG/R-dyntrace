@@ -12,25 +12,25 @@ Rdt <- function(block, tracer="promises", ...) {
     .Call(C_Rdt, tracer, environment(), list(...))
 }
 
-trace.promises.r <- function(expression, tracer="promises", output="R", format="trace", pretty.print=TRUE, overwrite=FALSE, synthetic.call.id=TRUE, path="trace")
-    Rdt(expression, tracer=tracer, output=output, path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite)
+trace.promises.r <- function(expression, tracer="promises", output="p", format="trace", pretty.print=TRUE, overwrite=FALSE, synthetic.call.id=TRUE, path="trace", include.configuration=FALSE)
+    Rdt(expression, tracer=tracer, output=output, path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite, include.configuration=include.configuration)
 
-trace.promises.file <- function(expression, tracer="promises", output="file", path="trace.txt", format="trace", pretty.print=FALSE, overwrite=FALSE, synthetic.call.id=TRUE)
-    Rdt(expression, tracer=tracer, output=output, path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite)
+trace.promises.file <- function(expression, tracer="promises", output="f", path="trace.txt", format="trace", pretty.print=FALSE, overwrite=FALSE, synthetic.call.id=TRUE, include.configuration=FALSE)
+    Rdt(expression, tracer=tracer, output=output, path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite, include.configuration=include.configuration)
 
-trace.promises.sql <- function(expression, tracer="promises", output="file", path="trace.sql", format="sql", pretty.print=FALSE, overwrite=FALSE, synthetic.call.id=TRUE)
-    Rdt(expression, tracer=tracer, output=output, path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite)
+trace.promises.sql <- function(expression, tracer="promises", output="f", path="trace.sql", format="sql", pretty.print=FALSE, overwrite=FALSE, synthetic.call.id=TRUE, include.configuration=TRUE)
+    Rdt(expression, tracer=tracer, output=output, path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite, include.configuration=include.configuration)
 
-trace.promises.compiled.db <- function(expression, tracer="promises", output="DB", path="trace.sqlite", format="psql", pretty.print=FALSE, overwrite=FALSE, synthetic.call.id=TRUE)
-    Rdt(expression, tracer=tracer, output=output, path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite)
+trace.promises.compiled.db <- function(expression, tracer="promises", output="d", path="trace.sqlite", format="psql", pretty.print=FALSE, overwrite=FALSE, synthetic.call.id=TRUE, include.configuration=TRUE)
+    Rdt(expression, tracer=tracer, output=output, path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite, include.configuration=include.configuration)
 
-trace.promises.uncompiled.db <- function(expression, tracer="promises", output="DB", path="trace.sqlite", format="sql", pretty.print=FALSE, overwrite=FALSE, synthetic.call.id=TRUE)
-    Rdt(expression, tracer=tracer, output=output, path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite)
+trace.promises.uncompiled.db <- function(expression, tracer="promises", output="d", path="trace.sqlite", format="sql", pretty.print=FALSE, overwrite=FALSE, synthetic.call.id=TRUE, include.configuration=TRUE)
+    Rdt(expression, tracer=tracer, output=output, path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite, include.configuration=include.configuration)
 
 trace.promises.db <-trace.promises.compiled.db
 
-trace.promises.both <- function(expression, tracer="promises", output="R+DB", path="trace.sqlite", format="both", pretty.print=FALSE, overwrite=FALSE, synthetic.call.id=TRUE)
-    Rdt(expression, tracer=tracer, output=output, path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite)
+trace.promises.both <- function(expression, tracer="promises", output="pd", path="trace.sqlite", format="both", pretty.print=FALSE, overwrite=FALSE, synthetic.call.id=TRUE, include.configuration=TRUE)
+    Rdt(expression, tracer=tracer, output=output, path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite, include.configuration=include.configuration)
 
 run.all.vignettes.from.package <- function(package, executor = eval, ...) {
     result.set <- vignette(package = package)

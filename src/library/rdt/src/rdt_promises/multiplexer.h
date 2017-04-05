@@ -1,7 +1,3 @@
-//
-// Created by ksiek on 30.03.17.
-//
-
 #ifndef R_3_3_1_OUTPUT_MULTIPLEXER_H
 #define R_3_3_1_OUTPUT_MULTIPLEXER_H
 
@@ -19,10 +15,11 @@
 //#include <cstdio>
 
 // Output destinations: global variables.
-extern FILE *rdt_mux_output_file; // FIXME I can't put this stupid thing into a namespace? Fuck off. Can't we use a C++ file type? The plan is to only use it in C++ anyway...
+extern FILE * rdt_mux_output_file; // FIXME switch to fstream
 
 namespace multiplexer {
 
+    // FIXME should these be local to multiplexer anyway?
 #ifdef RDT_SQLITE_SUPPORT
     extern sqlite3 *sqlite_database;
 #endif
@@ -31,7 +28,7 @@ namespace multiplexer {
     enum Sink {PRINT = 'p', FILE = 'f', DATABASE = 'd'};
     enum class Payload {TEXT, PREPARED_STATEMENT};
 
-    /*typedef*/ struct payload_t {
+    struct payload_t {
         Payload type;
         union {
             std::string * text;
@@ -81,8 +78,11 @@ namespace multiplexer {
 
     typedef std::string sink_arr_t;
 
-    // Functions for configuring outputs and outputting stuff.
-    bool init(Sink output, std::string file_path, bool overwrite);
+    // Functions for configuring outputs.
+    bool init(sink_arr_t output, std::string file_path, bool overwrite);
+    bool close(sink_arr_t output);
+
+    // Function for actually outputting stuff.
     bool output(payload_t && payload, sink_arr_t outputs);
 }
 

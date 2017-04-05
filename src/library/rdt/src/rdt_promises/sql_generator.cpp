@@ -148,11 +148,15 @@ namespace sql_generator {
     }
 
     sql_stmt_t make_abort_transaction_statement() {
-        return "abort;\n";
+        return "rollback;\n";
     }
 
     sql_stmt_t make_commit_transaction_statement() {
         return "commit;\n";
+    }
+
+    sql_stmt_t make_pragma_statement(sql_val_t option, sql_val_t value) {
+        return "pragma " + option + " = " + value + ";\n";
     }
 
     sql_stmt_t make_create_tables_and_views_statement() {
@@ -163,6 +167,27 @@ namespace sql_generator {
         schema_file.seekg(0, ios::beg);
         schema_string.assign((istreambuf_iterator<char>(schema_file)), istreambuf_iterator<char>());
         return schema_string.c_str();
+    }
+
+
+    vector<sql_stmt_t> split_into_individual_statements(sql_stmt_t statement_blob) {
+        vector<sql_stmt_t> statements;
+        stringstream statement;
+
+        for (char c : statement_blob) {
+            statement << c;
+
+            if (c == ';') {
+                statements.push_back(statement.str());
+                statement.str(string()); // clear
+            }
+        }
+
+        // The remainder is probably garbage...
+        // It won't compile on its own since it doesn't end with a semicolon.
+        // I'll append it to the most recent statement, so as not to lose information.
+        statements.back() += statement.str();
+        return statements;
     }
 
     sql_val_cell_t join(std::initializer_list<sql_val_t> values) {

@@ -107,6 +107,8 @@ void sql_recorder_t::function_entry(const call_info_t & info) {
         multiplexer::output(
                 multiplexer::payload_t(statement),
                 tracer_conf.outputs);
+
+        STATE(already_inserted_functions).insert(info.fn_id);
     }
 
     if (info.arguments.size() > 0) {
@@ -116,7 +118,7 @@ void sql_recorder_t::function_entry(const call_info_t & info) {
                 tracer_conf.outputs);
     }
 
-    {
+    /* always */ {
         sql_stmt_t statement = insert_call_statement(info);
         multiplexer::output(
                 multiplexer::payload_t(statement),
@@ -151,9 +153,11 @@ void sql_recorder_t::builtin_entry(const call_info_t & info) {
                 multiplexer::output(
                 multiplexer::payload_t(statement),
                 tracer_conf.outputs);
+
+        STATE(already_inserted_functions).insert(info.fn_id);
     }
 
-    {
+    /* always */ {
         sql_stmt_t statement = insert_call_statement(info);
                 multiplexer::output(
                 multiplexer::payload_t(statement),
@@ -221,10 +225,39 @@ void sql_recorder_t::init_recorder() {
 
 }
 
-void sql_recorder_t::start_trace() {
+void sql_recorder_t::start_trace() { // bool output_configuration
+    multiplexer::init(tracer_conf.outputs, tracer_conf.filename, tracer_conf.overwrite);
 
+    if (tracer_conf.include_configuration)
+        if (tracer_conf.overwrite) {
+            sql_stmt_t statement =
+                    make_pragma_statement("synchronous", "off") +
+                    make_create_tables_and_views_statement();
+
+            multiplexer::output(
+                    multiplexer::payload_t(statement),
+                    tracer_conf.outputs);
+        }
+
+    /* always */ {
+        sql_stmt_t statement = make_begin_transaction_statement();
+        multiplexer::output(
+                multiplexer::payload_t(statement),
+                tracer_conf.outputs);
+    }
+
+    // TODO cleanup comment
+    // if (output_configuration)
+    //      if (overwrite or writing to a new db/file)
+    //          load pragmas --> make_pragma_statement("synchronous", "off")
+    //          load schema --> make_create_tables_and_views_statement()
 }
 
 void sql_recorder_t::finish_trace() {
+    sql_stmt_t statement = make_commit_transaction_statement();
+    multiplexer::output(
+            multiplexer::payload_t(statement),
+            tracer_conf.outputs);
 
+    multiplexer::close(tracer_conf.outputs);
 }

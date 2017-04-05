@@ -15,6 +15,7 @@ R_INCLUDE_DIR = $(R_HOME)/include
 
 SOURCES_C = init.c rdt.c
 SOURCES_CXX = rdt_promises.cpp rdt_noop.cpp rdt_debug.cpp rdt_trace.cpp \
+              rdt_promises/tools.cpp \
               rdt_promises/tracer_conf.cpp \
               rdt_promises/tracer_sexpinfo.cpp \
               rdt_promises/tracer_state.cpp \

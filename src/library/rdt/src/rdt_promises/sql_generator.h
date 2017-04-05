@@ -1,7 +1,3 @@
-//
-// Created by ksiek on 29.03.17.
-//
-
 #ifndef R_3_3_1_SQL_GENERATOR_H
 #define R_3_3_1_SQL_GENERATOR_H
 
@@ -33,9 +29,12 @@ namespace sql_generator {
     sql_stmt_t make_abort_transaction_statement();
     sql_stmt_t make_commit_transaction_statement();
 
-    sql_stmt_t make_create_tables_and_views_statement();
+    sql_stmt_t make_pragma_statement(sql_val_t option, sql_val_t value);
 
-    sql_val_cell_t join(std::initializer_list<sql_val_t>);
+    sql_stmt_t make_create_tables_and_views_statement();
+    std::vector<sql_stmt_t> split_into_individual_statements(sql_stmt_t statements);
+
+        sql_val_cell_t join(std::initializer_list<sql_val_t>);
 
     sql_val_t from_int(int i);
     sql_val_t from_hex(int h);

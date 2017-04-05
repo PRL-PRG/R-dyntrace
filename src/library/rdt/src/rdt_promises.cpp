@@ -55,11 +55,6 @@ struct trace_promises {
         tracer_state().finish_pass();
 
         rec.finish_trace_process();
-        // FIXME new API
-//        if (output) {
-//            fclose(output);
-//            output = NULL;
-//        }
     }
 
     // Triggered when entering function evaluation.
@@ -233,7 +228,6 @@ rdt_handler *setup_promise_tracing(SEXP options) {
     tracer_conf_t new_conf = get_config_from_R_options(options);
     tracer_conf.update(new_conf);
 
-
     // TODO: can we move these into `begin` hook or possibly trace/sql_recorder implementations?
 //    if (tracer_conf.output_type != OutputDestination::SQLITE && tracer_conf.output_type != OutputDestination::CONSOLE_AND_SQLITE) {
 //        output = fopen(tracer_conf.filename->c_str(), tracer_conf.overwrite ? "w" : "a");
@@ -241,9 +235,10 @@ rdt_handler *setup_promise_tracing(SEXP options) {
 //            error("Unable to open %s: %s\n", tracer_conf.filename, strerror(errno));
 //            return NULL;
 //        }
-//    }
-    // FIXME moved to multiplexer::init
+//    } // FIXME done -- moved
 
+
+    // FIXME moved to multiplexer::init
 //    THIS IS DONE IN tracer_state().start_pass() (called from trace_promises_begin()) if the overwrite flag is set
 //    call_id_counter = 0;
 //    already_inserted_functions.clear();
@@ -260,11 +255,11 @@ rdt_handler *setup_promise_tracing(SEXP options) {
 
     // FIXME CALL FUNCTIONS FROM MULTIPLEXER INIT!!!!!
 
-    if (tracer_conf.output_format != OutputFormat::TRACE) {
+    //if (tracer_conf.output_format != OutputFormat::TRACE) {
         // rdt_configure_sqlite(); FIXME NEW API
         // FIXME ALSO CALL STH TO LOAD SCHEMA
         // rdt_begin_transaction(); FIXME NEW API
-    }
+    //} // FIXME done -- moved
 
     rdt_handler *h = (rdt_handler *) malloc(sizeof(rdt_handler));
     //memcpy(h, &trace_promises_rdt_handler, sizeof(rdt_handler));

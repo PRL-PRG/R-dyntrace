@@ -26,15 +26,15 @@ inline void prepend_prefix(stringstream &stream, TraceLinePrefix prefix, bool in
 
     switch (prefix) {
         case TraceLinePrefix::ENTER:
-            stream << ">>";
+            stream << ">> ";
             break;
 
         case TraceLinePrefix::EXIT:
-            stream << "<<";
+            stream << "<< ";
             break;
 
         case TraceLinePrefix::ENTER_AND_EXIT:
-            stream << "<>";
+            stream << "<> ";
             break;
     }
 }
@@ -48,18 +48,18 @@ string function_info_line(TraceLinePrefix prefix, const call_info_t & info, bool
 
     stream << "function call";
 
-    stream << " call_id="  << num_pref << num_fmt << info.call_id
-           << " function_id=0x" << hex << info.fn_id;
-
     if (info.fqfn.empty())
         stream << " name=<unknown>";
     else
-        stream << " name=\"" << info.fqfn << "\"";
+        stream << " name=" << info.fqfn;
 
-    if (info.fqfn.empty())
+    stream << " call_id="  << num_pref << num_fmt << info.call_id
+           << " function_id=0x" << hex << info.fn_id;
+
+    if (info.loc.empty())
         stream << " location=<unknown>";
     else
-        stream << " location=\"" << info.loc << "\"";
+        stream << " location=" << info.loc;
 
     stream << " arguments={";
     int i = 0;
@@ -67,7 +67,7 @@ string function_info_line(TraceLinePrefix prefix, const call_info_t & info, bool
         const arg_t & argument = arg_ref.get();
         prom_id_t promise = get<2>(argument);
 
-        stream << get<0>(argument).c_str() << ":0x" << hex << promise;
+        stream << get<0>(argument).c_str() << ":" << promise;
 
         if (i < info.arguments.size() - 1)
             stream << ",";
@@ -88,18 +88,18 @@ string builtin_info_line(TraceLinePrefix prefix, const call_info_t & info, bool 
 
     stream << "builtin call";
 
-    stream << " call_id="  << num_pref << num_fmt << info.call_id
-           << " function_id=0x" << hex << info.fn_id;
-
     if (info.fqfn.empty())
         stream << " name=<unknown>";
     else
-        stream << " name=\"" << info.fqfn << "\"";
+        stream << " name=" << info.fqfn;
 
-    if (info.fqfn.empty())
+    stream << " call_id="  << num_pref << num_fmt << info.call_id
+           << " function_id=0x" << hex << info.fn_id;
+
+    if (info.loc.empty())
         stream << " location=<unknown>";
     else
-        stream << " location=\"" << info.loc << "\"";
+        stream << " location=" << info.loc;
 
     stream << "\n";
 
@@ -122,7 +122,7 @@ string promise_creation_info_line(TraceLinePrefix prefix, const prom_id_t & prom
     stringstream stream;
     prepend_prefix(stream, prefix, indent, as_sql_comment);
 
-    stream << "create promise id=0x" << hex << prom_id << "\n";
+    stream << "create promise id=" << prom_id << "\n";
 
     return stream.str();
 }
@@ -143,10 +143,12 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
     auto num_fmt = call_id_is_pointer ? hex : dec;
     string num_pref =  call_id_is_pointer ? "0x" : "";
 
-    stream << " id=0x" << hex << info.prom_id
-           << " name=" << info.name
-           << " in=" << num_pref << num_fmt << info.in_call_id
-           << " from=" << num_pref << num_fmt << info.from_call_id << "\n";
+    // FIXME (1) sometimes name is empty and it prints name anyway instead of unknown...
+    // FIXME (2) when outputting to file name is always unknown, even though in many cases it should be known
+    stream << " name=" << (info.name.empty() ? info.name : "<unknown>")
+           << " id=" << info.prom_id
+           << " in_call=" << num_pref << num_fmt << info.in_call_id
+           << " from_call=" << num_pref << num_fmt << info.from_call_id << "\n";
 
     return stream.str();
 }
@@ -200,14 +202,12 @@ void trace_recorder_t::builtin_entry(const call_info_t & info) {
     multiplexer::output(
             multiplexer::payload_t(statement),
             tracer_conf.outputs);
-    if (tracer_conf.pretty_print)
-        STATE(indent) -= tracer_conf.indent_width;
-
-    // TODO rem
-    //rdt_print(TRACE, {print_builtin("=> b-in", NULL, info.name.c_str(), info.fn_id, info.call_id)});
 
     if (tracer_conf.pretty_print)
         STATE(indent) += tracer_conf.indent_width;
+
+    // TODO rem
+    //rdt_print(TRACE, {print_builtin("=> b-in", NULL, info.name.c_str(), info.fn_id, info.call_id)});
 }
 
 void trace_recorder_t::builtin_exit(const call_info_t & info) {
@@ -298,15 +298,15 @@ void trace_recorder_t::promise_lookup(const prom_info_t & info) {
 }
 
 void trace_recorder_t::init_recorder() {
-    multiplexer::init(tracer_conf.outputs);
+
 }
 
 void trace_recorder_t::start_trace() {
-    multiplexer::start(tracer_conf.outputs);
+    multiplexer::init(tracer_conf.outputs, tracer_conf.filename, tracer_conf.overwrite);
 }
 
 void trace_recorder_t::finish_trace() {
-    multiplexer::finish(tracer_conf.outputs);
+    multiplexer::close(tracer_conf.outputs);
 }
 
 void trace_recorder_t::unwind(const vector<call_id_t> & unwound_calls) {

@@ -177,7 +177,6 @@ typedef map<int, sqlite3_stmt*> pstmt_cache;
 pstmt_cache prepared_sql_insert_promise_assocs;
 pstmt_cache prepared_sql_insert_arguments;
 
-
 // Internal functions
 static sqlite3_stmt *get_prepared_sql_insert_statement(string database_table, int num_columns, int num_values, pstmt_cache *cache) {
     sqlite3_stmt *statement;// = prepared_sql_insert_functions[num_values];
@@ -655,7 +654,6 @@ void run_prep_sql_promise_evaluation(int event_type, prom_id_t promise_id, call_
 
     sqlite3_reset(prepared_sql_insert_promise_eval);
 }
-
 
 string mk_sql_promise_evaluation(int event_type, prom_id_t promise_id, call_id_t call_id) {
     std::stringstream stream;
