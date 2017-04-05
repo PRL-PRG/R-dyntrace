@@ -188,8 +188,9 @@ sqlite3_stmt * populate_promise_evaluation_statement(prom_eval_t type, const pro
 void psql_recorder_t::function_entry(const call_info_t & info) {
 #ifdef RDT_SQLITE_SUPPORT
     bool align_statements = tracer_conf.pretty_print;
+    bool need_to_insert = STATE(already_inserted_functions).count(info.fn_id) == 0;
 
-    if (STATE(already_inserted_functions).count(info.fn_id) == 0) {
+    if (need_to_insert) {
         sqlite3_stmt * statement = populate_function_statement(info);
         multiplexer::output(
                 multiplexer::payload_t(statement),
@@ -198,7 +199,7 @@ void psql_recorder_t::function_entry(const call_info_t & info) {
         STATE(already_inserted_functions).insert(info.fn_id);
     }
 
-    if (info.arguments.size() > 0) {
+    if (need_to_insert && info.arguments.size() > 0) {
         sqlite3_stmt * statement = populate_arguments_statement(info);
         multiplexer::output(
                 multiplexer::payload_t(statement),
@@ -225,7 +226,9 @@ void psql_recorder_t::function_entry(const call_info_t & info) {
 
 void psql_recorder_t::builtin_entry(const call_info_t & info) {
 #ifdef RDT_SQLITE_SUPPORT
-    if (STATE(already_inserted_functions).count(info.fn_id) == 0) {
+    bool need_to_insert = STATE(already_inserted_functions).count(info.fn_id) == 0;
+
+    if (need_to_insert) {
         sqlite3_stmt * statement = populate_function_statement(info);
         multiplexer::output(
                 multiplexer::payload_t(statement),

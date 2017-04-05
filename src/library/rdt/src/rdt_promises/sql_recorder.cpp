@@ -101,8 +101,9 @@ sql_stmt_t insert_promise_evaluation_statement(prom_eval_t type, const prom_info
 
 void sql_recorder_t::function_entry(const call_info_t & info) {
     bool align_statements = tracer_conf.pretty_print;
+    bool need_to_insert = STATE(already_inserted_functions).count(info.fn_id) == 0;
 
-    if (STATE(already_inserted_functions).count(info.fn_id) == 0) {
+    if (need_to_insert) {
         sql_stmt_t statement = insert_function_statement(info);
         multiplexer::output(
                 multiplexer::payload_t(statement),
@@ -111,7 +112,7 @@ void sql_recorder_t::function_entry(const call_info_t & info) {
         STATE(already_inserted_functions).insert(info.fn_id);
     }
 
-    if (info.arguments.size() > 0) {
+    if (need_to_insert && info.arguments.size() > 0) {
         sql_stmt_t statement = insert_arguments_statement(info, align_statements);
         multiplexer::output(
                 multiplexer::payload_t(statement),
@@ -135,8 +136,9 @@ void sql_recorder_t::function_entry(const call_info_t & info) {
 }
 
 void sql_recorder_t::builtin_entry(const call_info_t & info) {
+    bool need_to_insert = STATE(already_inserted_functions).count(info.fn_id) == 0;
 
-    if (STATE(already_inserted_functions).count(info.fn_id) == 0) {
+    if (need_to_insert) {
         sql_stmt_t statement = insert_function_statement(info);
                 multiplexer::output(
                 multiplexer::payload_t(statement),
@@ -175,10 +177,6 @@ void sql_recorder_t::promise_lookup(const prom_info_t & info) {
     multiplexer::output(
             multiplexer::payload_t(statement),
             tracer_conf.outputs);
-}
-
-void sql_recorder_t::init_recorder() {
-
 }
 
 void sql_recorder_t::start_trace() { // bool output_configuration
