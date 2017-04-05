@@ -69,7 +69,7 @@ string function_info_line(TraceLinePrefix prefix, const call_info_t & info, bool
         const arg_t & argument = arg_ref.get();
         prom_id_t promise = get<2>(argument);
 
-        stream << get<0>(argument).c_str() << ":" << promise;
+        stream << get<0>(argument).c_str() << ":" << dec << promise;
 
         if (i < info.arguments.size() - 1)
             stream << ",";
