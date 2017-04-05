@@ -216,6 +216,8 @@ rdt_handler register_hooks_with() {
                         tp::function_exit,
                         tp::builtin_entry,
                         tp::builtin_exit,
+                        tp::specialsxp_entry,
+                        tp::specialsxp_exit,
                         tp::force_promise_entry,
                         tp::force_promise_exit,
                         tp::promise_lookup,
