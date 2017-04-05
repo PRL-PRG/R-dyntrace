@@ -125,7 +125,8 @@ namespace multiplexer {
             switch (output) {
                 case Sink::PRINT:
                     if (payload.type == Payload::TEXT)
-                        Rprintf(payload.text->c_str());
+                        // Write to a format string to avoid problems if there are %s etc. expressions in payload.text.
+                        Rprintf("%s", payload.text->c_str());
                     else
                         fprintf(stderr, "Warning: cannot print non-text payload (%i), ignoring.\n",
                                 tools::enum_cast(payload.type));
