@@ -2,11 +2,11 @@
 // Created by nohajc on 3.4.17.
 //
 
-#include <stdlib.h>
-#include <stdarg.h>
+#include <cstdlib>
+#include <cstdarg>
 // Should work on Linux and macOS
 #include <dlfcn.h>
-#include <stdio.h>
+#include <cstdio>
 
 #include "dyn_fn_lookup.h"
 
@@ -24,6 +24,8 @@ void * find_fn_by_name(const char * format, ...) {
         vasprintf(&fn_name, format, args);
         va_end(args);
 
+        // TODO: How about caching the pointers so we don't have to
+        // do dlsym everytime we call Rdt with a previously used tracer?
         void * fn_ptr = dlsym(rdt_dll_handle, fn_name);
         free(fn_name);
         return fn_ptr;
