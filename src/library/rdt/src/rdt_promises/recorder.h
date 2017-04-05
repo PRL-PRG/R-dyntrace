@@ -92,7 +92,8 @@ public:
         info.call_type = 2;
 
         char *location = get_location(op);
-        info.loc = CHKSTR(location);
+        if (location != NULL)
+            info.loc = location;
         free(location);
 
         info.fn_definition = get_expression(op);
@@ -123,7 +124,8 @@ public:
         info.call_type = 2;
 
         char *location = get_location(op);
-        info.loc = CHKSTR(location);
+        if (location != NULL)
+            info.loc = location;
         free(location);
 
         return info;
