@@ -12,10 +12,10 @@
     struct hook_name { \
         template<typename T> \
         inline static void init(rdt_handler& h) { \
-            h.probe_ ## hook_name = T::fn_ ## hook_name; \
+            h.probe_##hook_name = T::fn_##hook_name; \
         } \
     }; \
-    static void fn_ ## hook_name
+    static void fn_##hook_name
 
 #define REGISTER_HOOKS(tracer_name, ...) []() { \
         typedef tracer_name tr; \
