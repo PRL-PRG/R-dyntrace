@@ -49,7 +49,7 @@ struct tracer_state_t {
     void finish_pass();
     // When doing longjump (exception thrown, etc.) this function gets the target environment
     // and unwinds function call stack until that environment is on top. It also fixes indentation.
-    void adjust_fun_stack(SEXP rho);
+    void adjust_fun_stack(SEXP rho, vector<call_id_t> & unwound_calls);
 
     static tracer_state_t& get_instance();
 

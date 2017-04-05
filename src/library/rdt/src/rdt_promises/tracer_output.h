@@ -13,10 +13,10 @@
 
 using namespace std;
 
-enum class OutputFormat: char {RDT_OUTPUT_TRACE, RDT_OUTPUT_SQL, RDT_OUTPUT_BOTH, RDT_OUTPUT_COMPILED_SQLITE};
-enum class OutputType: char {RDT_R_PRINT, RDT_FILE, RDT_SQLITE, RDT_R_PRINT_AND_SQLITE};
+enum class OutputFormat: char {TRACE, SQL, TRACE_AND_SQL, PREPARED_SQL};
+//enum class OutputDestination: char {CONSOLE, FILE, SQLITE, CONSOLE_AND_SQLITE};
 
-extern FILE *output;
+//extern FILE *output;
 
 void rdt_print(OutputFormat string_format, std::initializer_list<string> strings);
 void prepend_prefix(stringstream *stream);
@@ -33,18 +33,14 @@ string print_function(const char *type, const char *loc, const char *name, fn_ad
  * ===========================================================
  */
 
-//#ifdef SQLITE3_H
-#define RDT_SQLITE_SUPPORT
-//#endif
+
 
 #ifdef RDT_SQLITE_SUPPORT
 #include <sqlite3.h>
 
-extern sqlite3 *sqlite_database; // TODO does not need to be global maybe?
+//extern sqlite3 *sqlite_database; // TODO does not need to be global maybe?
 #endif
 
-#define RDT_LOOKUP_PROMISE 0x0
-#define RDT_FORCE_PROMISE 0xF
 
 void rdt_init_sqlite(const string& filename);
 void rdt_close_sqlite();

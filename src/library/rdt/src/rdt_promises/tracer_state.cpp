@@ -4,7 +4,7 @@
 
 #include "tracer_state.h"
 #include "tracer_conf.h"
-#include "tracer_output.h"
+//#include "tracer_output.h"
 #include "tracer_sexpinfo.h"
 
 void tracer_state_t::start_pass(const SEXP prom) {
@@ -26,7 +26,8 @@ void tracer_state_t::start_pass(const SEXP prom) {
     prom_addr_t prom_addr = get_sexp_address(prom);
     prom_id_t prom_id = make_promise_id(prom);
     promise_origin[prom_id] = 0;
-    rdt_print(OutputFormat::RDT_OUTPUT_SQL, {mk_sql_promise(prom_id)});
+    //rdt_print(OutputFormat::SQL, {mk_sql_promise(prom_id)}); // FIXME RE-WRITE WITH NEW FUNCTIONS!!!!
+    // FIXME or move somewhere... probablky move somewhere
 }
 
 void tracer_state_t::finish_pass() {
@@ -38,7 +39,8 @@ void tracer_state_t::finish_pass() {
     promise_origin.clear();
 }
 
-void tracer_state_t::adjust_fun_stack(SEXP rho) {
+// TODO returning call ids through a vector. seems kludgy... is there a better way to do this?
+void tracer_state_t::adjust_fun_stack(SEXP rho, vector<call_id_t> & unwound_calls) {
     call_id_t call_id;
     env_addr_t call_addr;
 
@@ -57,7 +59,9 @@ void tracer_state_t::adjust_fun_stack(SEXP rho) {
 
         if (tracer_conf.pretty_print)
             indent -= tracer_conf.indent_width;
-        rdt_print(OutputFormat::RDT_OUTPUT_TRACE, {print_unwind("<=", call_id)});
+
+        unwound_calls.push_back(call_id);
+        //rdt_print(OutputFormat::TRACE, {print_unwind("<=", call_id)}); // FIXME USE NEW FUNCTION API
     }
 }
 

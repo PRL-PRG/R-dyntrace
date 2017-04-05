@@ -129,3 +129,9 @@ from functions
 join arguments as arguments on arguments.function_id = functions.id
 group by functions.id
 order by functions.id, arguments.position;
+
+-- Warning: The prepared statement generator assumes semicolons are used only to separate statements in this file,
+--          If you use a semicolon for anything else in this file,
+--                                                    that prepared statement generator will go explosively crazy.
+--
+--                                                                                         -love, the Sign Painter

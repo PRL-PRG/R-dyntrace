@@ -14,7 +14,7 @@
 
 template<typename Impl>
 class recorder_t {
-private:
+protected:
     Impl& impl() {
         return *static_cast<Impl*>(this);
     }
@@ -36,13 +36,15 @@ public:
         info.call_id = make_funcall_id(rho);
 #endif
         char *location = get_location(op);
-        info.loc = CHKSTR(location);
+        if (location != NULL)
+            info.loc = location;
         free(location);
 
         if (ns) {
             info.fqfn = string(ns) + "::" + CHKSTR(name);
         } else {
-            info.fqfn = CHKSTR(name);
+            if (name != NULL)
+                info.fqfn = name;
         }
 
         info.arguments = get_arguments(op, rho);
@@ -58,18 +60,20 @@ public:
         const char *name = get_name(call);
         const char *ns = get_ns_name(op);
 
-        info.type = is_byte_compiled(call) ? "<= bcod" : "<= func";
+        info.type = is_byte_compiled(call) ? "<= bcod" : "<= func"; // FIXME this seems... inelegant now
         info.fn_id = get_function_id(op);
         info.call_id = STATE(fun_stack).top();
 
         char *location = get_location(op);
-        info.loc = CHKSTR(location);
+        if (location != NULL)
+            info.loc = location;
         free(location);
 
         if (ns) {
             info.fqfn = string(ns) + "::" + CHKSTR(name);
         } else {
-            info.fqfn = CHKSTR(name);
+            if (name != NULL)
+                info.fqfn = name;
         }
 
         info.arguments = get_arguments(op, rho);
@@ -81,8 +85,11 @@ public:
         call_info_t info;
 
         const char *name = get_name(call);
-        info.name = CHKSTR(name);
+        if (name != NULL)
+            info.name = name;
         info.fn_id = get_function_id(op);
+        info.fqfn = info.name;
+        info.call_type = 2;
 
         char *location = get_location(op);
         info.loc = CHKSTR(location);
@@ -107,9 +114,13 @@ public:
         call_info_t info;
 
         const char *name = get_name(call);
-        info.name = CHKSTR(name);
+        if (name != NULL)
+            info.name = name;
         info.fn_id = get_function_id(op);
         info.call_id = STATE(fun_stack).top();
+        if (name != NULL)
+            info.fqfn = name;
+        info.call_type = 2;
 
         char *location = get_location(op);
         info.loc = CHKSTR(location);
@@ -127,7 +138,8 @@ private:
         prom_info_t info;
 
         const char *name = get_name(symbol);
-        info.name = CHKSTR(name);
+        if (name != NULL)
+            info.name = name;
 
         SEXP promise_expression = get_promise(symbol, rho);
         info.prom_id = get_promise_id(promise_expression);
@@ -150,10 +162,19 @@ public:
         return promise_get_info(symbol, rho);
     }
 
-#define DELEGATE(func, info_struct) \
+#define DELEGATE2(func, info_struct) \
     void func##_process(const info_struct & info) { \
         impl().func(info); \
     }
+
+#define DELEGATE1(func) \
+    void func##_process() { \
+        impl().func(); \
+    }
+
+    // Macro overloading trick: http://stackoverflow.com/a/11763277/6846474
+#define GET_MACRO(_1, _2, NAME, ...) NAME
+#define DELEGATE(...) GET_MACRO(__VA_ARGS__, DELEGATE2, DELEGATE1)(__VA_ARGS__)
 
     DELEGATE(function_entry, call_info_t)
     DELEGATE(function_exit, call_info_t)
@@ -164,21 +185,47 @@ public:
     DELEGATE(promise_created, prom_id_t)
     DELEGATE(promise_lookup, prom_info_t)
 
+    DELEGATE(init_recorder)
+    DELEGATE(start_trace)
+    DELEGATE(finish_trace)
+    DELEGATE(unwind, vector<call_id_t>)
+
 #undef DELEGATE
+#undef DELEGATE1
+#undef DELEGATE2
+};
+
+template<typename ...Rec>
+class compose_impl;
+
+template<typename ...Rec>
+class compose : public compose_impl<Rec...> {
+public:
+    std::tuple<Rec...> rec;
 };
 
 
 template<typename ...Rec>
-class compose : public recorder_t<compose<Rec...>> {
-    std::tuple<Rec...> rec;
-
+class compose_impl : public recorder_t<compose<Rec...>> {
+protected:
+    // Make sure no one can create an instance of compose_impl
+    compose_impl() = default;
 public:
-#define COMPOSE(func, info_struct) \
+#define COMPOSE2(func, info_struct) \
     void func(const info_struct & info) { \
-        tuple_for_each(rec, [&info](auto & r) { \
+        tuple_for_each(this->impl().rec, [&info](auto & r) { \
             r.func(info); \
         }); \
     }
+
+#define COMPOSE1(func) \
+    void func() { \
+        tuple_for_each(this->impl().rec, [](auto & r) { \
+            r.func(); \
+        }); \
+    }
+
+#define COMPOSE(...) GET_MACRO(__VA_ARGS__, COMPOSE2, COMPOSE1)(__VA_ARGS__)
 
     COMPOSE(function_entry, call_info_t)
     COMPOSE(function_exit, call_info_t)
@@ -189,7 +236,15 @@ public:
     COMPOSE(promise_created, prom_id_t)
     COMPOSE(promise_lookup, prom_info_t)
 
+    COMPOSE(init_recorder)
+    COMPOSE(start_trace)
+    COMPOSE(finish_trace)
+    COMPOSE(unwind, vector<call_id_t>)
+
 #undef COMPOSE
+#undef COMPOSE1
+#undef COMPOSE2
+#undef GET_MACRO
 };
 
 #endif //R_3_3_1_RECORDER_H

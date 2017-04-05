@@ -732,7 +732,8 @@ set(SOURCE_FILES
         src/unix/sys-unix.c
         src/unix/system.c
         src/library/rdt/src/rdt_register_hook.h
-        src/library/rdt/src/r.h src/library/rdt/src/rdt_promises/tracer_conf.h
+        src/library/rdt/src/r.h
+        src/library/rdt/src/rdt_promises/tracer_conf.h
         src/library/rdt/src/rdt_promises/tracer_state.h
         src/library/rdt/src/rdt_promises/tracer_output.h
         src/library/rdt/src/rdt_promises/tracer_sexpinfo.h
@@ -744,9 +745,17 @@ set(SOURCE_FILES
         src/library/rdt/src/rdt_promises/tuple_for_each.h
         src/library/rdt/src/rdt_promises/trace_recorder.h
         src/library/rdt/src/rdt_promises/trace_recorder.cpp
+        src/library/rdt/src/rdt_promises/psql_recorder.h
+        src/library/rdt/src/rdt_promises/psql_recorder.cpp
         src/library/rdt/src/rdt_promises/sql_recorder.h
         src/library/rdt/src/rdt_promises/sql_recorder.cpp
-        src/library/rdt/src/dyn_fn_lookup.h
+        src/library/rdt/src/rdt_promises/sql_generator.cpp
+        src/library/rdt/src/rdt_promises/sql_generator.h
+        src/library/rdt/src/rdt_promises/multiplexer.cpp
+        src/library/rdt/src/rdt_promises/multiplexer.h
+        src/library/rdt/src/rdt_promises/tools.h
+        src/library/rdt/src/rdt_promises/tools.cpp
+	src/library/rdt/src/dyn_fn_lookup.h
         src/library/rdt/src/dyn_fn_lookup.cpp)
 
 include_directories(include)

@@ -18,17 +18,19 @@
 #define RID_INVALID (rid_t)-1
 
 using namespace std;
+                            // Typical human-readable representation
+typedef uintptr_t rid_t;    // TODO
+typedef intptr_t rsid_t;    // TODO
 
-typedef uintptr_t rid_t;
-typedef intptr_t rsid_t;
+typedef rid_t prom_addr_t;  // hexadecimal
+typedef rid_t env_addr_t;   // hexadecimal
+typedef rid_t fn_addr_t;    // hexadecimal
+typedef rsid_t prom_id_t;   // hexadecimal
+typedef rid_t call_id_t;    // integer          if RDT_CALL_ID
+                            // hexadecimal      otherwise
 
-typedef rid_t prom_addr_t;
-typedef rid_t env_addr_t;
-typedef rid_t fn_addr_t;
-typedef rsid_t prom_id_t;
-typedef rid_t call_id_t;
+typedef int arg_id_t;       // integer
 
-typedef int arg_id_t;
 typedef pair<fn_addr_t, string> arg_key_t;
 
 rid_t get_sexp_address(SEXP e);
@@ -112,7 +114,7 @@ struct call_info_t {
     string type;
     int call_type;
     fn_addr_t fn_id;
-    string fqfn;
+    string fqfn; // TODO get rid of name and only leave fully qualified name (possibly just call it name...)
     string name; // For builtins
     string fn_definition;
     string loc;
@@ -121,6 +123,7 @@ struct call_info_t {
     arglist_t arguments;
 };
 
+// FIXME would it make sense to add type of action here?
 struct prom_info_t {
     string name;
     prom_id_t prom_id;

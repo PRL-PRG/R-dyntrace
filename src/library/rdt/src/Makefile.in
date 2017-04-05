@@ -15,10 +15,17 @@ R_INCLUDE_DIR = $(R_HOME)/include
 
 SOURCES_C = init.c rdt.c
 SOURCES_CXX = rdt_promises.cpp rdt_noop.cpp rdt_debug.cpp rdt_trace.cpp \
-              rdt_promises/tracer_conf.cpp rdt_promises/tracer_output.cpp \
-              rdt_promises/tracer_sexpinfo.cpp rdt_promises/tracer_state.cpp \
-              rdt_promises/trace_recorder.cpp rdt_promises/sql_recorder.cpp \
+              rdt_promises/tools.cpp \
+              rdt_promises/tracer_conf.cpp \
+              rdt_promises/tracer_sexpinfo.cpp \
+              rdt_promises/tracer_state.cpp \
+              rdt_promises/multiplexer.cpp \
+              rdt_promises/sql_generator.cpp \
+              rdt_promises/trace_recorder.cpp \
+              rdt_promises/sql_recorder.cpp \
+              rdt_promises/psql_recorder.cpp \
               dyn_fn_lookup.cpp
+
 
 
 DEPENDS = $(SOURCES_C:.c=.d)
@@ -64,6 +71,7 @@ mostlyclean: clean
 clean:
 	@-rm -rf .libs _libs
 	@-rm -f Makedeps *.d *.o *$(SHLIB_EXT)
+	@-rm -f Makedeps rdt_promises/*.d rdt_promises/*.o rdt_promises/*$(SHLIB_EXT)
 distclean: clean
 	@-rm -f Makefile
 maintainer-clean: distclean
