@@ -9,10 +9,10 @@
 #include "sql_recorder.h"
 
 class trace_recorder_t : public recorder_t<trace_recorder_t> {
-    bool commented;
+    bool render_as_sql_comment;
 public:
-    trace_recorder_t(bool commented = false) {
-        this->commented = commented;
+    trace_recorder_t(bool render_as_sql_comment = false) {
+        this->render_as_sql_comment = render_as_sql_comment;
     }
 
     void init_recorder();
@@ -34,7 +34,7 @@ public:
 #define CONCAT_IMPL(a, b) a ## b
 #define CONCAT(a, b) CONCAT_IMPL(a, b)
 
-// This is the part where we set `commented` to true
+// This is the part where we set `render_as_sql_comment` to true
 //by calling the constructor with non-default value
 #define trace_recorder_t_CONSTR trace_recorder_t(true)
 #define sql_recorder_t_CONSTR sql_recorder_t()
