@@ -12,7 +12,6 @@
 #include <vector>
 
 using namespace std;
-//using namespace sql_generator;
 
 namespace sql_generator {
 
@@ -110,38 +109,6 @@ namespace sql_generator {
 
         return statement.str();
     }
-
-// XXX I'm keeping this around just in case.
-//sql_stmt_t multirow_insert_template(string table, int num_columns, int num_rows) {
-//    // Weird cases.
-//    assert(num_rows > 0 && num_columns > 0);
-//
-//    // Make a string represeting one row of placeholders/values.
-//    string value_cell;
-//    value_cell.reserve(1 + (num_columns - 1) * 3);
-//    value_cell += "%s";
-//    for (int i = 1; i < num_columns; i++)
-//        value_cell += ", %s";
-//
-//    // Special case for 1 value.
-//    if (num_rows == 1)
-//         return "insert into " + table + " values (" + value_cell + ");\n";
-//
-//    // General case;
-//    stringstream statement;
-//    statement << "insert into "
-//              << table
-//              << " select "
-//              << value_cell;
-//
-//    for (int i = num_rows - 1; i--; num_rows >= 0)
-//        statement << "union all select "
-//                  << value_cell;
-//
-//    statement << ";\n";
-//
-//    return statement.str();
-//}
 
     sql_stmt_t make_begin_transaction_statement() {
         return "begin transaction;\n";

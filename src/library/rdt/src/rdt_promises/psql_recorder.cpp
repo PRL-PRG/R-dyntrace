@@ -11,7 +11,6 @@
 #include "multiplexer.h"
 
 #ifdef RDT_SQLITE_SUPPORT
-#include <sqlite3.h>
 #endif
 
 #include <string>
@@ -36,7 +35,6 @@ static sqlite3_stmt * prepared_sql_transaction_abort = nullptr;
 static sqlite3_stmt * prepared_sql_pragma_asynchronous = nullptr;
 
 static vector<sqlite3_stmt *> prepared_sql_create_tables_and_views;
-// FIXME load schema statement
 
 // Prepared statement object getters for objects with variable arrity.
 sqlite3_stmt *get_prepared_sql_insert_argument(int);
@@ -49,7 +47,6 @@ pstmt_cache prepared_sql_insert_arguments;
 // More helper functions.
 void free_prepared_sql_statements();
 void free_prepared_sql_statement_cache(pstmt_cache *cache);
-//sqlite3_stmt *get_prepared_sql_insert_statement(string table, int columns, int values, pstmt_cache *cache);
 #endif
 
 void compile_prepared_sql_schema_statements() {
@@ -318,18 +315,6 @@ void psql_recorder_t::start_trace() {
                 multiplexer::payload_t(prepared_sql_transaction_begin),
                 tracer_conf.outputs);
     }
-
-    // TODO cleanup comment
-    // if (overwrite or writing to a new db/file)
-    //      throw away any precompiled statements
-    //      re-compile statements
-    //
-    // if (output_configuration)
-    //      if (overwrite or writing to a new db/file)
-    //          load pragmas
-    //          load schema
-    //
-    //
 #else
     // FIXME
 #endif
@@ -395,9 +380,6 @@ void free_prepared_sql_statements() {
     free_prepared_sql_statement_cache(prepared_sql_insert_promise_assocs);
     free_prepared_sql_statement_cache(prepared_sql_insert_arguments);
 }
-
-//pstmt_cache prepared_sql_insert_promise_assocs;
-//pstmt_cache prepared_sql_insert_arguments;
 
 sqlite3_stmt * get_prepared_sql_insert_argument(int values) {
     if (prepared_sql_insert_arguments.count(values))

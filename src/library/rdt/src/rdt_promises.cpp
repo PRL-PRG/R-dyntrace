@@ -43,7 +43,7 @@ struct trace_promises {
     static Rec rec_impl;
     static recorder_t<Rec>& rec;
 
-    // ??? can we get metadata about the program we're analysing in here?
+    // TODO ??? can we get metadata about the program we're analysing in here?
     // TODO: also pass environment
     DECL_HOOK(begin)(const SEXP prom) {
         tracer_state().start_pass(prom);
@@ -228,56 +228,17 @@ rdt_handler *setup_promise_tracing(SEXP options) {
     tracer_conf_t new_conf = get_config_from_R_options(options);
     tracer_conf.update(new_conf);
 
-    // TODO: can we move these into `begin` hook or possibly trace/sql_recorder implementations?
-//    if (tracer_conf.output_type != OutputDestination::SQLITE && tracer_conf.output_type != OutputDestination::CONSOLE_AND_SQLITE) {
-//        output = fopen(tracer_conf.filename->c_str(), tracer_conf.overwrite ? "w" : "a");
-//        if (!output) {
-//            error("Unable to open %s: %s\n", tracer_conf.filename, strerror(errno));
-//            return NULL;
-//        }
-//    } // FIXME done -- moved
-
-
-    // FIXME moved to multiplexer::init
-//    THIS IS DONE IN tracer_state().start_pass() (called from trace_promises_begin()) if the overwrite flag is set
-//    call_id_counter = 0;
-//    already_inserted_functions.clear();
-
-//    if (tracer_conf.output_type == OutputDestination::SQLITE || tracer_conf.output_type == OutputDestination::CONSOLE_AND_SQLITE) {
-//        if(tracer_conf.overwrite) {
-//            if (file_exists(tracer_conf.filename)) {
-//                remove(tracer_conf.filename->c_str());
-//            }
-//        }
-//        rdt_init_sqlite(tracer_conf.filename);
-//    }
-    // FIXME MOVED TO multiplexer::init
-
-    // FIXME CALL FUNCTIONS FROM MULTIPLEXER INIT!!!!!
-
-    //if (tracer_conf.output_format != OutputFormat::TRACE) {
-        // rdt_configure_sqlite(); FIXME NEW API
-        // FIXME ALSO CALL STH TO LOAD SCHEMA
-        // rdt_begin_transaction(); FIXME NEW API
-    //} // FIXME done -- moved
-
     rdt_handler *h = (rdt_handler *) malloc(sizeof(rdt_handler));
-    //memcpy(h, &trace_promises_rdt_handler, sizeof(rdt_handler));
-    //*h = trace_promises_rdt_handler; // This actually does the same thing as memcpy
     if (tracer_conf.output_format == OutputFormat::TRACE) {
-        Rprintf("1\n"); // TODO cleanup debug
         *h = register_hooks_with<trace_recorder_t>();
     }
     else if (tracer_conf.output_format == OutputFormat::SQL) {
-        Rprintf("2\n");// TODO cleanup debug
         *h = register_hooks_with<sql_recorder_t>();
     }
     else if (tracer_conf.output_format == OutputFormat::PREPARED_SQL) {
-        Rprintf("2b\n");// TODO cleanup debug
         *h = register_hooks_with<psql_recorder_t>();
     }
     else { // TRACE_AND_SQL
-        Rprintf("3\n");// TODO cleanup debug
         *h = register_hooks_with<compose<trace_recorder_t, sql_recorder_t>>();
     }
 
@@ -312,14 +273,10 @@ rdt_handler *setup_promise_tracing(SEXP options) {
         }
     }
 
-    //rdt_close_sqlite();
     return h;
 }
 
+// FIXME do we need this function anymore?
 void cleanup_promise_tracing(/*rdt_handler *h,*/ SEXP options) {
-    //if (tracer_conf.output_format != OutputFormat::TRACE)
-        //rdt_commit_transaction(); //FIXME implement this using new functions
 
-    //if (tracer_conf.output_type == OutputDestination::SQLITE || tracer_conf.output_type == OutputDestination::CONSOLE_AND_SQLITE)
-        //rdt_close_sqlite(); //FIXME implement this using new functions
 }
