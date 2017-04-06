@@ -17,8 +17,6 @@ namespace multiplexer {
 #endif
 
     bool init(sink_arr_t outputs, string file_path, bool overwrite) {
-        //Rprintf("outputs%s\n", outputs.c_str());
-
         set<Sink> already_initialized;
         bool return_value = true;
 
@@ -138,7 +136,6 @@ namespace multiplexer {
                         fprintf(rdt_mux_output_file, "%s", payload.text->c_str());
                     else
                         fprintf(stderr, "Warning: cannot print non-text payload to file (%i), ignoring.\n",
-                                // FIXME stop offending Honza's sensibilities
                                 tools::enum_cast(payload.type));
                     break;
 

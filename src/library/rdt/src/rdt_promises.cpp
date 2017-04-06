@@ -95,8 +95,8 @@ struct trace_promises {
 #endif
     }
 
-    static void printEntryInfo(const SEXP call, const SEXP op, const SEXP rho, const char * msg) {
-        call_info_t info = rec.builtin_entry_get_info(call, op, rho);
+    static void print_entry_info(const SEXP call, const SEXP op, const SEXP rho, function_type fn_type) {
+        call_info_t info = rec.builtin_entry_get_info(call, op, rho, fn_type);
         rec.builtin_entry_process(info);
 
         STATE(fun_stack).push(info.call_id);
@@ -107,15 +107,15 @@ struct trace_promises {
 
     // TODO retrieve arguments
     DECL_HOOK(builtin_entry)(const SEXP call, const SEXP op, const SEXP rho) {
-        printEntryInfo(call, op, rho, "=> b-in");
+        print_entry_info(call, op, rho, function_type::BUILTIN);
     }
 
     DECL_HOOK(specialsxp_entry)(const SEXP call, const SEXP op, const SEXP rho) {
-        printEntryInfo(call, op, rho, "=> specialsxp");
+        print_entry_info(call, op, rho, function_type::SPECIAL);
     }
 
-    static void printExitInfo(const SEXP call, const SEXP op, const SEXP rho, const char * msg) {
-        call_info_t info = rec.builtin_exit_get_info(call, op, rho);
+    static void print_exit_info(const SEXP call, const SEXP op, const SEXP rho, function_type fn_type) {
+        call_info_t info = rec.builtin_exit_get_info(call, op, rho, fn_type);
         rec.builtin_exit_process(info);
 
         STATE(fun_stack).pop();
@@ -125,11 +125,11 @@ struct trace_promises {
     }
 
     DECL_HOOK(builtin_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
-        printExitInfo(call, op, rho, "<= b-in");
+        print_exit_info(call, op, rho, function_type::BUILTIN);
     }
 
     DECL_HOOK(specialsxp_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
-        printExitInfo(call, op, rho, "<= specialsxp");
+        print_exit_info(call, op, rho, function_type::SPECIAL);
     }
 
     DECL_HOOK(promise_created)(const SEXP prom) {

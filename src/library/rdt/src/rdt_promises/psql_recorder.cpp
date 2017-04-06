@@ -9,6 +9,7 @@
 
 #include "sql_generator.h"
 #include "multiplexer.h"
+#include "tools.h"
 
 #ifdef RDT_SQLITE_SUPPORT
 #endif
@@ -60,9 +61,9 @@ void compile_prepared_sql_schema_statements() {
 
 void compile_prepared_sql_statements() {
     prepared_sql_insert_function =
-            compile_sql_statement(make_insert_function_statement("?","?","?"));
+            compile_sql_statement(make_insert_function_statement("?","?","?","?","?"));
     prepared_sql_insert_call =
-            compile_sql_statement(make_insert_function_call_statement("?","?","?","?","?","?"));
+            compile_sql_statement(make_insert_function_call_statement("?","?","?","?","?"));
     prepared_sql_insert_promise =
             compile_sql_statement(make_insert_promise_statement("?"));
     prepared_sql_insert_promise_eval =
@@ -90,6 +91,10 @@ sqlite3_stmt * populate_function_statement(const call_info_t & info) {
         sqlite3_bind_null(prepared_sql_insert_function, 3);
     else
         sqlite3_bind_text(prepared_sql_insert_function, 3, info.fn_definition.c_str(), -1, SQLITE_STATIC);
+
+    sqlite3_bind_int(prepared_sql_insert_function, 4, tools::enum_cast(info.fn_type));
+
+    sqlite3_bind_int(prepared_sql_insert_function, 5, info.fn_compiled ? 1 : 0);
 
     return prepared_sql_insert_function;
 }
@@ -125,18 +130,17 @@ sqlite3_stmt * populate_call_statement(const call_info_t & info) {
     sqlite3_bind_int(prepared_sql_insert_call, 1, (int)info.call_id);
     sqlite3_bind_int(prepared_sql_insert_call, 2, (int)info.call_ptr); // FIXME do we really need this?
 
-    if (info.fqfn.empty())
+    if (info.name.empty())
         sqlite3_bind_null(prepared_sql_insert_call, 3);
     else
-        sqlite3_bind_text(prepared_sql_insert_call, 3, info.fqfn.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(prepared_sql_insert_call, 3, info.name.c_str(), -1, SQLITE_STATIC);
 
     if (info.loc.empty())
         sqlite3_bind_null(prepared_sql_insert_call, 4);
     else
         sqlite3_bind_text(prepared_sql_insert_call, 4, info.loc.c_str(), -1, SQLITE_STATIC);
 
-    sqlite3_bind_int(prepared_sql_insert_call, 5, info.call_type);
-    sqlite3_bind_int(prepared_sql_insert_call, 6, (int)info.fn_id);
+    sqlite3_bind_int(prepared_sql_insert_call, 5, (int)info.fn_id);
 
     return prepared_sql_insert_call;
 }

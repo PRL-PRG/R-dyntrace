@@ -110,17 +110,18 @@ public:
     }
 };
 
+enum class function_type {CLOSURE = 0, BUILTIN = 1, SPECIAL = 2};
+
 struct call_info_t {
-    string type;
-    int call_type;
     fn_addr_t fn_id;
-    string fqfn; // TODO get rid of name and only leave fully qualified name (possibly just call it name...)
-    string name; // For builtins
+    string name; // fully qualified function name, if available
     string fn_definition;
     string loc;
     call_id_t call_id;
     env_addr_t call_ptr;
     arglist_t arguments;
+    bool fn_compiled;
+    function_type fn_type;
 };
 
 // FIXME would it make sense to add type of action here?

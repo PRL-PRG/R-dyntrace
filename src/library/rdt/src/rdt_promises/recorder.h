@@ -26,8 +26,8 @@ public:
         const char *name = get_name(call);
         const char *ns = get_ns_name(op);
 
-        info.type = is_byte_compiled(call) ? "=> bcod" : "=> func";
-        info.call_type = is_byte_compiled(call) ? 1 : 0;
+        info.fn_compiled = is_byte_compiled(call);
+        info.fn_type = function_type::CLOSURE;
         info.fn_id = get_function_id(op);
         info.call_ptr = get_sexp_address(rho);
 #ifdef RDT_CALL_ID
@@ -41,10 +41,10 @@ public:
         free(location);
 
         if (ns) {
-            info.fqfn = string(ns) + "::" + CHKSTR(name);
+            info.name = string(ns) + "::" + CHKSTR(name);
         } else {
             if (name != NULL)
-                info.fqfn = name;
+                info.name = name;
         }
 
         info.arguments = get_arguments(op, rho);
@@ -60,9 +60,10 @@ public:
         const char *name = get_name(call);
         const char *ns = get_ns_name(op);
 
-        info.type = is_byte_compiled(call) ? "<= bcod" : "<= func"; // FIXME this seems... inelegant now
+        info.fn_compiled = is_byte_compiled(call);
         info.fn_id = get_function_id(op);
         info.call_id = STATE(fun_stack).top();
+        info.fn_type = function_type::CLOSURE;
 
         char *location = get_location(op);
         if (location != NULL)
@@ -70,10 +71,10 @@ public:
         free(location);
 
         if (ns) {
-            info.fqfn = string(ns) + "::" + CHKSTR(name);
+            info.name = string(ns) + "::" + CHKSTR(name);
         } else {
             if (name != NULL)
-                info.fqfn = name;
+                info.name = name;
         }
 
         info.arguments = get_arguments(op, rho);
@@ -81,15 +82,16 @@ public:
         return info;
     }
 
-    call_info_t builtin_entry_get_info(const SEXP call, const SEXP op, const SEXP rho) {
+    call_info_t builtin_entry_get_info(const SEXP call, const SEXP op, const SEXP rho, function_type fn_type) {
         call_info_t info;
 
         const char *name = get_name(call);
         if (name != NULL)
             info.name = name;
         info.fn_id = get_function_id(op);
-        info.fqfn = info.name;
-        info.call_type = 2;
+        info.name = info.name;
+        info.fn_type = fn_type;
+        info.fn_compiled = is_byte_compiled(call); // FIXME Shouldn't this be op?
 
         char *location = get_location(op);
         if (location != NULL)
@@ -111,7 +113,7 @@ public:
         return info;
     }
 
-    call_info_t builtin_exit_get_info(const SEXP call, const SEXP op, const SEXP rho) {
+    call_info_t builtin_exit_get_info(const SEXP call, const SEXP op, const SEXP rho, function_type fn_type) {
         call_info_t info;
 
         const char *name = get_name(call);
@@ -120,8 +122,9 @@ public:
         info.fn_id = get_function_id(op);
         info.call_id = STATE(fun_stack).top();
         if (name != NULL)
-            info.fqfn = name;
-        info.call_type = 2;
+            info.name = name;
+        info.fn_type = fn_type;
+        info.fn_compiled = is_byte_compiled(call);
 
         char *location = get_location(op);
         if (location != NULL)
@@ -142,6 +145,8 @@ private:
         const char *name = get_name(symbol);
         if (name != NULL)
             info.name = name;
+
+        // FIXME what is name??
 
         SEXP promise_expression = get_promise(symbol, rho);
         info.prom_id = get_promise_id(promise_expression);

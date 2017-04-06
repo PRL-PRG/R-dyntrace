@@ -10,6 +10,7 @@
 
 #include "sql_generator.h"
 #include "multiplexer.h"
+#include "tools.h"
 
 #include <string>
 
@@ -24,8 +25,10 @@ sql_stmt_t insert_function_statement(const call_info_t & info) {
     sql_val_t id = from_hex(info.fn_id);
     sql_val_t location = wrap_nullable_string(info.loc);
     sql_val_t definition = wrap_and_escape_nullable_string(info.fn_definition);
+    sql_val_t type = from_int(tools::enum_cast(info.fn_type));
+    sql_val_t compiled = from_int(info.fn_compiled ? 1 : 0);
 
-    return make_insert_function_statement(id, location, definition);
+    return make_insert_function_statement(id, location, definition, type, compiled);
 }
 
 sql_stmt_t insert_arguments_statement(const call_info_t & info, bool align) {
@@ -51,12 +54,11 @@ sql_stmt_t insert_arguments_statement(const call_info_t & info, bool align) {
 sql_stmt_t insert_call_statement(const call_info_t & info) {
     sql_val_t id = from_int(info.call_id);
     sql_val_t pointer = from_hex(info.call_ptr); // FIXME do we really need this?
-    sql_val_t name = wrap_nullable_string(info.fqfn);
-    sql_val_t type = from_int(info.call_type);
+    sql_val_t name = wrap_nullable_string(info.name);
     sql_val_t location = wrap_nullable_string(info.loc);
     sql_val_t function_id = from_hex(info.fn_id);
 
-    return make_insert_function_call_statement(id, pointer, name, type, location, function_id);
+    return make_insert_function_call_statement(id, pointer, name, location, function_id);
 }
 
 sql_stmt_t insert_promise_statement(const prom_id_t id) {

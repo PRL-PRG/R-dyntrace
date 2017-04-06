@@ -17,20 +17,23 @@ namespace sql_generator {
 
     inline sql_stmt_t make_multirow_insert_statement(string table, vector<string> &values, bool align);
 
-    sql_stmt_t make_insert_function_statement(sql_val_t id, sql_val_t location, sql_val_t definition) {
+    sql_stmt_t make_insert_function_statement(sql_val_t id, sql_val_t location, sql_val_t definition, sql_val_t type,
+                                              sql_val_t compiled) {
         stringstream statement;
 
         statement << "insert into functions values ("
                   << id << ","
                   << location << ","
-                  << definition
+                  << definition << ","
+                  << type << ","
+                  << compiled
                   << ");\n";
 
         return statement.str();
     }
 
     sql_stmt_t
-    make_insert_function_call_statement(sql_val_t id, sql_val_t ptr, sql_val_t name, sql_val_t type, sql_val_t location,
+    make_insert_function_call_statement(sql_val_t id, sql_val_t ptr, sql_val_t name, sql_val_t location,
                                         sql_val_t function_id) {
         stringstream statement;
 
@@ -39,7 +42,6 @@ namespace sql_generator {
                   << ptr << ","
                   << name << ","
                   << location << ","
-                  << type << ","
                   << function_id
                   << ");\n";
 

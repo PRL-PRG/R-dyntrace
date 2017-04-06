@@ -50,10 +50,10 @@ string function_info_line(TraceLinePrefix prefix, const call_info_t & info, bool
 
     stream << "function call";
 
-    if (info.fqfn.empty())
+    if (info.name.empty())
         stream << " name=<unknown>";
     else
-        stream << " name=" << info.fqfn;
+        stream << " name=" << info.name;
 
     stream << " call_id="  << num_pref << num_fmt << info.call_id
            << " function_id=0x" << hex << info.fn_id;
@@ -62,6 +62,20 @@ string function_info_line(TraceLinePrefix prefix, const call_info_t & info, bool
         stream << " location=<unknown>";
     else
         stream << " location=" << info.loc;
+
+    stream << " type=";
+    switch (info.fn_type) {
+        case function_type::CLOSURE:
+            stream << "closure";
+            break;
+        case function_type::SPECIAL:
+            stream << "special";
+            break;
+        case function_type::BUILTIN:
+            stream << "builtin";
+    }
+
+    stream << " compiled=" << (info.fn_compiled ? "true" : "false");
 
     stream << " arguments={";
     int i = 0;
@@ -88,12 +102,12 @@ string builtin_info_line(TraceLinePrefix prefix, const call_info_t & info, bool 
     auto num_fmt = call_id_is_pointer ? hex : dec;
     string num_pref =  call_id_is_pointer ? "0x" : "";
 
-    stream << "builtin call";
+    stream << "non-closure call";
 
-    if (info.fqfn.empty())
+    if (info.name.empty())
         stream << " name=<unknown>";
     else
-        stream << " name=" << info.fqfn;
+        stream << " name=" << info.name;
 
     stream << " call_id="  << num_pref << num_fmt << info.call_id
            << " function_id=0x" << hex << info.fn_id;
@@ -102,6 +116,20 @@ string builtin_info_line(TraceLinePrefix prefix, const call_info_t & info, bool 
         stream << " location=<unknown>";
     else
         stream << " location=" << info.loc;
+
+    stream << " type=";
+    switch (info.fn_type) {
+        case function_type::SPECIAL:
+            stream << "special";
+            break;
+        case function_type::BUILTIN:
+            stream << "builtin";
+            break;
+        case function_type::CLOSURE:
+            stream << "closure";
+    }
+
+    stream << " compiled=" << (info.fn_compiled ? "true" : "false");
 
     stream << "\n";
 
