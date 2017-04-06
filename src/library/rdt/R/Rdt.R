@@ -8,8 +8,15 @@
 Rdt <- function(block, tracer="promises", ...) {
     stopifnot(is.character(tracer) && length(tracer) == 1 && nchar(tracer) > 0)
     if (missing(block)) stop("block is required")
-    
-    .Call(C_Rdt, tracer, environment(), list(...))
+
+    start.time <- Sys.time()
+
+    retval <- .Call(C_Rdt, tracer, environment(), list(...))
+
+    end.time <- Sys.time()
+    write(paste("Elapsed time:", (end.time - start.time)), stderr())
+
+    retval
 }
 
 trace.promises.r <- function(expression, tracer="promises", output="p", format="trace", pretty.print=TRUE, overwrite=FALSE, synthetic.call.id=TRUE, path="trace", include.configuration=FALSE)
