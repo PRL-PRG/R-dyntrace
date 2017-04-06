@@ -1,17 +1,17 @@
 #include "multiplexer.h"
 #include "tools.h"
 
-//#include <string>
 #include <fstream>
 #include <set>
 
 #include "../rdt.h"
 
-FILE *rdt_mux_output_file = NULL; // FIXME use fstream
-
 using namespace std;
 
 namespace multiplexer {
+
+    ofstream output_file;
+
 #ifdef RDT_SQLITE_SUPPORT
     sqlite3 *sqlite_database;
 #endif
@@ -36,8 +36,8 @@ namespace multiplexer {
                     break;
 
                 case Sink::FILE: {
-                    rdt_mux_output_file = fopen(file_path.c_str(), overwrite ? "w" : "a");
-                    if (!rdt_mux_output_file) {
+                    output_file.open(file_path, overwrite ? ios::trunc : ios::ate);
+                    if (!output_file.is_open()) {
                         fprintf(stderr, "Error: could not open file \"%s\", message (%i): %s\n",
                                 file_path.c_str(), errno, strerror(errno));
                         return_value = false;
@@ -92,13 +92,12 @@ namespace multiplexer {
                     break;
 
                 case Sink::FILE: {
-                    int outcome = fclose(rdt_mux_output_file);
-                    if (outcome != 0) {
+                    output_file.close();
+                    if (output_file.is_open()) {
                         fprintf(stderr, "Error: could not close output file, message (%i): %s\n",
                                 errno, strerror(errno));
                         return_value = false;
                     }
-                    rdt_mux_output_file = NULL;
                     break;
                 }
 
@@ -133,10 +132,11 @@ namespace multiplexer {
 
                 case Sink::FILE:
                     if (payload.type == Payload::TEXT)
-                        fprintf(rdt_mux_output_file, "%s", payload.text->c_str());
-                    else
-                        fprintf(stderr, "Warning: cannot print non-text payload to file (%i), ignoring.\n",
-                                tools::enum_cast(payload.type));
+                        output_file << *(payload.text);
+#ifdef RDT_SQLITE_SUPPORT
+                    else // if (payload.type == Payload::PREPARED_STATEMENT)
+                        output_file << sqlite3_sql(payload.prepared_statement);
+#endif
                     break;
 
                 case Sink::DATABASE:

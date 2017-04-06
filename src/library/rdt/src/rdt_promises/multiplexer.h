@@ -6,20 +6,20 @@
 //#endif
 
 #include <string>
+#include <fstream>
+//#include <iostream>
 
 #ifdef RDT_SQLITE_SUPPORT
 #include <sqlite3.h>
 #endif
 
-//#include <cstdlib>
-//#include <cstdio>
-
-// Output destinations: global variables.
-extern FILE * rdt_mux_output_file; // FIXME switch to fstream
 
 namespace multiplexer {
 
-    // FIXME should these be local to multiplexer anyway?
+    // Output destinations: global variables.
+
+//    extern std::ofstream output_file;
+
 #ifdef RDT_SQLITE_SUPPORT
     extern sqlite3 *sqlite_database;
 #endif
