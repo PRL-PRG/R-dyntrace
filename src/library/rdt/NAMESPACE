@@ -11,6 +11,9 @@ export(trace.promises.compiled.db)
 export(trace.promises.uncompiled.db)
 export(trace.promises.both)
 
+export(wrap.executor)
+export(wrap.session.executor)
+
 export(run.all.vignettes.from.package)
 export(run.all.vignettes.from.packages)
 export(run.all.vignettes.from.all.packages)
