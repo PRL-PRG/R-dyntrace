@@ -32,9 +32,30 @@ trace.promises.db <-trace.promises.compiled.db
 trace.promises.both <- function(expression, tracer="promises", output="pd", path="trace.sqlite", format="both", pretty.print=FALSE, overwrite=FALSE, synthetic.call.id=TRUE, include.configuration=TRUE)
     Rdt(expression, tracer=tracer, output=output, path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite, include.configuration=include.configuration)
 
-run.all.vignettes.from.package <- function(package, executor = eval, ...) {
+wrap.executor <- function(executor)
+    function(expr, current_vignette, total_vignettes, vignette_name, vignette_package, ...) {
+        write(paste("Vignette ", current_vignette, "/", (total_vignettes - 1),
+                        " (", vignette_name, " from ", vignette_package, ")", sep=""),
+            stderr())
+
+        executor(eval(expr), ...)
+    }
+
+wrap.session.executor <- function(executor)
+    function(expr, current_vignette, total_vignettes, vignette_name, vignette_package, ...) {
+        write(paste("Vignette ", current_vignette, "/", (total_vignettes - 1),
+                        " (", vignette_name, " from ", vignette_package, ")", sep=""),
+            stderr())
+
+        executor(eval(expr), overwrite=if (current_vignette == 0) TRUE else FALSE, ...)
+    }
+
+run.all.vignettes.from.package <- function(package, executor = wrap.executor(trace.promises.r) , ...) {
     result.set <- vignette(package = package)
     vignettes.in.package <- result.set$results[,3]
+    index = 0
+    total = length(vignettes.in.package)
+
     for (v in vignettes.in.package) {
         error.handler = function(err) {
             write(paste("Error in vignette ", v, " for package ", package, ": ",
@@ -44,14 +65,25 @@ run.all.vignettes.from.package <- function(package, executor = eval, ...) {
         one.vignette <- vignette(v, package = package)
         R.code.path <- paste(one.vignette$Dir, "doc", one.vignette$R, sep="/")
         R.code.source <- parse(R.code.path)
-        tryCatch(executor(R.code.source, ...), error = error.handler)
+        tryCatch(
+            executor(
+                R.code.source,
+                current_vignette=index,
+                total_vignettes=total,
+                vignette_name=v,
+                vignette_package=package,
+                ...),
+            error = error.handler
+        )
+
+        index <- index + 1
     }
 }
 
-run.all.vignettes.from.packages <- function(packages, executor = eval, ...)
+run.all.vignettes.from.packages <- function(packages, executor = wrap.executor(trace.promises.r), ...)
 invisible(lapply(packages, function(x) run.all.vignettes.from.package(x, eval, ...)))
 
-run.all.vignettes.from.all.packages <- function(executor = eval, ...)
+run.all.vignettes.from.all.packages <- function(executor = wrap.executor(trace.promises.r), ...)
 run.all.vignettes.from.packages(unique(vignette()$results[,1]), executor = eval, ...)
 
 # keep an empty line below this one
