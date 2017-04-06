@@ -5,7 +5,7 @@ create table functions (
     --[ data ]-----------------------------------------------------------------
     location text,
     definition text,
-    call_type integer not null, -- 0: function, 1: built-in, 2: special
+    type integer not null, -- 0: function, 1: built-in, 2: special
                                 -- values defined by function_type
     compiled boolean not null
 );

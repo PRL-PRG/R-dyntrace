@@ -37,7 +37,7 @@ namespace multiplexer {
                     break;
 
                 case Sink::FILE: {
-                    output_file.open(file_path, overwrite ? ios::trunc : ios::ate);
+                    output_file.open(file_path, overwrite ? ofstream::trunc : ofstream::app);
                     if (output_file.fail()) {
                         cerr << "Error: could not open file \"" << file_path << "\", "
                              << "message (" << errno << "): " << strerror(errno) << "\n";
