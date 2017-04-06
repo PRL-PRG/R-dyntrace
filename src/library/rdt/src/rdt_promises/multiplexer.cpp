@@ -2,6 +2,7 @@
 #include "tools.h"
 
 #include <fstream>
+#include <iostream>
 #include <set>
 
 #include "../rdt.h"
@@ -24,8 +25,8 @@ namespace multiplexer {
             Sink output = (Sink) output_as_wrong_type;
 
             if (already_initialized.count(output)) {
-                fprintf(stderr, "Warning: trying to initialize the same output type twice (%c). Hillarity may ensue.\n",
-                        output);
+                cerr << "Warning: trying to initialize the same output type twice (" << output << ")."
+                     << "Hillarity may ensue.\n";
                 continue;
             } else
                 already_initialized.insert(output);
@@ -37,9 +38,9 @@ namespace multiplexer {
 
                 case Sink::FILE: {
                     output_file.open(file_path, overwrite ? ios::trunc : ios::ate);
-                    if (!output_file.is_open()) {
-                        fprintf(stderr, "Error: could not open file \"%s\", message (%i): %s\n",
-                                file_path.c_str(), errno, strerror(errno));
+                    if (output_file.fail()) {
+                        cerr << "Error: could not open file \"" << file_path << "\", "
+                             << "message (" << errno << "): " << strerror(errno) << "\n";
                         return_value = false;
                     }
                     break;
@@ -54,20 +55,19 @@ namespace multiplexer {
                     // Open DB connection.
                     int outcome = sqlite3_open(file_path.c_str(), &sqlite_database);
                     if (outcome != SQLITE_OK) {
-                        fprintf(stderr, "Error: could not open DB connection, message (%i): %s\n",
-                                outcome,
-                                sqlite3_errmsg(sqlite_database));
-
+                        cerr << "Error: could not open DB connection,"
+                             << " message (" << outcome << "): "
+                             << string(sqlite3_errmsg(sqlite_database)) << "\n";
                         return_value = false;
                     }
 #else
-                    fprintf(stderr, "Warning: cannot initialize database connection: no SQLite3 support.\n");
+                    cerr << "Warning: cannot initialize database connection: no SQLite3 support.\n";
                     return_value = false;
 #endif
                     break;
                 }
                 default:
-                    fprintf(stderr, "Cannot initialize, unknown output sink type: %c\n", output);
+                    cerr << "Warning: cannot initialize, unknown output sink type: " << output << "\n";
             }
         }
 
@@ -94,8 +94,8 @@ namespace multiplexer {
                 case Sink::FILE: {
                     output_file.close();
                     if (output_file.is_open()) {
-                        fprintf(stderr, "Error: could not close output file, message (%i): %s\n",
-                                errno, strerror(errno));
+                        cerr << "Error: could not close output file, "
+                             << "message (" << errno << "): " << strerror(errno) << "\n";
                         return_value = false;
                     }
                     break;
@@ -108,7 +108,7 @@ namespace multiplexer {
                     break;
                 }
                 default:
-                    fprintf(stderr, "Cannot close, unknown output sink type: %c\n", output);
+                    cerr << "Warning: cannot close, unknown output sink type: " << output << "\n";
             }
         }
 
@@ -125,8 +125,8 @@ namespace multiplexer {
                         // Write to a format string to avoid problems if there are %s etc. expressions in payload.text.
                         Rprintf("%s", payload.text->c_str());
                     else
-                        fprintf(stderr, "Warning: cannot print non-text payload (%i), ignoring.\n",
-                                tools::enum_cast(payload.type));
+                        cerr << "Warning: cannot print non-text payload (" << tools::enum_cast(payload.type) << "), "
+                             << "ignoring.\n";
 
                     break;
 
@@ -145,10 +145,9 @@ namespace multiplexer {
                         int outcome = sqlite3_exec(sqlite_database, payload.text->c_str(), NULL, 0, NULL /*&error_msg*/);
 
                         if (outcome != SQLITE_OK) {
-                            fprintf(stderr, "Error: could not execute SQL query: \"%s\", message (%i): %s\n",
-                                    payload.text->c_str(),
-                                    outcome,
-                                    sqlite3_errmsg(sqlite_database));
+                            cerr << "Error: could not execute SQL query: \"" << payload.text << "\", "
+                                 << "message (" << outcome << "): "
+                                 << sqlite3_errmsg(sqlite_database) << "\n";
 
                             return_value = false;
                         }
@@ -156,29 +155,29 @@ namespace multiplexer {
                         int outcome = sqlite3_step(payload.prepared_statement);
 
                         if (outcome != SQLITE_DONE) {
-                            fprintf(stderr, "Error: could not execute prepared statement \"%s\", message (%i): %s\n",
-                                    sqlite3_sql(payload.prepared_statement),
-                                    outcome,
-                                    sqlite3_errmsg(sqlite_database));
+                            cerr << "Error: could not execute prepared statement \""
+                                 << sqlite3_sql(payload.prepared_statement) << "\", "
+                                 << "message (" << outcome << "): "
+                                 << sqlite3_errmsg(sqlite_database) << "\n";
 
                             return_value = false;
                         }
 
                         sqlite3_reset(payload.prepared_statement);
                     } else {
-                        fprintf(stderr, "Warning: cannot execute query from unknown payload to DB (%i), ignoring.\n",
-                                tools::enum_cast(payload.type));
+                        cerr << "Warning: cannot execute query from unknown payload to DB "
+                             << "(" <<  tools::enum_cast(payload.type) << "), ignoring.\n";
                     }
                     break;
 #else
-                    fprintf(stderr, "Warning: cannot execute query: no SQLite3 support.\n");
+                    cerr << "Warning: cannot execute query: no SQLite3 support.\n";
 
                     return_value = false;
                     break;
 #endif
 
                 default:
-                    fprintf(stderr, "Cannot output, unknown output sink type: %c\n", output);
+                    cerr << "Warning: cannot output, unknown output sink type: " << output << "\n";
 
                     return_value = false;
             }
