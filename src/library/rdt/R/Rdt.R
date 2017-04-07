@@ -48,7 +48,7 @@ trace.promises.both <- function(expression, tracer="promises", output=c(CONSOLE,
 
 wrap.executor <- function(executor)
     function(expr, current_vignette, total_vignettes, vignette_name, vignette_package, ...) {
-        write(paste("Vignette ", current_vignette, "/", (total_vignettes - 1),
+        write(paste("Vignette ", (current_vignette + 1), "/", total_vignettes,
                         " (", vignette_name, " from ", vignette_package, ")", sep=""),
             stderr())
 
@@ -57,7 +57,7 @@ wrap.executor <- function(executor)
 
 wrap.session.executor <- function(executor)
     function(expr, current_vignette, total_vignettes, vignette_name, vignette_package, ...) {
-        write(paste("Vignette ", current_vignette, "/", (total_vignettes - 1),
+        write(paste("Vignette ", (current_vignette + 1), "/", total_vignettes,
                         " (", vignette_name, " from ", vignette_package, ")", sep=""),
             stderr())
 

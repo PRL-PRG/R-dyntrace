@@ -8,10 +8,11 @@
 #include <string>
 
 #include "../rdt.h"
-#include "tracer_output.h"
 #include "multiplexer.h"
 
 using namespace std;
+
+enum class OutputFormat {TRACE, SQL, PREPARED_SQL, TRACE_AND_SQL};
 
 template<typename T>
 class option {

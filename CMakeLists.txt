@@ -735,10 +735,8 @@ set(SOURCE_FILES
         src/library/rdt/src/r.h
         src/library/rdt/src/rdt_promises/tracer_conf.h
         src/library/rdt/src/rdt_promises/tracer_state.h
-        src/library/rdt/src/rdt_promises/tracer_output.h
         src/library/rdt/src/rdt_promises/tracer_sexpinfo.h
         src/library/rdt/src/rdt_promises/tracer_state.cpp
-        src/library/rdt/src/rdt_promises/tracer_output.cpp
         src/library/rdt/src/rdt_promises/tracer_sexpinfo.cpp
         src/library/rdt/src/rdt_promises/tracer_conf.cpp
         src/library/rdt/src/rdt_promises/recorder.h

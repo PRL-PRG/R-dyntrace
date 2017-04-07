@@ -8,7 +8,6 @@
 #include "rdt_register_hook.h"
 
 #include "rdt_promises/tracer_conf.h"
-#include "rdt_promises/tracer_output.h"
 
 static std::map<std::string, uint64_t> specialsxp_count;
 
