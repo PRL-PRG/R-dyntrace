@@ -11,6 +11,10 @@ export(trace.promises.compiled.db)
 export(trace.promises.uncompiled.db)
 export(trace.promises.both)
 
+export(CONSOLE)
+export(FILE)
+export(DB)
+
 export(wrap.executor)
 export(wrap.session.executor)
 

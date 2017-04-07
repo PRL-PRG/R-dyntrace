@@ -41,7 +41,7 @@ trace.promises.compiled.db <- function(expression, tracer="promises", output=DB,
 trace.promises.uncompiled.db <- function(expression, tracer="promises", output=DB, path="trace.sqlite", format="sql", pretty.print=FALSE, overwrite=FALSE, synthetic.call.id=TRUE, include.configuration=TRUE)
     Rdt(expression, tracer=tracer, output=format.output(output), path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite, include.configuration=include.configuration)
 
-trace.promises.db <-trace.promises.compiled.db
+trace.promises.db <- trace.promises.compiled.db
 
 trace.promises.both <- function(expression, tracer="promises", output=c(CONSOLE, DATABASE), path="trace.sqlite", format="both", pretty.print=FALSE, overwrite=FALSE, synthetic.call.id=TRUE, include.configuration=TRUE)
     Rdt(expression, tracer=tracer, output=format.output(output), path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite, include.configuration=include.configuration)
@@ -95,9 +95,9 @@ run.all.vignettes.from.package <- function(package, executor = wrap.executor(tra
 }
 
 run.all.vignettes.from.packages <- function(packages, executor = wrap.executor(trace.promises.r), ...)
-invisible(lapply(packages, function(x) run.all.vignettes.from.package(x, eval, ...)))
+    invisible(lapply(packages, function(x) run.all.vignettes.from.package(x, eval, ...)))
 
 run.all.vignettes.from.all.packages <- function(executor = wrap.executor(trace.promises.r), ...)
-run.all.vignettes.from.packages(unique(vignette()$results[,1]), executor = eval, ...)
+    run.all.vignettes.from.packages(unique(vignette()$results[,1]), executor = eval, ...)
 
 # keep an empty line below this one
