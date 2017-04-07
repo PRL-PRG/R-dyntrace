@@ -175,7 +175,7 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
 
     // FIXME (1) sometimes name is empty and it prints name anyway instead of unknown...
     // FIXME (2) when outputting to file name is always unknown, even though in many cases it should be known
-    stream << " name=" << (info.name.empty() ? info.name : "<unknown>")
+    stream << " name=" << (info.name.empty() ? "<unknown>" : info.name)
            << " id=" << info.prom_id
            << " in_call=" << num_pref << num_fmt << info.in_call_id
            << " from_call=" << num_pref << num_fmt << info.from_call_id << "\n";
