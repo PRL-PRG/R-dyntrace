@@ -99,7 +99,6 @@ struct trace_promises {
         STATE(curr_env_stack).push(info.call_ptr | 1);
     }
 
-    // TODO retrieve arguments
     DECL_HOOK(builtin_entry)(const SEXP call, const SEXP op, const SEXP rho) {
         print_entry_info(call, op, rho, function_type::BUILTIN);
     }
@@ -148,14 +147,7 @@ struct trace_promises {
     }
 
     DECL_HOOK(error)(const SEXP call, const char* message) {
-        char *call_str = NULL;
-        char *loc = get_location(call);
 
-        // FIXME: Shouldn't we use `call_str`?
-        asprintf(&call_str, "\"%s\"", get_call(call));
-
-        if (loc) free(loc);
-        if (call_str) free(call_str);
     }
 
     DECL_HOOK(vector_alloc)(int sexptype, long length, long bytes, const char* srcref) {

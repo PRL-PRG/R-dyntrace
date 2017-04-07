@@ -7,6 +7,7 @@
 // Should work on Linux and macOS
 #include <dlfcn.h>
 #include <cstdio>
+#include <assert.h>
 
 #include "dyn_fn_lookup.h"
 
@@ -21,7 +22,8 @@ void * find_fn_by_name(const char * format, ...) {
         char * fn_name;
         va_list args;
         va_start(args, format);
-        vasprintf(&fn_name, format, args);
+        int outcome = vasprintf(&fn_name, format, args);
+        assert(outcome > 0);
         va_end(args);
 
         // TODO: How about caching the pointers so we don't have to

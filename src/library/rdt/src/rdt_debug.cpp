@@ -4,6 +4,7 @@
 #include <cstring>
 #include <cstdint>
 #include <cinttypes>
+#include <string>
 
 extern "C" {
 #include "../../../main/inspect.h"
@@ -17,13 +18,15 @@ static FILE *output = NULL;
 static uint64_t last = 0;
 static uint64_t delta = 0;
 
-static inline void print(const char *type, const char *loc, const char *name) {
+using namespace std;
+
+static inline void print(string & type, string & loc, string & name) {
 	fprintf(output, 
             "%" PRId64 ",%s,%s,%s\n",
             delta,
-            type, 
-            CHKSTR(loc),
-            CHKSTR(name));
+            type.c_str(),
+            loc.c_str(),
+            name.c_str());
 }
 
 static inline void compute_delta() {
@@ -41,17 +44,14 @@ struct trace_debug {
     DECL_HOOK(function_entry)(const SEXP call, const SEXP op, const SEXP rho) {
         compute_delta();
 
-        const char *type = is_byte_compiled(op) ? "bc-function-entry" : "function-entry";
-        const char *name = get_name(call);
-        const char *ns = get_ns_name(op);
-        char *loc = get_location(op);
-        char *fqfn = NULL;
+        string type = is_byte_compiled(op) ? "bc-function-entry" : "function-entry";
+        string name = CHKSTR(get_name(call));
+        string loc = CHKSTR(get_location(op));
 
-        if (ns) {
-            asprintf(&fqfn, "%s::%s", ns, CHKSTR(name));
-        } else {
-            fqfn = name != NULL ? strdup(name) : NULL;
-        }
+        const char * ns = get_ns_name(op);
+        string fqfn = ns != NULL
+                      ? (string(ns) + "::" + name)
+                      : name;
 
         Rprintf("-------------------------------------------------------------------------------\n");
         print(type, loc, fqfn);
@@ -61,9 +61,6 @@ struct trace_debug {
         R_inspect(op);
         Rprintf("rho:\n");
         R_inspect(rho);
-
-        if (loc) free(loc);
-        if (fqfn) free(fqfn);
 
         last = timestamp();
     }
@@ -71,17 +68,14 @@ struct trace_debug {
     DECL_HOOK(function_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
         compute_delta();
 
-        const char *type = is_byte_compiled(op) ? "bc-function-exit" : "function-exit";
-        const char *name = get_name(call);
-        const char *ns = get_ns_name(op);
-        char *loc = get_location(op);
-        char *fqfn = NULL;
+        string type = is_byte_compiled(op) ? "bc-function-exit" : "function-exit";
+        string name = CHKSTR(get_name(call));
+        string loc = CHKSTR(get_location(op));
 
-        if (ns) {
-            asprintf(&fqfn, "%s::%s", ns, CHKSTR(name));
-        } else {
-            fqfn = name != NULL ? strdup(name) : NULL;
-        }
+        const char * ns = get_ns_name(op);
+        string fqfn = ns != NULL
+                      ? (string(ns) + "::" + name)
+                      : name;
 
         Rprintf("-------------------------------------------------------------------------------\n");
         print(type, loc, fqfn);
@@ -91,9 +85,8 @@ struct trace_debug {
         R_inspect(op);
         Rprintf("rho:\n");
         R_inspect(rho);
-
-        if (loc) free(loc);
-        if (fqfn) free(fqfn);
+        Rprintf("retval:\n");
+        R_inspect(retval);
 
         last = timestamp();
     }
@@ -101,10 +94,17 @@ struct trace_debug {
     DECL_HOOK(builtin_entry)(const SEXP call, const SEXP op, const SEXP rho) {
         compute_delta();
 
-        const char *name = get_name(call);
+        string type = "builtin-entry";
+        string name = CHKSTR(get_name(call));
+        string loc = CHKSTR(get_location(op));
+
+        const char * ns = get_ns_name(op);
+        string fqfn = ns != NULL
+                      ? (string(ns) + "::" + name)
+                      : name;
 
         Rprintf("-------------------------------------------------------------------------------\n");
-        print("builtin-entry", NULL, name);
+        print(type, loc, fqfn);
         Rprintf("call:\n");
         R_inspect(call);
         Rprintf("op:\n");
@@ -118,10 +118,17 @@ struct trace_debug {
     DECL_HOOK(builtin_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
         compute_delta();
 
-        const char *name = get_name(call);
+        string type = "builtin-exit";
+        string name = CHKSTR(get_name(call));
+        string loc = CHKSTR(get_location(op));
+
+        const char * ns = get_ns_name(op);
+        string fqfn = ns != NULL
+                      ? (string(ns) + "::" + name)
+                      : name;
 
         Rprintf("-------------------------------------------------------------------------------\n");
-        print("builtin-exit", NULL, name);
+        print(type, loc, fqfn);
         Rprintf("call:\n");
         R_inspect(call);
         Rprintf("op:\n");
@@ -137,10 +144,17 @@ struct trace_debug {
     DECL_HOOK(specialsxp_entry)(const SEXP call, const SEXP op, const SEXP rho) {
         compute_delta();
 
-        const char *name = get_name(call);
+        string type = "special-entry";
+        string name = CHKSTR(get_name(call));
+        string loc = CHKSTR(get_location(op));
+
+        const char * ns = get_ns_name(op);
+        string fqfn = ns != NULL
+                      ? (string(ns) + "::" + name)
+                      : name;
 
         Rprintf("-------------------------------------------------------------------------------\n");
-        print("specialsxp-entry", NULL, name);
+        print(type, loc, fqfn);
         Rprintf("call:\n");
         R_inspect(call);
         Rprintf("op:\n");
@@ -154,10 +168,17 @@ struct trace_debug {
     DECL_HOOK(specialsxp_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
         compute_delta();
 
-        const char *name = get_name(call);
+        string type = "special-exit";
+        string name = CHKSTR(get_name(call));
+        string loc = CHKSTR(get_location(op));
+
+        const char * ns = get_ns_name(op);
+        string fqfn = ns != NULL
+                      ? (string(ns) + "::" + name)
+                      : name;
 
         Rprintf("-------------------------------------------------------------------------------\n");
-        print("specialsxp-exit", NULL, name);
+        print(type, loc, fqfn);
         Rprintf("call:\n");
         R_inspect(call);
         Rprintf("op:\n");
@@ -173,10 +194,12 @@ struct trace_debug {
     DECL_HOOK(force_promise_entry)(const SEXP symbol, const SEXP rho) {
         compute_delta();
 
-        const char *name = get_name(symbol);
+        string name = CHKSTR(get_name(symbol));
+        string type = "promise-force-entry";
+        string location = "<unknown>";
 
         Rprintf("-------------------------------------------------------------------------------\n");
-        print("promise-force-entry", NULL, name);
+        print(type, location, name);
         Rprintf("symbol:\n");
         R_inspect(symbol);
         Rprintf("rho:\n");
@@ -188,10 +211,12 @@ struct trace_debug {
     DECL_HOOK(force_promise_exit)(const SEXP symbol, const SEXP rho, const SEXP val) {
         compute_delta();
 
-        const char *name = get_name(symbol);
+        string name = CHKSTR(get_name(symbol));
+        string type = "promise-force-exit";
+        string location = "<unknown>";
 
         Rprintf("-------------------------------------------------------------------------------\n");
-        print("promise-force-exit", NULL, name);
+        print(type, location, name);
         Rprintf("symbol:\n");
         R_inspect(symbol);
         Rprintf("rho:\n");
@@ -205,10 +230,12 @@ struct trace_debug {
     DECL_HOOK(promise_lookup)(const SEXP symbol, const SEXP rho, const SEXP val) {
         compute_delta();
 
-        const char *name = get_name(symbol);
+        string name = CHKSTR(get_name(symbol));
+        string type = "promise-lookup";
+        string location = "<unknown>";
 
         Rprintf("-------------------------------------------------------------------------------\n");
-        print("promise-lookup", NULL, name);
+        print(type, location, name);
         Rprintf("symbol:\n");
         R_inspect(symbol);
         Rprintf("rho:\n");
@@ -222,44 +249,59 @@ struct trace_debug {
     DECL_HOOK(error)(const SEXP call, const char* message) {
         compute_delta();
 
-        char *call_str = NULL;
-        char *loc = get_location(call);
+        string call_str = string("\"") + CHKSTR(get_call(call)) + string("\"");
+        string loc = CHKSTR(get_location(call));
+        string type = "error";
 
-        asprintf(&call_str, "\"%s\"", get_call(call));
-
-        print("error", NULL, call_str);
-
-        if (loc) free(loc);
-        if (call_str) free(call_str);
+        print(type, loc, call_str);
 
         last = timestamp();
     }
 
     DECL_HOOK(vector_alloc)(int sexptype, long length, long bytes, const char* srcref) {
         compute_delta();
-        print("vector-alloc", NULL, NULL);
+
+        string name = "<unknown>";
+        string loc = "<unknown>";
+        string type = "vector-alloc";
+
+        print(type, loc, name);
         last = timestamp();
     }
 
     DECL_HOOK(gc_entry)(R_size_t size_needed) {
         compute_delta();
+
+        string name = "gc-internal";
+        string loc = "<unknown>";
+        string type = "builtin-entry";
+
         Rprintf("-------------------------------------------------------------------------------\n");
-        print("builtin-entry", NULL, "gc_internal");
+        print(type, loc, name);
         last = timestamp();
     }
 
     DECL_HOOK(gc_exit)(int gc_count, double vcells, double ncells) {
         compute_delta();
+
+        string name = "gc-internal";
+        string loc = "<unknown>";
+        string type = "builtin-exit";
+
         Rprintf("-------------------------------------------------------------------------------\n");
-        print("builtin-exit", NULL, "gc_internal");
+        print(type, loc, name);
         last = timestamp();
     }
 
     DECL_HOOK(S3_generic_entry)(const char *generic, const SEXP object) {
         compute_delta();
 
+        string name = CHKSTR(generic);
+        string loc = "<unknown>";
+        string type = "s3-generic-entry";
+
         Rprintf("-------------------------------------------------------------------------------\n");
-        print("s3-generic-entry", NULL, generic);
+        print(type, loc, name);
         Rprintf("object:\n");
         R_inspect(object);
 
@@ -269,8 +311,13 @@ struct trace_debug {
     DECL_HOOK(S3_generic_exit)(const char *generic, const SEXP object, const SEXP retval) {
         compute_delta();
 
+        string name = CHKSTR(generic);
+        string loc = "<unknown>";
+        string type = "s3-generic-exit";
+
+
         Rprintf("-------------------------------------------------------------------------------\n");
-        print("s3-generic-exit", NULL, generic);
+        print(type, loc, name);
         Rprintf("object:\n");
         R_inspect(object);
         Rprintf("retval:\n");
@@ -282,8 +329,15 @@ struct trace_debug {
     DECL_HOOK(S3_dispatch_entry)(const char *generic, const char *clazz, const SEXP method, const SEXP object) {
         compute_delta();
 
+        string name = get_name(method);
+        string loc = "<unknown>";
+        string type = "s3-dispatch-entry";
+
+        if(name.empty())
+            name = "<unknown>";
+
         Rprintf("-------------------------------------------------------------------------------\n");
-        print("s3-dispatch-entry", NULL, get_name(method));
+        print(type, loc, name);
         Rprintf("method:\n");
         R_inspect(method);
         Rprintf("object:\n");
@@ -295,8 +349,15 @@ struct trace_debug {
     DECL_HOOK(S3_dispatch_exit)(const char *generic, const char *clazz, const SEXP method, const SEXP object, const SEXP retval) {
         compute_delta();
 
+        string name = get_name(method);
+        string loc = "<unknown>";
+        string type = "s3-dispatch-exit";
+
+        if(name.empty())
+            name = "<unknown>";
+
         Rprintf("-------------------------------------------------------------------------------\n");
-        print("s3-dispatch-exit", NULL, get_name(method));
+        print(type, loc, name);
         Rprintf("method:\n");
         R_inspect(method);
         Rprintf("object:\n");
@@ -307,7 +368,6 @@ struct trace_debug {
         last = timestamp();
     }
 };
-
 
 // static void debug_eval_entry(SEXP e, SEXP rho) {
 //     switch(TYPEOF(e)) {

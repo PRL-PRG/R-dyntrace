@@ -4,6 +4,7 @@
 #include <cstring>
 #include <cstdint>
 #include <cinttypes>
+#include <assert.h>
 
 #include "rdt.h"
 
@@ -44,7 +45,8 @@ struct trace_default {
         char *fqfn = NULL;
 
         if (ns) {
-            asprintf(&fqfn, "%s::%s", ns, CHKSTR(name));
+            int outcome = asprintf(&fqfn, "%s::%s", ns, CHKSTR(name));
+            assert(outcome > 0);
         } else {
             fqfn = name != NULL ? strdup(name) : NULL;
         }
@@ -67,9 +69,9 @@ struct trace_default {
         char *fqfn = NULL;
 
         if (ns) {
-            asprintf(&fqfn, "%s::%s", ns, CHKSTR(name));
+            int outcome = asprintf(&fqfn, "%s::%s", ns, CHKSTR(name));
+            assert(outcome > 0);
         } else {
-            fqfn = name != NULL ? strdup(name) : NULL;
             fqfn = name != NULL ? strdup(name) : NULL;
         }
 
@@ -137,7 +139,8 @@ struct trace_default {
         char *call_str = NULL;
         char *loc = get_location(call);
 
-        asprintf(&call_str, "\"%s\"", get_call(call));
+        int outcome = asprintf(&call_str, "\"%s\"", get_call(call));
+        assert(outcome > 0);
 
         print("error", NULL, call_str);
 
