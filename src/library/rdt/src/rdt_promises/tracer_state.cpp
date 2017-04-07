@@ -57,9 +57,6 @@ void tracer_state_t::adjust_fun_stack(SEXP rho, vector<call_id_t> & unwound_call
 #endif
         fun_stack.pop();
 
-        if (tracer_conf.pretty_print)
-            indent -= tracer_conf.indent_width;
-
         unwound_calls.push_back(call_id);
         //rdt_print(OutputFormat::TRACE, {print_unwind("<=", call_id)}); // FIXME USE NEW FUNCTION API
     }

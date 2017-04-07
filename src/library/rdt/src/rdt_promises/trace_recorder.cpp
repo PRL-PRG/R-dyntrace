@@ -143,7 +143,7 @@ string unwind_info_line(TraceLinePrefix prefix, const call_id_t call_id, bool in
     auto num_fmt = call_id_is_pointer ? hex : dec;
     string num_pref =  call_id_is_pointer ? "0x" : "";
 
-    stream << "unwind call_id=" << (tracer_conf.call_id_use_ptr_fmt ? hex : dec) << call_id << "\n";
+    stream << "unwind call_id=" << num_pref << num_fmt << call_id << "\n";
 
     return stream.str();
 }
@@ -316,13 +316,17 @@ void trace_recorder_t::finish_trace() {
 void trace_recorder_t::unwind(const vector<call_id_t> & unwound_calls) {
     stringstream statement;
 
-    for (call_id_t call_id : unwound_calls)
+    for (call_id_t call_id : unwound_calls) {
+        if (tracer_conf.pretty_print)
+            STATE(indent) -= tracer_conf.indent_width;
+
         statement << unwind_info_line(
                 TraceLinePrefix::EXIT,
                 call_id,
                 tracer_conf.pretty_print,
                 /*as_sql_comment=*/render_as_sql_comment,
                 /*call_id_as_pointer=*/tracer_conf.call_id_use_ptr_fmt);
+    }
 
     string s = statement.str();
     multiplexer::output(
