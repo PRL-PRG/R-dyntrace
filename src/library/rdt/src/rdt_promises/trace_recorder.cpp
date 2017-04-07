@@ -41,14 +41,25 @@ inline void prepend_prefix(stringstream &stream, TraceLinePrefix prefix, bool in
     }
 }
 
-string function_info_line(TraceLinePrefix prefix, const call_info_t & info, bool indent, bool as_sql_comment, bool call_id_is_pointer) {
+string function_call_info_line(TraceLinePrefix prefix, const call_info_t &info, bool indent, bool as_sql_comment,
+                               bool call_id_is_pointer) {
     stringstream stream;
     prepend_prefix(stream, prefix, indent, as_sql_comment);
 
     auto num_fmt = call_id_is_pointer ? hex : dec;
     string num_pref =  call_id_is_pointer ? "0x" : "";
 
-    stream << "function call";
+    stream << "call ";
+    switch (info.fn_type) {
+        case function_type::CLOSURE: // Always this...
+            stream << "closure";
+            break;
+        case function_type::SPECIAL:
+            stream << "special";
+            break;
+        case function_type::BUILTIN:
+            stream << "builtin";
+    }
 
     if (info.name.empty())
         stream << " name=<unknown>";
@@ -62,18 +73,6 @@ string function_info_line(TraceLinePrefix prefix, const call_info_t & info, bool
         stream << " location=<unknown>";
     else
         stream << " location=" << info.loc;
-
-    stream << " type=";
-    switch (info.fn_type) {
-        case function_type::CLOSURE:
-            stream << "closure";
-            break;
-        case function_type::SPECIAL:
-            stream << "special";
-            break;
-        case function_type::BUILTIN:
-            stream << "builtin";
-    }
 
     stream << " compiled=" << (info.fn_compiled ? "true" : "false");
 
@@ -95,14 +94,25 @@ string function_info_line(TraceLinePrefix prefix, const call_info_t & info, bool
     return stream.str();
 }
 
-string builtin_info_line(TraceLinePrefix prefix, const call_info_t & info, bool indent, bool as_sql_comment, bool call_id_is_pointer) {
+string builtin_or_special_call_info_line(TraceLinePrefix prefix, const call_info_t &info, bool indent,
+                                         bool as_sql_comment, bool call_id_is_pointer) {
     stringstream stream;
     prepend_prefix(stream, prefix, indent, as_sql_comment);
 
     auto num_fmt = call_id_is_pointer ? hex : dec;
     string num_pref =  call_id_is_pointer ? "0x" : "";
 
-    stream << "non-closure call";
+    stream << "call ";
+    switch (info.fn_type) {
+        case function_type::SPECIAL:
+            stream << "special";
+            break;
+        case function_type::BUILTIN:
+            stream << "builtin";
+            break;
+        case function_type::CLOSURE: // Just in case
+            stream << "closure";
+    }
 
     if (info.name.empty())
         stream << " name=<unknown>";
@@ -116,18 +126,6 @@ string builtin_info_line(TraceLinePrefix prefix, const call_info_t & info, bool 
         stream << " location=<unknown>";
     else
         stream << " location=" << info.loc;
-
-    stream << " type=";
-    switch (info.fn_type) {
-        case function_type::SPECIAL:
-            stream << "special";
-            break;
-        case function_type::BUILTIN:
-            stream << "builtin";
-            break;
-        case function_type::CLOSURE:
-            stream << "closure";
-    }
 
     stream << " compiled=" << (info.fn_compiled ? "true" : "false");
 
@@ -184,7 +182,7 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
 }
 
 void trace_recorder_t::function_entry(const call_info_t & info) {
-    string statement = function_info_line(
+    string statement = function_call_info_line(
             TraceLinePrefix::ENTER,
             info,
             /*indent=*/tracer_conf.pretty_print,
@@ -203,7 +201,7 @@ void trace_recorder_t::function_exit(const call_info_t & info) {
     if (tracer_conf.pretty_print)
         STATE(indent) -= tracer_conf.indent_width;
 
-    string statement = function_info_line(
+    string statement = function_call_info_line(
             TraceLinePrefix::EXIT,
             info,
             tracer_conf.pretty_print,
@@ -216,7 +214,7 @@ void trace_recorder_t::function_exit(const call_info_t & info) {
 }
 
 void trace_recorder_t::builtin_entry(const call_info_t & info) {
-    string statement = builtin_info_line(
+    string statement = builtin_or_special_call_info_line(
             TraceLinePrefix::ENTER,
             info,
             tracer_conf.pretty_print,
@@ -235,7 +233,7 @@ void trace_recorder_t::builtin_exit(const call_info_t & info) {
     if (tracer_conf.pretty_print)
         STATE(indent) -= tracer_conf.indent_width;
 
-    string statement = builtin_info_line(
+    string statement = builtin_or_special_call_info_line(
             TraceLinePrefix::EXIT,
             info,
             tracer_conf.pretty_print,

@@ -6,6 +6,7 @@
 #define R_3_3_1_RECORDER_H
 
 #include <tuple>
+#include <inspect.h>
 #include "tuple_for_each.h"
 
 #include "../rdt.h"
@@ -143,8 +144,6 @@ private:
         const char *name = get_name(symbol);
         if (name != NULL)
             info.name = name;
-
-        // FIXME what is name??
 
         SEXP promise_expression = get_promise(symbol, rho);
         info.prom_id = get_promise_id(promise_expression);
