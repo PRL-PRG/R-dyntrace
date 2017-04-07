@@ -58,20 +58,18 @@ fn_addr_t get_function_id(SEXP func) {
     return get_sexp_address(func);
 }
 
-#ifdef RDT_CALL_ID
 call_id_t make_funcall_id(SEXP function) {
     if (function == R_NilValue)
         return RID_INVALID;
 
     return ++STATE(call_id_counter);
 }
-#else
-call_id_t make_funcall_id(SEXP fn_env) {
-    assert(fn_env != NULL);
-    return get_sexp_address(fn_env);
-}
-#endif
 
+// XXX This is a remnant of the RDT_CALL_ID format
+//call_id_t make_funcall_id(SEXP fn_env) {
+//    assert(fn_env != NULL);
+//    return get_sexp_address(fn_env);
+//}
 
 // Wraper for findVar. Does not look up the value if it already is PROMSXP.
 SEXP get_promise(SEXP var, SEXP rho) {

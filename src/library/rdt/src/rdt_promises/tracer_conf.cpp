@@ -14,11 +14,7 @@ tracer_conf_t::tracer_conf_t() :
         include_configuration(true),
         overwrite(false),
         indent_width(4),
-#ifdef RDT_CALL_ID
         call_id_use_ptr_fmt(false),
-#else
-        call_id_use_ptr_fmt(true),
-#endif
         outputs(string({multiplexer::Sink::PRINT}))
 {}
 
@@ -93,12 +89,10 @@ tracer_conf_t get_config_from_R_options(SEXP options) {
         conf.overwrite = LOGICAL(overwrite_option)[0] == TRUE;
     //Rprintf("overwrite_option=%p->%i\n", (overwrite_option), overwrite);
 
-#ifdef RDT_CALL_ID
     SEXP synthetic_call_id_option = get_named_list_element(options, "synthetic.call.id");
     if (synthetic_call_id_option != NULL && synthetic_call_id_option == R_NilValue)
         conf.call_id_use_ptr_fmt = LOGICAL(synthetic_call_id_option)[0] == FALSE;
     //Rprintf("call_id_use_ptr_fmt=%p->%i\n", (synthetic_call_id_option), call_id_use_ptr_fmt);
-#endif
 
     SEXP include_configuration_option = get_named_list_element(options, "include.configuration");
     if (include_configuration_option != NULL && include_configuration_option != R_NilValue)

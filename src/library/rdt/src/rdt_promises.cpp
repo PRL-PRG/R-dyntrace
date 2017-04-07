@@ -63,9 +63,7 @@ struct trace_promises {
 
         // Push function ID on function stack
         STATE(fun_stack).push(info.call_id);
-#ifdef RDT_CALL_ID
         STATE(curr_env_stack).push(info.call_ptr);
-#endif
 
         rec.function_entry_process(info);
 
@@ -90,9 +88,7 @@ struct trace_promises {
 
         // Pop current function ID
         STATE(fun_stack).pop();
-#ifdef RDT_CALL_ID
         STATE(curr_env_stack).pop();
-#endif
     }
 
     static void print_entry_info(const SEXP call, const SEXP op, const SEXP rho, function_type fn_type) {
@@ -100,9 +96,7 @@ struct trace_promises {
         rec.builtin_entry_process(info);
 
         STATE(fun_stack).push(info.call_id);
-#ifdef RDT_CALL_ID
         STATE(curr_env_stack).push(info.call_ptr | 1);
-#endif
     }
 
     // TODO retrieve arguments
@@ -119,9 +113,7 @@ struct trace_promises {
         rec.builtin_exit_process(info);
 
         STATE(fun_stack).pop();
-#ifdef RDT_CALL_ID
         STATE(curr_env_stack).pop();
-#endif
     }
 
     DECL_HOOK(builtin_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {

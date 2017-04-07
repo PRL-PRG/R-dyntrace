@@ -30,11 +30,9 @@ public:
         info.fn_type = function_type::CLOSURE;
         info.fn_id = get_function_id(op);
         info.call_ptr = get_sexp_address(rho);
-#ifdef RDT_CALL_ID
         info.call_id = make_funcall_id(op);
-#else
-        info.call_id = make_funcall_id(rho);
-#endif
+        //info.call_id = make_funcall_id(rho);
+
         char *location = get_location(op);
         if (location != NULL)
             info.loc = location;
@@ -101,14 +99,14 @@ public:
         info.fn_definition = get_expression(op);
 
         info.call_ptr = get_sexp_address(rho);
-#ifdef RDT_CALL_ID
         info.call_id = make_funcall_id(op);
-#else
+
+        // XXX This is a remnant of an RDT_CALL_ID ifdef
         // Builtins have no environment of their own
         // we take the parent env rho and add 1 to it to create a new pseudo-address
         // it will be unique because real pointers are aligned (no odd addresses)
-        info.call_id = make_funcall_id(rho) | 1;
-#endif
+        // info.call_id = make_funcall_id(rho) | 1;
+
 
         return info;
     }

@@ -19,9 +19,7 @@ void tracer_state_t::start_pass(const SEXP prom) {
     // when referring to the promise created by call to Rdt.
     // This is just a dummy call and environment.
     fun_stack.push(0);
-#ifdef RDT_CALL_ID
     curr_env_stack.push(0);
-#endif
 
     prom_addr_t prom_addr = get_sexp_address(prom);
     prom_id_t prom_id = make_promise_id(prom);
@@ -32,9 +30,7 @@ void tracer_state_t::start_pass(const SEXP prom) {
 
 void tracer_state_t::finish_pass() {
     fun_stack.pop();
-#ifdef RDT_CALL_ID
     curr_env_stack.pop();
-#endif
 
     promise_origin.clear();
 }
@@ -44,21 +40,16 @@ void tracer_state_t::adjust_fun_stack(SEXP rho, vector<call_id_t> & unwound_call
     call_id_t call_id;
     env_addr_t call_addr;
 
-    while (!fun_stack.empty() &&
-           #ifdef RDT_CALL_ID
-           (call_addr = curr_env_stack.top()) && get_sexp_address(rho) != call_addr
-           #else
-           (call_id = fun_stack.top()) && get_sexp_address(rho) != call_id
-#endif
-            ) {
-#ifdef RDT_CALL_ID
+    // XXX remnant of RDT_CALL_ID
+    //(call_id = fun_stack.top()) && get_sexp_address(rho) != call_id
+
+    while (!fun_stack.empty() && (call_addr = curr_env_stack.top()) && get_sexp_address(rho) != call_addr) {
         call_id = fun_stack.top();
             curr_env_stack.pop();
-#endif
+
         fun_stack.pop();
 
         unwound_calls.push_back(call_id);
-        //rdt_print(OutputFormat::TRACE, {print_unwind("<=", call_id)}); // FIXME USE NEW FUNCTION API
     }
 }
 

@@ -24,12 +24,7 @@ struct tracer_state_t {
     // Whenever R makes a function call, we generate a function ID and store that ID on top of the stack
     // so that we know where we are (e.g. when printing function ID at function_exit hook)
     stack<call_id_t, vector<call_id_t>> fun_stack; // Should be reset on each tracer pass
-#ifdef RDT_CALL_ID
-    #define CALL_ID_FMT "%d"
     stack<env_addr_t , vector<env_addr_t>> curr_env_stack; // Should be reset on each tracer pass
-#else
-#define CALL_ID_FMT "%#x"
-#endif
 
     // Map from promise IDs to call IDs
     unordered_map<prom_id_t, call_id_t> promise_origin; // Should be reset on each tracer pass

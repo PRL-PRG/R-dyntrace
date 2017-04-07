@@ -12,9 +12,6 @@
 
 #include "../r.h"
 
-// Use generated call IDs instead of function env addresses
-#define RDT_CALL_ID
-
 #define RID_INVALID (rid_t)-1
 
 using namespace std;
