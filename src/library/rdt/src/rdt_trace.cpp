@@ -37,7 +37,7 @@ struct trace_default {
     DECL_HOOK(function_entry)(const SEXP call, const SEXP op, const SEXP rho) {
         compute_delta();
 
-        const char *type = is_byte_compiled(call) ? "bc-function-entry" : "function-entry";
+        const char *type = is_byte_compiled(op) ? "bc-function-entry" : "function-entry";
         const char *name = get_name(call);
         const char *ns = get_ns_name(op);
         char *loc = get_location(op);
@@ -60,7 +60,7 @@ struct trace_default {
     DECL_HOOK(function_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
         compute_delta();
 
-        const char *type = is_byte_compiled(call) ? "bc-function-exit" : "function-exit";
+        const char *type = is_byte_compiled(op) ? "bc-function-exit" : "function-exit";
         const char *name = get_name(call);
         const char *ns = get_ns_name(op);
         char *loc = get_location(op);
@@ -69,6 +69,7 @@ struct trace_default {
         if (ns) {
             asprintf(&fqfn, "%s::%s", ns, CHKSTR(name));
         } else {
+            fqfn = name != NULL ? strdup(name) : NULL;
             fqfn = name != NULL ? strdup(name) : NULL;
         }
 
