@@ -1208,6 +1208,8 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
 
     tmp = R_NilValue;
 
+    RDT_HOOK(probe_function_entry, call, op, newrho);
+
     /* Debugging */
 
     SET_RDEBUG(newrho, (RDEBUG(op) && R_current_debug_state()) || RSTEP(op)
@@ -1273,6 +1275,8 @@ static SEXP R_execClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho,
     cntxt.returnValue = tmp; /* make it available to on.exit */
     endcontext(&cntxt);
 
+    RDT_HOOK(probe_function_exit, call, op, newrho, tmp);
+
     if (RDEBUG(op) && R_current_debug_state()) {
 	Rprintf("exiting from: ");
 	PrintCall(call, rho);
@@ -1294,7 +1298,9 @@ SEXP R_forceAndCall(SEXP e, int n, SEXP rho)
 	int flag = PRIMPRINT(fun);
 	PROTECT(CDR(e));
 	R_Visible = flag != 1;
+	RDT_HOOK(probe_specialsxp_entry, e, fun, rho); // XXX
 	tmp = PRIMFUN(fun) (e, fun, CDR(e), rho);
+	RDT_HOOK(probe_specialsxp_exit, e, fun, rho, tmp); // XXX
 	if (flag < 2) R_Visible = flag != 1;
 	UNPROTECT(1);
     }
@@ -1302,6 +1308,7 @@ SEXP R_forceAndCall(SEXP e, int n, SEXP rho)
 	int flag = PRIMPRINT(fun);
 	PROTECT(tmp = evalList(CDR(e), rho, e, 0));
 	if (flag < 2) R_Visible = flag != 1;
+	RDT_HOOK(probe_builtin_entry, e, fun, rho); // XXX
 	/* We used to insert a context only if profiling,
 	   but helps for tracebacks on .C etc. */
 	if (R_Profiling || (PPINFO(fun).kind == PP_FOREIGN)) {
@@ -1316,6 +1323,7 @@ SEXP R_forceAndCall(SEXP e, int n, SEXP rho)
 	} else {
 	    tmp = PRIMFUN(fun) (e, fun, tmp, rho);
 	}
+	RDT_HOOK(probe_builtin_exit, e, fun, rho, tmp); // XXX
 	if (flag < 2) R_Visible = flag != 1;
 	UNPROTECT(1);
     }
@@ -5613,9 +5621,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXPTYPE ftype = CALL_FRAME_FTYPE();
 	if (ftype != SPECIALSXP) {
 	  if (ftype == BUILTINSXP) {
-	      RDT_HOOK(probe_builtin_entry, CALL_FRAME_FUN(), code, rho); // XXX
 	      value = bcEval(code, rho, TRUE);
-	      RDT_HOOK(probe_builtin_exit, CALL_FRAME_FUN(), code, rho, value); // XXX
 	      }
 	  else
 	    value = mkPROMISE(code, rho);
@@ -5683,13 +5689,17 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  checkForMissings(args, call);
 	  flag = PRIMPRINT(fun);
 	  R_Visible = flag != 1;
+	  RDT_HOOK(probe_builtin_entry, call, fun, rho); // XXX
 	  value = PRIMFUN(fun) (call, fun, args, rho);
+	  RDT_HOOK(probe_builtin_exit, call, fun, rho, value); // XXX
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case SPECIALSXP:
 	  flag = PRIMPRINT(fun);
 	  R_Visible = flag != 1;
+	  RDT_HOOK(probe_specialsxp_entry, call, fun, rho); // XXX
 	  value = PRIMFUN(fun) (call, fun, CDR(call), rho);
+	  RDT_HOOK(probe_specialsxp_exit, call, fun, rho, value); // XXX
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case CLOSXP:
@@ -5711,6 +5721,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  error(_("not a BUILTIN function"));
 	flag = PRIMPRINT(fun);
 	R_Visible = flag != 1;
+	RDT_HOOK(probe_builtin_entry, call, fun, rho); // XXX
 	if (R_Profiling && IS_TRUE_BUILTIN(fun)) {
 	    RCNTXT cntxt;
 	    SEXP oldref = R_Srcref;
@@ -5718,17 +5729,14 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 			 R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
 	    R_Srcref = NULL;
 
-	    RDT_HOOK(probe_builtin_entry, call, fun, rho); // XXX
 	    value = PRIMFUN(fun) (call, fun, args, rho);
-	    RDT_HOOK(probe_builtin_exit, call, fun, rho, value); // XXX
 
 	    R_Srcref = oldref;
 	    endcontext(&cntxt);
 	} else {
-	    RDT_HOOK(probe_builtin_entry, call, fun, rho); // XXX
 	    value = PRIMFUN(fun) (call, fun, args, rho);
-	    RDT_HOOK(probe_builtin_exit, call, fun, rho, value); // XXX
 	}
+	RDT_HOOK(probe_builtin_exit, call, fun, rho, value); // XXX
 	if (flag < 2) R_Visible = flag != 1;
 	vmaxset(vmax);
 	POP_CALL_FRAME(value);
@@ -5747,7 +5755,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	}
 	flag = PRIMPRINT(fun);
 	R_Visible = flag != 1;
+	RDT_HOOK(probe_specialsxp_entry, call, fun, rho); // XXX
 	value = PRIMFUN(fun) (call, fun, CDR(call), rho);
+	RDT_HOOK(probe_specialsxp_exit, call, fun, rho, value); // XXX
 	if (flag < 2) R_Visible = flag != 1;
 	vmaxset(vmax);
 	BCNPUSH(value);
@@ -6015,7 +6025,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  SETCAR(args, lhs);
 	  /* make the call */
 	  checkForMissings(args, call);
+	  RDT_HOOK(probe_builtin_entry, call, fun, rho); // XXX
 	  value = PRIMFUN(fun) (call, fun, args, rho);
+	  RDT_HOOK(probe_builtin_exit, call, fun, rho, value); // XXX
 	  break;
 	case SPECIALSXP:
 	  /* duplicate arguments and protect */
@@ -6031,7 +6043,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  prom = mkRHSPROMISE(vexpr, rhs);
 	  SETCAR(last, prom);
 	  /* make the call */
+	  RDT_HOOK(probe_specialsxp_entry, call, fun, rho); // XXX
 	  value = PRIMFUN(fun) (call, fun, args, rho);
+	  RDT_HOOK(probe_specialsxp_exit, call, fun, rho, value); // XXX
 	  UNPROTECT(1);
 	  break;
 	case CLOSXP:
@@ -6065,7 +6079,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  SETCAR(args, lhs);
 	  /* make the call */
 	  checkForMissings(args, call);
+	  RDT_HOOK(probe_builtin_entry, call, fun, rho); // XXX
 	  value = PRIMFUN(fun) (call, fun, args, rho);
+	  RDT_HOOK(probe_builtin_exit, call, fun, rho, value); // XXX
 	  break;
 	case SPECIALSXP:
 	  /* duplicate arguments and put into stack for GC protection */
@@ -6076,7 +6092,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  prom = R_mkEVPROMISE_NR(R_TmpvalSymbol, lhs);
 	  SETCAR(args, prom);
 	  /* make the call */
+	  RDT_HOOK(probe_specialsxp_entry, call, fun, rho); // XXX
 	  value = PRIMFUN(fun) (call, fun, args, rho);
+	  RDT_HOOK(probe_specialsxp_exit, call, fun, rho, value); // XXX
 	  break;
 	case CLOSXP:
 	  /* replace first argument with evaluated promise for LHS */
