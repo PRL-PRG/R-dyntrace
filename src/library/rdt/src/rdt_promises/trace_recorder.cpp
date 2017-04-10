@@ -58,7 +58,7 @@ string function_call_info_line(TraceLinePrefix prefix, const call_info_t &info, 
             stream << "special";
             break;
         case function_type::BUILTIN:
-            stream << "builtin";
+            stream << "built-in";
     }
 
     if (info.name.empty())
@@ -67,7 +67,7 @@ string function_call_info_line(TraceLinePrefix prefix, const call_info_t &info, 
         stream << " name=" << info.name;
 
     stream << " call_id="  << num_pref << num_fmt << info.call_id
-           << " function_id=0x" << hex << info.fn_id;
+           << " function_id=" << info.fn_id;
 
     if (info.loc.empty())
         stream << " location=<unknown>";
@@ -108,7 +108,7 @@ string builtin_or_special_call_info_line(TraceLinePrefix prefix, const call_info
             stream << "special";
             break;
         case function_type::BUILTIN:
-            stream << "builtin";
+            stream << "built-in";
             break;
         case function_type::CLOSURE: // Just in case
             stream << "closure";
@@ -120,7 +120,7 @@ string builtin_or_special_call_info_line(TraceLinePrefix prefix, const call_info
         stream << " name=" << info.name;
 
     stream << " call_id="  << num_pref << num_fmt << info.call_id
-           << " function_id=0x" << hex << info.fn_id;
+           << " function_id=" << info.fn_id;
 
     if (info.loc.empty())
         stream << " location=<unknown>";

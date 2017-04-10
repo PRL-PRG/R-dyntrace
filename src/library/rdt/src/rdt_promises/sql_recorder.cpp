@@ -22,7 +22,7 @@ typedef int prom_eval_t;
 /* Functions for generating SQL strings. */
 
 sql_stmt_t insert_function_statement(const call_info_t & info) {
-    sql_val_t id = from_hex(info.fn_id);
+    sql_val_t id = from_int(info.fn_id);
     sql_val_t location = wrap_nullable_string(info.loc);
     sql_val_t definition = wrap_and_escape_nullable_string(info.fn_definition);
     sql_val_t type = from_int(tools::enum_cast(info.fn_type));
@@ -35,7 +35,7 @@ sql_stmt_t insert_arguments_statement(const call_info_t & info, bool align) {
     assert(info.arguments.size() > 0);
 
     vector<sql_val_cell_t> value_cells;
-    sql_val_t function_id = from_hex(info.fn_id);
+    sql_val_t function_id = from_int(info.fn_id);
 
     int i = 0;
     for (auto argument_ref : info.arguments.all()) {
@@ -56,7 +56,7 @@ sql_stmt_t insert_call_statement(const call_info_t & info) {
     sql_val_t pointer = from_hex(info.call_ptr); // FIXME do we really need this?
     sql_val_t name = wrap_nullable_string(info.name);
     sql_val_t location = wrap_nullable_string(info.loc);
-    sql_val_t function_id = from_hex(info.fn_id);
+    sql_val_t function_id = from_int(info.fn_id);
 
     return make_insert_function_call_statement(id, pointer, name, location, function_id);
 }
