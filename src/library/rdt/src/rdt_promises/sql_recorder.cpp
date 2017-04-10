@@ -21,7 +21,7 @@ typedef int prom_eval_t;
 
 /* Functions for generating SQL strings. */
 
-sql_stmt_t insert_function_statement(const call_info_t & info) {
+sql_stmt_t insert_function_statement(const closure_info_t & info) {
     sql_val_t id = from_int(info.fn_id);
     sql_val_t location = wrap_nullable_string(info.loc);
     sql_val_t definition = wrap_and_escape_nullable_string(info.fn_definition);
@@ -31,7 +31,18 @@ sql_stmt_t insert_function_statement(const call_info_t & info) {
     return make_insert_function_statement(id, location, definition, type, compiled);
 }
 
-sql_stmt_t insert_arguments_statement(const call_info_t & info, bool align) {
+// FIXME remove duplicates
+sql_stmt_t insert_function_statement(const builtin_info_t & info) {
+    sql_val_t id = from_int(info.fn_id);
+    sql_val_t location = wrap_nullable_string(info.loc);
+    sql_val_t definition = wrap_and_escape_nullable_string(info.fn_definition);
+    sql_val_t type = from_int(tools::enum_cast(info.fn_type));
+    sql_val_t compiled = from_int(info.fn_compiled ? 1 : 0);
+
+    return make_insert_function_statement(id, location, definition, type, compiled);
+}
+
+sql_stmt_t insert_arguments_statement(const closure_info_t & info, bool align) {
     assert(info.arguments.size() > 0);
 
     vector<sql_val_cell_t> value_cells;
@@ -51,7 +62,18 @@ sql_stmt_t insert_arguments_statement(const call_info_t & info, bool align) {
     return make_insert_arguments_statement(value_cells, align);
 }
 
-sql_stmt_t insert_call_statement(const call_info_t & info) {
+sql_stmt_t insert_call_statement(const closure_info_t & info) {
+    sql_val_t id = from_int(info.call_id);
+    sql_val_t pointer = from_hex(info.call_ptr); // FIXME do we really need this?
+    sql_val_t name = wrap_nullable_string(info.name);
+    sql_val_t location = wrap_nullable_string(info.loc);
+    sql_val_t function_id = from_int(info.fn_id);
+
+    return make_insert_function_call_statement(id, pointer, name, location, function_id);
+}
+
+// FIXME remove duplicates
+sql_stmt_t insert_call_statement(const builtin_info_t & info) {
     sql_val_t id = from_int(info.call_id);
     sql_val_t pointer = from_hex(info.call_ptr); // FIXME do we really need this?
     sql_val_t name = wrap_nullable_string(info.name);
@@ -65,7 +87,7 @@ sql_stmt_t insert_promise_statement(const prom_id_t id) {
     return make_insert_promise_statement(from_int(id));
 }
 
-sql_stmt_t insert_promise_association_statement(const call_info_t & info, bool align) {
+sql_stmt_t insert_promise_association_statement(const closure_info_t & info, bool align) {
     assert(info.arguments.size() > 0);
 
     vector<sql_val_cell_t> value_cells;
@@ -101,7 +123,7 @@ sql_stmt_t insert_promise_evaluation_statement(prom_eval_t type, const prom_info
 
 /* Functions connecting to the outside world, create SQL and multiplex output. */
 
-void sql_recorder_t::function_entry(const call_info_t & info) {
+void sql_recorder_t::function_entry(const closure_info_t & info) {
     bool align_statements = tracer_conf.pretty_print;
     bool need_to_insert = function_already_exists(info.fn_definition);
 
@@ -136,7 +158,7 @@ void sql_recorder_t::function_entry(const call_info_t & info) {
     }
 }
 
-void sql_recorder_t::builtin_entry(const call_info_t & info) {
+void sql_recorder_t::builtin_entry(const builtin_info_t & info) {
     bool need_to_insert = function_already_exists(info.fn_definition);
 
     if (need_to_insert) {

@@ -111,25 +111,40 @@ public:
 
 enum class function_type {CLOSURE = 0, BUILTIN = 1, SPECIAL = 2};
 
-struct call_info_t {
-    fn_id_t fn_id;
-    fn_addr_t fn_addr;
-    string name; // fully qualified function name, if available
-    string fn_definition;
-    string loc;
-    call_id_t call_id;
-    env_addr_t call_ptr;
-    arglist_t arguments;
-    bool fn_compiled;
+struct closure_info_t {
     function_type fn_type;
+    fn_id_t       fn_id;
+    fn_addr_t     fn_addr;
+    string        fn_definition;
+    string        loc;
+    bool          fn_compiled;
+
+    string        name; // fully qualified function name, if available
+    call_id_t     call_id;
+    env_addr_t    call_ptr;
+
+    arglist_t     arguments;
+};
+
+struct builtin_info_t {
+    function_type fn_type;
+    fn_id_t       fn_id;
+    fn_addr_t     fn_addr;
+    string        fn_definition;
+    string        loc;
+    bool          fn_compiled;
+
+    string        name; // fully qualified function name, if available
+    call_id_t     call_id;
+    env_addr_t    call_ptr;
 };
 
 // FIXME would it make sense to add type of action here?
 struct prom_info_t {
-    string name;
-    prom_id_t prom_id;
-    call_id_t in_call_id;
-    call_id_t from_call_id;
+    string        name;
+    prom_id_t     prom_id;
+    call_id_t     in_call_id;
+    call_id_t     from_call_id;
 };
 
 prom_id_t get_promise_id(SEXP promise);

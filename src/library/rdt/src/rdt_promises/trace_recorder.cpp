@@ -41,7 +41,7 @@ inline void prepend_prefix(stringstream &stream, TraceLinePrefix prefix, bool in
     }
 }
 
-string function_call_info_line(TraceLinePrefix prefix, const call_info_t &info, bool indent, bool as_sql_comment,
+string function_call_info_line(TraceLinePrefix prefix, const closure_info_t &info, bool indent, bool as_sql_comment,
                                bool call_id_is_pointer) {
     stringstream stream;
     prepend_prefix(stream, prefix, indent, as_sql_comment);
@@ -94,7 +94,7 @@ string function_call_info_line(TraceLinePrefix prefix, const call_info_t &info, 
     return stream.str();
 }
 
-string builtin_or_special_call_info_line(TraceLinePrefix prefix, const call_info_t &info, bool indent,
+string builtin_or_special_call_info_line(TraceLinePrefix prefix, const builtin_info_t &info, bool indent,
                                          bool as_sql_comment, bool call_id_is_pointer) {
     stringstream stream;
     prepend_prefix(stream, prefix, indent, as_sql_comment);
@@ -181,7 +181,7 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
     return stream.str();
 }
 
-void trace_recorder_t::function_entry(const call_info_t & info) {
+void trace_recorder_t::function_entry(const closure_info_t & info) {
     string statement = function_call_info_line(
             TraceLinePrefix::ENTER,
             info,
@@ -197,7 +197,7 @@ void trace_recorder_t::function_entry(const call_info_t & info) {
         STATE(indent) += tracer_conf.indent_width;
 }
 
-void trace_recorder_t::function_exit(const call_info_t & info) {
+void trace_recorder_t::function_exit(const closure_info_t & info) {
     if (tracer_conf.pretty_print)
         STATE(indent) -= tracer_conf.indent_width;
 
@@ -213,7 +213,7 @@ void trace_recorder_t::function_exit(const call_info_t & info) {
             tracer_conf.outputs);
 }
 
-void trace_recorder_t::builtin_entry(const call_info_t & info) {
+void trace_recorder_t::builtin_entry(const builtin_info_t & info) {
     string statement = builtin_or_special_call_info_line(
             TraceLinePrefix::ENTER,
             info,
@@ -229,7 +229,7 @@ void trace_recorder_t::builtin_entry(const call_info_t & info) {
         STATE(indent) += tracer_conf.indent_width;
 }
 
-void trace_recorder_t::builtin_exit(const call_info_t & info) {
+void trace_recorder_t::builtin_exit(const builtin_info_t & info) {
     if (tracer_conf.pretty_print)
         STATE(indent) -= tracer_conf.indent_width;
 
