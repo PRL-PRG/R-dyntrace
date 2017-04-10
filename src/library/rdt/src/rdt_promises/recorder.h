@@ -79,6 +79,7 @@ public:
         }
 
         info.arguments = get_arguments(op, rho);
+        info.fn_definition = get_expression(op);
 
         return info;
     }
@@ -94,13 +95,13 @@ public:
         info.name = info.name;
         info.fn_type = fn_type;
         info.fn_compiled = is_byte_compiled(op);
+        info.fn_definition = get_expression(op);
 
         char *location = get_location(op);
-        if (location != NULL)
+        if (location != NULL) {
             info.loc = location;
+        }
         free(location);
-
-        info.fn_definition = get_expression(op);
 
         info.call_ptr = get_sexp_address(rho);
         info.call_id = make_funcall_id(op);
@@ -128,6 +129,7 @@ public:
             info.name = name;
         info.fn_type = fn_type;
         info.fn_compiled = is_byte_compiled(op);
+        info.fn_definition = get_expression(op);
 
         char *location = get_location(op);
         if (location != NULL)
