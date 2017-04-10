@@ -55,6 +55,7 @@ tracer_state_t::tracer_state_t() {
     indent = 0;
     clock_id = 0;
     call_id_counter = 0;
+    fn_id_counter = 0;
     prom_id_counter = 0;
     prom_neg_id_counter = 0;
     argument_id_sequence = 0;
@@ -63,10 +64,12 @@ tracer_state_t::tracer_state_t() {
 void tracer_state_t::reset() {
     clock_id = 0;
     call_id_counter = 0;
+    fn_id_counter = 0;
     prom_id_counter = 0;
     prom_neg_id_counter = 0;
     argument_id_sequence = 0;
-    already_inserted_functions.clear();
+    //already_inserted_functions.clear(); XXX cleanup
+    function_ids.clear();
     argument_ids.clear();
     promise_ids.clear();
 }

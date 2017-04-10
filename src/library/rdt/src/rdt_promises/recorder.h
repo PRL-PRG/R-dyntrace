@@ -30,6 +30,7 @@ public:
         info.fn_compiled = is_byte_compiled(op);
         info.fn_type = function_type::CLOSURE;
         info.fn_id = get_function_id(op);
+        info.fn_addr = get_function_addr(op);
         info.call_ptr = get_sexp_address(rho);
         info.call_id = make_funcall_id(op);
         //info.call_id = make_funcall_id(rho);
@@ -61,6 +62,7 @@ public:
 
         info.fn_compiled = is_byte_compiled(op);
         info.fn_id = get_function_id(op);
+        info.fn_addr = get_function_addr(op);
         info.call_id = STATE(fun_stack).top();
         info.fn_type = function_type::CLOSURE;
 
@@ -88,6 +90,7 @@ public:
         if (name != NULL)
             info.name = name;
         info.fn_id = get_function_id(op);
+        info.fn_addr = get_function_addr(op);
         info.name = info.name;
         info.fn_type = fn_type;
         info.fn_compiled = is_byte_compiled(op);
@@ -119,6 +122,7 @@ public:
         if (name != NULL)
             info.name = name;
         info.fn_id = get_function_id(op);
+        info.fn_addr = get_function_addr(op);
         info.call_id = STATE(fun_stack).top();
         if (name != NULL)
             info.name = name;

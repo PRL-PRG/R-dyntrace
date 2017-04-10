@@ -103,7 +103,7 @@ sql_stmt_t insert_promise_evaluation_statement(prom_eval_t type, const prom_info
 
 void sql_recorder_t::function_entry(const call_info_t & info) {
     bool align_statements = tracer_conf.pretty_print;
-    bool need_to_insert = STATE(already_inserted_functions).count(info.fn_id) == 0;
+    bool need_to_insert = function_already_exists(info.fn_definition);
 
     if (need_to_insert) {
         sql_stmt_t statement = insert_function_statement(info);
@@ -111,7 +111,7 @@ void sql_recorder_t::function_entry(const call_info_t & info) {
                 multiplexer::payload_t(statement),
                 tracer_conf.outputs);
 
-        STATE(already_inserted_functions).insert(info.fn_id);
+        // STATE(already_inserted_functions).insert(info.fn_id); XXX cleanup
     }
 
     if (need_to_insert && info.arguments.size() > 0) {
@@ -128,7 +128,6 @@ void sql_recorder_t::function_entry(const call_info_t & info) {
                 tracer_conf.outputs);
     }
 
-
     if (info.arguments.size() > 0) {
         sql_stmt_t statement = insert_promise_association_statement(info, align_statements);
         multiplexer::output(
@@ -138,15 +137,14 @@ void sql_recorder_t::function_entry(const call_info_t & info) {
 }
 
 void sql_recorder_t::builtin_entry(const call_info_t & info) {
-    bool need_to_insert = STATE(already_inserted_functions).count(info.fn_id) == 0;
+    bool need_to_insert = function_already_exists(info.fn_definition);
 
     if (need_to_insert) {
         sql_stmt_t statement = insert_function_statement(info);
                 multiplexer::output(
                 multiplexer::payload_t(statement),
                 tracer_conf.outputs);
-
-        STATE(already_inserted_functions).insert(info.fn_id);
+        // STATE(already_inserted_functions).insert(info.fn_id); XXX cleanup
     }
 
     /* always */ {
@@ -160,7 +158,6 @@ void sql_recorder_t::builtin_entry(const call_info_t & info) {
 }
 
 void sql_recorder_t::force_promise_entry(const prom_info_t & info) {
-
     sql_stmt_t statement = insert_promise_evaluation_statement(RDT_SQL_FORCE_PROMISE, info);
     multiplexer::output(
             multiplexer::payload_t(statement),
