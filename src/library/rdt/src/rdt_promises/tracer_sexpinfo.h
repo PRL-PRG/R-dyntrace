@@ -16,19 +16,21 @@
 
 using namespace std;
                             // Typical human-readable representation
-typedef uintptr_t rid_t;    // TODO
-typedef intptr_t rsid_t;    // TODO
+typedef uintptr_t rid_t;    // hexadecimal
+typedef intptr_t rsid_t;    // hexadecimal
 
 typedef rid_t prom_addr_t;  // hexadecimal
 typedef rid_t env_addr_t;   // hexadecimal
-typedef rid_t fn_addr_t;    // hexadecimal
 typedef rsid_t prom_id_t;   // hexadecimal
-typedef rid_t call_id_t;    // integer          if RDT_CALL_ID
-                            // hexadecimal      otherwise
+typedef rid_t call_id_t;    // integer TODO this is pedantic, but shouldn't this be int?
+
+typedef int fn_id_t;        // integer
+typedef rid_t fn_addr_t;    // hexadecimal
+typedef string fn_key_t;    // pun
 
 typedef int arg_id_t;       // integer
 
-typedef pair<fn_addr_t, string> arg_key_t;
+typedef pair<fn_id_t, string> arg_key_t;
 
 rid_t get_sexp_address(SEXP e);
 
@@ -110,29 +112,38 @@ public:
 enum class function_type {CLOSURE = 0, BUILTIN = 1, SPECIAL = 2};
 
 struct call_info_t {
-    fn_addr_t fn_id;
-    string name; // fully qualified function name, if available
-    string fn_definition;
-    string loc;
-    call_id_t call_id;
-    env_addr_t call_ptr;
-    arglist_t arguments;
-    bool fn_compiled;
     function_type fn_type;
+    fn_id_t       fn_id;
+    fn_addr_t     fn_addr;
+    string        fn_definition;
+    string        loc;
+    bool          fn_compiled;
+
+    string        name; // fully qualified function name, if available
+    call_id_t     call_id;
+    env_addr_t    call_ptr;
 };
+
+struct closure_info_t : call_info_t {
+    arglist_t     arguments;
+};
+
+struct builtin_info_t : call_info_t {};
 
 // FIXME would it make sense to add type of action here?
 struct prom_info_t {
-    string name;
-    prom_id_t prom_id;
-    call_id_t in_call_id;
-    call_id_t from_call_id;
+    string        name;
+    prom_id_t     prom_id;
+    call_id_t     in_call_id;
+    call_id_t     from_call_id;
 };
 
 prom_id_t get_promise_id(SEXP promise);
 prom_id_t make_promise_id(SEXP promise, bool negative = false);
-fn_addr_t get_function_id(SEXP func);
 call_id_t make_funcall_id(SEXP fn_env);
+fn_id_t get_function_id(SEXP func);
+fn_addr_t get_function_addr(SEXP func);
+bool function_already_exists(fn_key_t fn_key);
 
 // Wraper for findVar. Does not look up the value if it already is PROMSXP.
 SEXP get_promise(SEXP var, SEXP rho);

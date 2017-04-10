@@ -33,10 +33,12 @@ struct tracer_state_t {
     unordered_map<prom_addr_t, prom_id_t> promise_ids;
 
     call_id_t call_id_counter; // IDs assigned should be globally unique but we can reset it after each pass if overwrite is true)
+    prom_id_t fn_id_counter; // IDs assigned should be globally unique but we can reset it after each pass if overwrite is true)
     prom_id_t prom_id_counter; // IDs assigned should be globally unique but we can reset it after each pass if overwrite is true)
     prom_id_t prom_neg_id_counter;
 
-    unordered_set<fn_addr_t> already_inserted_functions; // Should be kept across Rdt calls (unless overwrite is true)
+    unordered_map<fn_key_t, fn_id_t> function_ids; // Should be kept across Rdt calls (unless overwrite is true)
+    //unordered_set<fn_addr_t> already_inserted_functions; // Should be kept across Rdt calls (unless overwrite is true) FIXME unnecessary?
     arg_id_t argument_id_sequence; // Should be globally unique (can reset between tracer calls if overwrite is true)
     map<arg_key_t, arg_id_t> argument_ids; // Should be kept across Rdt calls (unless overwrite is true)
 

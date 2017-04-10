@@ -22,7 +22,7 @@ typedef int prom_eval_t;
 /* Functions for generating SQL strings. */
 
 sql_stmt_t insert_function_statement(const call_info_t & info) {
-    sql_val_t id = from_hex(info.fn_id);
+    sql_val_t id = from_int(info.fn_id);
     sql_val_t location = wrap_nullable_string(info.loc);
     sql_val_t definition = wrap_and_escape_nullable_string(info.fn_definition);
     sql_val_t type = from_int(tools::enum_cast(info.fn_type));
@@ -31,11 +31,11 @@ sql_stmt_t insert_function_statement(const call_info_t & info) {
     return make_insert_function_statement(id, location, definition, type, compiled);
 }
 
-sql_stmt_t insert_arguments_statement(const call_info_t & info, bool align) {
+sql_stmt_t insert_arguments_statement(const closure_info_t & info, bool align) {
     assert(info.arguments.size() > 0);
 
     vector<sql_val_cell_t> value_cells;
-    sql_val_t function_id = from_hex(info.fn_id);
+    sql_val_t function_id = from_int(info.fn_id);
 
     int i = 0;
     for (auto argument_ref : info.arguments.all()) {
@@ -56,7 +56,7 @@ sql_stmt_t insert_call_statement(const call_info_t & info) {
     sql_val_t pointer = from_hex(info.call_ptr); // FIXME do we really need this?
     sql_val_t name = wrap_nullable_string(info.name);
     sql_val_t location = wrap_nullable_string(info.loc);
-    sql_val_t function_id = from_hex(info.fn_id);
+    sql_val_t function_id = from_int(info.fn_id);
 
     return make_insert_function_call_statement(id, pointer, name, location, function_id);
 }
@@ -65,7 +65,7 @@ sql_stmt_t insert_promise_statement(const prom_id_t id) {
     return make_insert_promise_statement(from_int(id));
 }
 
-sql_stmt_t insert_promise_association_statement(const call_info_t & info, bool align) {
+sql_stmt_t insert_promise_association_statement(const closure_info_t & info, bool align) {
     assert(info.arguments.size() > 0);
 
     vector<sql_val_cell_t> value_cells;
@@ -101,9 +101,9 @@ sql_stmt_t insert_promise_evaluation_statement(prom_eval_t type, const prom_info
 
 /* Functions connecting to the outside world, create SQL and multiplex output. */
 
-void sql_recorder_t::function_entry(const call_info_t & info) {
+void sql_recorder_t::function_entry(const closure_info_t & info) {
     bool align_statements = tracer_conf.pretty_print;
-    bool need_to_insert = STATE(already_inserted_functions).count(info.fn_id) == 0;
+    bool need_to_insert = function_already_exists(info.fn_definition);
 
     if (need_to_insert) {
         sql_stmt_t statement = insert_function_statement(info);
@@ -111,7 +111,7 @@ void sql_recorder_t::function_entry(const call_info_t & info) {
                 multiplexer::payload_t(statement),
                 tracer_conf.outputs);
 
-        STATE(already_inserted_functions).insert(info.fn_id);
+        // STATE(already_inserted_functions).insert(info.fn_id); XXX cleanup
     }
 
     if (need_to_insert && info.arguments.size() > 0) {
@@ -128,7 +128,6 @@ void sql_recorder_t::function_entry(const call_info_t & info) {
                 tracer_conf.outputs);
     }
 
-
     if (info.arguments.size() > 0) {
         sql_stmt_t statement = insert_promise_association_statement(info, align_statements);
         multiplexer::output(
@@ -137,16 +136,15 @@ void sql_recorder_t::function_entry(const call_info_t & info) {
     }
 }
 
-void sql_recorder_t::builtin_entry(const call_info_t & info) {
-    bool need_to_insert = STATE(already_inserted_functions).count(info.fn_id) == 0;
+void sql_recorder_t::builtin_entry(const builtin_info_t & info) {
+    bool need_to_insert = function_already_exists(info.fn_definition);
 
     if (need_to_insert) {
         sql_stmt_t statement = insert_function_statement(info);
                 multiplexer::output(
                 multiplexer::payload_t(statement),
                 tracer_conf.outputs);
-
-        STATE(already_inserted_functions).insert(info.fn_id);
+        // STATE(already_inserted_functions).insert(info.fn_id); XXX cleanup
     }
 
     /* always */ {
@@ -160,7 +158,6 @@ void sql_recorder_t::builtin_entry(const call_info_t & info) {
 }
 
 void sql_recorder_t::force_promise_entry(const prom_info_t & info) {
-
     sql_stmt_t statement = insert_promise_evaluation_statement(RDT_SQL_FORCE_PROMISE, info);
     multiplexer::output(
             multiplexer::payload_t(statement),

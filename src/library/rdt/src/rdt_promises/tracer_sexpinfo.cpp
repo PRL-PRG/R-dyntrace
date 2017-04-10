@@ -53,7 +53,30 @@ prom_id_t make_promise_id(SEXP promise, bool negative) {
     return prom_id;
 }
 
-fn_addr_t get_function_id(SEXP func) {
+fn_id_t get_function_id(SEXP func) {
+    const char * def = get_expression(func);
+    assert(def != NULL);
+    fn_key_t definition = def;
+
+    auto & function_ids = STATE(function_ids);
+    auto it = function_ids.find(definition);
+
+    if (it != function_ids.end()) {
+        return it->second;
+    } else {
+        fn_id_t fn_id = STATE(fn_id_counter)++;
+        STATE(function_ids)[definition] = fn_id;
+        return fn_id;
+    }
+}
+
+bool function_already_exists(fn_key_t fn_key) {
+    auto & function_ids = STATE(function_ids);
+    auto it = function_ids.find(fn_key);
+    return (it != function_ids.end());
+}
+
+fn_addr_t get_function_addr(SEXP func) {
     assert(TYPEOF(func) == CLOSXP);
     return get_sexp_address(func);
 }
@@ -84,7 +107,7 @@ SEXP get_promise(SEXP var, SEXP rho) {
     return prom;
 }
 
-arg_id_t get_argument_id(fn_addr_t function_id, const string & argument) {
+arg_id_t get_argument_id(fn_id_t function_id, const string & argument) {
     arg_key_t key = make_pair(function_id, argument);
     auto iterator = STATE(argument_ids).find(key);
 

@@ -59,7 +59,7 @@ struct trace_promises {
 
     // Triggered when entering function evaluation.
     DECL_HOOK(function_entry)(const SEXP call, const SEXP op, const SEXP rho) {
-        call_info_t info = rec.function_entry_get_info(call, op, rho);
+        closure_info_t info = rec.function_entry_get_info(call, op, rho);
 
         // Push function ID on function stack
         STATE(fun_stack).push(info.call_id);
@@ -83,7 +83,7 @@ struct trace_promises {
 
     DECL_HOOK(function_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
 
-        call_info_t info = rec.function_exit_get_info(call, op, rho);
+        closure_info_t info = rec.function_exit_get_info(call, op, rho);
         rec.function_exit_process(info);
 
         // Pop current function ID
@@ -92,7 +92,7 @@ struct trace_promises {
     }
 
     static void print_entry_info(const SEXP call, const SEXP op, const SEXP rho, function_type fn_type) {
-        call_info_t info = rec.builtin_entry_get_info(call, op, rho, fn_type);
+        builtin_info_t info = rec.builtin_entry_get_info(call, op, rho, fn_type);
         rec.builtin_entry_process(info);
 
         STATE(fun_stack).push(info.call_id);
@@ -108,7 +108,7 @@ struct trace_promises {
     }
 
     static void print_exit_info(const SEXP call, const SEXP op, const SEXP rho, function_type fn_type) {
-        call_info_t info = rec.builtin_exit_get_info(call, op, rho, fn_type);
+        builtin_info_t info = rec.builtin_exit_get_info(call, op, rho, fn_type);
         rec.builtin_exit_process(info);
 
         STATE(fun_stack).pop();

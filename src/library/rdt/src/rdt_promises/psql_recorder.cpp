@@ -99,7 +99,7 @@ sqlite3_stmt * populate_function_statement(const call_info_t & info) {
     return prepared_sql_insert_function;
 }
 
-sqlite3_stmt * populate_arguments_statement(const call_info_t & info) {
+sqlite3_stmt * populate_arguments_statement(const closure_info_t & info) {
     assert(info.arguments.size() > 0);
 
     sqlite3_stmt *prepared_statement = get_prepared_sql_insert_argument(info.arguments.size());
@@ -150,7 +150,7 @@ sqlite3_stmt * populate_promise_statement(const prom_id_t id) {
     return prepared_sql_insert_promise;
 }
 
-sqlite3_stmt * populate_promise_association_statement(const call_info_t & info) {
+sqlite3_stmt * populate_promise_association_statement(const closure_info_t & info) {
     int num_of_arguments = info.arguments.size();
     assert(num_of_arguments > 0);
 
@@ -189,18 +189,17 @@ sqlite3_stmt * populate_promise_evaluation_statement(prom_eval_t type, const pro
 
 // Functions connecting to the outside world, create SQL and multiplex output.
 
-void psql_recorder_t::function_entry(const call_info_t & info) {
+void psql_recorder_t::function_entry(const closure_info_t & info) {
 #ifdef RDT_SQLITE_SUPPORT
     bool align_statements = tracer_conf.pretty_print;
-    bool need_to_insert = STATE(already_inserted_functions).count(info.fn_id) == 0;
+    bool need_to_insert = function_already_exists(info.fn_definition);
 
     if (need_to_insert) {
         sqlite3_stmt * statement = populate_function_statement(info);
         multiplexer::output(
                 multiplexer::payload_t(statement),
                 tracer_conf.outputs);
-
-        STATE(already_inserted_functions).insert(info.fn_id);
+        //STATE(already_inserted_functions).insert(info.fn_id); XXX cleanup
     }
 
     if (need_to_insert && info.arguments.size() > 0) {
@@ -228,17 +227,16 @@ void psql_recorder_t::function_entry(const call_info_t & info) {
 #endif
 }
 
-void psql_recorder_t::builtin_entry(const call_info_t & info) {
+void psql_recorder_t::builtin_entry(const builtin_info_t & info) {
 #ifdef RDT_SQLITE_SUPPORT
-    bool need_to_insert = STATE(already_inserted_functions).count(info.fn_id) == 0;
+    bool need_to_insert = function_already_exists(info.fn_definition);
 
     if (need_to_insert) {
         sqlite3_stmt * statement = populate_function_statement(info);
         multiplexer::output(
                 multiplexer::payload_t(statement),
                 tracer_conf.outputs);
-
-        STATE(already_inserted_functions).insert(info.fn_id);
+        //STATE(already_inserted_functions).insert(info.fn_id); XXX cleanup
     }
 
     /* always */ {

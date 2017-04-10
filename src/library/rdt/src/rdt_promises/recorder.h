@@ -21,8 +21,8 @@ protected:
     }
 
 public:
-    call_info_t function_entry_get_info(const SEXP call, const SEXP op, const SEXP rho) {
-        call_info_t info;
+    closure_info_t function_entry_get_info(const SEXP call, const SEXP op, const SEXP rho) {
+        closure_info_t info;
 
         const char *name = get_name(call);
         const char *ns = get_ns_name(op);
@@ -30,6 +30,7 @@ public:
         info.fn_compiled = is_byte_compiled(op);
         info.fn_type = function_type::CLOSURE;
         info.fn_id = get_function_id(op);
+        info.fn_addr = get_function_addr(op);
         info.call_ptr = get_sexp_address(rho);
         info.call_id = make_funcall_id(op);
         //info.call_id = make_funcall_id(rho);
@@ -53,14 +54,15 @@ public:
     }
 
     // TODO: merge duplicate code from function_entry/exit
-    call_info_t function_exit_get_info(const SEXP call, const SEXP op, const SEXP rho) {
-        call_info_t info;
+    closure_info_t function_exit_get_info(const SEXP call, const SEXP op, const SEXP rho) {
+        closure_info_t info;
 
         const char *name = get_name(call);
         const char *ns = get_ns_name(op);
 
         info.fn_compiled = is_byte_compiled(op);
         info.fn_id = get_function_id(op);
+        info.fn_addr = get_function_addr(op);
         info.call_id = STATE(fun_stack).top();
         info.fn_type = function_type::CLOSURE;
 
@@ -77,27 +79,29 @@ public:
         }
 
         info.arguments = get_arguments(op, rho);
+        info.fn_definition = get_expression(op);
 
         return info;
     }
 
-    call_info_t builtin_entry_get_info(const SEXP call, const SEXP op, const SEXP rho, function_type fn_type) {
-        call_info_t info;
+    builtin_info_t builtin_entry_get_info(const SEXP call, const SEXP op, const SEXP rho, function_type fn_type) {
+        builtin_info_t info;
 
         const char *name = get_name(call);
         if (name != NULL)
             info.name = name;
         info.fn_id = get_function_id(op);
+        info.fn_addr = get_function_addr(op);
         info.name = info.name;
         info.fn_type = fn_type;
         info.fn_compiled = is_byte_compiled(op);
+        info.fn_definition = get_expression(op);
 
         char *location = get_location(op);
-        if (location != NULL)
+        if (location != NULL) {
             info.loc = location;
+        }
         free(location);
-
-        info.fn_definition = get_expression(op);
 
         info.call_ptr = get_sexp_address(rho);
         info.call_id = make_funcall_id(op);
@@ -112,18 +116,20 @@ public:
         return info;
     }
 
-    call_info_t builtin_exit_get_info(const SEXP call, const SEXP op, const SEXP rho, function_type fn_type) {
-        call_info_t info;
+    builtin_info_t builtin_exit_get_info(const SEXP call, const SEXP op, const SEXP rho, function_type fn_type) {
+        builtin_info_t info;
 
         const char *name = get_name(call);
         if (name != NULL)
             info.name = name;
         info.fn_id = get_function_id(op);
+        info.fn_addr = get_function_addr(op);
         info.call_id = STATE(fun_stack).top();
         if (name != NULL)
             info.name = name;
         info.fn_type = fn_type;
         info.fn_compiled = is_byte_compiled(op);
+        info.fn_definition = get_expression(op);
 
         char *location = get_location(op);
         if (location != NULL)
@@ -180,10 +186,10 @@ public:
 #define GET_MACRO(_1, _2, NAME, ...) NAME
 #define DELEGATE(...) GET_MACRO(__VA_ARGS__, DELEGATE2, DELEGATE1)(__VA_ARGS__)
 
-    DELEGATE(function_entry, call_info_t)
-    DELEGATE(function_exit, call_info_t)
-    DELEGATE(builtin_entry, call_info_t)
-    DELEGATE(builtin_exit, call_info_t)
+    DELEGATE(function_entry, closure_info_t)
+    DELEGATE(function_exit, closure_info_t)
+    DELEGATE(builtin_entry, builtin_info_t)
+    DELEGATE(builtin_exit, builtin_info_t)
     DELEGATE(force_promise_entry, prom_info_t)
     DELEGATE(force_promise_exit, prom_info_t)
     DELEGATE(promise_created, prom_id_t)
@@ -231,10 +237,10 @@ public:
 
 #define COMPOSE(...) GET_MACRO(__VA_ARGS__, COMPOSE2, COMPOSE1)(__VA_ARGS__)
 
-    COMPOSE(function_entry, call_info_t)
-    COMPOSE(function_exit, call_info_t)
-    COMPOSE(builtin_entry, call_info_t)
-    COMPOSE(builtin_exit, call_info_t)
+    COMPOSE(function_entry, closure_info_t)
+    COMPOSE(function_exit, closure_info_t)
+    COMPOSE(builtin_entry, builtin_info_t)
+    COMPOSE(builtin_exit, builtin_info_t)
     COMPOSE(force_promise_entry, prom_info_t)
     COMPOSE(force_promise_exit, prom_info_t)
     COMPOSE(promise_created, prom_id_t)

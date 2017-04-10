@@ -24,8 +24,6 @@ void tracer_state_t::start_pass(const SEXP prom) {
     prom_addr_t prom_addr = get_sexp_address(prom);
     prom_id_t prom_id = make_promise_id(prom);
     promise_origin[prom_id] = 0;
-    //rdt_print(OutputFormat::SQL, {mk_sql_promise(prom_id)}); // FIXME RE-WRITE WITH NEW FUNCTIONS!!!!
-    // FIXME or move somewhere... probablky move somewhere
 }
 
 void tracer_state_t::finish_pass() {
@@ -57,6 +55,7 @@ tracer_state_t::tracer_state_t() {
     indent = 0;
     clock_id = 0;
     call_id_counter = 0;
+    fn_id_counter = 0;
     prom_id_counter = 0;
     prom_neg_id_counter = 0;
     argument_id_sequence = 0;
@@ -65,10 +64,12 @@ tracer_state_t::tracer_state_t() {
 void tracer_state_t::reset() {
     clock_id = 0;
     call_id_counter = 0;
+    fn_id_counter = 0;
     prom_id_counter = 0;
     prom_neg_id_counter = 0;
     argument_id_sequence = 0;
-    already_inserted_functions.clear();
+    //already_inserted_functions.clear(); XXX cleanup
+    function_ids.clear();
     argument_ids.clear();
     promise_ids.clear();
 }

@@ -12,10 +12,10 @@ public:
     void init_recorder();
     void start_trace();
     void finish_trace();
-    void function_entry(const call_info_t &);
-    void function_exit(const call_info_t &) {}
-    void builtin_entry(const call_info_t &);
-    void builtin_exit(const call_info_t &) {};
+    void function_entry(const closure_info_t &);
+    void function_exit(const closure_info_t &) {}
+    void builtin_entry(const builtin_info_t &);
+    void builtin_exit(const builtin_info_t &) {};
     void force_promise_entry(const prom_info_t &);
     void force_promise_exit(const prom_info_t &) {}
     void promise_created(const prom_id_t &);
