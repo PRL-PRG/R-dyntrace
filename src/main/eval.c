@@ -669,7 +669,7 @@ SEXP eval(SEXP e, SEXP rho)
 		forcePromise(e);
 		RDT_HOOK(probe_force_promise_exit, e, rho, PRVALUE(e));
 	}
-	tmp = PRVALUE(e);
+	tmp = PRVALUE(e); // TODO: promise_lookup here?
 	/* This does _not_ change the value of NAMED on the value tmp,
 	   in contrast to the handling of promises bound to symbols in
 	   the SYMSXP case above.  The reason is that one (typically
@@ -1878,8 +1878,9 @@ SEXP attribute_hidden do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (TYPEOF(op) == PROMSXP) {
     // Tracing: we now handle this. Not sure how to trigger it though.
         RDT_HOOK(probe_force_promise_entry, op, rho);
-        op = forcePromise(op);
-        RDT_HOOK(probe_force_promise_exit, op, rho, PRVALUE(op));
+        SEXP op_saved = op;
+        op = forcePromise(op); // TODO: this could be lookup
+        RDT_HOOK(probe_force_promise_exit, op_saved, rho, op);
 
         SET_NAMED(op, 2);
     }
@@ -3565,9 +3566,9 @@ static R_INLINE SEXP getPrimitive(SEXP symbol, SEXPTYPE type, SEXP rho)
     SEXP value = SYMVALUE(symbol);
     if (TYPEOF(value) == PROMSXP) {
     // Tracing: we dont't handle this. Not sure why not. This can potentially happen a lot, actually.
-        RDT_HOOK(probe_force_promise_entry, value, rho);
-        value = forcePromise(value);
-        RDT_HOOK(probe_force_promise_exit, value, rho, PRVALUE(value));
+        RDT_HOOK(probe_force_promise_entry, symbol, rho);
+        value = forcePromise(value); // TODO: this could be lookup
+        RDT_HOOK(probe_force_promise_exit, symbol, rho, value);
 
 	SET_NAMED(value, 2);
     }
@@ -3625,9 +3626,9 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
     if (TYPEOF(op) == PROMSXP) {
 
         // Tracing: we didn't handle this. Not sure why not.
-        RDT_HOOK(probe_force_promise_entry, op, rho);
-        op = forcePromise(op);
-        RDT_HOOK(probe_force_promise_exit, op, rho, PRVALUE(op));
+        RDT_HOOK(probe_force_promise_entry, opsym, rho);
+        op = forcePromise(op); // TODO: this could be lookup
+        RDT_HOOK(probe_force_promise_exit, opsym, rho, op);
 
         SET_NAMED(op, 2);
     }
@@ -4324,6 +4325,7 @@ static R_INLINE SEXP FORCE_PROMISE(SEXP value, SEXP symbol, SEXP rho,
             RDT_HOOK(probe_force_promise_entry, symbol, rho);
 
             value = forcePromise(value);
+            RDT_HOOK(probe_force_promise_exit, symbol, rho, value);
         }
     } else {
         value = PRVALUE(value);
@@ -5563,9 +5565,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	value = SYMVALUE(symbol);
 	if (TYPEOF(value) == PROMSXP) {
         // Tracing: we didnt't handle this. Not sure why not. Also not sure what a GETSYMFUN op is.
-        RDT_HOOK(probe_force_promise_entry, value, rho);
-        value = forcePromise(value);
-        RDT_HOOK(probe_force_promise_exit, value, rho, PRVALUE(value));
+        RDT_HOOK(probe_force_promise_entry, symbol, rho);
+        value = forcePromise(value); // TODO: this could be lookup
+        RDT_HOOK(probe_force_promise_exit, symbol, rho, value);
 
         SET_NAMED(value, 2);
 	}
