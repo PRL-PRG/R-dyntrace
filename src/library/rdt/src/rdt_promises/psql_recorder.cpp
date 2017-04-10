@@ -79,28 +79,7 @@ void compile_prepared_sql_statements() {
 
 // Functions for populating prepared statements.
 
-sqlite3_stmt * populate_function_statement(const closure_info_t & info) {
-    sqlite3_bind_int(prepared_sql_insert_function, 1, info.fn_id);
-
-    if (info.loc.empty())
-        sqlite3_bind_null(prepared_sql_insert_function, 2);
-    else
-        sqlite3_bind_text(prepared_sql_insert_function, 2, info.loc.c_str(), -1, SQLITE_STATIC);
-
-    if (info.fn_definition.empty())
-        sqlite3_bind_null(prepared_sql_insert_function, 3);
-    else
-        sqlite3_bind_text(prepared_sql_insert_function, 3, info.fn_definition.c_str(), -1, SQLITE_STATIC);
-
-    sqlite3_bind_int(prepared_sql_insert_function, 4, tools::enum_cast(info.fn_type));
-
-    sqlite3_bind_int(prepared_sql_insert_function, 5, info.fn_compiled ? 1 : 0);
-
-    return prepared_sql_insert_function;
-}
-
-// FIXME remove duplicates
-sqlite3_stmt * populate_function_statement(const builtin_info_t & info) {
+sqlite3_stmt * populate_function_statement(const call_info_t & info) {
     sqlite3_bind_int(prepared_sql_insert_function, 1, info.fn_id);
 
     if (info.loc.empty())
@@ -147,27 +126,7 @@ sqlite3_stmt * populate_arguments_statement(const closure_info_t & info) {
     return prepared_statement;
 }
 
-sqlite3_stmt * populate_call_statement(const closure_info_t & info) {
-    sqlite3_bind_int(prepared_sql_insert_call, 1, (int)info.call_id);
-    sqlite3_bind_int(prepared_sql_insert_call, 2, (int)info.call_ptr); // FIXME do we really need this?
-
-    if (info.name.empty())
-        sqlite3_bind_null(prepared_sql_insert_call, 3);
-    else
-        sqlite3_bind_text(prepared_sql_insert_call, 3, info.name.c_str(), -1, SQLITE_STATIC);
-
-    if (info.loc.empty())
-        sqlite3_bind_null(prepared_sql_insert_call, 4);
-    else
-        sqlite3_bind_text(prepared_sql_insert_call, 4, info.loc.c_str(), -1, SQLITE_STATIC);
-
-    sqlite3_bind_int(prepared_sql_insert_call, 5, (int)info.fn_id);
-
-    return prepared_sql_insert_call;
-}
-
-// FIXME remove duplicates
-sqlite3_stmt * populate_call_statement(const builtin_info_t & info) {
+sqlite3_stmt * populate_call_statement(const call_info_t & info) {
     sqlite3_bind_int(prepared_sql_insert_call, 1, (int)info.call_id);
     sqlite3_bind_int(prepared_sql_insert_call, 2, (int)info.call_ptr); // FIXME do we really need this?
 

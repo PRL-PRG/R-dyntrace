@@ -21,18 +21,7 @@ typedef int prom_eval_t;
 
 /* Functions for generating SQL strings. */
 
-sql_stmt_t insert_function_statement(const closure_info_t & info) {
-    sql_val_t id = from_int(info.fn_id);
-    sql_val_t location = wrap_nullable_string(info.loc);
-    sql_val_t definition = wrap_and_escape_nullable_string(info.fn_definition);
-    sql_val_t type = from_int(tools::enum_cast(info.fn_type));
-    sql_val_t compiled = from_int(info.fn_compiled ? 1 : 0);
-
-    return make_insert_function_statement(id, location, definition, type, compiled);
-}
-
-// FIXME remove duplicates
-sql_stmt_t insert_function_statement(const builtin_info_t & info) {
+sql_stmt_t insert_function_statement(const call_info_t & info) {
     sql_val_t id = from_int(info.fn_id);
     sql_val_t location = wrap_nullable_string(info.loc);
     sql_val_t definition = wrap_and_escape_nullable_string(info.fn_definition);
@@ -62,18 +51,7 @@ sql_stmt_t insert_arguments_statement(const closure_info_t & info, bool align) {
     return make_insert_arguments_statement(value_cells, align);
 }
 
-sql_stmt_t insert_call_statement(const closure_info_t & info) {
-    sql_val_t id = from_int(info.call_id);
-    sql_val_t pointer = from_hex(info.call_ptr); // FIXME do we really need this?
-    sql_val_t name = wrap_nullable_string(info.name);
-    sql_val_t location = wrap_nullable_string(info.loc);
-    sql_val_t function_id = from_int(info.fn_id);
-
-    return make_insert_function_call_statement(id, pointer, name, location, function_id);
-}
-
-// FIXME remove duplicates
-sql_stmt_t insert_call_statement(const builtin_info_t & info) {
+sql_stmt_t insert_call_statement(const call_info_t & info) {
     sql_val_t id = from_int(info.call_id);
     sql_val_t pointer = from_hex(info.call_ptr); // FIXME do we really need this?
     sql_val_t name = wrap_nullable_string(info.name);
