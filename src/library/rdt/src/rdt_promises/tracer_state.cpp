@@ -24,8 +24,6 @@ void tracer_state_t::start_pass(const SEXP prom) {
     prom_addr_t prom_addr = get_sexp_address(prom);
     prom_id_t prom_id = make_promise_id(prom);
     promise_origin[prom_id] = 0;
-    //rdt_print(OutputFormat::SQL, {mk_sql_promise(prom_id)}); // FIXME RE-WRITE WITH NEW FUNCTIONS!!!!
-    // FIXME or move somewhere... probablky move somewhere
 }
 
 void tracer_state_t::finish_pass() {
