@@ -14,6 +14,6 @@ addons:
       - libsqlite3-dev
 
 script:
-  - ./configure --with-blas --with-lapack --without-ICU --without-x --without-tcltk --without-aqua --without-recommended-packages --without-internal-tzcode --with-included-gettext --enable-rdt
+  - CC="clang" CXX="clang++" ./configure --with-blas --with-lapack --without-ICU --without-x --without-tcltk --without-aqua --without-recommended-packages --without-internal-tzcode --with-included-gettext --enable-rdt
   - make -j5
 
