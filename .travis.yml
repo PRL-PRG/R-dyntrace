@@ -8,7 +8,6 @@ language: cpp
 
 os:
   - linux
-  - osx
 
 compiler: clang
 
@@ -24,6 +23,9 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then . ./tools/ci/before_install-osx.sh; fi
 
 script:
-  - CC="clang" CXX="clang++ -std=c++14 -stdlib=libc++" ./configure --with-blas --with-lapack --without-ICU --without-x --without-tcltk --without-aqua --without-recommended-packages --without-internal-tzcode --with-included-gettext --enable-rdt
+  - export CCACHE_CPP2=yes
+  - CC="ccache clang" CXX="ccache clang++ -std=c++14 -stdlib=libc++" ./configure --with-blas --with-lapack --without-ICU --without-x --without-tcltk --without-aqua --without-recommended-packages --without-internal-tzcode --with-included-gettext --enable-rdt
   - make -j5
 
+cache:
+  - ccache
