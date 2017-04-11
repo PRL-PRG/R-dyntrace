@@ -32,8 +32,27 @@ namespace sql_generator {
         return statement.str();
     }
 
-    sql_stmt_t
-    make_insert_function_call_statement(sql_val_t id, sql_val_t ptr, sql_val_t name, sql_val_t location,
+    sql_stmt_t make_select_max_promise_id_statement() {
+        return "select max(id) from promises;\n";
+    }
+
+    sql_stmt_t make_select_max_promise_evaluation_clock_statement() {
+        return "select max(clock) from promise_evalutations;\n";
+    }
+
+    sql_stmt_t make_select_max_call_id_statement() {
+        return "select max(id) from calls;\n";
+    }
+
+    sql_stmt_t make_select_max_function_id_statement() {
+        return "select max(id) from functions;\n";
+    }
+
+    sql_stmt_t make_select_all_function_ids_and_definitions_statement() {
+        return "select definition, id from functions;\n";
+    }
+
+    sql_stmt_t make_insert_function_call_statement(sql_val_t id, sql_val_t ptr, sql_val_t name, sql_val_t location,
                                         sql_val_t function_id) {
         stringstream statement;
 
