@@ -1,9 +1,17 @@
+dist: trusty
+
 language: cpp
 
 os: linux
 
-compiler:
-  - gcc
+compiler: gcc
+
+addons:
+  apt:
+    packages:
+	   gfortran
+		liblzma-dev
+
 
 script: 
   - ./configure --with-blas --with-lapack --without-ICU --without-x --without-tcltk --without-aqua --without-recommended-packages --without-internal-tzcode --with-included-gettext --enable-rdt
