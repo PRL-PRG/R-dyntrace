@@ -9,11 +9,10 @@ compiler: gcc
 addons:
   apt:
     packages:
-	   gfortran
-		liblzma-dev
+      - gfortran
+      - liblzma-dev
 
-
-script: 
+script:
   - ./configure --with-blas --with-lapack --without-ICU --without-x --without-tcltk --without-aqua --without-recommended-packages --without-internal-tzcode --with-included-gettext --enable-rdt
   - make -j5
 
