@@ -14,5 +14,6 @@
 #undef FALSE
 #undef length
 #undef eval
+#undef error
 
 #endif //R_3_3_1_R_H

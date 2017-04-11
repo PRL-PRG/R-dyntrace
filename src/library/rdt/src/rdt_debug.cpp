@@ -388,7 +388,7 @@ rdt_handler *setup_debug_tracing(SEXP options) {
     output = filename != NULL ? fopen(filename, "wt") : stderr;
 
     if (!output) {
-        error("Unable to open %s: %s\n", filename, strerror(errno));
+        Rf_error("Unable to open %s: %s\n", filename, strerror(errno));
         return NULL;
     }
 

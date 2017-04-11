@@ -63,7 +63,7 @@ tracer_conf_t get_config_from_R_options(SEXP options) {
             conf.output_format = OutputFormat::TRACE_AND_SQL;
         //else if (!strcmp(output_format_option, "trace+psql") || !strcmp(output_format_option, "trace+PSQL")) // TODO
         else
-            error("Unknown format type: \"%s\"\n", output_format_option);
+            Rf_error("Unknown format type: \"%s\"\n", output_format_option);
     }
 
     const char *output_type_options = get_string(get_named_list_element(options, "output"));
