@@ -2,7 +2,9 @@ dist: trusty
 
 language: cpp
 
-os: linux
+os:
+  - linux
+  - osx
 
 compiler: clang
 
