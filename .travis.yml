@@ -4,13 +4,14 @@ language: cpp
 
 os: linux
 
-compiler: gcc
+compiler: clang
 
 addons:
   apt:
     packages:
       - gfortran
       - liblzma-dev
+      - sqlite3-dev
 
 script:
   - ./configure --with-blas --with-lapack --without-ICU --without-x --without-tcltk --without-aqua --without-recommended-packages --without-internal-tzcode --with-included-gettext --enable-rdt
