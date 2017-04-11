@@ -1,0 +1,11 @@
+language: cpp
+
+os: linux
+
+compiler:
+  - gcc
+
+script: 
+  - ./configure --with-blas --with-lapack --without-ICU --without-x --without-tcltk --without-aqua --without-recommended-packages --without-internal-tzcode --with-included-gettext --enable-rdt
+  - make -j5
+
