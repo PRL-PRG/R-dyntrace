@@ -183,14 +183,43 @@ void sql_recorder_t::start_trace() { // bool output_configuration
 
     if (tracer_conf.include_configuration)
         if (tracer_conf.overwrite) {
-            sql_stmt_t statement =
-                    make_pragma_statement("synchronous", "off") +
-                    make_create_tables_and_views_statement();
+            sql_stmt_t statement = make_pragma_statement("synchronous", "off")
+                                   + make_create_tables_and_views_statement();
 
             multiplexer::output(
                     multiplexer::payload_t(statement),
                     tracer_conf.outputs);
         }
+
+    if (!tracer_conf.overwrite /* AND not running continuously? */) {
+
+        sql_stmt_t max_function_id_query = make_select_max_function_id_statement();
+        sql_stmt_t max_call_id_query = make_select_max_call_id_statement();
+        sql_stmt_t max_promise_id_query = make_select_max_promise_id_statement();
+        sql_stmt_t max_clock_query = make_select_max_promise_evaluation_clock_statement();
+        sql_stmt_t functions_query = make_select_all_function_ids_and_definitions_statement();
+
+        multiplexer::int_result max_function_id;
+        multiplexer::int_result max_call_id;
+        multiplexer::int_result max_clock;
+        multiplexer::int_result max_promise_id;
+        multiplexer::string_int_map_result functions;
+
+        multiplexer::input(multiplexer::payload_t(max_function_id_query), tracer_conf.outputs, max_function_id);
+        multiplexer::input(multiplexer::payload_t(max_call_id_query), tracer_conf.outputs, max_call_id);
+        multiplexer::input(multiplexer::payload_t(max_clock_query), tracer_conf.outputs, max_clock);
+        multiplexer::input(multiplexer::payload_t(max_promise_id_query), tracer_conf.outputs, max_promise_id);
+        multiplexer::input(multiplexer::payload_t(functions_query), tracer_conf.outputs, functions);
+
+        STATE(clock_id) = max_clock.result + 1;
+        STATE(call_id_counter) = max_call_id.result + 1;
+        STATE(fn_id_counter) = max_function_id.result + 1;
+        STATE(prom_id_counter) = max_promise_id.result + 1;
+        // FIXME prom_neg_id_counter = 0;
+        // FIXME argument_id_sequence = 0;
+        STATE(function_ids) = functions.result;
+        // FIXME argument_ids.clear();
+    }
 
     /* always */ {
         sql_stmt_t statement = make_begin_transaction_statement();

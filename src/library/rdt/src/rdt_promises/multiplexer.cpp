@@ -184,14 +184,4 @@ namespace multiplexer {
 
         return return_value;
     }
-
-
-
-//    bool input_int(payload_t && payload, sink_arr_t outputs, int & result) {
-//        for(char output : outputs) {
-//            bool outcome = input_single_int(payload, output, result);
-//            if (outcome)
-//                return true;
-//        }
-//    }
 }

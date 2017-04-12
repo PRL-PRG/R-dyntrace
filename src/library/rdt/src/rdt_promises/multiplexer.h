@@ -79,25 +79,6 @@ namespace multiplexer {
         }
     };
 
-//    struct status_t {
-//        int max_call_id = 0;
-//        int max_function_id = 0;
-//        int max_promise_id = 0;
-//        int max_promise_evaluation_clock = 0;
-//        std::unordered_map<std::string, int> functions;
-//    };
-
-    struct input_result_t {
-        void load(sqlite3_stmt * statement);
-    };
-
-    struct input_int_t : input_result_t {
-        int value;
-        void load(sqlite3_stmt * statement) {
-            value = sqlite3_column_int(statement, 0);
-        }
-    };
-
     typedef std::string sink_arr_t;
 
     // Functions for configuring outputs.
