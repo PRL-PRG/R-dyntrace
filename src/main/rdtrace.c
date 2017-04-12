@@ -5,6 +5,11 @@
 #include <rdtrace.h>
 #include <time.h>
 
+#ifdef __MACH__
+#include <mach/clock.h>
+#include <mach/mach.h>
+#endif
+
 static const rdt_handler rdt_null_handler;
 
 const rdt_handler *rdt_curr_handler = &rdt_null_handler;
@@ -123,8 +128,14 @@ const char *get_expression(SEXP e) {
 // returns a monotonic timestamp in microseconds
 uint64_t timestamp() {
     uint64_t t;
+    // The __MACH__ bit is from http://stackoverflow.com/a/6725161/6846474
 #ifdef __MACH__
-    t = clock_gettime_nsec_np(CLOCK_MONOTONIC);
+    clock_serv_t cclock;
+    mach_timespec_t mts;
+    host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &cclock);
+    clock_get_time(cclock, &mts);
+    mach_port_deallocate(mach_task_self(), cclock);
+    t = mts.tv_sec * 1e9 + mts.tv_nsec;
 #else
     struct timespec ts;    
     clock_gettime(CLOCK_MONOTONIC, &ts);
