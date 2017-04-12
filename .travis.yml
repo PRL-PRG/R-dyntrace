@@ -1,6 +1,7 @@
 branches:
   only:
     - debug-travis
+    - master
 
 dist: trusty
 
