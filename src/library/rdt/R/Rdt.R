@@ -7,7 +7,7 @@ Rdt <- function(block, tracer="promises", ...) {
     retval <- .Call(C_Rdt, tracer, environment(), list(...))
 
     end.time <- Sys.time()
-    write(paste("Elapsed time:", (end.time - start.time``)), stderr())
+    write(paste("Elapsed time:", (end.time - start.time)), stderr())
 
     retval
 }
