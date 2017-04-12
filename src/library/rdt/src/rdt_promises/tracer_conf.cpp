@@ -13,6 +13,7 @@ tracer_conf_t::tracer_conf_t() :
         pretty_print(true),
         include_configuration(true),
         overwrite(false),
+        reload_state(false),
         indent_width(4),
         call_id_use_ptr_fmt(false),
         outputs(string({multiplexer::Sink::PRINT}))
@@ -97,6 +98,11 @@ tracer_conf_t get_config_from_R_options(SEXP options) {
     SEXP include_configuration_option = get_named_list_element(options, "include.configuration");
     if (include_configuration_option != NULL && include_configuration_option != R_NilValue)
         conf.include_configuration = LOGICAL(include_configuration_option)[0] == TRUE;
+    //Rprintf("overwrite_option=%p->%i\n", (overwrite_option), overwrite);
+
+    SEXP reload_state_option = get_named_list_element(options, "reload.state");
+    if (reload_state_option != NULL && reload_state_option != R_NilValue)
+        conf.reload_state = LOGICAL(reload_state_option)[0] == TRUE;
     //Rprintf("overwrite_option=%p->%i\n", (overwrite_option), overwrite);
 
     return conf;

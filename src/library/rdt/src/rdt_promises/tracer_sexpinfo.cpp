@@ -70,10 +70,19 @@ fn_id_t get_function_id(SEXP func) {
     }
 }
 
-bool function_already_exists(fn_key_t fn_key) {
-    auto & function_ids = STATE(function_ids);
-    auto it = function_ids.find(fn_key);
-    return (it != function_ids.end());
+bool register_inserted_function(fn_id_t id) {
+    auto & already_inserted_functions = STATE(already_inserted_functions);
+//    bool exists = already_inserted_functions.count(id) > 0;
+//    if (exists)
+//        return false;
+    auto result = already_inserted_functions.insert(id);
+    return result.second;
+//        return true
+}
+
+bool function_already_inserted(fn_id_t id) {
+    auto & already_inserted_functions = STATE(already_inserted_functions);
+    return already_inserted_functions.count(id) > 0;
 }
 
 fn_addr_t get_function_addr(SEXP func) {

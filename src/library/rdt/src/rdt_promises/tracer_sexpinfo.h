@@ -143,7 +143,10 @@ prom_id_t make_promise_id(SEXP promise, bool negative = false);
 call_id_t make_funcall_id(SEXP fn_env);
 fn_id_t get_function_id(SEXP func);
 fn_addr_t get_function_addr(SEXP func);
-bool function_already_exists(fn_key_t fn_key);
+
+// Returns false if function already existed, true if it was registered now
+bool register_inserted_function(fn_id_t id);
+bool function_already_inserted(fn_id_t id);
 
 // Wraper for findVar. Does not look up the value if it already is PROMSXP.
 SEXP get_promise(SEXP var, SEXP rho);

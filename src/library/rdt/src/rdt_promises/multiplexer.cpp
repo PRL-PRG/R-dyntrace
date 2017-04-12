@@ -145,7 +145,7 @@ namespace multiplexer {
                         int outcome = sqlite3_exec(sqlite_database, payload.text->c_str(), NULL, 0, NULL /*&error_msg*/);
 
                         if (outcome != SQLITE_OK) {
-                            cerr << "Error: could not execute SQL query: \"" << payload.text << "\", "
+                            cerr << "Error: could not execute SQL query: \"" << *payload.text << "\", "
                                  << "message (" << outcome << "): "
                                  << sqlite3_errmsg(sqlite_database) << "\n";
 
