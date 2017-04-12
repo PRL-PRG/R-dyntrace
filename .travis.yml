@@ -10,6 +10,8 @@ os:
   - osx
   - linux
 
+osx_image: xcode8.3
+
 compiler: clang
 
 addons:
