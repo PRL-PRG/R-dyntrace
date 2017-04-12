@@ -77,6 +77,7 @@ struct tracer_conf_t {
     option<multiplexer::sink_arr_t> outputs;
 
     bool overwrite;
+    bool reload_state;
 
     tracer_conf_t();
 

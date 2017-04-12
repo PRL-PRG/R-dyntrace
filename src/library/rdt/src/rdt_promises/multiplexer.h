@@ -5,6 +5,7 @@
 #define RDT_SQLITE_SUPPORT
 //#endif
 
+#include <map>
 #include <vector>
 #include <string>
 #include <fstream>
@@ -108,7 +109,7 @@ namespace multiplexer {
 #endif
     };
 
-    class string_int_map_result {
+    class string_to_int_map_result {
     public:
         std::unordered_map<std::string, int> result;
 #ifdef RDT_SQLITE_SUPPORT
@@ -116,6 +117,19 @@ namespace multiplexer {
             std::string s = reinterpret_cast<const char *>(sqlite3_column_text(statement, 0));
             int i = sqlite3_column_int(statement, 1);
             result[s] = i;
+        }
+#endif
+    };
+
+    class int_string_to_int_map_result {
+    public:
+        std::map<std::pair<int, std::string>, int> result;
+#ifdef RDT_SQLITE_SUPPORT
+        bool load(sqlite3_stmt * statement) {
+            int i1 = sqlite3_column_int(statement, 0);
+            std::string s = reinterpret_cast<const char *>(sqlite3_column_text(statement, 1));
+            int i2 = sqlite3_column_int(statement, 2);
+            result[std::pair<int, std::string>(i1, s)] = i2;
         }
 #endif
     };
@@ -137,7 +151,7 @@ namespace multiplexer {
                                                          &prepared_statement, NULL);
 
                         if (outcome != SQLITE_OK) {
-                            std::cerr << "Error: could not prepare ad-hoc statement: \"" << payload.text << "\", "
+                            std::cerr << "Error: could not prepare ad-hoc statement: \"" << *payload.text << "\", "
                                  << "message (" << outcome << "): "
                                  << sqlite3_errmsg(sqlite_database) << "\n";
 

@@ -36,8 +36,15 @@ namespace sql_generator {
         return "select max(id) from promises;\n";
     }
 
+    sql_stmt_t make_select_min_promise_id_statement() {
+        // FIXME currently promises with negative IDs are not properly stored in the DB, so I work around it here.
+        return "select min(promise_id) from promise_evaluations where promise_id < 1;\n";
+        // FIXME this is how it's supposed to be once the promises are fixed
+        // return "select min(id) from promises where id < 1;\n";
+    }
+
     sql_stmt_t make_select_max_promise_evaluation_clock_statement() {
-        return "select max(clock) from promise_evalutations;\n";
+        return "select max(clock) from promise_evaluations;\n";
     }
 
     sql_stmt_t make_select_max_call_id_statement() {
@@ -48,8 +55,16 @@ namespace sql_generator {
         return "select max(id) from functions;\n";
     }
 
+    sql_stmt_t make_select_max_argument_id_statement() {
+        return "select max(id) from arguments;\n";
+    }
+
     sql_stmt_t make_select_all_function_ids_and_definitions_statement() {
         return "select definition, id from functions;\n";
+    }
+
+    sql_stmt_t make_select_all_argument_ids_names_and_function_allegiances_statement() {
+        return "select function_id, name, id from arguments;\n";
     }
 
     sql_stmt_t make_insert_function_call_statement(sql_val_t id, sql_val_t ptr, sql_val_t name, sql_val_t location,

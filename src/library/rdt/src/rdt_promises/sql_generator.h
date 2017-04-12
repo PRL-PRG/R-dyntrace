@@ -25,11 +25,15 @@ namespace sql_generator {
     sql_stmt_t make_insert_promise_evaluation_statement(sql_val_t clock, sql_val_t event_type, sql_val_t promise_id, sql_val_t call_id);
     sql_stmt_t make_insert_promise_associations_statement(std::vector<sql_val_cell_t> & associations, bool align);
 
+    sql_stmt_t make_select_max_argument_id_statement();
     sql_stmt_t make_select_max_promise_id_statement();
+    sql_stmt_t make_select_min_promise_id_statement();
     sql_stmt_t make_select_max_promise_evaluation_clock_statement();
     sql_stmt_t make_select_max_call_id_statement();
     sql_stmt_t make_select_max_function_id_statement();
     sql_stmt_t make_select_all_function_ids_and_definitions_statement();
+    sql_stmt_t make_select_all_argument_ids_names_and_function_allegiances_statement();
+
 
     sql_stmt_t make_begin_transaction_statement();
     sql_stmt_t make_abort_transaction_statement();

@@ -103,15 +103,13 @@ sql_stmt_t insert_promise_evaluation_statement(prom_eval_t type, const prom_info
 
 void sql_recorder_t::function_entry(const closure_info_t & info) {
     bool align_statements = tracer_conf.pretty_print;
-    bool need_to_insert = function_already_exists(info.fn_definition);
+    bool need_to_insert = register_inserted_function(info.fn_id);
 
     if (need_to_insert) {
         sql_stmt_t statement = insert_function_statement(info);
         multiplexer::output(
                 multiplexer::payload_t(statement),
                 tracer_conf.outputs);
-
-        // STATE(already_inserted_functions).insert(info.fn_id); XXX cleanup
     }
 
     if (need_to_insert && info.arguments.size() > 0) {
@@ -137,7 +135,7 @@ void sql_recorder_t::function_entry(const closure_info_t & info) {
 }
 
 void sql_recorder_t::builtin_entry(const builtin_info_t & info) {
-    bool need_to_insert = function_already_exists(info.fn_definition);
+    bool need_to_insert = register_inserted_function(info.fn_id);
 
     if (need_to_insert) {
         sql_stmt_t statement = insert_function_statement(info);
@@ -191,34 +189,42 @@ void sql_recorder_t::start_trace() { // bool output_configuration
                     tracer_conf.outputs);
         }
 
-    if (!tracer_conf.overwrite /* AND not running continuously? */) {
-
+    if (!tracer_conf.overwrite && tracer_conf.reload_state) {
         sql_stmt_t max_function_id_query = make_select_max_function_id_statement();
         sql_stmt_t max_call_id_query = make_select_max_call_id_statement();
         sql_stmt_t max_promise_id_query = make_select_max_promise_id_statement();
+        sql_stmt_t min_promise_id_query = make_select_min_promise_id_statement();
+        sql_stmt_t max_argument_id_query = make_select_max_argument_id_statement();
         sql_stmt_t max_clock_query = make_select_max_promise_evaluation_clock_statement();
         sql_stmt_t functions_query = make_select_all_function_ids_and_definitions_statement();
+        sql_stmt_t arguments_query = make_select_all_argument_ids_names_and_function_allegiances_statement();
 
         multiplexer::int_result max_function_id;
         multiplexer::int_result max_call_id;
         multiplexer::int_result max_clock;
         multiplexer::int_result max_promise_id;
-        multiplexer::string_int_map_result functions;
+        multiplexer::int_result min_promise_id;
+        multiplexer::int_result max_argument_id;
+        multiplexer::string_to_int_map_result functions;
+        multiplexer::int_string_to_int_map_result arguments;
 
         multiplexer::input(multiplexer::payload_t(max_function_id_query), tracer_conf.outputs, max_function_id);
         multiplexer::input(multiplexer::payload_t(max_call_id_query), tracer_conf.outputs, max_call_id);
         multiplexer::input(multiplexer::payload_t(max_clock_query), tracer_conf.outputs, max_clock);
         multiplexer::input(multiplexer::payload_t(max_promise_id_query), tracer_conf.outputs, max_promise_id);
+        multiplexer::input(multiplexer::payload_t(min_promise_id_query), tracer_conf.outputs, min_promise_id);
+        multiplexer::input(multiplexer::payload_t(max_argument_id_query), tracer_conf.outputs, max_argument_id);
         multiplexer::input(multiplexer::payload_t(functions_query), tracer_conf.outputs, functions);
+        multiplexer::input(multiplexer::payload_t(arguments_query), tracer_conf.outputs, arguments);
 
         STATE(clock_id) = max_clock.result + 1;
         STATE(call_id_counter) = max_call_id.result + 1;
         STATE(fn_id_counter) = max_function_id.result + 1;
         STATE(prom_id_counter) = max_promise_id.result + 1;
-        // FIXME prom_neg_id_counter = 0;
-        // FIXME argument_id_sequence = 0;
+        STATE(prom_neg_id_counter) = min_promise_id.result;
+        STATE(argument_id_sequence) = max_argument_id.result + 1;
         STATE(function_ids) = functions.result;
-        // FIXME argument_ids.clear();
+        STATE(argument_ids) = arguments.result;
     }
 
     /* always */ {
