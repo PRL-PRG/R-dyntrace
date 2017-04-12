@@ -1,3 +1,0 @@
-CFLAGS="-g -O0 "./configure --with-blas --with-lapack --without-ICU --without-x --without-tcltk --without-aqua --without-recommended-packages --without-internal-tzcode --with-included-gettext --enable-rdt CFLAGS="-g -O0"
-make -j3 CFLAGS="-g -O0"
-
