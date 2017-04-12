@@ -6,7 +6,6 @@ echo
 
 echo Installing gcc/fortran
 brew install gcc
-brew install gfortran
 
 brew install xz
 brew install sqlite
