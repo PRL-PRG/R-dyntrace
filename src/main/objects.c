@@ -82,8 +82,11 @@ static SEXP GetObject(RCNTXT *cptr)
     if (TYPEOF(s) == PROMSXP) {
 	if (PRVALUE(s) == R_UnboundValue)
 	    s = eval(s, R_BaseEnv);
-	else
+	else {
+	    SEXP s_saved = s;
 	    s = PRVALUE(s);
+	    RDT_HOOK(probe_promise_lookup, s_saved, R_BaseEnv, s);
+	}
     }
     return(s);
 }

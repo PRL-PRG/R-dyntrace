@@ -4444,7 +4444,10 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
             /* Tracing: we didn't handle this and we handle this. */ \
 			value = FORCE_PROMISE(value, symbol, rho, keepmiss); \
 		    }							\
-		    else value = pv;					\
+		    else {						\
+		    RDT_HOOK(probe_promise_lookup, value, rho, pv)	\
+		    value = pv;						\
+		    }							\
 		}							\
 		else if (NAMED(value) == 0)				\
 		    SET_NAMED(value, 1);				\
