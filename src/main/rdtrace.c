@@ -5,7 +5,7 @@
 #include <rdtrace.h>
 #include <time.h>
 
-#ifdef __MACH__
+#if !defined(HAVE_CLOCK_GETTIME) && defined(__MACH__)
 #include <mach/clock.h>
 #include <mach/mach.h>
 #endif
@@ -129,7 +129,7 @@ const char *get_expression(SEXP e) {
 uint64_t timestamp() {
     uint64_t t;
     // The __MACH__ bit is from http://stackoverflow.com/a/6725161/6846474
-#ifdef __MACH__
+#if !defined(HAVE_CLOCK_GETTIME) && defined(__MACH__)
     clock_serv_t cclock;
     mach_timespec_t mts;
     host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &cclock);
