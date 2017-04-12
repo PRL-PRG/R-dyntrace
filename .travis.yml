@@ -24,7 +24,6 @@ addons:
       - libc++-dev
 
 before_install:
-  - tools/ci/before_install-debug.sh
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then . tools/ci/before_install-osx.sh; fi
 
 script:
