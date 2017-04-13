@@ -57,6 +57,15 @@ wrap.session.executor <- function(executor)
         executor(eval(expr), overwrite=if (current_vignette == 0) TRUE else FALSE, ...)
     }
 
+wrap.contination.executor <- function(executor)
+function(expr, current_vignette, total_vignettes, vignette_name, vignette_package, ...) {
+    write(paste("Vignette ", (current_vignette + 1), "/", total_vignettes,
+    " (", vignette_name, " from ", vignette_package, ")", sep=""),
+    stderr())
+
+    executor(eval(expr), overwrite=if (current_vignette == 0) TRUE else FALSE, ...)
+}
+
 run.all.vignettes.from.package <- function(package, executor = wrap.executor(trace.promises.r) , ...) {
     result.set <- vignette(package = package)
     vignettes.in.package <- result.set$results[,3]

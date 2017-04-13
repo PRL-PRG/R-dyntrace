@@ -142,7 +142,6 @@ void sql_recorder_t::builtin_entry(const builtin_info_t & info) {
                 multiplexer::output(
                 multiplexer::payload_t(statement),
                 tracer_conf.outputs);
-        // STATE(already_inserted_functions).insert(info.fn_id); XXX cleanup
     }
 
     /* always */ {
@@ -156,10 +155,20 @@ void sql_recorder_t::builtin_entry(const builtin_info_t & info) {
 }
 
 void sql_recorder_t::force_promise_entry(const prom_info_t & info) {
-    sql_stmt_t statement = insert_promise_evaluation_statement(RDT_SQL_FORCE_PROMISE, info);
-    multiplexer::output(
-            multiplexer::payload_t(statement),
-            tracer_conf.outputs);
+    if (info.prom_id < 0) // if this is a promise from the outside
+        if (!negative_promise_already_inserted(info.prom_id)) {
+            sql_stmt_t statement = insert_promise_statement(info.prom_id);
+            multiplexer::output(
+                    multiplexer::payload_t(statement),
+                    tracer_conf.outputs);
+        }
+
+    /* always */ {
+        sql_stmt_t statement = insert_promise_evaluation_statement(RDT_SQL_FORCE_PROMISE, info);
+        multiplexer::output(
+                multiplexer::payload_t(statement),
+                tracer_conf.outputs);
+    }
 }
 
 void sql_recorder_t::promise_created(const prom_id_t & prom_id) {
@@ -198,6 +207,8 @@ void sql_recorder_t::start_trace() { // bool output_configuration
         sql_stmt_t max_clock_query = make_select_max_promise_evaluation_clock_statement();
         sql_stmt_t functions_query = make_select_all_function_ids_and_definitions_statement();
         sql_stmt_t arguments_query = make_select_all_argument_ids_names_and_function_allegiances_statement();
+        sql_stmt_t already_inserted_functions_query = make_select_all_function_ids_statement();
+        sql_stmt_t already_inserted_negative_promises_query = make_select_all_negative_promise_ids_statement();
 
         multiplexer::int_result max_function_id;
         multiplexer::int_result max_call_id;
@@ -208,6 +219,9 @@ void sql_recorder_t::start_trace() { // bool output_configuration
         multiplexer::string_to_int_map_result functions;
         multiplexer::int_string_to_int_map_result arguments;
 
+        multiplexer::int_set_result already_inserted_functions;
+        multiplexer::int_set_result already_inserted_negative_promises;
+
         multiplexer::input(multiplexer::payload_t(max_function_id_query), tracer_conf.outputs, max_function_id);
         multiplexer::input(multiplexer::payload_t(max_call_id_query), tracer_conf.outputs, max_call_id);
         multiplexer::input(multiplexer::payload_t(max_clock_query), tracer_conf.outputs, max_clock);
@@ -216,6 +230,8 @@ void sql_recorder_t::start_trace() { // bool output_configuration
         multiplexer::input(multiplexer::payload_t(max_argument_id_query), tracer_conf.outputs, max_argument_id);
         multiplexer::input(multiplexer::payload_t(functions_query), tracer_conf.outputs, functions);
         multiplexer::input(multiplexer::payload_t(arguments_query), tracer_conf.outputs, arguments);
+        multiplexer::input(multiplexer::payload_t(already_inserted_functions_query), tracer_conf.outputs, already_inserted_functions);
+        multiplexer::input(multiplexer::payload_t(already_inserted_negative_promises_query), tracer_conf.outputs, already_inserted_negative_promises);
 
         STATE(clock_id) = max_clock.result + 1;
         STATE(call_id_counter) = max_call_id.result + 1;
@@ -225,6 +241,8 @@ void sql_recorder_t::start_trace() { // bool output_configuration
         STATE(argument_id_sequence) = max_argument_id.result + 1;
         STATE(function_ids) = functions.result;
         STATE(argument_ids) = arguments.result;
+        STATE(already_inserted_functions) = already_inserted_functions.result;
+        STATE(already_inserted_negative_promises) = already_inserted_negative_promises.result;
     }
 
     /* always */ {

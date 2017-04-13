@@ -11,6 +11,7 @@
 #include <fstream>
 #include <iostream>
 #include <unordered_map>
+#include <unordered_set>
 #include "tools.h"
 
 #ifdef RDT_SQLITE_SUPPORT
@@ -86,9 +87,7 @@ namespace multiplexer {
     bool init(sink_arr_t output, std::string file_path, bool overwrite);
     bool close(sink_arr_t output);
 
-    // Function for actually outputting stuff.
-    bool output(payload_t && payload, sink_arr_t outputs);
-
+    // Classes for returning results from the input function.
     class int_result {
     public:
         int result;
@@ -105,6 +104,16 @@ namespace multiplexer {
 #ifdef RDT_SQLITE_SUPPORT
         bool load(sqlite3_stmt * statement) {
             result.push_back(sqlite3_column_int(statement, 0));
+        }
+#endif
+    };
+
+    class int_set_result {
+    public:
+        std::unordered_set<int> result;
+#ifdef RDT_SQLITE_SUPPORT
+        bool load(sqlite3_stmt * statement) {
+            result.insert(sqlite3_column_int(statement, 0));
         }
 #endif
     };
@@ -133,6 +142,9 @@ namespace multiplexer {
         }
 #endif
     };
+
+    // Function for actually retrieving and outputting stuff.
+    bool output(payload_t && payload, sink_arr_t outputs);
 
     template<typename T>
     bool input(payload_t && payload, sink_arr_t outputs, T & result) {

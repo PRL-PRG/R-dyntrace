@@ -146,7 +146,9 @@ fn_addr_t get_function_addr(SEXP func);
 
 // Returns false if function already existed, true if it was registered now
 bool register_inserted_function(fn_id_t id);
+
 bool function_already_inserted(fn_id_t id);
+bool negative_promise_already_inserted(prom_id_t id);
 
 // Wraper for findVar. Does not look up the value if it already is PROMSXP.
 SEXP get_promise(SEXP var, SEXP rho);

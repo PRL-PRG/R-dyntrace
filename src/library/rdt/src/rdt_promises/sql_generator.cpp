@@ -67,6 +67,13 @@ namespace sql_generator {
         return "select function_id, name, id from arguments;\n";
     }
 
+    sql_stmt_t make_select_all_function_ids_statement() {
+        return "select id from functions;\n";
+    }
+    sql_stmt_t make_select_all_negative_promise_ids_statement() {
+        return "select id from promises where id < 0;\n";
+    }
+
     sql_stmt_t make_insert_function_call_statement(sql_val_t id, sql_val_t ptr, sql_val_t name, sql_val_t location,
                                         sql_val_t function_id) {
         stringstream statement;

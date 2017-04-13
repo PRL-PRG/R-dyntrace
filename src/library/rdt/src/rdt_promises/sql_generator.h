@@ -33,7 +33,8 @@ namespace sql_generator {
     sql_stmt_t make_select_max_function_id_statement();
     sql_stmt_t make_select_all_function_ids_and_definitions_statement();
     sql_stmt_t make_select_all_argument_ids_names_and_function_allegiances_statement();
-
+    sql_stmt_t make_select_all_function_ids_statement();
+    sql_stmt_t make_select_all_negative_promise_ids_statement();
 
     sql_stmt_t make_begin_transaction_statement();
     sql_stmt_t make_abort_transaction_statement();

@@ -69,6 +69,7 @@ void tracer_state_t::reset() {
     prom_neg_id_counter = 0;
     argument_id_sequence = 0;
     already_inserted_functions.clear();
+    already_inserted_negative_promises.clear();
     function_ids.clear();
     argument_ids.clear();
     promise_ids.clear();

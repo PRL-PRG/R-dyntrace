@@ -199,7 +199,6 @@ void psql_recorder_t::function_entry(const closure_info_t & info) {
         multiplexer::output(
                 multiplexer::payload_t(statement),
                 tracer_conf.outputs);
-        //STATE(already_inserted_functions).insert(info.fn_id); XXX cleanup
     }
 
     if (need_to_insert && info.arguments.size() > 0) {
@@ -253,10 +252,20 @@ void psql_recorder_t::builtin_entry(const builtin_info_t & info) {
 
 void psql_recorder_t::force_promise_entry(const prom_info_t & info) {
 #ifdef RDT_SQLITE_SUPPORT
-    sqlite3_stmt *statement = populate_promise_evaluation_statement(RDT_SQL_FORCE_PROMISE, info);
-    multiplexer::output(
-            multiplexer::payload_t(statement),
-            tracer_conf.outputs);
+    if (info.prom_id < 0) // if this is a promise from the outside
+        if (!negative_promise_already_inserted(info.prom_id)) {
+            sqlite3_stmt *statement = populate_promise_statement(info.prom_id);
+            multiplexer::output(
+                    multiplexer::payload_t(statement),
+                    tracer_conf.outputs);
+        }
+
+    /* always */ {
+        sqlite3_stmt *statement = populate_promise_evaluation_statement(RDT_SQL_FORCE_PROMISE, info);
+        multiplexer::output(
+                multiplexer::payload_t(statement),
+                tracer_conf.outputs);
+    }
 #else
     // FIXME
 #endif

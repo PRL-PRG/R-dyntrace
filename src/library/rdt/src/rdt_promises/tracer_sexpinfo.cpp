@@ -80,6 +80,11 @@ bool register_inserted_function(fn_id_t id) {
 //        return true
 }
 
+bool negative_promise_already_inserted(prom_id_t id) {
+    auto & already_inserted = STATE(already_inserted_negative_promises);
+    return already_inserted.count(id) > 0;
+}
+
 bool function_already_inserted(fn_id_t id) {
     auto & already_inserted_functions = STATE(already_inserted_functions);
     return already_inserted_functions.count(id) > 0;
