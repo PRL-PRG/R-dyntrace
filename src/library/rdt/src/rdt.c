@@ -59,7 +59,7 @@ SEXP Rdt(SEXP tracer, SEXP rho, SEXP options) {
 
     tracer_cleanup_ptr_t cleanup_tracing = find_fn_by_name("cleanup_%s_tracing", sys);
     if (cleanup_tracing) {
-        cleanup_promises_tracing(options);
+        cleanup_tracing(options);
     }
     // Missing cleanup_tracing function is not an error
 
