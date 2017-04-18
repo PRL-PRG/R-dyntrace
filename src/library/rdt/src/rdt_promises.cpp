@@ -36,8 +36,6 @@ using namespace std;
 //}
 
 // All the interpreter hooks go here
-// DECL_HOOK macro generates an initializer for each function
-// which is then used in the REGISTER_HOOKS macro to properly init rdt_handler.
 template<typename Rec>
 struct trace_promises {
     static Rec rec_impl;
@@ -45,20 +43,20 @@ struct trace_promises {
 
     // TODO ??? can we get metadata about the program we're analysing in here?
     // TODO: also pass environment
-    DECL_HOOK(begin)(const SEXP prom) {
+    static void begin(const SEXP prom) {
         tracer_state().start_pass(prom);
 
         rec.start_trace_process();
     }
 
-    DECL_HOOK(end)() {
+    static void end() {
         tracer_state().finish_pass();
 
         rec.finish_trace_process();
     }
 
     // Triggered when entering function evaluation.
-    DECL_HOOK(function_entry)(const SEXP call, const SEXP op, const SEXP rho) {
+    static void function_entry(const SEXP call, const SEXP op, const SEXP rho) {
         closure_info_t info = rec.function_entry_get_info(call, op, rho);
 
         // Push function ID on function stack
@@ -81,7 +79,7 @@ struct trace_promises {
         }
     }
 
-    DECL_HOOK(function_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
+    static void function_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
 
         closure_info_t info = rec.function_exit_get_info(call, op, rho);
         rec.function_exit_process(info);
@@ -99,11 +97,11 @@ struct trace_promises {
         STATE(curr_env_stack).push(info.call_ptr | 1);
     }
 
-    DECL_HOOK(builtin_entry)(const SEXP call, const SEXP op, const SEXP rho) {
+    static void builtin_entry(const SEXP call, const SEXP op, const SEXP rho) {
         print_entry_info(call, op, rho, function_type::BUILTIN);
     }
 
-    DECL_HOOK(specialsxp_entry)(const SEXP call, const SEXP op, const SEXP rho) {
+    static void specialsxp_entry(const SEXP call, const SEXP op, const SEXP rho) {
         print_entry_info(call, op, rho, function_type::SPECIAL);
     }
 
@@ -115,15 +113,15 @@ struct trace_promises {
         STATE(curr_env_stack).pop();
     }
 
-    DECL_HOOK(builtin_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
+    static void builtin_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
         print_exit_info(call, op, rho, function_type::BUILTIN);
     }
 
-    DECL_HOOK(specialsxp_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
+    static void specialsxp_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
         print_exit_info(call, op, rho, function_type::SPECIAL);
     }
 
-    DECL_HOOK(promise_created)(const SEXP prom) {
+    static void promise_created(const SEXP prom) {
         prom_id_t prom_id = make_promise_id(prom);
         STATE(fresh_promises).insert(prom_id);
 
@@ -131,29 +129,22 @@ struct trace_promises {
     }
 
     // Promise is being used inside a function body for the first time.
-    DECL_HOOK(force_promise_entry)(const SEXP symbol, const SEXP rho) {
+    static void force_promise_entry(const SEXP symbol, const SEXP rho) {
         prom_info_t info = rec.force_promise_entry_get_info(symbol, rho);
         rec.force_promise_entry_process(info);
     }
 
-    DECL_HOOK(force_promise_exit)(const SEXP symbol, const SEXP rho, const SEXP val) {
+    static void force_promise_exit(const SEXP symbol, const SEXP rho, const SEXP val) {
         prom_info_t info = rec.force_promise_exit_get_info(symbol, rho);
         rec.force_promise_exit_process(info);
     }
 
-    DECL_HOOK(promise_lookup)(const SEXP symbol, const SEXP rho, const SEXP val) {
+    static void promise_lookup(const SEXP symbol, const SEXP rho, const SEXP val) {
         prom_info_t info = rec.promise_lookup_get_info(symbol, rho);
         rec.promise_lookup_process(info);
     }
 
-    DECL_HOOK(error)(const SEXP call, const char* message) {
-
-    }
-
-    DECL_HOOK(vector_alloc)(int sexptype, long length, long bytes, const char* srcref) {
-    }
-
-    DECL_HOOK(gc_promise_unmarked)(const SEXP promise) {
+    static void gc_promise_unmarked(const SEXP promise) {
         prom_addr_t addr = get_sexp_address(promise);
         prom_id_t id = get_promise_id(promise);
         auto & promise_origin = STATE(promise_origin);
@@ -169,7 +160,7 @@ struct trace_promises {
         STATE(promise_ids).erase(addr);
     }
 
-    DECL_HOOK(jump_ctxt)(const SEXP rho, const SEXP val) {
+    static void jump_ctxt(const SEXP rho, const SEXP val) {
         vector<call_id_t> unwound_calls;
         tracer_state().adjust_fun_stack(rho, unwound_calls);
         rec.unwind_process(unwound_calls);
@@ -189,28 +180,23 @@ static bool file_exists(const string & fname) {
 }
 
 template<typename Rec>
-rdt_handler register_hooks_with() {
-    // Because Rec is an unknown type (until template instantiation) we have to
-    // explicitly tell the compiler that trace_promises<Rec>::hook_name is also a type
-#define tp typename tr
-    return REGISTER_HOOKS(trace_promises<Rec>,
-                        tp::begin,
-                        tp::end,
-                        tp::function_entry,
-                        tp::function_exit,
-                        tp::builtin_entry,
-                        tp::builtin_exit,
-                        tp::specialsxp_entry,
-                        tp::specialsxp_exit,
-                        tp::force_promise_entry,
-                        tp::force_promise_exit,
-                        tp::promise_lookup,
-                        tp::error,
-                        tp::vector_alloc,
-                        tp::gc_promise_unmarked,
-                        tp::jump_ctxt,
-                        tp::promise_created);
-#undef tp
+void register_hooks_with(rdt_handler * h) {
+    REG_HOOKS_BEGIN(h, trace_promises<Rec>);
+        ADD_HOOK(begin);
+        ADD_HOOK(end);
+        ADD_HOOK(function_entry);
+        ADD_HOOK(function_exit);
+        ADD_HOOK(builtin_entry);
+        ADD_HOOK(builtin_exit);
+        ADD_HOOK(specialsxp_entry);
+        ADD_HOOK(specialsxp_exit);
+        ADD_HOOK(force_promise_entry);
+        ADD_HOOK(force_promise_exit);
+        ADD_HOOK(promise_lookup);
+        ADD_HOOK(gc_promise_unmarked);
+        ADD_HOOK(jump_ctxt);
+        ADD_HOOK(promise_created);
+    REG_HOOKS_END;
 }
 
 rdt_handler *setup_promises_tracing(SEXP options) {
@@ -219,16 +205,16 @@ rdt_handler *setup_promises_tracing(SEXP options) {
 
     rdt_handler *h = (rdt_handler *) malloc(sizeof(rdt_handler));
     if (tracer_conf.output_format == OutputFormat::TRACE) {
-        *h = register_hooks_with<trace_recorder_t>();
+        register_hooks_with<trace_recorder_t>(h);
     }
     else if (tracer_conf.output_format == OutputFormat::SQL) {
-        *h = register_hooks_with<sql_recorder_t>();
+        register_hooks_with<sql_recorder_t>(h);
     }
     else if (tracer_conf.output_format == OutputFormat::PREPARED_SQL) {
-        *h = register_hooks_with<psql_recorder_t>();
+        register_hooks_with<psql_recorder_t>(h);
     }
     else { // TRACE_AND_SQL
-        *h = register_hooks_with<compose<trace_recorder_t, sql_recorder_t>>();
+        register_hooks_with<compose<trace_recorder_t, sql_recorder_t>>(h);
     }
 
     SEXP disabled_probes = get_named_list_element(options, "disabled.probes");

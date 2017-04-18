@@ -8,7 +8,6 @@
 
 #include "rdt.h"
 
-#include "rdt_register_hook.h"
 
 static FILE *output = NULL;
 static uint64_t last = 0;
@@ -28,14 +27,14 @@ static inline void compute_delta() {
 }
 
 struct trace_default {
-    DECL_HOOK(begin)(const SEXP prom) {
+    static void begin(const SEXP prom) {
         fprintf(output, "DELTA,TYPE,LOCATION,NAME\n");
         fflush(output);
 
         last = timestamp();
     }
 
-    DECL_HOOK(function_entry)(const SEXP call, const SEXP op, const SEXP rho) {
+    static void function_entry(const SEXP call, const SEXP op, const SEXP rho) {
         compute_delta();
 
         const char *type = is_byte_compiled(op) ? "bc-function-entry" : "function-entry";
@@ -59,7 +58,7 @@ struct trace_default {
         last = timestamp();
     }
 
-    DECL_HOOK(function_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
+    static void function_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
         compute_delta();
 
         const char *type = is_byte_compiled(op) ? "bc-function-exit" : "function-exit";
@@ -83,7 +82,7 @@ struct trace_default {
         last = timestamp();
     }
 
-    DECL_HOOK(builtin_entry)(const SEXP call, const SEXP op, const SEXP rho) {
+    static void builtin_entry(const SEXP call, const SEXP op, const SEXP rho) {
         compute_delta();
 
         const char *name = get_name(call);
@@ -93,7 +92,7 @@ struct trace_default {
         last = timestamp();
     }
 
-    DECL_HOOK(builtin_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
+    static void builtin_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
         compute_delta();
 
         const char *name = get_name(call);
@@ -103,7 +102,7 @@ struct trace_default {
         last = timestamp();
     }
 
-    DECL_HOOK(force_promise_entry)(const SEXP symbol, const SEXP rho) {
+    static void force_promise_entry(const SEXP symbol, const SEXP rho) {
         compute_delta();
 
         const char *name = get_name(symbol);
@@ -113,7 +112,7 @@ struct trace_default {
         last = timestamp();
     }
 
-    DECL_HOOK(force_promise_exit)(const SEXP symbol, const SEXP rho, const SEXP val) {
+    static void force_promise_exit(const SEXP symbol, const SEXP rho, const SEXP val) {
         compute_delta();
 
         const char *name = get_name(symbol);
@@ -123,7 +122,7 @@ struct trace_default {
         last = timestamp();
     }
 
-    DECL_HOOK(promise_lookup)(const SEXP symbol, const SEXP rho, const SEXP val) {
+    static void promise_lookup(const SEXP symbol, const SEXP rho, const SEXP val) {
         compute_delta();
 
         const char *name = get_name(symbol);
@@ -133,7 +132,7 @@ struct trace_default {
         last = timestamp();
     }
 
-    DECL_HOOK(error)(const SEXP call, const char *message) {
+    static void error(const SEXP call, const char *message) {
         compute_delta();
 
         char *call_str = NULL;
@@ -150,25 +149,25 @@ struct trace_default {
         last = timestamp();
     }
 
-    DECL_HOOK(vector_alloc)(int sexptype, long length, long bytes, const char *srcref) {
+    static void vector_alloc(int sexptype, long length, long bytes, const char *srcref) {
         compute_delta();
         print("vector-alloc", NULL, NULL);
         last = timestamp();
     }
 
-    DECL_HOOK(gc_entry)(R_size_t size_needed) {
+    static void gc_entry(R_size_t size_needed) {
         compute_delta();
         print("builtin-entry", NULL, "gc_internal");
         last = timestamp();
     }
 
-    DECL_HOOK(gc_exit)(int gc_count, double vcells, double ncells) {
+    static void gc_exit(int gc_count, double vcells, double ncells) {
         compute_delta();
         print("builtin-exit", NULL, "gc_internal");
         last = timestamp();
     }
 
-    DECL_HOOK(S3_generic_entry)(const char *generic, const SEXP object) {
+    static void S3_generic_entry(const char *generic, const SEXP object) {
         compute_delta();
 
         print("s3-generic-entry", NULL, generic);
@@ -176,7 +175,7 @@ struct trace_default {
         last = timestamp();
     }
 
-    DECL_HOOK(S3_generic_exit)(const char *generic, const SEXP object, const SEXP retval) {
+    static void S3_generic_exit(const char *generic, const SEXP object, const SEXP retval) {
         compute_delta();
 
         print("s3-generic-exit", NULL, generic);
@@ -184,7 +183,7 @@ struct trace_default {
         last = timestamp();
     }
 
-    DECL_HOOK(S3_dispatch_entry)(const char *generic, const char *clazz, const SEXP method, const SEXP object) {
+    static void S3_dispatch_entry(const char *generic, const char *clazz, const SEXP method, const SEXP object) {
         compute_delta();
 
         print("s3-dispatch-entry", NULL, get_name(method));
@@ -192,7 +191,7 @@ struct trace_default {
         last = timestamp();
     }
 
-    DECL_HOOK(S3_dispatch_exit)(const char *generic, const char *clazz, const SEXP method, const SEXP object, const SEXP retval) {
+    static void S3_dispatch_exit(const char *generic, const char *clazz, const SEXP method, const SEXP object, const SEXP retval) {
         compute_delta();
 
         print("s3-dispatch-exit", NULL, get_name(method));
@@ -225,24 +224,26 @@ rdt_handler *setup_default_tracing(SEXP options) {
     }
 
     rdt_handler *h = (rdt_handler *)  malloc(sizeof(rdt_handler));
-    *h = REGISTER_HOOKS(trace_default,
-                        tr::begin,
-                        tr::function_entry,
-                        tr::function_exit,
-                        tr::builtin_entry,
-                        tr::builtin_exit,
-                        tr::force_promise_entry,
-                        tr::force_promise_exit,
-                        tr::promise_lookup,
-                        tr::error,
-                        tr::vector_alloc,
-                        tr::gc_entry,
-                        tr::gc_exit,
-                        tr::S3_generic_entry,
-                        tr::S3_generic_exit,
-                        tr::S3_dispatch_entry,
-                        tr::S3_dispatch_exit);
-    
+
+    REG_HOOKS_BEGIN(h, trace_default);
+        ADD_HOOK(begin);
+        ADD_HOOK(function_entry);
+        ADD_HOOK(function_exit);
+        ADD_HOOK(builtin_entry);
+        ADD_HOOK(builtin_exit);
+        ADD_HOOK(force_promise_entry);
+        ADD_HOOK(force_promise_exit);
+        ADD_HOOK(promise_lookup);
+        ADD_HOOK(error);
+        ADD_HOOK(vector_alloc);
+        ADD_HOOK(gc_entry);
+        ADD_HOOK(gc_exit);
+        ADD_HOOK(S3_generic_entry);
+        ADD_HOOK(S3_generic_exit);
+        ADD_HOOK(S3_dispatch_entry);
+        ADD_HOOK(S3_dispatch_exit);
+    REG_HOOKS_END;
+
     SEXP disabled_probes = get_named_list_element(options, "disabled.probes");
     if (disabled_probes != R_NilValue && TYPEOF(disabled_probes) == STRSXP) {
         for (int i=0; i<LENGTH(disabled_probes); i++) {

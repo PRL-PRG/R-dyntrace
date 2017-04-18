@@ -25,6 +25,17 @@ extern "C" {
 #define RDT_HOOK(name, ...)
 #endif
 
+#define REG_HOOKS_BEGIN(handler_struct_ptr, tracer_name) \
+    do { \
+        typedef tracer_name tr; \
+        rdt_handler * hnd = handler_struct_ptr; \
+        memset(h, 0, sizeof(*h)) \
+
+#define ADD_HOOK(hook_name) \
+    hnd->probe_##hook_name = tr::hook_name \
+
+#define REG_HOOKS_END } while(0)
+
 // ----------------------------------------------------------------------------
 // probes
 // ----------------------------------------------------------------------------
