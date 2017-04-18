@@ -269,9 +269,15 @@ void trace_recorder_t::force_promise_entry(const prom_info_t & info) {
     multiplexer::output(
             multiplexer::payload_t(statement),
             tracer_conf.outputs);
+
+    if (tracer_conf.pretty_print)
+        STATE(indent) += tracer_conf.indent_width;
 }
 
 void trace_recorder_t::force_promise_exit(const prom_info_t & info) {
+    if (tracer_conf.pretty_print)
+        STATE(indent) -= tracer_conf.indent_width;
+
     string statement = promise_evaluation_info_line(
             TraceLinePrefix::EXIT,
             PromiseEvaluationEvent::FORCE,
