@@ -161,10 +161,10 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
 
     switch (event) {
         case PromiseEvaluationEvent::LOOKUP:
-            stream << "promise lookup";
+            stream << "lookup promise";
             break;
         case PromiseEvaluationEvent::FORCE:
-            stream << "promise force";
+            stream << "force promise";
             break;
     }
 
