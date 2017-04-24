@@ -13,8 +13,6 @@
 #include <fstream>
 #include <functional>
 
-#include "rdt_register_hook.h"
-
 #include "rdt_promises/tracer_conf.h"
 //#include "rdt_promises/tracer_output.h"
 #include "rdt_promises/tracer_state.h"
