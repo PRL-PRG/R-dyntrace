@@ -7,7 +7,7 @@
 
 #include <string>
 
-#include "../rdt.h"
+#include <rdt.h>
 #include "multiplexer.h"
 
 using namespace std;

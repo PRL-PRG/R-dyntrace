@@ -5,7 +5,7 @@
 #include <iostream>
 #include <set>
 
-#include "../rdt.h"
+#include <rdt.h>
 
 using namespace std;
 

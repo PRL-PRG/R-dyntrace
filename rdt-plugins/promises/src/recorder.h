@@ -9,7 +9,7 @@
 #include <inspect.h>
 #include "tuple_for_each.h"
 
-#include "../rdt.h"
+#include <rdt.h>
 #include "tracer_sexpinfo.h"
 #include "tracer_state.h"
 

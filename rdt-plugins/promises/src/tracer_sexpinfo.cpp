@@ -6,7 +6,7 @@
 //#include "tracer_output.h"
 #include "tracer_state.h"
 
-#include "../rdt.h"
+#include <rdt.h>
 
 rid_t get_sexp_address(SEXP e) {
     return (rid_t)e;
