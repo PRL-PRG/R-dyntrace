@@ -21,6 +21,7 @@ find_library(SQLITE3_LIBRARY NAMES sqlite3)
 
 set(SOURCE_FILES
         src/rdt_promises.cpp
+        src/rdt_promises.h
         src/tracer_conf.h
         src/tracer_state.h
         src/tracer_sexpinfo.h

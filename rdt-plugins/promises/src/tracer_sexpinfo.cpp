@@ -91,7 +91,6 @@ bool function_already_inserted(fn_id_t id) {
 }
 
 fn_addr_t get_function_addr(SEXP func) {
-    assert(TYPEOF(func) == CLOSXP);
     return get_sexp_address(func);
 }
 

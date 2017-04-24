@@ -66,15 +66,3 @@ SEXP Rdt(SEXP tracer, SEXP rho, SEXP options) {
     rdt_stop();
     return R_TrueValue; // TODO Why does this return TRUE and not the return value of the expression anyway?
 }
-
-inline const char *get_value_from_list(SEXP options) {
-    //if (sexp == R_NilValue || TYPEOF(sexp) != )
-}
-
-inline const char *get_string(SEXP sexp) {
-    if (sexp == R_NilValue || TYPEOF(sexp) != STRSXP) {
-        return NULL;
-    }
-
-    return CHAR(STRING_ELT(sexp, 0));
-}

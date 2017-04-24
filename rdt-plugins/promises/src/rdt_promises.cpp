@@ -18,6 +18,7 @@
 #include "tracer_state.h"
 
 #include <rdt.h>
+#include "rdt_promises.h"
 #include "recorder.h"
 #include "trace_recorder.h"
 #include "sql_recorder.h"

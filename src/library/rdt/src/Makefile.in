@@ -32,8 +32,7 @@ SHLIB = $(pkg)@SHLIB_EXT@
 PKG_CPPFLAGS =-I../../../include -I$(top_srcdir)/src/include -DHAVE_CONFIG_H \
   -I$(top_srcdir)/src/main
 
-PKG_CXXFLAGS =-std=c++14
-PKG_LIBS =  -lsqlite3
+PKG_CXXFLAGS = -std=c++14
 
 all: Makedeps
 	@$(MAKE) shlib
@@ -56,7 +55,6 @@ include $(top_srcdir)/share/make/shlib.mk
 LTO = @LTO@
 
 SHLIB_LD = $(CXX)
-SHLIB_LDFLAGS += -lsqlite3
 
 mostlyclean: clean
 clean:
