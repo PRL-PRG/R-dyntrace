@@ -66,6 +66,29 @@ wrap.contination.executor <- function(executor)
         executor(eval(expr), overwrite=FALSE, reload.state=TRUE, ...)
     }
 
+list.vignettes.in.package <- function (package) vignette(package=package)$results[,3]
+
+run.one.vignette.from.package <- function(package, v, executor = wrap.executor(trace.promises.r) , current_vignette=0, total_vignettes=1, ...) {
+    error.handler = function(err) {
+        write(paste("Error in vignette ", v, " for package ", package, ": ",
+        as.character(err), sep = ""), file = stderr())
+    }
+
+    one.vignette <- vignette(v, package = package)
+    R.code.path <- paste(one.vignette$Dir, "doc", one.vignette$R, sep="/")
+    R.code.source <- parse(R.code.path)
+    tryCatch(
+        executor(
+            R.code.source,
+                current_vignette=current_vignette,
+                total_vignettes=total_vignettes,
+                vignette_name=v,
+                vignette_package=package,
+            ...),
+        error = error.handler
+    )
+}
+
 run.all.vignettes.from.package <- function(package, executor = wrap.executor(trace.promises.r) , ...) {
     result.set <- vignette(package = package)
     vignettes.in.package <- result.set$results[,3]
@@ -73,29 +96,9 @@ run.all.vignettes.from.package <- function(package, executor = wrap.executor(tra
     total = length(vignettes.in.package)
 
     for (v in vignettes.in.package) {
-        error.handler = function(err) {
-            write(paste("Error in vignette ", v, " for package ", package, ": ",
-            as.character(err), sep = ""), file = stderr())
-        }
-
-        one.vignette <- vignette(v, package = package)
-        R.code.path <- paste(one.vignette$Dir, "doc", one.vignette$R, sep="/")
-        R.code.source <- parse(R.code.path)
-        tryCatch(
-            executor(
-                R.code.source,
-                current_vignette=index,
-                total_vignettes=total,
-                vignette_name=v,
-                vignette_package=package,
-                ...),
-            error = error.handler
-        )
-
+        run.one.vignette.from.package(package, v, executor=executor, current_vignette=index, total_vignettes=total)
         index <- index + 1
     }
-
-    # Map Filter Reduce
 }
 
 run.all.vignettes.from.packages <- function(packages, executor = wrap.executor(trace.promises.r), ...)
