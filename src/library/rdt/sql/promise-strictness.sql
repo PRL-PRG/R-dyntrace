@@ -11,6 +11,7 @@
 .mode column
 .headers on
 
+-- create table strictness as
 select
 	function_names.function_id,
 	function_names.names as aliases,

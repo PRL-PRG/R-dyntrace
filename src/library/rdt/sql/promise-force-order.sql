@@ -11,6 +11,7 @@
 .mode column
 .headers on
 
+-- create table force_order as
 select
 	calls.function_id,
 	calls.id as call_id,

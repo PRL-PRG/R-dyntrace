@@ -669,8 +669,10 @@ SEXP eval(SEXP e, SEXP rho)
 		forcePromise(e);
 		RDT_HOOK(probe_force_promise_exit, e, rho, PRVALUE(e));
 	}
+	else {
+		RDT_HOOK(probe_promise_lookup, e, rho, PRVALUE(e));
+	}
 	tmp = PRVALUE(e);
-	RDT_HOOK(probe_promise_lookup, e, rho, tmp);
 	/* This does _not_ change the value of NAMED on the value tmp,
 	   in contrast to the handling of promises bound to symbols in
 	   the SYMSXP case above.  The reason is that one (typically
