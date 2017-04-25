@@ -148,18 +148,18 @@ arglist_t get_arguments(SEXP op, SEXP rho) {
                 SEXP ddd_argument_expression = TAG(dots);
                 SEXP ddd_promise_expression = CAR(dots);
                 if (ddd_argument_expression == R_NilValue) {
-                    arguments.push_back({
-                                                get_argument_id(get_function_id(op), to_string(i++)),
-                                                get_promise_id(ddd_promise_expression)
-                                        }); // ... argument without a name
+                    arguments.push_back(std::make_tuple(
+                            get_argument_id(get_function_id(op), to_string(i++)),
+                            get_promise_id(ddd_promise_expression)
+                    )); // ... argument without a name
                 }
                 else {
                     string ddd_arg_name = get_name(ddd_argument_expression);
-                    arguments.push_back({
-                                                ddd_arg_name,
-                                                get_argument_id(get_function_id(op), ddd_arg_name),
-                                                get_promise_id(ddd_promise_expression)
-                                        }, true); // this flag says we're inserting a ... argument
+                    arguments.push_back(std::make_tuple(
+                            ddd_arg_name,
+                            get_argument_id(get_function_id(op), ddd_arg_name),
+                            get_promise_id(ddd_promise_expression)
+                    ), true); // this flag says we're inserting a ... argument
                 }
             }
         }
@@ -169,11 +169,11 @@ arglist_t get_arguments(SEXP op, SEXP rho) {
             string arg_name = get_name(argument_expression);
             prom_id_t prom_id = get_promise_id(promise_expression);
             if (prom_id != RID_INVALID)
-                arguments.push_back({
-                                            arg_name,
-                                            get_argument_id(get_function_id(op), arg_name),
-                                            prom_id
-                                    });
+                arguments.push_back(std::make_tuple(
+                        arg_name,
+                        get_argument_id(get_function_id(op), arg_name),
+                        prom_id
+                ));
         }
 
     }
