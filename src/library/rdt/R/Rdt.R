@@ -58,13 +58,13 @@ wrap.session.executor <- function(executor)
     }
 
 wrap.contination.executor <- function(executor)
-function(expr, current_vignette, total_vignettes, vignette_name, vignette_package, ...) {
-    write(paste("Vignette ", (current_vignette + 1), "/", total_vignettes,
-    " (", vignette_name, " from ", vignette_package, ")", sep=""),
-    stderr())
+    function(expr, current_vignette, total_vignettes, vignette_name, vignette_package, ...) {
+        write(paste("Vignette ", (current_vignette + 1), "/", total_vignettes,
+                        " (", vignette_name, " from ", vignette_package, ")", sep=""),
+            stderr())
 
-    executor(eval(expr), overwrite=if (current_vignette == 0) TRUE else FALSE, ...)
-}
+        executor(eval(expr), overwrite=FALSE, reload.state=TRUE, ...)
+    }
 
 run.all.vignettes.from.package <- function(package, executor = wrap.executor(trace.promises.r) , ...) {
     result.set <- vignette(package = package)
@@ -94,6 +94,8 @@ run.all.vignettes.from.package <- function(package, executor = wrap.executor(tra
 
         index <- index + 1
     }
+
+    # Map Filter Reduce
 }
 
 run.all.vignettes.from.packages <- function(packages, executor = wrap.executor(trace.promises.r), ...)
