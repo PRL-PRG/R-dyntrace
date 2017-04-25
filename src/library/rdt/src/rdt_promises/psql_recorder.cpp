@@ -179,8 +179,6 @@ sqlite3_stmt * populate_promise_evaluation_statement(prom_eval_t type, const pro
     sqlite3_bind_int(prepared_sql_insert_promise_eval, 3, info.prom_id);
     sqlite3_bind_int(prepared_sql_insert_promise_eval, 4, info.from_call_id);
 
-    STATE(clock_id)++;
-
     // in_call_id = current call
     // from_call_id = TODO what is it
 

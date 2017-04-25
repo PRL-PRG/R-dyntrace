@@ -1,5 +1,5 @@
 -- SQLite3 schema for Rdt
-create table functions (
+create table if not exists functions (
     --[ identity ]-------------------------------------------------------------
     id integer primary key, -- equiv. to pointer of function definition SEXP
     --[ data ]-----------------------------------------------------------------
@@ -10,7 +10,7 @@ create table functions (
     compiled boolean not null
 );
 
-create table arguments (
+create table if not exists arguments (
     --[ identity ]-------------------------------------------------------------
     id integer primary key, -- arbitrary
     --[ data ]-----------------------------------------------------------------
@@ -22,7 +22,7 @@ create table arguments (
     foreign key (function_id) references functions
 );
 
-create table calls (
+create table if not exists calls (
     --[ identity ]-------------------------------------------------------------
     id integer primary key, -- if CALL_ID is off this is equal to SEXP pointer
     pointer integer not null,
@@ -35,12 +35,12 @@ create table calls (
     foreign key (function_id) references functions
 );
 
-create table promises (
+create table if not exists promises (
     --[ identity ]-------------------------------------------------------------
     id integer primary key -- equal to promise pointer SEXP
 );
 
-create table promise_associations (
+create table if not exists promise_associations (
     --[ relations ]------------------------------------------------------------
     promise_id integer not null,
     call_id integer not null,
@@ -51,7 +51,7 @@ create table promise_associations (
     foreign key (argument_id) references arguments
 );
 
-create table promise_evaluations (
+create table if not exists promise_evaluations (
     --[ data ]-----------------------------------------------------------------
     clock integer primary key autoincrement, -- imposes an order on evaluations
     event_type integer not null, -- 0x0: lookup, 0xf: force, 0x30: peek
@@ -63,7 +63,7 @@ create table promise_evaluations (
     foreign key (call_id) references calls
 );
 
-create view function_evals as
+create view if not exists function_evals as
 select
     functions.id as function_id,
 	count(*) as evaluations
@@ -71,7 +71,7 @@ from functions
 left outer join calls on functions.id = calls.function_id
 group by functions.id;
 
-create view function_names as
+create view if not exists function_names as
 select
     function_id,
 	group_concat(distinct_name, ", ") as names
@@ -88,7 +88,7 @@ from(
 )
 group by function_id;
 
-create view argument_evals as
+create view if not exists argument_evals as
 select
     arguments.function_id,
     arguments.name,
@@ -100,7 +100,7 @@ join promise_associations on arguments.id = promise_associations.argument_id
 join promise_evaluations on promise_associations.promise_id = promise_evaluations.promise_id
 group by arguments.id;
 
-create view promise_evaluations_order as
+create view if not exists promise_evaluations_order as
 select
 	promise_evaluations.call_id,
 	group_concat(arguments.name ||
@@ -122,7 +122,7 @@ join arguments on promise_associations.argument_id = arguments.id
 group by promise_evaluations.call_id
 order by promise_evaluations.call_id, clock;
 
-create view function_arguments as
+create view if not exists function_arguments as
 select
 	functions.id as function_id,
 	group_concat(arguments.name, ", ") as arguments
