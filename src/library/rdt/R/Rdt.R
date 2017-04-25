@@ -10,7 +10,6 @@ findPlugins <- function() {
 }
 
 .onLoad <- function(libname, pkgname) {
-	print("Oh hi")
 	if(exists(".RdtPlugins")) {
 		findPlugins()
 	}
