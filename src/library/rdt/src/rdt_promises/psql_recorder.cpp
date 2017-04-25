@@ -305,10 +305,10 @@ void psql_recorder_t::start_trace() {
 #ifdef RDT_SQLITE_SUPPORT
     multiplexer::init(tracer_conf.outputs, tracer_conf.filename, tracer_conf.overwrite);
 
+    compile_prepared_sql_schema_statements();
+
     if (tracer_conf.include_configuration) {
         if (tracer_conf.overwrite) {
-            compile_prepared_sql_schema_statements();
-
             multiplexer::output(
                     multiplexer::payload_t(prepared_sql_pragma_asynchronous),
                     tracer_conf.outputs);
@@ -321,7 +321,6 @@ void psql_recorder_t::start_trace() {
         }
     }
 
-    compile_prepared_sql_schema_statements();
     compile_prepared_sql_statements();
 
     /* always */ {
