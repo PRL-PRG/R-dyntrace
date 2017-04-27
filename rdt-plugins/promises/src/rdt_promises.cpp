@@ -13,15 +13,16 @@
 #include <fstream>
 #include <functional>
 
-#include "rdt_promises/tracer_conf.h"
+#include "tracer_conf.h"
 //#include "rdt_promises/tracer_output.h"
-#include "rdt_promises/tracer_state.h"
+#include "tracer_state.h"
 
-#include "rdt.h"
-#include "rdt_promises/recorder.h"
-#include "rdt_promises/trace_recorder.h"
-#include "rdt_promises/sql_recorder.h"
-#include "rdt_promises/psql_recorder.h"
+#include <rdt.h>
+#include "rdt_promises.h"
+#include "recorder.h"
+#include "trace_recorder.h"
+#include "sql_recorder.h"
+#include "psql_recorder.h"
 
 using namespace std;
 

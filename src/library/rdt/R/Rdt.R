@@ -1,3 +1,20 @@
+findPlugins <- function() {
+	plugins <- list.files(.RdtPlugins, full.names = TRUE)
+
+	for (plugin in plugins) {
+		utils <- file.path(plugin, "R", "utils.R")
+		if (file.exists(utils)) {
+			source(utils)
+		}
+	}
+}
+
+.onLoad <- function(libname, pkgname) {
+	if(exists(".RdtPlugins")) {
+		findPlugins()
+	}
+}
+
 Rdt <- function(block, tracer="promises", ...) {
     stopifnot(is.character(tracer) && length(tracer) == 1 && nchar(tracer) > 0)
     if (missing(block)) stop("block is required")
@@ -12,32 +29,6 @@ Rdt <- function(block, tracer="promises", ...) {
     retval
 }
 
-# This now seems like a horrible idea... we could use a namespace or something.
-FILE <- 'f'
-CONSOLE <- 'p'
-DB <- 'd'
-
-format.output <- function(outputs) do.call(paste, c(as.list(outputs), sep=""))
-
-trace.promises.r <- function(expression, tracer="promises", output=CONSOLE, format="trace", pretty.print=TRUE, overwrite=FALSE, synthetic.call.id=TRUE, path="trace", include.configuration=FALSE, reload.state=FALSE)
-    Rdt(expression, tracer=tracer, output=format.output(output), path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite, include.configuration=include.configuration, reload.state=reload.state)
-
-trace.promises.file <- function(expression, tracer="promises", output=FILE, path="trace.txt", format="trace", pretty.print=FALSE, overwrite=FALSE, synthetic.call.id=TRUE, include.configuration=FALSE, reload.state=FALSE)
-    Rdt(expression, tracer=tracer, output=format.output(output), path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite, include.configuration=include.configuration, reload.state=reload.state)
-
-trace.promises.sql <- function(expression, tracer="promises", output=FILE, path="trace.sql", format="sql", pretty.print=FALSE, overwrite=FALSE, synthetic.call.id=TRUE, include.configuration=TRUE, reload.state=FALSE)
-    Rdt(expression, tracer=tracer, output=format.output(output), path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite, include.configuration=include.configuration, reload.state=reload.state)
-
-trace.promises.compiled.db <- function(expression, tracer="promises", output=DB, path="trace.sqlite", format="psql", pretty.print=FALSE, overwrite=FALSE, synthetic.call.id=TRUE, include.configuration=TRUE, reload.state=FALSE)
-    Rdt(expression, tracer=tracer, output=format.output(output), path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite, include.configuration=include.configuration, reload.state=reload.state)
-
-trace.promises.uncompiled.db <- function(expression, tracer="promises", output=DB, path="trace.sqlite", format="sql", pretty.print=FALSE, overwrite=FALSE, synthetic.call.id=TRUE, include.configuration=TRUE, reload.state=FALSE)
-    Rdt(expression, tracer=tracer, output=format.output(output), path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite, include.configuration=include.configuration, reload.state=reload.state)
-
-trace.promises.db <- trace.promises.compiled.db
-
-trace.promises.both <- function(expression, tracer="promises", output=c(CONSOLE, DATABASE), path="trace.sqlite", format="both", pretty.print=FALSE, overwrite=FALSE, synthetic.call.id=TRUE, include.configuration=TRUE, reload.state=FALSE)
-    Rdt(expression, tracer=tracer, output=format.output(output), path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite, include.configuration=include.configuration, reload.state=reload.state)
 
 wrap.executor <- function(executor)
     function(expr, current_vignette, total_vignettes, vignette_name, vignette_package, ...) {

@@ -10,7 +10,7 @@
 #include <functional>
 #include <cassert>
 
-#include "../r.h"
+#include <r.h>
 
 #define RID_INVALID (rid_t)-1
 

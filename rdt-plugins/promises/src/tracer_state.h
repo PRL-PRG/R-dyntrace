@@ -13,7 +13,7 @@
 
 #include "tracer_sexpinfo.h"
 
-#include "../r.h"
+#include <r.h>
 
 using namespace std;
 

@@ -4,13 +4,12 @@
 #include <fstream>
 
 #include "rdt.h"
-#include "rdt_promises/tracer_conf.h"
 
 static std::map<std::string, uint64_t> specialsxp_count;
 
 struct trace_specialsxp {
     static void end() {
-        ofstream myfile;
+        std::ofstream myfile;
         myfile.open ("specialsxp_analysis.txt");
         for (auto &pair : specialsxp_count) {
             Rprintf("%s : %llu\n", pair.first.c_str(), pair.second);
