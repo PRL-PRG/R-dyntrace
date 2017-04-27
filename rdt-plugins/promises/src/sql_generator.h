@@ -9,7 +9,7 @@
 //#include <stdarg.h>
 #include <initializer_list>
 
-#define RDT_SQL_SCHEMA "src/library/rdt/sql/schema.sql"
+#define RDT_SQL_SCHEMA "rdt-plugins/promises/SQL/schema.sql"
 
 namespace sql_generator {
 
