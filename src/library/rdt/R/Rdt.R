@@ -49,12 +49,35 @@ wrap.session.executor <- function(executor)
     }
 
 wrap.contination.executor <- function(executor)
-function(expr, current_vignette, total_vignettes, vignette_name, vignette_package, ...) {
-    write(paste("Vignette ", (current_vignette + 1), "/", total_vignettes,
-    " (", vignette_name, " from ", vignette_package, ")", sep=""),
-    stderr())
+    function(expr, current_vignette, total_vignettes, vignette_name, vignette_package, ...) {
+        write(paste("Vignette ", (current_vignette + 1), "/", total_vignettes,
+                        " (", vignette_name, " from ", vignette_package, ")", sep=""),
+            stderr())
 
-    executor(eval(expr), overwrite=if (current_vignette == 0) TRUE else FALSE, ...)
+        executor(eval(expr), overwrite=FALSE, reload.state=TRUE, ...)
+    }
+
+list.vignettes.in.package <- function (package) vignette(package=package)$results[,3]
+
+run.one.vignette.from.package <- function(package, v, executor = wrap.executor(trace.promises.r) , current_vignette=0, total_vignettes=1, ...) {
+    error.handler = function(err) {
+        write(paste("Error in vignette ", v, " for package ", package, ": ",
+        as.character(err), sep = ""), file = stderr())
+    }
+
+    one.vignette <- vignette(v, package = package)
+    R.code.path <- paste(one.vignette$Dir, "doc", one.vignette$R, sep="/")
+    R.code.source <- parse(R.code.path)
+    tryCatch(
+        executor(
+            R.code.source,
+                current_vignette=current_vignette,
+                total_vignettes=total_vignettes,
+                vignette_name=v,
+                vignette_package=package,
+            ...),
+        error = error.handler
+    )
 }
 
 run.all.vignettes.from.package <- function(package, executor = wrap.executor(trace.promises.r) , ...) {
@@ -64,25 +87,7 @@ run.all.vignettes.from.package <- function(package, executor = wrap.executor(tra
     total = length(vignettes.in.package)
 
     for (v in vignettes.in.package) {
-        error.handler = function(err) {
-            write(paste("Error in vignette ", v, " for package ", package, ": ",
-            as.character(err), sep = ""), file = stderr())
-        }
-
-        one.vignette <- vignette(v, package = package)
-        R.code.path <- paste(one.vignette$Dir, "doc", one.vignette$R, sep="/")
-        R.code.source <- parse(R.code.path)
-        tryCatch(
-            executor(
-                R.code.source,
-                current_vignette=index,
-                total_vignettes=total,
-                vignette_name=v,
-                vignette_package=package,
-                ...),
-            error = error.handler
-        )
-
+        run.one.vignette.from.package(package, v, executor=executor, current_vignette=index, total_vignettes=total)
         index <- index + 1
     }
 }

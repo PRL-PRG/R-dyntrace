@@ -19,7 +19,7 @@ using namespace std;
 
 struct tracer_state_t {
     int indent;
-    int clock_id;
+    int clock_id; // Should be kept across Rdt calls (unless overwrite is true)
     // Function call stack (may be useful)
     // Whenever R makes a function call, we generate a function ID and store that ID on top of the stack
     // so that we know where we are (e.g. when printing function ID at function_exit hook)

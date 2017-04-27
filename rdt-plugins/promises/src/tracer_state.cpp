@@ -13,7 +13,7 @@ void tracer_state_t::start_pass(const SEXP prom) {
     }
 
     indent = 0;
-    clock_id = 0;
+    //clock_id = 0;
 
     // We have to make sure the stack is not empty
     // when referring to the promise created by call to Rdt.
