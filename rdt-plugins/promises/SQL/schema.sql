@@ -96,7 +96,9 @@ select
     arguments.name,
     arguments.position,
     sum(case when promise_evaluations.event_type = 15 then 1 else 0 end) as forces,
-    sum(case when promise_evaluations.event_type = 0 then 1 else 0 end) as lookups
+    sum(case when promise_evaluations.event_type = 0 then 1 else 0 end) as lookups,
+    sum(case when promise_evaluations.event_type = 15 and promise_evaluations.from_call_id = promise_evaluations.in_call_id then 1 else 0 end) as local_forces,
+    sum(case when promise_evaluations.event_type = 0 and promise_evaluations.from_call_id = promise_evaluations.in_call_id  then 1 else 0 end) as local_lookups
 from arguments
 join promise_associations on arguments.id = promise_associations.argument_id
 join promise_evaluations on promise_associations.promise_id = promise_evaluations.promise_id

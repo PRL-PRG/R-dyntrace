@@ -19,7 +19,9 @@ select
 	argument_evals.name as argument,
 	function_evals.evaluations,
 	argument_evals.forces,
-	argument_evals.lookups
+	argument_evals.lookups,
+	argument_evals.local_forces,
+	argument_evals.local_lookups
 from function_names
 join function_evals on function_names.function_id = function_evals.function_id
 join argument_evals on function_names.function_id = argument_evals.function_id
