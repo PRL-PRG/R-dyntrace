@@ -11,7 +11,7 @@
 .mode column
 .headers on
 
--- create table force_order as
+-- create table out_force_order as
 select
 	calls.function_id,
 	calls.id as call_id,
@@ -19,5 +19,5 @@ select
 	function_arguments.arguments,
 	promise_evaluations_order.events as evaluation_order
 from calls
-join promise_evaluations_order on calls.id = promise_evaluations_order.call_id
+join promise_evaluations_order on calls.id = promise_evaluations_order.from_call_id
 join function_arguments on calls.function_id = function_arguments.function_id;

@@ -11,7 +11,8 @@
 .mode column
 .headers on
 
--- create table strictness as
+-- TODO http://stackoverflow.com/questions/2359205/copying-data-from-one-sqlite-database-to-another
+-- create table out_strictness as
 select
 	function_names.function_id,
 	function_names.names as aliases,

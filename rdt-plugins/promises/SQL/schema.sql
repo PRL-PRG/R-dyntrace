@@ -57,10 +57,12 @@ create table if not exists promise_evaluations (
     event_type integer not null, -- 0x0: lookup, 0xf: force, 0x30: peek
     --[ relations ]------------------------------------------------------------
     promise_id integer not null,
-    call_id integer not null,
+    from_call_id integer not null,
+    in_call_id integer not null,
     --[ keys ]-----------------------------------------------------------------
     foreign key (promise_id) references promises,
-    foreign key (call_id) references calls
+    foreign key (from_call_id) references calls,
+    foreign key (in_call_id) references calls
 );
 
 create view if not exists function_evals as
@@ -102,7 +104,7 @@ group by arguments.id;
 
 create view if not exists promise_evaluations_order as
 select
-	promise_evaluations.call_id,
+	promise_evaluations.from_call_id,
 	group_concat(arguments.name ||
 	case
 		when promise_evaluations.event_type = 0 then '=' --lookup
@@ -119,8 +121,8 @@ from promises
 join promise_evaluations on promise_associations.promise_id = promise_evaluations.promise_id
 join promise_associations on promise_associations.promise_id = promises.id
 join arguments on promise_associations.argument_id = arguments.id
-group by promise_evaluations.call_id
-order by promise_evaluations.call_id, clock;
+group by promise_evaluations.from_call_id
+order by promise_evaluations.from_call_id, clock;
 
 create view if not exists function_arguments as
 select

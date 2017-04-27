@@ -91,12 +91,13 @@ sql_stmt_t insert_promise_evaluation_statement(prom_eval_t type, const prom_info
     sql_val_t clock = next_from_sequence();
     sql_val_t event_type = from_int(type);
     sql_val_t promise_id = from_int(info.prom_id);
-    sql_val_t call_id = from_int(info.from_call_id);
+    sql_val_t from_call_id = from_int(info.from_call_id);
+    sql_val_t in_call_id = from_int(info.in_call_id);
 
     // in_call_id = current call
     // from_call_id = TODO what is it
 
-    return make_insert_promise_evaluation_statement(clock, event_type, promise_id, call_id);
+    return make_insert_promise_evaluation_statement(clock, event_type, promise_id, from_call_id, in_call_id);
 }
 
 /* Functions connecting to the outside world, create SQL and multiplex output. */
