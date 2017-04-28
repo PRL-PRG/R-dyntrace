@@ -12,4 +12,4 @@ brew install xz
 brew install sqlite
 
 brew install ccache
-export PATH=$PATH:/usr/local/opt/ccache/libexec
+export PATH=/usr/local/opt/ccache/libexec:$PATH

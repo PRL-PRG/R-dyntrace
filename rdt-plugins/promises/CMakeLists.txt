@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.0)
 project(rdt_promises)
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR})
@@ -61,3 +61,12 @@ add_library(rdt_promises SHARED ${SOURCE_FILES})
 
 # Link SQLITE
 target_link_libraries(rdt_promises ${SQLITE3_LIBRARY})
+
+# This tells the linker not to complain about undefined symbols
+# which are from the loader module (R in this case).
+# It's needed because this is a plugin library that will call
+# back to R API but we cannot link against it at compile time.
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    message(STATUS "Setting '-undefined dynamic_lookup' for clang")
+    set(CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
+endif()
