@@ -122,6 +122,7 @@ struct call_info_t {
     string        name; // fully qualified function name, if available
     call_id_t     call_id;
     env_addr_t    call_ptr;
+    call_id_t     parent_call_id; // the id of the parent call that executed this call
 };
 
 struct closure_info_t : call_info_t {

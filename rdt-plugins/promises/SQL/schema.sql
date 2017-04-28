@@ -31,8 +31,10 @@ create table if not exists calls (
     location text,
     --[ relations ]------------------------------------------------------------
     function_id integer not null,
+    parent_id integer not null, -- ID of call that executed current call
     --[ keys ]-----------------------------------------------------------------
-    foreign key (function_id) references functions
+    foreign key (function_id) references functions,
+    foreign key (parent_id) references calls
 );
 
 create table if not exists promises (

@@ -69,6 +69,8 @@ string function_call_info_line(TraceLinePrefix prefix, const closure_info_t &inf
     stream << " call_id="  << num_pref << num_fmt << info.call_id
            << " function_id=" << info.fn_id;
 
+    stream << " from_call_id=" << info.parent_call_id;
+
     if (info.loc.empty())
         stream << " location=<unknown>";
     else
@@ -121,6 +123,8 @@ string builtin_or_special_call_info_line(TraceLinePrefix prefix, const builtin_i
 
     stream << " call_id="  << num_pref << num_fmt << info.call_id
            << " function_id=" << info.fn_id;
+
+    stream << " from_call_id=" << info.parent_call_id;
 
     if (info.loc.empty())
         stream << " location=<unknown>";

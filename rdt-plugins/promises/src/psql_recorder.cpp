@@ -77,7 +77,7 @@ void compile_prepared_sql_statements() {
     prepared_sql_insert_function =
             compile_sql_statement(make_insert_function_statement("?","?","?","?","?"));
     prepared_sql_insert_call =
-            compile_sql_statement(make_insert_function_call_statement("?","?","?","?","?"));
+            compile_sql_statement(make_insert_function_call_statement("?","?","?","?","?","?"));
     prepared_sql_insert_promise =
             compile_sql_statement(make_insert_promise_statement("?"));
     prepared_sql_insert_promise_eval =
@@ -176,6 +176,8 @@ sqlite3_stmt * populate_call_statement(const call_info_t & info) {
         sqlite3_bind_text(prepared_sql_insert_call, 4, info.loc.c_str(), -1, SQLITE_STATIC);
 
     sqlite3_bind_int(prepared_sql_insert_call, 5, (int)info.fn_id);
+
+    sqlite3_bind_int(prepared_sql_insert_call, 6, (int)info.parent_call_id);
 
     return prepared_sql_insert_call;
 }

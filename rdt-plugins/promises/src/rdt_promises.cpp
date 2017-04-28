@@ -79,12 +79,10 @@ struct trace_promises {
     }
 
     static void function_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
-
         closure_info_t info = rec.function_exit_get_info(call, op, rho);
         rec.function_exit_process(info);
 
-        // Pop current function ID
-        STATE(fun_stack).pop();
+        // Current function ID is popped in function_exit_get_info
         STATE(curr_env_stack).pop();
     }
 

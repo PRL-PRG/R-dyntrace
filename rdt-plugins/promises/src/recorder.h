@@ -35,6 +35,8 @@ public:
         info.call_id = make_funcall_id(op);
         //info.call_id = make_funcall_id(rho);
 
+        info.parent_call_id = STATE(fun_stack).top();
+
         char *location = get_location(op);
         if (location != NULL)
             info.loc = location;
@@ -53,7 +55,6 @@ public:
         return info;
     }
 
-    // TODO: merge duplicate code from function_entry/exit
     closure_info_t function_exit_get_info(const SEXP call, const SEXP op, const SEXP rho) {
         closure_info_t info;
 
@@ -81,6 +82,9 @@ public:
         info.arguments = get_arguments(op, rho);
         info.fn_definition = get_expression(op);
 
+        STATE(fun_stack).pop();
+        info.parent_call_id = STATE(fun_stack).top();
+
         return info;
     }
 
@@ -96,6 +100,8 @@ public:
         info.fn_type = fn_type;
         info.fn_compiled = is_byte_compiled(op);
         info.fn_definition = get_expression(op);
+
+        info.parent_call_id = STATE(fun_stack).top(); // FIXME this is currently self, should: pop top push
 
         char *location = get_location(op);
         if (location != NULL) {
@@ -130,6 +136,8 @@ public:
         info.fn_type = fn_type;
         info.fn_compiled = is_byte_compiled(op);
         info.fn_definition = get_expression(op);
+
+        info.parent_call_id = STATE(fun_stack).top(); // FIXME this is currently self, should: pop top push
 
         char *location = get_location(op);
         if (location != NULL)

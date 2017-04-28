@@ -75,7 +75,7 @@ namespace sql_generator {
     }
 
     sql_stmt_t make_insert_function_call_statement(sql_val_t id, sql_val_t ptr, sql_val_t name, sql_val_t location,
-                                        sql_val_t function_id) {
+                                        sql_val_t function_id, sql_val_t parent_id) {
         stringstream statement;
 
         statement << "insert into calls values ("
@@ -83,7 +83,8 @@ namespace sql_generator {
                   << ptr << ","
                   << name << ","
                   << location << ","
-                  << function_id
+                  << function_id << ","
+                  << parent_id
                   << ");\n";
 
         return statement.str();
