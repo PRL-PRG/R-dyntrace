@@ -15,7 +15,7 @@ findPlugins <- function() {
 	}
 }
 
-Rdt <- function(block, tracer="promises", ...) {
+Rdt <- function(block, tracer="default", ...) {
     stopifnot(is.character(tracer) && length(tracer) == 1 && nchar(tracer) > 0)
     if (missing(block)) stop("block is required")
 
@@ -59,7 +59,7 @@ wrap.contination.executor <- function(executor)
 
 list.vignettes.in.package <- function (package) vignette(package=package)$results[,3]
 
-run.one.vignette.from.package <- function(package, v, executor = wrap.executor(trace.promises.r) , current_vignette=0, total_vignettes=1, ...) {
+run.one.vignette.from.package <- function(package, v, executor = wrap.executor(Rdt) , current_vignette=0, total_vignettes=1, ...) {
     error.handler = function(err) {
         write(paste("Error in vignette ", v, " for package ", package, ": ",
         as.character(err), sep = ""), file = stderr())
@@ -80,7 +80,7 @@ run.one.vignette.from.package <- function(package, v, executor = wrap.executor(t
     )
 }
 
-run.all.vignettes.from.package <- function(package, executor = wrap.executor(trace.promises.r) , ...) {
+run.all.vignettes.from.package <- function(package, executor = wrap.executor(Rdt) , ...) {
     result.set <- vignette(package = package)
     vignettes.in.package <- result.set$results[,3]
     index = 0
@@ -92,10 +92,10 @@ run.all.vignettes.from.package <- function(package, executor = wrap.executor(tra
     }
 }
 
-run.all.vignettes.from.packages <- function(packages, executor = wrap.executor(trace.promises.r), ...)
+run.all.vignettes.from.packages <- function(packages, executor = wrap.executor(Rdt), ...)
     invisible(lapply(packages, function(x) run.all.vignettes.from.package(x, eval, ...)))
 
-run.all.vignettes.from.all.packages <- function(executor = wrap.executor(trace.promises.r), ...)
+run.all.vignettes.from.all.packages <- function(executor = wrap.executor(Rdt), ...)
     run.all.vignettes.from.packages(unique(vignette()$results[,1]), executor = eval, ...)
 
 # keep an empty line below this one
