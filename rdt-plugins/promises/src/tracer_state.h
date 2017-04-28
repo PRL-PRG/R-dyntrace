@@ -18,6 +18,7 @@
 using namespace std;
 
 struct tracer_state_t {
+    stack<int, vector<int>> curr_fn_indent_level;
     int indent;
     int clock_id; // Should be kept across Rdt calls (unless overwrite is true)
     // Function call stack (may be useful)

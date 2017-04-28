@@ -197,13 +197,17 @@ void trace_recorder_t::function_entry(const closure_info_t & info) {
             multiplexer::payload_t(statement),
             tracer_conf.outputs);
 
-    if (tracer_conf.pretty_print)
+    if (tracer_conf.pretty_print) {
         STATE(indent) += tracer_conf.indent_width;
+        STATE(curr_fn_indent_level).push(STATE(indent));
+    }
 }
 
 void trace_recorder_t::function_exit(const closure_info_t & info) {
-    if (tracer_conf.pretty_print)
+    if (tracer_conf.pretty_print) {
         STATE(indent) -= tracer_conf.indent_width;
+        STATE(curr_fn_indent_level).pop();
+    }
 
     string statement = function_call_info_line(
             TraceLinePrefix::EXIT,
@@ -229,13 +233,17 @@ void trace_recorder_t::builtin_entry(const builtin_info_t & info) {
             multiplexer::payload_t(statement),
             tracer_conf.outputs);
 
-    if (tracer_conf.pretty_print)
+    if (tracer_conf.pretty_print) {
         STATE(indent) += tracer_conf.indent_width;
+        STATE(curr_fn_indent_level).push(STATE(indent));
+    }
 }
 
 void trace_recorder_t::builtin_exit(const builtin_info_t & info) {
-    if (tracer_conf.pretty_print)
+    if (tracer_conf.pretty_print) {
         STATE(indent) -= tracer_conf.indent_width;
+        STATE(curr_fn_indent_level).pop();
+    }
 
     string statement = builtin_or_special_call_info_line(
             TraceLinePrefix::EXIT,
@@ -325,8 +333,11 @@ void trace_recorder_t::unwind(const vector<call_id_t> & unwound_calls) {
     stringstream statement;
 
     for (call_id_t call_id : unwound_calls) {
-        if (tracer_conf.pretty_print)
+        if (tracer_conf.pretty_print) {
+            STATE(indent) = STATE(curr_fn_indent_level).top();
+            STATE(curr_fn_indent_level).pop();
             STATE(indent) -= tracer_conf.indent_width;
+        }
 
         statement << unwind_info_line(
                 TraceLinePrefix::EXIT,
