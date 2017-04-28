@@ -11,4 +11,4 @@ make -j3
 # Build promise tracer
 cd rdt-plugins/promises
 cmake .
-make -j3
+make -j3 VERBOSE=1
