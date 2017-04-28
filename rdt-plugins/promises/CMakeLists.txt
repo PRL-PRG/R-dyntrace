@@ -66,7 +66,7 @@ target_link_libraries(rdt_promises ${SQLITE3_LIBRARY})
 # which are from the loader module (R in this case).
 # It's needed because this is a plugin library that will call
 # back to R API but we cannot link against it at compile time.
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    message(STATUS setting '-undefined dynamic_lookup' for clang)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    message(STATUS "Setting '-undefined dynamic_lookup' for clang")
     set(CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
 endif()
