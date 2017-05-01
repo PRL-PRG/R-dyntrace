@@ -1,4 +1,6 @@
 -- SQLite3 schema for Rdt
+
+-- 1. Tables containing basic information ferived from trace.
 create table if not exists functions (
     --[ identity ]-------------------------------------------------------------
     id integer primary key, -- equiv. to pointer of function definition SEXP
@@ -67,6 +69,7 @@ create table if not exists promise_evaluations (
     foreign key (in_call_id) references calls
 );
 
+-- 2. Views that agglomerate parts of the information from the trace.
 create view if not exists function_evals as
 select
     functions.id as function_id,
@@ -106,15 +109,41 @@ join promise_associations on arguments.id = promise_associations.argument_id
 join promise_evaluations on promise_associations.promise_id = promise_evaluations.promise_id
 group by arguments.id;
 
-create view if not exists promise_evaluations_order as
+--create view if not exists promise_evaluations_order as
+--select
+--	promise_evaluations.from_call_id,
+--	group_concat(arguments.name ||
+--	case
+--		when promise_evaluations.event_type = 0 then '=' --lookup
+--		when promise_evaluations.event_type = 15 then '!' -- force
+--		else '?' -- wildcard
+--	end, " < ") as events
+--	--group_concat(arguments.name || "@" || promise_evaluations.clock ||
+--	--case
+--	--	when promise_evaluations.event_type = 0 then '=' --lookup
+--	--	when promise_evaluations.event_type = 15 then '!' -- force
+--	--	else '?' -- wildcard
+--	--end, " < ") as annotated_events
+--from promises
+--join promise_evaluations on promise_associations.promise_id = promise_evaluations.promise_id
+--join promise_associations on promise_associations.promise_id = promises.id
+--join arguments on promise_associations.argument_id = arguments.id
+--group by promise_evaluations.from_call_id
+--order by promise_evaluations.from_call_id, clock;
+
+create view if not exists promise_evaluation_events as
 select
 	promise_evaluations.from_call_id,
-	group_concat(arguments.name ||
+	arguments.name,
+	promise_evaluations.promise_id,
+	promise_evaluations.event_type,
+	promise_evaluations.clock,
+	arguments.name ||
 	case
 		when promise_evaluations.event_type = 0 then '=' --lookup
 		when promise_evaluations.event_type = 15 then '!' -- force
 		else '?' -- wildcard
-	end, " < ") as events
+	end as event
 	--group_concat(arguments.name || "@" || promise_evaluations.clock ||
 	--case
 	--	when promise_evaluations.event_type = 0 then '=' --lookup
@@ -124,9 +153,7 @@ select
 from promises
 join promise_evaluations on promise_associations.promise_id = promise_evaluations.promise_id
 join promise_associations on promise_associations.promise_id = promises.id
-join arguments on promise_associations.argument_id = arguments.id
-group by promise_evaluations.from_call_id
-order by promise_evaluations.from_call_id, clock;
+join arguments on promise_associations.argument_id = arguments.id;
 
 create view if not exists function_arguments as
 select
@@ -137,6 +164,48 @@ from functions
 join arguments as arguments on arguments.function_id = functions.id
 group by functions.id
 order by functions.id, arguments.position;
+
+-- 3. Output (as views)
+-- 3.1 Call graph
+create view if not exists out_call_graph as
+select
+    parent.function_id as caller_function,
+    current.function_id as callee_function,
+    count(*) as edges
+from calls as current
+join calls as parent on current.parent_id = parent.id
+group by parent.function_id, current.function_id;
+
+-- 3.2 Function strictness
+create view if not exists out_strictness as
+select
+	function_names.function_id,
+	function_names.names as aliases,
+	argument_evals.name as argument,
+	function_evals.evaluations,
+	argument_evals.forces,
+	argument_evals.lookups,
+	argument_evals.local_forces,
+	argument_evals.local_lookups
+from function_names
+join function_evals on function_names.function_id = function_evals.function_id
+join argument_evals on function_names.function_id = argument_evals.function_id
+order by names;
+
+-- 3.3 Function force order FIXME
+create view if not exists out_force_order as
+select
+	calls.function_id,
+	calls.id as call_id,
+	calls.function_name as alias,
+	--function_arguments.arguments as arguments,
+	promise_evaluation_events.event as event,
+	promise_evaluation_events.promise_id,
+	promise_evaluation_events.clock as clock
+from calls
+join promise_evaluation_events on calls.id = promise_evaluation_events.from_call_id
+--join function_arguments on calls.function_id = function_arguments.function_id
+order by calls.function_id, clock;
 
 -- Warning: The prepared statement generator assumes semicolons are used only to separate statements in this file,
 --          If you use a semicolon for anything else in this file,
