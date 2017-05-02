@@ -7,7 +7,7 @@ create table if not exists functions (
     --[ data ]-----------------------------------------------------------------
     location text,
     definition text,
-    type integer not null, -- 0: function, 1: built-in, 2: special
+    type integer not null, -- 0: closure, 1: built-in, 2: special
                                 -- values defined by function_type
     compiled boolean not null
 );
@@ -154,6 +154,8 @@ from promises
 join promise_evaluations on promise_associations.promise_id = promise_evaluations.promise_id
 join promise_associations on promise_associations.promise_id = promises.id
 join arguments on promise_associations.argument_id = arguments.id;
+
+
 
 create view if not exists function_arguments as
 select

@@ -32,7 +32,10 @@ trace.promises.db <- trace.promises.compiled.db
 trace.promises.both <- function(expression, tracer="promises", output=c(CONSOLE, DATABASE), path="trace.sqlite", format="both", pretty.print=FALSE, overwrite=FALSE, synthetic.call.id=TRUE, include.configuration=TRUE, reload.state=FALSE)
     Rdt(expression, tracer=tracer, output=format.output(output), path=path, format=format, pretty.print=pretty.print, synthetic.call.id=synthetic.call.id, overwrite=overwrite, include.configuration=include.configuration, reload.state=reload.state)
 
+# requires dplyr, igraph, RSQLite
+
 library(dplyr)
+library(igraph)
 
 get_trace_call_graph <- function(path="trace.sqlite")
     src_sqlite(path) %>% tbl("out_call_graph")
@@ -49,13 +52,94 @@ get_function_by_id <- function(function_id, path="trace.sqlite")
 get_function_aliases_by_id <- function(id, path="trace.sqlite")
     src_sqlite(path) %>% tbl("function_names") %>% filter(function_id == id)
 
-get_trace_call_graph_as_igraph <- function ()
-    src_sqlite(path) %>%
-    tbl("out_call_graph") %>%
-    select(c(caller_function, callee_function)) %>%
-    as.data.frame %>%
-    apply(1, function(x) c(toString(x[1]), toString(x[2]))) %>%  # or just apply(1, c) if all nodes > 0... which they are not
-    c %>%
-    make_directed_graph
+# db <- src_sqlite(path)
+get_trace_call_graph_as_igraph <- function(db) {
+    # 1. make define edges for call graph
+    cg <-
+        # get data from database
+        db %>% tbl("out_call_graph") %>%
+        # select only the two columns we need
+        select(caller_function, callee_function) %>%
+        # flatten to an edge list -- this could be simply `apply(1, c) %>% c` if all nodes > 0, else convert to string
+        as.data.frame %>% apply(1, function(x) c(toString(x[1]), toString(x[2]))) %>% c %>%
+        # construct graph from edge list
+        make_directed_graph
+
+    # 2. fill in attributes: aliases
+    V(cg)$aliases <-
+        # get data from database
+        (db %>% tbl("function_names") %>%
+        # sort by id, so that it fits the data in the graph
+        arrange(function_id) %>%
+        # retrieve the column we're interested in
+        select(names) %>%
+        # convert data structure
+        as.data.frame)$names
+
+    # 3. fill in attributes: function types
+    V(cg)$type <-
+        # get data from database
+        (db %>% tbl("functions") %>%
+        # convert types to strings
+        mutate(htype = if (type == 0) 'closure' else
+                       if (type == 1) 'built-in' else
+                       if (type == 2) 'special' else NULL) %>%
+        # sort by id, so that it fits the data in the graph
+        arrange(id) %>%
+        # retrieve the column we want
+        select(htype) %>%
+        # convert data structure
+        as.data.frame)$htype
+
+    # 4. color graph by function type
+    V(cg)$color <- ifelse(V(cg)$type == "closure", "green", "red")
+
+    # Finally, return graph
+    cg
+}
+
+calculate_distance <- function(cg, form, to) {
+    shortest_paths(cg, from=from, to=to)$vpath
+}
+
+function(db) {
+    prom_eval <-
+        # make an outer join to get evaluated and unevaluated promises
+        db %>% tbl(sql("select * from promises left outer join promise_evaluations on id = promise_id")) %>%
+        # filter out lookups, leave NAs and forces
+        filter(is.na(event_type) || event_type == 15) %>%
+        #      1    2           3             4
+        select(id, event_type, from_call_id, in_call_id) %>%
+#        mutate(locality = if(is.na(promise_id)) "virgin" else
+#                          if(
+        as.data.frame
+
+    classify <- function(row) {
+        if (is.na(row[2]))
+            "unclassified"
+        else {
+            created <- function_from_call(db, row[3]) # maybe this can be moved to select FIXME
+            forced <- function_from_call(db, row[4]) # FIXME to implement
+
+            distance <- calculate_distance(cg, created, forced) # FIXME to implement
+
+            if (is.na(distance))
+                "escaped"
+            else if (distance == 0)
+                "call-local"
+            else
+                "branch-local"
+        }
+    }
+
+    prom_eval$classification <- prom_eval %>% apply(1, classify)
+
+
+    #db %>% tbl("promise_evaluations") %>% filter(event_type != 0) %>% select(promise_id, from_call_id, in_call_id)
+    prom_eval
+}
+#> src_sqlite(path) %>% tbl("promise_evaluations") %>% filter(event_type == 15) %>% select(promise_id, from_call_id, in_call_id) %>% as.data.frame %>% apply(1, c )
+
+
 
 #shortest_paths(cg, from="0", to="7")$vpath
