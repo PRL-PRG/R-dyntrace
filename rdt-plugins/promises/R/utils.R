@@ -34,12 +34,28 @@ trace.promises.both <- function(expression, tracer="promises", output=c(CONSOLE,
 
 library(dplyr)
 
-get_trace_call_graph <- function(path="trace.sqlite") tbl(src_sqlite(path), "out_call_graph")
-get_trace_strictness <- function(path="trace.sqlite") tbl(src_sqlite(path), "out_strictness")
-get_trace_force_order <- function(path="trace.sqlite") tbl(src_sqlite(path), "out_force_order")
+get_trace_call_graph <- function(path="trace.sqlite")
+    src_sqlite(path) %>% tbl("out_call_graph")
+
+get_trace_strictness <- function(path="trace.sqlite")
+    src_sqlite(path) %>% tbl("out_strictness")
+
+get_trace_force_order <- function(path="trace.sqlite")
+    src_sqlite(path) %>% tbl("out_force_order")
 
 get_function_by_id <- function(function_id, path="trace.sqlite")
-    filter(tbl(src_sqlite(path), "functions"), id == function_id)
+    src_sqlite(path) %>% tbl("functions") %>% filter(id == function_id)
 
 get_function_aliases_by_id <- function(id, path="trace.sqlite")
-    filter(tbl(src_sqlite(path), "function_names"), function_id == id)
+    src_sqlite(path) %>% tbl("function_names") %>% filter(function_id == id)
+
+get_trace_call_graph_as_igraph <- function ()
+    src_sqlite(path) %>%
+    tbl("out_call_graph") %>%
+    select(c(caller_function, callee_function)) %>%
+    as.data.frame %>%
+    apply(1, function(x) c(toString(x[1]), toString(x[2]))) %>%  # or just apply(1, c) if all nodes > 0... which they are not
+    c %>%
+    make_directed_graph
+
+#shortest_paths(cg, from="0", to="7")$vpath
