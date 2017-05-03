@@ -3,6 +3,7 @@ FILE <- 'f'
 CONSOLE <- 'p'
 DB <- 'd'
 
+# TODO rename to format_output
 format.output <- function(outputs) do.call(paste, c(as.list(outputs), sep=""))
 
 # TODO rename to trace_promises_r
@@ -50,6 +51,9 @@ get_function_aliases_by_id <- function(id, path="trace.sqlite")
     src_sqlite(path) %>% tbl("function_names") %>% filter(function_id == id)
 
 # db <- src_sqlite(path)
+
+# Derive a call graph from a trace. This call graph agregates a concrete call tree by translating calls to function
+# definitions.
 get_trace_call_graph <- function(db) {
     # 1. make define edges for call graph
     cg <-
@@ -98,6 +102,7 @@ get_trace_call_graph <- function(db) {
     cg
 }
 
+# Uses a call graph to classify each promise to be either forced locally, relayed, escaped, or not forced.
 get_trace_promise_lifespan_for_call_graph <- function(db, cg) {
     promises <- db %>% tbl("promises")
     promise_evaluations <- db %>% tbl("promise_evaluations")
@@ -139,6 +144,7 @@ get_trace_promise_lifespan_for_call_graph <- function(db, cg) {
     promise_lifespan
 }
 
+# Derive a concrete call tree from a trace. This is a tree built on actual calls (not functions).
 get_trace_concrete_call_tree <- function(db) {
     calls <- db %>% tbl("calls")
     functions <- db %>% tbl("functions")
@@ -181,6 +187,7 @@ get_trace_concrete_call_tree <- function(db) {
     cct
 }
 
+# Uses a concrete call tree to classify each promise to be either forced locally, relayed, escaped, or not forced.
 get_trace_promise_lifespan_for_concrete_call_tree <- function(db, cct) {
     promises <- db %>% tbl("promises")
     promise_evaluations <- db %>% tbl("promise_evaluations")
