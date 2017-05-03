@@ -37,9 +37,6 @@ trace.promises.both <- function(expression, tracer="promises", output=c(CONSOLE,
 library(dplyr)
 library(igraph)
 
-get_trace_call_graph <- function(path="trace.sqlite")
-    src_sqlite(path) %>% tbl("out_call_graph")
-
 get_trace_strictness <- function(path="trace.sqlite")
     src_sqlite(path) %>% tbl("out_strictness")
 
@@ -53,7 +50,7 @@ get_function_aliases_by_id <- function(id, path="trace.sqlite")
     src_sqlite(path) %>% tbl("function_names") %>% filter(function_id == id)
 
 # db <- src_sqlite(path)
-get_trace_call_graph_as_igraph <- function(db) {
+get_trace_call_graph <- function(db) {
     # 1. make define edges for call graph
     cg <-
         # get data from database
@@ -81,9 +78,9 @@ get_trace_call_graph_as_igraph <- function(db) {
         # get data from database
         (db %>% tbl("functions") %>%
         # convert types to strings
-        mutate(htype = if (type == 0) 'closure' else
-                       if (type == 1) 'built-in' else
-                       if (type == 2) 'special' else NULL) %>%
+        mutate(htype = if (type == 0) "closure" else
+                       if (type == 1) "built-in" else
+                       if (type == 2) "special" else NULL) %>%
         # sort by id, so that it fits the data in the graph
         arrange(id) %>%
         # retrieve the column we want
@@ -101,7 +98,7 @@ get_trace_call_graph_as_igraph <- function(db) {
     cg
 }
 
-get_promise_lifespan <- function(db, cg) {
+get_trace_promise_lifespan_for_call_graph <- function(db, cg) {
     promises <- db %>% tbl("promises")
     promise_evaluations <- db %>% tbl("promise_evaluations")
     function_dictionary <- db %>% tbl("calls") %>% select(id, function_id) %>% rename(call_id=id)
@@ -115,13 +112,14 @@ get_promise_lifespan <- function(db, cg) {
         left_join(function_dictionary, by=c("in_call_id" = "call_id")) %>% rename(forced_function_id=function_id) %>%
         # include function ids for from_call_id
         left_join(function_dictionary, by=c("from_call_id" = "call_id")) %>% rename(created_function_id=function_id) %>%
-        # row: [1] [2]                  [3]
+        # only what we need: promise and function ids
         select(id, created_function_id, forced_function_id) %>%
         as.data.frame
 
     classify <- function(row) {
         created <- row["created_function_id"]
         forced <- row["forced_function_id"]
+
         if (is.na(created) || is.na(forced))
             "virgin"
         else {
@@ -130,18 +128,89 @@ get_promise_lifespan <- function(db, cg) {
                 "escaped"
             else if (distance == 0)
                 "local"
-            else
+            else #if (0 < distance < Inf)
+                "relayed"
+        }
+    }
+
+    # apply classifier to each promise
+    promise_lifespan$classification <- promise_lifespan %>% apply(1, classify)
+
+    promise_lifespan
+}
+
+get_trace_concrete_call_tree <- function(db) {
+    calls <- db %>% tbl("calls")
+    functions <- db %>% tbl("functions")
+    all_call_ids <- {
+        call_ids <- calls %>% select(id)
+        parent_ids <- calls %>% select(parent_id) %>% rename(id=parent_id)
+        union_all(call_ids, parent_ids)
+    } %>% distinct(id) %>% arrange(id)
+
+    # 1. define edges for call tree
+    cct <-
+        calls %>% select(parent_id, id) %>%
+        as.data.frame %>% apply(1, function(x) c(toString(x[1]), toString(x[2]))) %>% c %>%
+        make_directed_graph
+
+    # 2. fill in attributes: function name
+    V(cct)$alias <-
+        (left_join(all_call_ids, calls, by="id") %>%
+        arrange(id) %>%
+        select(function_name) %>%
+        as.data.frame)$function_name
+
+    # 3. fill in attributes: function types
+    V(cct)$type <-
+        (left_join(all_call_ids, calls, by="id") %>%
+        left_join(functions %>% rename(function_id=id), by="function_id") %>%
+        mutate(htype = if (type == 0) "closure" else
+                       if (type == 1) "built-in" else
+                       if (type == 2) "special" else NULL) %>%
+        select(htype) %>%
+        as.data.frame)$htype
+
+    # 4. color tree by function type
+    V(cct)$color <- ifelse(V(cct)$type == "closure", "green", "red")
+
+    # 5. weight edges by colors
+    E(cct)$weight <- get.edgelist(cct) %>% apply(1, function(edge) if (V(cct)[edge[2]]$color == "red") 0 else 1)
+
+    # Finally, return graph
+    cct
+}
+
+get_trace_promise_lifespan_for_concrete_call_tree <- function(db, cct) {
+    promises <- db %>% tbl("promises")
+    promise_evaluations <- db %>% tbl("promise_evaluations")
+
+    promise_lifespan <-
+        left_join(promises, promise_evaluations, by=c("id" = "promise_id")) %>%
+        filter(is.na(event_type) || event_type == 15) %>%
+        rename(created_call_id=in_call_id) %>%
+        rename(forced_call_id=from_call_id) %>%
+        select(id, created_call_id, forced_call_id) %>%
+        as.data.frame
+
+    classify <- function(row) {
+        created <- row["created_call_id"]
+        forced <- row["forced_call_id"]
+
+        if (is.na(created) || is.na(forced))
+            "virgin"
+        else {
+            distance <- distances(cct, v=toString(created), to=toString(forced), mode="out")[1]
+            if (distance == Inf)
+                "escaped"
+            else if (distance == 0)
+                "local"
+            else #if (0 < distance < Inf)
                 "relayed"
         }
     }
 
     promise_lifespan$classification <- promise_lifespan %>% apply(1, classify)
 
-    #db %>% tbl("promise_evaluations") %>% filter(event_type != 0) %>% select(promise_id, from_call_id, in_call_id)
     promise_lifespan
 }
-#> src_sqlite(path) %>% tbl("promise_evaluations") %>% filter(event_type == 15) %>% select(promise_id, from_call_id, in_call_id) %>% as.data.frame %>% apply(1, c )
-
-
-
-#shortest_paths(cg, from="0", to="7")$vpath
