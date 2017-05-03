@@ -94,49 +94,51 @@ get_trace_call_graph_as_igraph <- function(db) {
     # 4. color graph by function type
     V(cg)$color <- ifelse(V(cg)$type == "closure", "green", "red")
 
+    # 5. weight edges by colors
+    E(cg)$weight <- get.edgelist(cg) %>% apply(1, function(edge) if (V(cg)[edge[2]]$color == "red") 0 else 1)
+
     # Finally, return graph
     cg
 }
 
-calculate_distance <- function(cg, form, to) {
-    shortest_paths(cg, from=from, to=to)$vpath
-}
+get_promise_lifespan <- function(db, cg) {
+    promises <- db %>% tbl("promises")
+    promise_evaluations <- db %>% tbl("promise_evaluations")
+    function_dictionary <- db %>% tbl("calls") %>% select(id, function_id) %>% rename(call_id=id)
 
-function(db) {
-    prom_eval <-
+    promise_lifespan <-
         # make an outer join to get evaluated and unevaluated promises
-        db %>% tbl(sql("select * from promises left outer join promise_evaluations on id = promise_id")) %>%
+        left_join(promises, promise_evaluations, by=c("id" = "promise_id")) %>%
         # filter out lookups, leave NAs and forces
         filter(is.na(event_type) || event_type == 15) %>%
-        #      1    2           3             4
-        select(id, event_type, from_call_id, in_call_id) %>%
-#        mutate(locality = if(is.na(promise_id)) "virgin" else
-#                          if(
+        # include function ids for in_call_id
+        left_join(function_dictionary, by=c("in_call_id" = "call_id")) %>% rename(forced_function_id=function_id) %>%
+        # include function ids for from_call_id
+        left_join(function_dictionary, by=c("from_call_id" = "call_id")) %>% rename(created_function_id=function_id) %>%
+        # row: [1] [2]                  [3]
+        select(id, created_function_id, forced_function_id) %>%
         as.data.frame
 
     classify <- function(row) {
-        if (is.na(row[2]))
-            "unclassified"
+        created <- row["created_function_id"]
+        forced <- row["forced_function_id"]
+        if (is.na(created) || is.na(forced))
+            "virgin"
         else {
-            created <- function_from_call(db, row[3]) # maybe this can be moved to select FIXME
-            forced <- function_from_call(db, row[4]) # FIXME to implement
-
-            distance <- calculate_distance(cg, created, forced) # FIXME to implement
-
-            if (is.na(distance))
+            distance <- distances(cg, v=toString(created), to=toString(forced), mode="out")[1]
+            if (distance == Inf)
                 "escaped"
             else if (distance == 0)
-                "call-local"
+                "local"
             else
-                "branch-local"
+                "relayed"
         }
     }
 
-    prom_eval$classification <- prom_eval %>% apply(1, classify)
-
+    promise_lifespan$classification <- promise_lifespan %>% apply(1, classify)
 
     #db %>% tbl("promise_evaluations") %>% filter(event_type != 0) %>% select(promise_id, from_call_id, in_call_id)
-    prom_eval
+    promise_lifespan
 }
 #> src_sqlite(path) %>% tbl("promise_evaluations") %>% filter(event_type == 15) %>% select(promise_id, from_call_id, in_call_id) %>% as.data.frame %>% apply(1, c )
 
