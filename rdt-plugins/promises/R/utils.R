@@ -94,7 +94,7 @@ get_trace_call_graph <- function(db) {
         as.data.frame)$htype
 
     # 4. color graph by function type
-    V(cg)$color <- ifelse(V(cg)$type %in% c("closure", "built-in"), "green", "red")
+    V(cg)$color <- ifelse(V(cg)$type %in% c("closure", "built-in", NA), "green", "red")
 
     # 5. weight edges by colors
     E(cg)$weight <- get.edgelist(cg) %>% apply(1, function(edge) if (V(cg)[edge[2]]$color == "red") 0 else 1)
@@ -180,7 +180,7 @@ get_trace_concrete_call_tree <- function(db) {
         as.data.frame)$htype
 
     # 4. color tree by function type
-    V(cct)$color <- ifelse(V(cct)$type %in% c("closure", "built-in"), "green", "red")
+    V(cct)$color <- ifelse(V(cct)$type %in% c("closure", "built-in", NA), "green", "red")
 
     # 5. weight edges by colors
     E(cct)$weight <- get.edgelist(cct) %>% apply(1, function(edge) if (V(cct)[edge[2]]$color == "red") 0 else 1)
