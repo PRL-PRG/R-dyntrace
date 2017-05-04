@@ -84,7 +84,8 @@ get_trace_call_graph <- function(db) {
         # convert types to strings
         mutate(htype = if (type == 0) "closure" else
                        if (type == 1) "built-in" else
-                       if (type == 2) "special" else NULL) %>%
+                       if (type == 2) "special" else
+                       if (type == 3) "primitive" else NULL) %>%
         # sort by id, so that it fits the data in the graph
         arrange(id) %>%
         # retrieve the column we want
@@ -93,7 +94,7 @@ get_trace_call_graph <- function(db) {
         as.data.frame)$htype
 
     # 4. color graph by function type
-    V(cg)$color <- ifelse(V(cg)$type == "closure", "green", "red")
+    V(cg)$color <- ifelse(V(cg)$type %in% c("closure", "built-in"), "green", "red")
 
     # 5. weight edges by colors
     E(cg)$weight <- get.edgelist(cg) %>% apply(1, function(edge) if (V(cg)[edge[2]]$color == "red") 0 else 1)
@@ -173,12 +174,13 @@ get_trace_concrete_call_tree <- function(db) {
         left_join(functions %>% rename(function_id=id), by="function_id") %>%
         mutate(htype = if (type == 0) "closure" else
                        if (type == 1) "built-in" else
-                       if (type == 2) "special" else NULL) %>%
+                       if (type == 2) "special" else
+                       if (type == 3) "primitive" else NULL) %>%
         select(htype) %>%
         as.data.frame)$htype
 
     # 4. color tree by function type
-    V(cct)$color <- ifelse(V(cct)$type == "closure", "green", "red")
+    V(cct)$color <- ifelse(V(cct)$type %in% c("closure", "built-in"), "green", "red")
 
     # 5. weight edges by colors
     E(cct)$weight <- get.edgelist(cct) %>% apply(1, function(edge) if (V(cct)[edge[2]]$color == "red") 0 else 1)
@@ -217,7 +219,29 @@ get_trace_promise_lifespan_for_concrete_call_tree <- function(db, cct) {
         }
     }
 
-    promise_lifespan$classification <- promise_lifespan %>% apply(1, classify)
+    promise_lifespan$classification <- (promise_lifespan %>% as.data.frame %>% apply(1, classify))
 
     promise_lifespan
+}
+
+how_many_promises_are_evaluated_in_the_same_function_in_which_they_are_created <- function() {
+    db <- src_sqlite(path)
+    cct <- get_trace_concrete_call_tree(db)
+    pl <- get_trace_promise_lifespan_for_concrete_call_tree()
+
+    (pl %>% as.tbl %>% count(classification == "local") %>% as.data.frame)$n
+}
+
+where_are_promises_evaluated <- function(path="trace.sqlite") {
+    db <- src_sqlite(path)
+    cct <- get_trace_concrete_call_tree(db)
+    pl <- get_trace_promise_lifespan_for_concrete_call_tree(db, cct)
+
+    pl %>% as.tbl %>% count(classification)
+}
+
+print_graph <- function(g, file="graph", size=20) {
+    pdf(paste(file, ".pdf", sep=""), height=size, width=size)
+    plot.igraph(g, vertex.label=V(cct)$alias, vertex.size=3, edge.arrow.size=.5)
+    dev.off()
 }

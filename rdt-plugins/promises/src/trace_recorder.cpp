@@ -59,6 +59,9 @@ string function_call_info_line(TraceLinePrefix prefix, const closure_info_t &inf
             break;
         case function_type::BUILTIN:
             stream << "built-in";
+            break;
+        case function_type::TRUE_BUILTIN:
+            stream << "true built-in";
     }
 
     if (info.name.empty())
@@ -111,6 +114,9 @@ string builtin_or_special_call_info_line(TraceLinePrefix prefix, const builtin_i
             break;
         case function_type::BUILTIN:
             stream << "built-in";
+            break;
+        case function_type::TRUE_BUILTIN:
+            stream << "true built-in";
             break;
         case function_type::CLOSURE: // Just in case
             stream << "closure";

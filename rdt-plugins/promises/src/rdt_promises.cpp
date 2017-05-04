@@ -95,7 +95,8 @@ struct trace_promises {
     }
 
     static void builtin_entry(const SEXP call, const SEXP op, const SEXP rho) {
-        print_entry_info(call, op, rho, function_type::BUILTIN);
+        function_type fn_type = (PRIMINTERNAL(op) == 0) ? function_type::TRUE_BUILTIN : function_type::BUILTIN;
+        print_entry_info(call, op, rho, fn_type);
     }
 
     static void specialsxp_entry(const SEXP call, const SEXP op, const SEXP rho) {
@@ -111,7 +112,8 @@ struct trace_promises {
     }
 
     static void builtin_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
-        print_exit_info(call, op, rho, function_type::BUILTIN);
+        function_type fn_type = (PRIMINTERNAL(op) == 0) ? function_type::TRUE_BUILTIN : function_type::BUILTIN;
+        print_exit_info(call, op, rho, fn_type);
     }
 
     static void specialsxp_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {

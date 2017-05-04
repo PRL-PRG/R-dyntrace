@@ -109,7 +109,7 @@ public:
     }
 };
 
-enum class function_type {CLOSURE = 0, BUILTIN = 1, SPECIAL = 2};
+enum class function_type {CLOSURE = 0, BUILTIN = 1, SPECIAL = 2, TRUE_BUILTIN = 3};
 
 struct call_info_t {
     function_type fn_type;
@@ -129,7 +129,8 @@ struct closure_info_t : call_info_t {
     arglist_t     arguments;
 };
 
-struct builtin_info_t : call_info_t {};
+struct builtin_info_t : call_info_t {
+};
 
 // FIXME would it make sense to add type of action here?
 struct prom_info_t {

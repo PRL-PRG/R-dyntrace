@@ -9,6 +9,7 @@
 #include <inspect.h>
 #include "tuple_for_each.h"
 
+//#include <Defn.h> // We need this for R_Funtab
 #include <rdt.h>
 #include "tracer_sexpinfo.h"
 #include "tracer_state.h"
@@ -101,7 +102,9 @@ public:
         info.fn_compiled = is_byte_compiled(op);
         info.fn_definition = get_expression(op);
 
-        info.parent_call_id = STATE(fun_stack).top(); // FIXME this is currently self, should: pop top push
+        //R_FunTab[PRIMOFFSET(op)].eval % 100 )/10 ==
+
+        info.parent_call_id = STATE(fun_stack).top();
 
         char *location = get_location(op);
         if (location != NULL) {
@@ -137,7 +140,7 @@ public:
         info.fn_compiled = is_byte_compiled(op);
         info.fn_definition = get_expression(op);
 
-        info.parent_call_id = STATE(fun_stack).top(); // FIXME this is currently self, should: pop top push
+        info.parent_call_id = STATE(fun_stack).top();
 
         char *location = get_location(op);
         if (location != NULL)
