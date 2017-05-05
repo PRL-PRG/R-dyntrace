@@ -50,11 +50,13 @@ get_function_by_id <- function(function_id, path="trace.sqlite")
 get_function_aliases_by_id <- function(id, path="trace.sqlite")
     src_sqlite(path) %>% tbl("function_names") %>% filter(function_id == id)
 
-# db <- src_sqlite(path)
+# db <-
+
+load_trace <- function(path="trace.sqlite") src_sqlite(path)
 
 # Derive a call graph from a trace. This call graph agregates a concrete call tree by translating calls to function
 # definitions.
-get_trace_call_graph <- function(db) {
+call_graph_from_trace <- function(db) {
     # 1. make define edges for call graph
     cg <-
         # get data from database
@@ -67,7 +69,7 @@ get_trace_call_graph <- function(db) {
         make_directed_graph
 
     # 2. fill in attributes: aliases
-    V(cg)$aliases <-
+    V(cg)$label <-
         # get data from database
         (db %>% tbl("function_names") %>%
         # sort by id, so that it fits the data in the graph
@@ -104,49 +106,44 @@ get_trace_call_graph <- function(db) {
 }
 
 # Uses a call graph to classify each promise to be either forced locally, relayed, escaped, or not forced.
-get_trace_promise_lifespan_for_call_graph <- function(db, cg) {
+promise_lifestyle_from_cg <- function(db, cg) {
     promises <- db %>% tbl("promises")
     promise_evaluations <- db %>% tbl("promise_evaluations")
     function_dictionary <- db %>% tbl("calls") %>% select(id, function_id) %>% rename(call_id=id)
 
-    promise_lifespan <-
-        # make an outer join to get evaluated and unevaluated promises
-        left_join(promises, promise_evaluations, by=c("id" = "promise_id")) %>%
-        # filter out lookups, leave NAs and forces
-        filter(is.na(event_type) || event_type == 15) %>%
-        # include function ids for in_call_id
-        left_join(function_dictionary, by=c("in_call_id" = "call_id")) %>% rename(forced_function_id=function_id) %>%
-        # include function ids for from_call_id
-        left_join(function_dictionary, by=c("from_call_id" = "call_id")) %>% rename(created_function_id=function_id) %>%
-        # only what we need: promise and function ids
-        select(id, created_function_id, forced_function_id) %>%
-        as.data.frame
-
-    classify <- function(row) {
-        created <- row["created_function_id"]
-        forced <- row["forced_function_id"]
-
+    classify <- function(created, forced)
         if (is.na(created) || is.na(forced))
             "virgin"
         else {
-            distance <- distances(cg, v=toString(created), to=toString(forced), mode="out")[1]
-            if (distance == Inf)
-                "escaped"
-            else if (distance == 0)
-                "local"
-            else #if (0 < distance < Inf)
-                "relayed"
+            distance <- distances(cg, v=created, to=forced, mode="out")[1]
+        if (distance == Inf)
+            "escaped"
+        else if (distance == 0)
+            "local"
+        else #if (0 < distance < Inf)
+            "vicarious"
         }
-    }
 
-    # apply classifier to each promise
-    promise_lifespan$classification <- promise_lifespan %>% apply(1, classify)
-
-    promise_lifespan
+    # make an outer join to get evaluated and unevaluated promises
+    left_join(promises, promise_evaluations, by=c("id" = "promise_id")) %>%
+    # filter out lookups, leave NAs and forces
+    filter(is.na(event_type) || event_type == 15) %>%
+    # include function ids for in_call_id
+    left_join(function_dictionary, by=c("in_call_id" = "call_id")) %>%
+    rename(forced_function_id=function_id) %>%
+    # include function ids for from_call_id
+    left_join(function_dictionary, by=c("from_call_id" = "call_id")) %>%
+    rename(created_function_id=function_id) %>%
+    # only what we need: promise and function ids
+    select(id, created_function_id, forced_function_id) %>%
+    # strings!
+    mutate(created_function_id=as.character(created_function_id),
+           forced_function_id=as.character(forced_function_id)) %>%
+    group_by(id) %>% do(mutate(., locality=classify(created_function_id, forced_function_id)))
 }
 
 # Derive a concrete call tree from a trace. This is a tree built on actual calls (not functions).
-get_trace_concrete_call_tree <- function(db) {
+concrete_call_tree_from_trace <- function(db) {
     calls <- db %>% tbl("calls")
     functions <- db %>% tbl("functions")
     all_call_ids <- {
@@ -157,12 +154,13 @@ get_trace_concrete_call_tree <- function(db) {
 
     # 1. define edges for call tree
     cct <-
-        calls %>% select(parent_id, id) %>%
-        as.data.frame %>% apply(1, function(x) c(toString(x[1]), toString(x[2]))) %>% c %>%
+        calls %>% mutate(id.s = as.character(id), parent_id.s = as.character(parent_id)) %>%
+        select(parent_id.s, id.s) %>% rename(parent_id=parent_id.s, id=id.s) %>%
+        as.data.frame %>% apply(1, c) %>% c %>%
         make_directed_graph
 
     # 2. fill in attributes: function name
-    V(cct)$alias <-
+    V(cct)$label <-
         (left_join(all_call_ids, calls, by="id") %>%
         arrange(id) %>%
         select(function_name) %>%
@@ -190,38 +188,54 @@ get_trace_concrete_call_tree <- function(db) {
 }
 
 # Uses a concrete call tree to classify each promise to be either forced locally, relayed, escaped, or not forced.
-get_trace_promise_lifespan_for_concrete_call_tree <- function(db, cct) {
+promise_lifestyle_from_cct <- function(db, cct) {
     promises <- db %>% tbl("promises")
     promise_evaluations <- db %>% tbl("promise_evaluations")
 
-    promise_lifespan <-
-        left_join(promises, promise_evaluations, by=c("id" = "promise_id")) %>%
-        filter(is.na(event_type) || event_type == 15) %>%
-        rename(created_call_id=in_call_id) %>%
-        rename(forced_call_id=from_call_id) %>%
-        select(id, created_call_id, forced_call_id) %>%
-        as.data.frame
-
-    classify <- function(row) {
-        created <- row["created_call_id"]
-        forced <- row["forced_call_id"]
-
+    classify <- function(created, forced) {
         if (is.na(created) || is.na(forced))
             "virgin"
         else {
-            distance <- distances(cct, v=toString(created), to=toString(forced), mode="out")[1]
+            distance <- distances(cct, v=created, to=forced, mode="out")[1]
             if (distance == Inf)
                 "escaped"
             else if (distance == 0)
                 "local"
             else #if (0 < distance < Inf)
-                "relayed"
+                "vicarious"
         }
     }
 
-    promise_lifespan$classification <- (promise_lifespan %>% as.data.frame %>% apply(1, classify))
+    # by analogy to cg
+    left_join(promises, promise_evaluations, by=c("id" = "promise_id")) %>%
+    filter(is.na(event_type) || event_type == 15) %>%
+    rename(created_call_id=in_call_id) %>%
+    rename(forced_call_id=from_call_id) %>%
+    select(id, created_call_id, forced_call_id) %>%
+    mutate(created_call_id=as.character(created_call_id),
+    forced_call_id=as.character(forced_call_id)) %>%
+    group_by(id) %>% do(mutate(., locality=classify(created_call_id, forced_call_id)))
+}
 
-    promise_lifespan
+print_graph <- function(g, file="graph", size=20, labels=NULL) {
+    color_function <- function(color) {
+        ifelse(color == "red",   "#FFAAAA",
+        ifelse(color == "green", "#A5C663",
+                                 "#669999"))
+    }
+
+    pdf(paste(file, ".pdf", sep=""), height=size, width=size)
+    lo <- layout.auto(g)
+    plot(0, type="n", ann=FALSE, axes=FALSE, xlim=extendrange(lo[,1]), ylim=extendrange(lo[,2]))
+    plot.igraph(g, layout=lo, add=TRUE, rescale=FALSE,
+                   edge.arrow.size = .75, edge.curved = seq(-0.3, 0.3, length = ecount(g)),
+                   vertex.label=labels,
+                   vertex.shape = "rectangle",
+                   vertex.color = color_function(V(g)$color),
+                   vertex.frame.color = color_function(V(g)$color),
+                   vertex.size = (strwidth(V(g)$label) + strwidth("oo")) * 100,
+                   vertex.size2 = strheight("I") * 2 * 100)
+    dev.off()
 }
 
 how_many_promises_are_evaluated_in_the_same_function_in_which_they_are_created <- function() {
@@ -229,19 +243,21 @@ how_many_promises_are_evaluated_in_the_same_function_in_which_they_are_created <
     cct <- get_trace_concrete_call_tree(db)
     pl <- get_trace_promise_lifespan_for_concrete_call_tree()
 
-    (pl %>% as.tbl %>% count(classification == "local") %>% as.data.frame)$n
+    (pl %>% count(classification == "local") %>% as.data.frame)$n
 }
 
-where_are_promises_evaluated <- function(path="trace.sqlite") {
-    db <- src_sqlite(path)
-    cct <- get_trace_concrete_call_tree(db)
-    pl <- get_trace_promise_lifespan_for_concrete_call_tree(db, cct)
-
-    pl %>% as.tbl %>% count(classification)
+where_are_promises_evaluated_cg <- function(path="trace.sqlite") {
+    db <- load_trace(path)
+    cg <- call_graph_from_trace(db)
+    cg.ls <- promise_lifestyle_from_cg(db,cg)
+    cg.ls %>% group_by(locality) %>% count(locality)
 }
 
-print_graph <- function(g, file="graph", size=20) {
-    pdf(paste(file, ".pdf", sep=""), height=size, width=size)
-    plot.igraph(g, vertex.label=V(cct)$alias, vertex.size=3, edge.arrow.size=.5)
-    dev.off()
+where_are_promises_evaluated_cct <- function(path="trace.sqlite") {
+    db <- load_trace(path)
+    cct <- concrete_call_tree_from_trace(db)
+    cct.ls <- promise_lifestyle_from_cg(db,cct)
+    cct.ls %>% group_by(locality) %>% count(locality)
 }
+
+#inner_join(cg.ls %>% rename(locality.cg=locality,creat.cg=created_function_id,force.cg=forced_function_id), cct.ls %>% rename(locality.cct=locality,creat.cct=created_function_id,force.cct=forced_function_id), by="id") %>% as.data.frame #%>% select (id, created_call_id, forced_call_id, locality.cg, locality.cct)
