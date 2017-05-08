@@ -109,28 +109,6 @@ join promise_associations on arguments.id = promise_associations.argument_id
 join promise_evaluations on promise_associations.promise_id = promise_evaluations.promise_id
 group by arguments.id;
 
---create view if not exists promise_evaluations_order as
---select
---	promise_evaluations.from_call_id,
---	group_concat(arguments.name ||
---	case
---		when promise_evaluations.event_type = 0 then '=' --lookup
---		when promise_evaluations.event_type = 15 then '!' -- force
---		else '?' -- wildcard
---	end, " < ") as events
---	--group_concat(arguments.name || "@" || promise_evaluations.clock ||
---	--case
---	--	when promise_evaluations.event_type = 0 then '=' --lookup
---	--	when promise_evaluations.event_type = 15 then '!' -- force
---	--	else '?' -- wildcard
---	--end, " < ") as annotated_events
---from promises
---join promise_evaluations on promise_associations.promise_id = promise_evaluations.promise_id
---join promise_associations on promise_associations.promise_id = promises.id
---join arguments on promise_associations.argument_id = arguments.id
---group by promise_evaluations.from_call_id
---order by promise_evaluations.from_call_id, clock;
-
 create view if not exists promise_evaluation_events as
 select
 	promise_evaluations.from_call_id,

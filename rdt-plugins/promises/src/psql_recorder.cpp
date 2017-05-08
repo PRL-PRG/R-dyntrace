@@ -81,7 +81,7 @@ void compile_prepared_sql_statements() {
     prepared_sql_insert_promise =
             compile_sql_statement(make_insert_promise_statement("?"));
     prepared_sql_insert_promise_eval =
-            compile_sql_statement(make_insert_promise_evaluation_statement("?","?","?","?", "?"));
+            compile_sql_statement(make_insert_promise_evaluation_statement("?","?","?","?","?"));
 
     prepared_sql_transaction_begin =
             compile_sql_statement(make_begin_transaction_statement());

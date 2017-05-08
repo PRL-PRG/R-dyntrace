@@ -242,7 +242,6 @@ how_many_promises_are_evaluated_in_the_same_function_in_which_they_are_created <
     db <- src_sqlite(path)
     cct <- get_trace_concrete_call_tree(db)
     pl <- get_trace_promise_lifespan_for_concrete_call_tree()
-
     (pl %>% count(classification == "local") %>% as.data.frame)$n
 }
 
