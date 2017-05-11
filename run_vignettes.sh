@@ -13,6 +13,6 @@ fi
 
 for i in "$@"
 do 
-    $CMD $i 
+    $CMD $i 2>&1 | tee "$i.log" 
 done   
 
