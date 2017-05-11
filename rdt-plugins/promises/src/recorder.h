@@ -167,11 +167,12 @@ private:
             call_id_t cursor = i->first;
             function_type type = i->second;
 
+            if (cursor == from_call_id) {
+                return (distance == 0) ? lifestyle_type::LOCAL : lifestyle_type::BRANCH_LOCAL;
+            }
+
             if (cursor == 0)
                 return lifestyle_type::ESCAPED; // reached root, parent must be in a different branch--promise escaped
-
-            if (cursor == from_call_id)
-                return (distance == 0) ? lifestyle_type::LOCAL : lifestyle_type::BRANCH_LOCAL;
 
             if (type == function_type::BUILTIN | type == function_type::CLOSURE)
                 distance++;
