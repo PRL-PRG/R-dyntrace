@@ -59,7 +59,7 @@ struct trace_promises {
         closure_info_t info = rec.function_entry_get_info(call, op, rho);
 
         // Push function ID on function stack
-        STATE(fun_stack).push(info.call_id);
+        STATE(fun_stack).push_back(make_pair(info.call_id, info.fn_type));
         STATE(curr_env_stack).push(info.call_ptr);
 
         rec.function_entry_process(info);
@@ -90,7 +90,7 @@ struct trace_promises {
         builtin_info_t info = rec.builtin_entry_get_info(call, op, rho, fn_type);
         rec.builtin_entry_process(info);
 
-        STATE(fun_stack).push(info.call_id);
+        STATE(fun_stack).push_back(make_pair(info.call_id, info.fn_type));
         STATE(curr_env_stack).push(info.call_ptr | 1);
     }
 
@@ -111,7 +111,7 @@ struct trace_promises {
         builtin_info_t info = rec.builtin_exit_get_info(call, op, rho, fn_type);
         rec.builtin_exit_process(info);
 
-        STATE(fun_stack).pop();
+        STATE(fun_stack).pop_back();
         STATE(curr_env_stack).pop();
     }
 

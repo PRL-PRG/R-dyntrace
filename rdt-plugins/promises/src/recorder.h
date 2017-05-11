@@ -36,7 +36,8 @@ public:
         info.call_id = make_funcall_id(op);
         //info.call_id = make_funcall_id(rho);
 
-        info.parent_call_id = STATE(fun_stack).top();
+        call_stack_elem_t elem = STATE(fun_stack).back();
+        info.parent_call_id = elem.first;
 
         char *location = get_location(op);
         if (location != NULL)
@@ -65,7 +66,8 @@ public:
         info.fn_compiled = is_byte_compiled(op);
         info.fn_id = get_function_id(op);
         info.fn_addr = get_function_addr(op);
-        info.call_id = STATE(fun_stack).top();
+        call_stack_elem_t elem = STATE(fun_stack).back();
+        info.call_id = elem.first;
         info.fn_type = function_type::CLOSURE;
 
         char *location = get_location(op);
@@ -83,8 +85,9 @@ public:
         info.arguments = get_arguments(op, rho);
         info.fn_definition = get_expression(op);
 
-        STATE(fun_stack).pop();
-        info.parent_call_id = STATE(fun_stack).top();
+        STATE(fun_stack).pop_back();
+        call_stack_elem_t elem_parent = STATE(fun_stack).back();
+        info.parent_call_id = elem_parent.first;
 
         return info;
     }
@@ -104,7 +107,8 @@ public:
 
         //R_FunTab[PRIMOFFSET(op)].eval % 100 )/10 ==
 
-        info.parent_call_id = STATE(fun_stack).top();
+        call_stack_elem_t elem = STATE(fun_stack).back();
+        info.parent_call_id = elem.first;
 
         char *location = get_location(op);
         if (location != NULL) {
@@ -133,14 +137,16 @@ public:
             info.name = name;
         info.fn_id = get_function_id(op);
         info.fn_addr = get_function_addr(op);
-        info.call_id = STATE(fun_stack).top();
+        call_stack_elem_t elem = STATE(fun_stack).back();
+        info.call_id = elem.first;
         if (name != NULL)
             info.name = name;
         info.fn_type = fn_type;
         info.fn_compiled = is_byte_compiled(op);
         info.fn_definition = get_expression(op);
 
-        info.parent_call_id = STATE(fun_stack).top();
+        call_stack_elem_t parent_elem = STATE(fun_stack).back();
+        info.parent_call_id = parent_elem.first;
 
         char *location = get_location(op);
         if (location != NULL)
@@ -155,6 +161,8 @@ public:
 //    }
 
 private:
+    enum lifestyle {LOCAL, BRANCH_LOCAL, ESCAPED};
+
     prom_info_t promise_get_info(const SEXP symbol, const SEXP rho) {
         prom_info_t info;
 
@@ -164,7 +172,13 @@ private:
 
         SEXP promise_expression = get_promise(symbol, rho);
         info.prom_id = get_promise_id(promise_expression);
-        info.in_call_id = STATE(fun_stack).top();
+
+        call_stack_elem_t stack_elem = STATE(fun_stack).back();
+        info.in_call_id = stack_elem.first;
+
+
+        //lifestyle =
+
         info.from_call_id = STATE(promise_origin)[info.prom_id];
 
         return info;
