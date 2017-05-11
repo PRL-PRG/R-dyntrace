@@ -19,12 +19,13 @@ Rdt <- function(block, tracer="default", ...) {
     stopifnot(is.character(tracer) && length(tracer) == 1 && nchar(tracer) > 0)
     if (missing(block)) stop("block is required")
 
-    start.time <- Sys.time()
+    start.time <- proc.time()
 
     retval <- .Call(C_Rdt, tracer, environment(), list(...))
 
-    end.time <- Sys.time()
-    write(paste("Elapsed time:", (end.time - start.time)), stderr())
+    end.time <- proc.time()
+    write("Tracing done, elapsed time:", stderr())
+    write(end.time - start.time, stderr())
 
     retval
 }

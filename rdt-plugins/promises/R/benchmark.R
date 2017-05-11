@@ -17,7 +17,7 @@ custom.executor <- function(executor, path)
 start <- proc.time()
 
 for (p in packages)
-    run.all.vignettes.from.package(p, custom.executor(trace.promises.db, path=paste(DIR, p, ".sqlite", sep="")))
+    run.all.vignettes.from.package(p, custom.executor(trace.promises.uncompiled.db, path=paste(DIR, p, ".sqlite", sep="")))
 
 end <- proc.time()
 

@@ -1,7 +1,7 @@
 # requires dplyr, igraph, RSQLite
 
-#library(dplyr)
-#library(igraph)
+library(dplyr)
+library(igraph)
 
 get_trace_strictness <- function(path="trace.sqlite")
     src_sqlite(path) %>% tbl("out_strictness")
@@ -16,8 +16,6 @@ get_function_aliases_by_id <- function(id, path="trace.sqlite")
     src_sqlite(path) %>% tbl("function_names") %>% filter(function_id == id)
 
 # db <-
-
-load_trace <- function(path="trace.sqlite") src_sqlite(path)
 
 # Derive a call graph from a trace. This call graph agregates a concrete call tree by translating calls to function
 # definitions.
@@ -225,4 +223,24 @@ where_are_promises_evaluated_cct <- function(path="trace.sqlite") {
 }
 
 #inner_join(cg.ls %>% rename(locality.cg=locality,creat.cg=created_function_id,force.cg=forced_function_id), cct.ls %>% rename(locality.cct=locality,creat.cct=created_function_id,force.cct=forced_function_id), by="id") %>% as.data.frame #%>% select (id, created_call_id, forced_call_id, locality.cg, locality.cct)
+
+
+# de noveau ###################
+load_trace <- function(path="trace.sqlite") src_sqlite(path)
+
+where_are_promises_evaluated <- function(path="trace.sqlite") {
+    db <- load_trace(path)
+    promise_evaluations <- db %>% tbl("promise_evaluations") %>% filter(event_type == 15) %>% filter(promise_id > 0)
+    promises <- db %>% tbl("promises")
+
+    lifestyles <-
+        left_join(promises, promise_evaluations, by=c("id" = "promise_id")) %>%
+        mutate(lifestyle = ifelse(lifestyle == 1, "local",
+                           ifelse(lifestyle == 2, "branch-local",
+                           ifelse(lifestyle == 3, "escaped",
+                                                  "virgin")))) %>%
+        select(id, from_call_id, in_call_id, lifestyle)
+
+    lifestyles %>% group_by(lifestyle) %>% count(lifestyle)
+}
 
