@@ -186,7 +186,24 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
     stream << " name=" << (info.name.empty() ? "<unknown>" : info.name)
            << " id=" << info.prom_id
            << " in_call=" << num_pref << num_fmt << info.in_call_id
-           << " from_call=" << num_pref << num_fmt << info.from_call_id << "\n";
+           << " from_call=" << num_pref << num_fmt << info.from_call_id;
+
+    switch (info.lifestyle) {
+        case lifestyle_type::LOCAL:
+            stream << " lifestyle=local";
+            break;
+        case lifestyle_type::BRANCH_LOCAL:
+            stream << " lifestyle=branch-local";
+            break;
+        case lifestyle_type::ESCAPED:
+            stream << " lifestyle=escaped";
+            break;
+        case lifestyle_type::VIRGIN:
+            stream << " lifestyle=virgin";
+            break;
+    }
+
+    stream << "\n";
 
     return stream.str();
 }

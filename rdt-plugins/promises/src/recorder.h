@@ -161,7 +161,22 @@ public:
 //    }
 
 private:
-    enum lifestyle {LOCAL, BRANCH_LOCAL, ESCAPED};
+    lifestyle_type judge_promise_lifestyle(call_id_t from_call_id) {
+        int distance = 0;
+        for (vector<call_stack_elem_t>::reverse_iterator i = STATE(fun_stack).rbegin(); i != STATE(fun_stack).rend(); ++i) {
+            call_id_t cursor = i->first;
+            function_type type = i->second;
+
+            if (cursor == 0)
+                return lifestyle_type::ESCAPED; // reached root, parent must be in a different branch--promise escaped
+
+            if (cursor == from_call_id)
+                return (distance == 0) ? lifestyle_type::LOCAL : lifestyle_type::BRANCH_LOCAL;
+
+            if (type == function_type::BUILTIN | type == function_type::CLOSURE)
+                distance++;
+        }
+    }
 
     prom_info_t promise_get_info(const SEXP symbol, const SEXP rho) {
         prom_info_t info;
@@ -176,10 +191,12 @@ private:
         call_stack_elem_t stack_elem = STATE(fun_stack).back();
         info.in_call_id = stack_elem.first;
 
-
-        //lifestyle =
-
         info.from_call_id = STATE(promise_origin)[info.prom_id];
+
+        if (info.in_call_id == info.from_call_id)
+            info.lifestyle = lifestyle_type::LOCAL;
+        else
+            info.lifestyle = judge_promise_lifestyle(info.from_call_id);
 
         return info;
     }

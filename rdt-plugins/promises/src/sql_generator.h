@@ -22,7 +22,7 @@ namespace sql_generator {
     sql_stmt_t make_insert_arguments_statement(std::vector<sql_val_cell_t> & arguments, bool align);
 
     sql_stmt_t make_insert_promise_statement(sql_val_t id);
-    sql_stmt_t make_insert_promise_evaluation_statement(sql_val_t clock, sql_val_t event_type, sql_val_t promise_id, sql_val_t from_call_id, sql_val_t in_call_id);
+    sql_stmt_t make_insert_promise_evaluation_statement(sql_val_t clock, sql_val_t event_type, sql_val_t promise_id, sql_val_t from_call_id, sql_val_t in_call_id, sql_val_t lifestyle);
     sql_stmt_t make_insert_promise_associations_statement(std::vector<sql_val_cell_t> & associations, bool align);
 
     sql_stmt_t make_select_max_argument_id_statement();

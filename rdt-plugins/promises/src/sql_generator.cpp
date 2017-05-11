@@ -101,7 +101,7 @@ namespace sql_generator {
     }
 
     sql_stmt_t make_insert_promise_evaluation_statement(sql_val_t clock, sql_val_t event_type, sql_val_t promise_id,
-                                                        sql_val_t from_call_id, sql_val_t in_call_id) {
+                                                        sql_val_t from_call_id, sql_val_t in_call_id, sql_val_t lifestyle) {
         stringstream statement;
 
         statement << "insert into promise_evaluations values ("
@@ -109,7 +109,8 @@ namespace sql_generator {
                   << event_type << ","
                   << promise_id << ","
                   << from_call_id << ","
-                  << in_call_id
+                  << in_call_id << ","
+                  << lifestyle
                   << ");\n";
 
         return statement.str();
