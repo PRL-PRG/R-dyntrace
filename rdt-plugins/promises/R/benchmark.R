@@ -1,7 +1,7 @@
 # Run as: Rscript file argv
 
-#DIR="/data/kondziu/"
-DIR="./"
+DIR="/data/kondziu/"
+#DIR="./"
 
 packages = commandArgs(trailingOnly = TRUE)
 
