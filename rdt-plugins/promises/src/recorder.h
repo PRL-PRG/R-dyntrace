@@ -199,6 +199,15 @@ private:
         else
             info.lifestyle = judge_promise_lifestyle(info.from_call_id);
 
+        info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(promise_expression)));
+
+        if (info.prom_type == sexp_type::BCODE) {
+            SEXP original_expression = BCODE_EXPR(PRCODE(promise_expression));
+            info.prom_original_type = static_cast<sexp_type>(TYPEOF(PRCODE(original_expression)));
+        } else {
+            info.prom_original_type = info.prom_type;
+        }
+
         return info;
     }
 
@@ -235,7 +244,7 @@ public:
     DELEGATE(builtin_exit, builtin_info_t)
     DELEGATE(force_promise_entry, prom_info_t)
     DELEGATE(force_promise_exit, prom_info_t)
-    DELEGATE(promise_created, prom_id_t)
+    DELEGATE(promise_created, prom_basic_info_t)
     DELEGATE(promise_lookup, prom_info_t)
 
     DELEGATE(init_recorder)
@@ -286,7 +295,7 @@ public:
     COMPOSE(builtin_exit, builtin_info_t)
     COMPOSE(force_promise_entry, prom_info_t)
     COMPOSE(force_promise_exit, prom_info_t)
-    COMPOSE(promise_created, prom_id_t)
+    COMPOSE(promise_created, prom_basic_info_t)
     COMPOSE(promise_lookup, prom_info_t)
 
     COMPOSE(init_recorder)

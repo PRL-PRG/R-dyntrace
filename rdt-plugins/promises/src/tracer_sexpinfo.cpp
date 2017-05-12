@@ -133,6 +133,8 @@ arg_id_t get_argument_id(fn_id_t function_id, const string & argument) {
     return argument_id;
 }
 
+
+
 arglist_t get_arguments(SEXP op, SEXP rho) {
     arglist_t arguments;
 
@@ -178,4 +180,34 @@ arglist_t get_arguments(SEXP op, SEXP rho) {
     }
 
     return arguments;
+}
+
+string sexp_type_to_string(sexp_type s) {
+    switch (s) {
+        case sexp_type::NIL: return "null";
+        case sexp_type::SYM: return "symbol";
+        case sexp_type::LIST: return "list";
+        case sexp_type::CLOS: return "closure";
+        case sexp_type::ENV: return "environment";
+        case sexp_type::PROM: return "promise";
+        case sexp_type::LANG: return "language";
+        case sexp_type::SPECIAL: return "special";
+        case sexp_type::BUILTIN: return "built-in";
+        case sexp_type::CHAR: return "character";
+        case sexp_type::LGL: return "logical";
+        case sexp_type::INT: return "integer";
+        case sexp_type::REAL: return "real";
+        case sexp_type::CPLX: return "complex";
+        case sexp_type::STR: return "string";
+        case sexp_type::DOT: return "dot";
+        case sexp_type::ANY: return "any";
+        case sexp_type::VEC: return "vector";
+        case sexp_type::EXPR: return "expression";
+        case sexp_type::BCODE: return "byte-code";
+        case sexp_type::EXTPTR: return "external_pointer";
+        case sexp_type::WEAKREF: return "weak_reference";
+        case sexp_type::RAW: return "raw";
+        case sexp_type::S4: return "s4";
+        default: return "<unknown>";
+     }
 }

@@ -41,7 +41,9 @@ create table if not exists calls (
 
 create table if not exists promises (
     --[ identity ]-------------------------------------------------------------
-    id integer primary key -- equal to promise pointer SEXP
+    id integer primary key, -- equal to promise pointer SEXP
+    type integer null,
+    original_type integer null -- if type is bcode (21) then this is the type before copilation
 );
 
 create table if not exists promise_associations (

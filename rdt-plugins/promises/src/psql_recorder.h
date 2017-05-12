@@ -18,7 +18,7 @@ public:
     void builtin_exit(const builtin_info_t &) {};
     void force_promise_entry(const prom_info_t &);
     void force_promise_exit(const prom_info_t &) {}
-    void promise_created(const prom_id_t &);
+    void promise_created(const prom_basic_info_t &);
     void promise_lookup(const prom_info_t &);
     void unwind(const vector<call_id_t> &) {};
 };

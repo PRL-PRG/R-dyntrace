@@ -79,7 +79,7 @@ void compile_prepared_sql_statements() {
     prepared_sql_insert_call =
             compile_sql_statement(make_insert_function_call_statement("?","?","?","?","?","?"));
     prepared_sql_insert_promise =
-            compile_sql_statement(make_insert_promise_statement("?"));
+            compile_sql_statement(make_insert_promise_statement("?", "?", "?"));
     prepared_sql_insert_promise_eval =
             compile_sql_statement(make_insert_promise_evaluation_statement("?","?","?","?","?","?"));
 
@@ -182,8 +182,15 @@ sqlite3_stmt * populate_call_statement(const call_info_t & info) {
     return prepared_sql_insert_call;
 }
 
-sqlite3_stmt * populate_promise_statement(const prom_id_t id) {
-    sqlite3_bind_int(prepared_sql_insert_promise, 1, (int)id);
+sqlite3_stmt * populate_promise_statement(const prom_basic_info_t info) {
+    sqlite3_bind_int(prepared_sql_insert_promise, 1, (int) info.prom_id);
+    sqlite3_bind_int(prepared_sql_insert_promise, 2, (int) info.prom_type);
+
+    if (info.prom_type == sexp_type::BCODE)
+        sqlite3_bind_int(prepared_sql_insert_promise, 3, (int) info.prom_original_type);
+    else
+        sqlite3_bind_null(prepared_sql_insert_promise, 3);
+
     return prepared_sql_insert_promise;
 }
 
@@ -291,7 +298,7 @@ void psql_recorder_t::force_promise_entry(const prom_info_t & info) {
 #ifdef RDT_SQLITE_SUPPORT
     if (info.prom_id < 0) // if this is a promise from the outside
         if (!negative_promise_already_inserted(info.prom_id)) {
-            sqlite3_stmt *statement = populate_promise_statement(info.prom_id);
+            sqlite3_stmt *statement = populate_promise_statement(info);
             multiplexer::output(
                     multiplexer::payload_t(statement),
                     tracer_conf.outputs);
@@ -308,9 +315,9 @@ void psql_recorder_t::force_promise_entry(const prom_info_t & info) {
 #endif
 }
 
-void psql_recorder_t::promise_created(const prom_id_t & prom_id) {
+void psql_recorder_t::promise_created(const prom_basic_info_t & info) {
 #ifdef RDT_SQLITE_SUPPORT
-    sqlite3_stmt *statement = populate_promise_statement(prom_id);
+    sqlite3_stmt *statement = populate_promise_statement(info);
     multiplexer::output(
             multiplexer::payload_t(statement),
             tracer_conf.outputs);

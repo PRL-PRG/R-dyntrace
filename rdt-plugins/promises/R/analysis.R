@@ -244,3 +244,47 @@ where_are_promises_evaluated <- function(path="trace.sqlite") {
     lifestyles %>% group_by(lifestyle) %>% count(lifestyle)
 }
 
+what_types_of_promises_are_there <- function(path="trace.sqlite") {
+    humanize_type = function(type)
+        if(type == 0) "NIL" else
+        if(type == 1) "SYM" else
+        if(type == 2) "LIST" else
+        if(type == 3) "CLOS" else
+        if(type == 4) "ENV" else
+        if(type == 5) "PROM" else
+        if(type == 6) "LANG" else
+        if(type == 7) "SPECIAL" else
+        if(type == 8) "BUILTIN" else
+        if(type == 9) "CHAR" else
+        if(type == 10) "LGL" else
+        if(type == 13) "INT" else
+        if(type == 14) "REAL" else
+        if(type == 15) "CPLX" else
+        if(type == 16) "STR" else
+        if(type == 17) "DOT" else
+        if(type == 18) "ANY" else
+        if(type == 19) "VEC" else
+        if(type == 20) "EXPR" else
+        if(type == 21) "BCODE" else
+        if(type == 22) "EXTPTR" else
+        if(type == 23) "WEAKREF" else
+        if(type == 24) "RAW" else
+        if(type == 25) "S4" else NULL
+
+    db <- load_trace(path)
+
+    promises <- db %>% tbl("promises")
+
+    types <-
+        promises %>%
+        group_by(type) %>% count(type) %>% arrange(type)
+
+    total <- (promises %>% count %>% as.data.frame)$n
+
+    types <- types %>% mutate(percent=((n*100/total)))
+
+    types <- types %>% group_by(type) %>% do(mutate(., type_code = type, type = humanize_type(type)))
+
+    types
+}
+

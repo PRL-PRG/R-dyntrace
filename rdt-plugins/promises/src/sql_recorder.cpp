@@ -62,8 +62,12 @@ sql_stmt_t insert_call_statement(const call_info_t & info) {
     return make_insert_function_call_statement(id, pointer, name, location, function_id, parent_call_id);
 }
 
-sql_stmt_t insert_promise_statement(const prom_id_t id) {
-    return make_insert_promise_statement(from_int(id));
+sql_stmt_t insert_promise_statement(const prom_basic_info_t & info) {
+    return make_insert_promise_statement(
+            from_int(info.prom_id),
+            from_int(tools::enum_cast(info.prom_type)),
+            from_int(tools::enum_cast(info.prom_original_type))
+    );
 }
 
 sql_stmt_t insert_promise_association_statement(const closure_info_t & info, bool align) {
@@ -160,7 +164,7 @@ void sql_recorder_t::builtin_entry(const builtin_info_t & info) {
 void sql_recorder_t::force_promise_entry(const prom_info_t & info) {
     if (info.prom_id < 0) // if this is a promise from the outside
         if (!negative_promise_already_inserted(info.prom_id)) {
-            sql_stmt_t statement = insert_promise_statement(info.prom_id);
+            sql_stmt_t statement = insert_promise_statement(info);
             multiplexer::output(
                     multiplexer::payload_t(statement),
                     tracer_conf.outputs);
@@ -174,8 +178,8 @@ void sql_recorder_t::force_promise_entry(const prom_info_t & info) {
     }
 }
 
-void sql_recorder_t::promise_created(const prom_id_t & prom_id) {
-    sql_stmt_t statement = insert_promise_statement(prom_id);
+void sql_recorder_t::promise_created(const prom_basic_info_t & info) {
+    sql_stmt_t statement = insert_promise_statement(info);
     multiplexer::output(
             multiplexer::payload_t(statement),
             tracer_conf.outputs);

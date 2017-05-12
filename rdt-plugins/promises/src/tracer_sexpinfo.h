@@ -109,9 +109,48 @@ public:
     }
 };
 
-enum class function_type {CLOSURE = 0, BUILTIN = 1, SPECIAL = 2, TRUE_BUILTIN = 3};
+enum class function_type {
+    CLOSURE = 0,
+    BUILTIN = 1,
+    SPECIAL = 2,
+    TRUE_BUILTIN = 3
+};
 
-enum class lifestyle_type {VIRGIN = 0, LOCAL = 1, BRANCH_LOCAL = 2, ESCAPED = 3};
+enum class lifestyle_type {
+    VIRGIN = 0,
+    LOCAL = 1,
+    BRANCH_LOCAL = 2,
+    ESCAPED = 3
+};
+
+enum class sexp_type {
+    NIL = 0,
+    SYM = 1,
+    LIST = 2,
+    CLOS = 3,
+    ENV = 4,
+    PROM = 5,
+    LANG = 6,
+    SPECIAL = 7,
+    BUILTIN = 8,
+    CHAR = 9,
+    LGL = 10,
+    INT = 13,
+    REAL = 14,
+    CPLX = 15,
+    STR = 16,
+    DOT = 17,
+    ANY = 18,
+    VEC = 19,
+    EXPR = 20,
+    BCODE = 21,
+    EXTPTR = 22,
+    WEAKREF = 23,
+    RAW = 24,
+    S4 = 25
+};
+
+string sexp_type_to_string(sexp_type s);
 
 struct call_info_t {
     function_type fn_type;
@@ -135,9 +174,14 @@ struct builtin_info_t : call_info_t {
 };
 
 // FIXME would it make sense to add type of action here?
-struct prom_info_t {
+struct prom_basic_info_t {
+    prom_id_t     prom_id;
+    sexp_type     prom_type;
+    sexp_type     prom_original_type; // if prom_type is BCODE, then this points what the BCODESXP was compiled from
+};
+
+struct prom_info_t : prom_basic_info_t {
     string          name;
-    prom_id_t       prom_id;
     call_id_t       in_call_id;
     call_id_t       from_call_id;
     lifestyle_type  lifestyle;
