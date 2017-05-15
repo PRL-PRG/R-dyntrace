@@ -140,7 +140,7 @@ struct trace_promises {
             SEXP original_expression = BCODE_EXPR(PRCODE(prom));
             info.prom_original_type = static_cast<sexp_type>(TYPEOF(PRCODE(original_expression)));
         } else {
-            info.prom_type = info.prom_original_type;
+            info.prom_original_type = info.prom_type;
         }
 
         rec.promise_created_process(info);
