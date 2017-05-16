@@ -11,7 +11,7 @@ else
     PACKAGES="grid dplyr ggplot2 haven readr readxl stringr tibble tidyverse digest colorspace kernlab vcd rpart survival mclust party mvtnorm igraph"
 fi
 
-for i in "$@"
+for i in "$PACKAGES"
 do 
     $CMD $i 2>&1 | tee "$i.log" 
 done   
