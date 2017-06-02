@@ -228,6 +228,10 @@ where_are_promises_evaluated_cct <- function(path="trace.sqlite") {
 # de noveau ###################
 load_trace <- function(path="trace.sqlite") src_sqlite(path)
 
+which_functions_dont_use_their_arguments <- function(path="trace.sqlite") {
+  
+}
+
 where_are_promises_evaluated <- function(path="trace.sqlite") {
     db <- load_trace(path)
     promise_evaluations <- db %>% tbl("promise_evaluations") %>% filter(event_type == 15) %>% filter(promise_id > 0)
@@ -245,7 +249,7 @@ where_are_promises_evaluated <- function(path="trace.sqlite") {
 }
 
 what_types_of_promises_are_there <- function(path="trace.sqlite") {
-    humanize_type = function(type)
+    humanize_type = function(type, fallback_type=NULL)
         if(type == 0) "NIL" else
         if(type == 1) "SYM" else
         if(type == 2) "LIST" else
@@ -265,7 +269,10 @@ what_types_of_promises_are_there <- function(path="trace.sqlite") {
         if(type == 18) "ANY" else
         if(type == 19) "VEC" else
         if(type == 20) "EXPR" else
-        if(type == 21) "BCODE" else
+        if(type == 21) {
+          if(is.null(fallback_type)) "BCODE"
+          else paste("BCODE", humanize_type(fallback_type), sep=" ")
+        } else
         if(type == 22) "EXTPTR" else
         if(type == 23) "WEAKREF" else
         if(type == 24) "RAW" else
@@ -276,15 +283,15 @@ what_types_of_promises_are_there <- function(path="trace.sqlite") {
     promises <- db %>% tbl("promises")
 
     types <-
-        promises %>%
-        group_by(type) %>% count(type) %>% arrange(type)
+        promises %>% #mutate(archetype = type*100+if(is.na(original_type)) 99 else original_type) %>%
+        group_by(type, original_type) %>% count(type, original_type) %>% arrange(original_type, type)
 
     total <- (promises %>% count %>% as.data.frame)$n
 
-    types <- types %>% mutate(percent=((n*100/total)))
-
-    types <- types %>% group_by(type) %>% do(mutate(., type_code = type, type = humanize_type(type)))
-
-    types
+    types %>% 
+      mutate(percent=((n*100/total))) %>%
+      group_by(type, original_type) %>% 
+      do(mutate(., type_code = type, type = humanize_type(type, original_type))) %>%
+      group_by(type) %>% select(type, n, percent)
 }
 
