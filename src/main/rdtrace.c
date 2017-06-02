@@ -57,6 +57,7 @@ const char *get_name(SEXP sexp) {
 
 static int get_lineno(SEXP srcref) {
     if (srcref && srcref != R_NilValue) {
+
         if (TYPEOF(srcref) == VECSXP) {
             srcref = VECTOR_ELT(srcref, 0);
         }
@@ -65,6 +66,34 @@ static int get_lineno(SEXP srcref) {
     } 
     
     return -1;               
+}
+
+static int get_colno(SEXP srcref) {
+    if (srcref && srcref != R_NilValue) {
+
+        if (TYPEOF(srcref) == VECSXP) {
+            srcref = VECTOR_ELT(srcref, 0);
+        }
+
+//        INTEGER(val)[0] = lloc->first_line;
+//        INTEGER(val)[1] = lloc->first_byte;
+//        INTEGER(val)[2] = lloc->last_line;
+//        INTEGER(val)[3] = lloc->last_byte;
+//        INTEGER(val)[4] = lloc->first_column;
+//        INTEGER(val)[5] = lloc->last_column;
+//        INTEGER(val)[6] = lloc->first_parsed;
+//        INTEGER(val)[7] = lloc->last_parsed;
+
+        if(TYPEOF(srcref) == INTSXP) {
+            //lineno = INTEGER(srcref)[0];
+            return INTEGER(srcref)[4];
+        } else {
+            // This should never happen, right?
+            return -1;
+        }
+    }
+
+    return -1;
 }
 
 static const char *get_filename(SEXP srcref) {
@@ -86,11 +115,12 @@ char *get_location(SEXP op) {
     SEXP srcref = getAttrib(op, R_SrcrefSymbol);
     const char *filename = get_filename(srcref);
     int lineno = get_lineno(srcref);
+    int colno = get_colno(srcref);
     char *location = NULL;
 
     if (filename) {
         if (strlen(filename) > 0) {
-            asprintf(&location, "%s:%d", filename, lineno);
+            asprintf(&location, "%s:%d,%d", filename, lineno, colno);
         } else {
             location = strdup("<console>");
         }
