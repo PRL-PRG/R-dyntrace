@@ -1,5 +1,6 @@
 # requires dplyr, igraph, RSQLite
 
+library(RSQLite)
 library(dplyr)
 library(igraph)
 
@@ -14,8 +15,6 @@ get_function_by_id <- function(function_id, path="trace.sqlite")
 
 get_function_aliases_by_id <- function(id, path="trace.sqlite")
     src_sqlite(path) %>% tbl("function_names") %>% filter(function_id == id)
-
-# db <-
 
 # Derive a call graph from a trace. This call graph agregates a concrete call tree by translating calls to function
 # definitions.
@@ -228,10 +227,6 @@ where_are_promises_evaluated_cct <- function(path="trace.sqlite") {
 # de noveau ###################
 load_trace <- function(path="trace.sqlite") src_sqlite(path)
 
-which_functions_dont_use_their_arguments <- function(path="trace.sqlite") {
-  
-}
-
 where_are_promises_evaluated <- function(path="trace.sqlite") {
     db <- load_trace(path)
     promise_evaluations <- db %>% tbl("promise_evaluations") %>% filter(event_type == 15) %>% filter(promise_id > 0)
@@ -271,7 +266,7 @@ what_types_of_promises_are_there <- function(path="trace.sqlite") {
         if(type == 20) "EXPR" else
         if(type == 21) {
           if(is.null(fallback_type)) "BCODE"
-          else paste("BCODE", humanize_type(fallback_type), sep=" ")
+          else paste("BCODE", Recall(fallback_type), sep=" ")
         } else
         if(type == 22) "EXTPTR" else
         if(type == 23) "WEAKREF" else
@@ -295,3 +290,181 @@ what_types_of_promises_are_there <- function(path="trace.sqlite") {
       group_by(type) %>% select(type, n, percent)
 }
 
+basic_results_for_one_function <- function(function.id, db) {
+    functions <- db %>% tbl("functions") %>% rename(function_id = id, function_location = location, call_type = type)
+    calls <- db %>% tbl("calls") %>% rename(call_id = id, call_location = location)
+    arguments <- db %>% tbl("arguments") %>% rename(argument_id = id)
+    promises <- db %>% tbl("promises") %>% rename(promise_id = id, promise_type = type)
+    promise_associations <- db %>% tbl("promise_associations")
+    promise_evaluations<- db %>% tbl("promise_evaluations") 
+    
+
+    function_info <- functions %>% filter(function_id == function.id)     
+    
+    function_info %>% 
+        left_join(calls, by = "function_id") %>% 
+        left_join(promise_associations, by = "call_id") %>%
+        left_join(promises, by = "promise_id") %>%
+        left_join(promise_evaluations, by = "promise_id")
+}
+
+basic_unagreggated_results_all_in_one_place <- function(path="trace.sqlite") {
+    db <- load_trace(path)
+
+    function_ids <- db %>% tbl("functions") %>% select(id) %>% rename(function_id = id)
+
+    functions <- db %>% tbl("functions") %>% rename(function_id = id, function_location = location, call_type = type)
+    calls <- db %>% tbl("calls") %>% rename(call_id = id, call_location = location)
+    arguments <- db %>% tbl("arguments") %>% rename(argument_id = id)
+    promises <- db %>% tbl("promises") %>% rename(promise_id = id, promise_type = type)
+    promise_associations <- db %>% tbl("promise_associations")
+    promise_evaluations<- db %>% tbl("promise_evaluations") 
+
+    #function_info <- functions %>% filter(function_id == function.id)     
+    
+    functions %>% 
+        left_join(calls, by = "function_id") %>% 
+        left_join(promise_associations, by = "call_id") %>%
+        left_join(promises, by = "promise_id") %>%
+        left_join(promise_evaluations, by = "promise_id")
+}
+
+write_unagreggated_results <- function(results, file="trace.txt", ...) {
+    printable <- 
+        results %>% data.frame %>%
+        mutate(definition = gsub("[\r\n]", "\\\\n", gsub("\t","\\\\t",definition))) %>% 
+        select(
+            function_name,
+            function_id,
+            call_id,
+            argument_id,
+            call_type,
+            compiled,
+            function_location,
+            call_location,
+            promise_id,
+            parent_id,
+            promise_type,
+            original_type,
+            clock,
+            event_type,
+            from_call_id,
+            in_call_id,
+            lifestyle,
+            #pointer,
+            definition)
+
+    write.table(printable, file=file, sep="\t", row.names=FALSE, ...)   
+}
+
+humanize_promise_type = function(type, fallback_type=NULL)
+    if(type == 0) "NIL" else
+    if(type == 1) "SYM" else
+    if(type == 2) "LIST" else
+    if(type == 3) "CLOS" else
+    if(type == 4) "ENV" else
+    if(type == 5) "PROM" else
+    if(type == 6) "LANG" else
+    if(type == 7) "SPECIAL" else
+    if(type == 8) "BUILTIN" else
+    if(type == 9) "CHAR" else
+    if(type == 10) "LGL" else
+    if(type == 13) "INT" else
+    if(type == 14) "REAL" else
+    if(type == 15) "CPLX" else
+    if(type == 16) "STR" else
+    if(type == 17) "DOT" else
+    if(type == 18) "ANY" else
+    if(type == 19) "VEC" else
+    if(type == 20) "EXPR" else
+    if(type == 21) {
+      if(is.null(fallback_type)) "BCODE"
+      else paste("BCODE", Recall(fallback_type), sep=" ")
+    } else
+    if(type == 22) "EXTPTR" else
+    if(type == 23) "WEAKREF" else
+    if(type == 24) "RAW" else
+    if(type == 25) "S4" else NULL
+
+pretty_unagreggated_report <- function(path="trace.sqlite", file="trace.report.txt") {
+    db <- load_trace(path)
+
+    functions <- db %>% tbl("functions") %>% rename(function_id = id, function_location = location, call_type = type)
+    calls <- db %>% tbl("calls") %>% rename(call_id = id, call_location = location)
+    arguments <- db %>% tbl("arguments") %>% rename(argument_id = id, argument_name = name)
+    promises <- db %>% tbl("promises") %>% rename(promise_id = id, promise_type = type)
+    promise_associations <- db %>% tbl("promise_associations")
+    promise_evaluations<- db %>% tbl("promise_evaluations") 
+
+    promise_info <- promise_associations %>%
+        left_join(promises, by = "promise_id") %>%
+        left_join(promise_evaluations, by = "promise_id") %>%
+        left_join(arguments, by = "argument_id") %>% 
+        data.frame
+   
+    handle_function <- function(fun.row) {
+        write(paste("FUNCTION:", fun.row$function_id), file)
+        write(paste("    location:", fun.row$location), file)
+        write(paste("    definition:\n        ", gsub("\n", "\n        ", fun.row$definition), sep=""), file)
+        write(file)
+
+        my.calls <- fun.row %>% left_join(calls, by = "function_id", copy=TRUE)        
+        my.calls %>% group_by(call_id) %>% do(handle_call(.))
+
+        write(file)
+        write(file)
+    }
+
+    handle_call <- function(call.row) {
+        if(is.na(call.row$call.id))
+            return(data.frame())
+        
+        args <- (arguments %>% filter(function_id == call.row$function_id) %>% arrange(position) %>% data.frame)$argument_name
+        signature <- paste(call.row$function_name, " <- function(", args, ") ...", sep="")
+        type <- if (call.row$call_type == 0) "closure" else
+                if (call.row$call_type == 1) "built-in" else
+                if (call.row$call_type == 2) "special" else
+                if (tcall.row$call_ype == 3) "primitive" else NULL
+
+
+        write(paste("    CALL:", call.row$call_id), file)
+        write(paste("        signature:", signature), file)
+        write(paste("        called by:", call.row$parent_id), file)
+        write(paste("        type:", type), file)
+        write(paste("        location:", call.row$call_location), file)
+        write(paste("        callsite:", "TODO"), file)
+        write(file)
+        
+        my.promises <- call.row %>% left_join(promise_info, by = "call_id") %>% group_by(clock) %>% arrange(clock)
+        my.promises %>% do(handle_promise(.))
+
+        data_frame()
+    }
+
+    handle_promise <- function(prom.row) {
+        if(is.na(prom.row$promise.id))
+            return(data.frame())
+ 
+        promise_type <- humanize_promise_type(prom.row$promise_type, prom.row$original_type)
+
+        event_type <- if (prom.row$event_type == 15) "promise forced" else 
+                     if(prom.row$event_type == 0) "promise lookup" else NULL
+
+        lifestyle <- if(prom.row$lifestyle == 1) "local" else
+                     if(prom.row$lifestyle == 2) "passed down" else
+                     if(prom.row$lifestyle == 3) "escaped" else NULL
+
+        write(paste("        PROMISE:", prom.row$argument_name, paste("(", prom.row$promise_id, ")", sep="")), file)
+        write(paste("            promise type:", promise_type), file) 
+        write(paste("            event:", event_type), file)
+        write(paste("            clock:", prom.row$clock), file)
+        write(paste("            created for:", prom.row$from_call_id), file)
+        write(paste("            evaluated in:", prom.row$in_call_id), file)
+        write(paste("            lifestyle:", lifestyle), file)
+        write(file)
+        
+        data_frame()
+    }
+
+    functions %>% group_by(function_id) %>% do(handle_function(.))
+}
