@@ -387,6 +387,8 @@ humanize_promise_type = function(type, fallback_type=NULL)
     if(type == 25) "S4" else NULL
 
 pretty_unagreggated_report <- function(path="trace.sqlite", file="trace.report.txt") {
+    write("!", file);
+
     db <- load_trace(path)
 
     functions <- db %>% tbl("functions") %>% rename(function_id = id, function_location = location, call_type = type)
@@ -403,22 +405,19 @@ pretty_unagreggated_report <- function(path="trace.sqlite", file="trace.report.t
         data.frame
    
     handle_function <- function(fun.row) {
-        write(paste("FUNCTION:", fun.row$function_id), file)
-        write(paste("    location:", fun.row$location), file)
-        write(paste("    definition:\n        ", gsub("\n", "\n        ", fun.row$definition), sep=""), file)
-        write(file)
+        write(paste("FUNCTION:", fun.row$function_id), file, append=TRUE)
+        write(paste("    location:", fun.row$location), file, append=TRUE)
+        write(paste("    definition:\n        ", gsub("\n", "\n        ", fun.row$definition), sep=""), file, append=TRUE)
+        write(file, append=TRUE)
 
         my.calls <- fun.row %>% left_join(calls, by = "function_id", copy=TRUE)        
         my.calls %>% group_by(call_id) %>% do(handle_call(.))
 
-        write(file)
-        write(file)
+        write(file, append=TRUE)
+        write(file, append=TRUE)
     }
 
     handle_call <- function(call.row) {
-        if(is.na(call.row$call.id))
-            return(data.frame())
-        
         args <- (arguments %>% filter(function_id == call.row$function_id) %>% arrange(position) %>% data.frame)$argument_name
         signature <- paste(call.row$function_name, " <- function(", args, ") ...", sep="")
         type <- if (call.row$call_type == 0) "closure" else
@@ -427,24 +426,23 @@ pretty_unagreggated_report <- function(path="trace.sqlite", file="trace.report.t
                 if (tcall.row$call_ype == 3) "primitive" else NULL
 
 
-        write(paste("    CALL:", call.row$call_id), file)
-        write(paste("        signature:", signature), file)
-        write(paste("        called by:", call.row$parent_id), file)
-        write(paste("        type:", type), file)
-        write(paste("        location:", call.row$call_location), file)
-        write(paste("        callsite:", "TODO"), file)
+        write(paste("    CALL:", call.row$call_id), file, append=TRUE)
+        write(paste("        signature:", signature), file, append=TRUE)
+        write(paste("        called by:", call.row$parent_id), file, append=TRUE)
+        write(paste("        type:", type), file, append=TRUE)
+        write(paste("        location:", call.row$call_location), file, append=TRUE)
+        write(paste("        callsite:", "TODO"), file, append=TRUE)
         write(file)
-        
-        my.promises <- call.row %>% left_join(promise_info, by = "call_id") %>% group_by(clock) %>% arrange(clock)
-        my.promises %>% do(handle_promise(.))
+       
+        if (length(args) > 0) {
+            my.promises <- call.row %>% left_join(promise_info, by = "call_id") %>% group_by(clock) %>% arrange(clock)
+            my.promises %>% do(handle_promise(.))
+        }
 
         data_frame()
     }
 
     handle_promise <- function(prom.row) {
-        if(is.na(prom.row$promise.id))
-            return(data.frame())
- 
         promise_type <- humanize_promise_type(prom.row$promise_type, prom.row$original_type)
 
         event_type <- if (prom.row$event_type == 15) "promise forced" else 
@@ -454,14 +452,14 @@ pretty_unagreggated_report <- function(path="trace.sqlite", file="trace.report.t
                      if(prom.row$lifestyle == 2) "passed down" else
                      if(prom.row$lifestyle == 3) "escaped" else NULL
 
-        write(paste("        PROMISE:", prom.row$argument_name, paste("(", prom.row$promise_id, ")", sep="")), file)
-        write(paste("            promise type:", promise_type), file) 
-        write(paste("            event:", event_type), file)
-        write(paste("            clock:", prom.row$clock), file)
-        write(paste("            created for:", prom.row$from_call_id), file)
-        write(paste("            evaluated in:", prom.row$in_call_id), file)
-        write(paste("            lifestyle:", lifestyle), file)
-        write(file)
+        write(paste("        PROMISE:", prom.row$argument_name, paste("(", prom.row$promise_id, ")", sep="")), file, append=TRUE)
+        write(paste("            promise type:", promise_type), file, append=TRUE) 
+        write(paste("            event:", event_type), file, append=TRUE)
+        write(paste("            clock:", prom.row$clock), file, append=TRUE)
+        write(paste("            created for:", prom.row$from_call_id), file, append=TRUE)
+        write(paste("            evaluated in:", prom.row$in_call_id), file, append=TRUE)
+        write(paste("            lifestyle:", lifestyle), file, append=TRUE)
+        write(file, append=TRUE)
         
         data_frame()
     }
