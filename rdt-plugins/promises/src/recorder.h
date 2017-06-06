@@ -44,6 +44,11 @@ public:
             info.loc = location;
         free(location);
 
+        char *callsite = get_callsite();
+        if (callsite != NULL)
+            info.callsite = callsite;
+        free(callsite);
+
         if (ns) {
             info.name = string(ns) + "::" + CHKSTR(name);
         } else {
@@ -74,6 +79,11 @@ public:
         if (location != NULL)
             info.loc = location;
         free(location);
+
+        char *callsite = get_callsite();
+        if (callsite != NULL)
+            info.callsite = callsite;
+        free(callsite);
 
         if (ns) {
             info.name = string(ns) + "::" + CHKSTR(name);
@@ -116,6 +126,11 @@ public:
         }
         free(location);
 
+        char *callsite = get_callsite();
+        if (callsite != NULL)
+            info.callsite = callsite;
+        free(callsite);
+
         info.call_ptr = get_sexp_address(rho);
         info.call_id = make_funcall_id(op);
 
@@ -152,6 +167,11 @@ public:
         if (location != NULL)
             info.loc = location;
         free(location);
+
+        char *callsite = get_callsite();
+        if (callsite != NULL)
+            info.callsite = callsite;
+        free(callsite);
 
         return info;
     }
@@ -207,6 +227,11 @@ private:
         } else {
             info.prom_original_type = info.prom_type;
         }
+
+        char *callsite = get_callsite();
+        if (callsite != NULL)
+            info.callsite = callsite;
+        free(callsite);
 
         return info;
     }

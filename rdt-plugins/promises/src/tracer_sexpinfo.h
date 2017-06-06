@@ -158,6 +158,7 @@ struct call_info_t {
     fn_addr_t     fn_addr;
     string        fn_definition;
     string        loc;
+    string        callsite;
     bool          fn_compiled;
 
     string        name; // fully qualified function name, if available
@@ -185,6 +186,7 @@ struct prom_info_t : prom_basic_info_t {
     call_id_t       in_call_id;
     call_id_t       from_call_id;
     lifestyle_type  lifestyle;
+    string          callsite;
 };
 
 prom_id_t get_promise_id(SEXP promise);

@@ -111,6 +111,24 @@ static const char *get_filename(SEXP srcref) {
     return NULL;
 }
 
+char *get_callsite(int how_far_in_the_past) {
+    SEXP srcref = R_GetCurrentSrcref(how_far_in_the_past);
+    const char *filename = get_filename(srcref);
+    int lineno = get_lineno(srcref);
+    int colno = get_colno(srcref);
+    char *location = NULL;
+
+    if (filename) {
+        if (strlen(filename) > 0) {
+            asprintf(&location, "%s:%d,%d", filename, lineno, colno);
+        } else {
+            asprintf(&location, "<console>:%d,%d", lineno, colno);
+        }
+    }
+
+    return location;
+}
+
 char *get_location(SEXP op) {
     SEXP srcref = getAttrib(op, R_SrcrefSymbol);
     const char *filename = get_filename(srcref);
@@ -122,7 +140,7 @@ char *get_location(SEXP op) {
         if (strlen(filename) > 0) {
             asprintf(&location, "%s:%d,%d", filename, lineno, colno);
         } else {
-            location = strdup("<console>");
+            asprintf(&location, "<console>:%d,%d", lineno, colno);
         }
     }
 

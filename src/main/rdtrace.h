@@ -123,6 +123,7 @@ extern const rdt_handler *rdt_curr_handler;
 const char *get_ns_name(SEXP op);
 const char *get_name(SEXP call);
 char *get_location(SEXP op);
+char *get_callsite();
 const char *get_call(SEXP call);
 int is_byte_compiled(SEXP op);
 char *to_string(SEXP var);
