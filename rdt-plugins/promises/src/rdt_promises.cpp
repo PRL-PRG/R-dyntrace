@@ -159,7 +159,8 @@ struct trace_promises {
 
     static void promise_lookup(const SEXP symbol, const SEXP rho, const SEXP val) {
         prom_info_t info = rec.promise_lookup_get_info(symbol, rho);
-        rec.promise_lookup_process(info);
+        if (info.prom_id >= 0)
+            rec.promise_lookup_process(info);
     }
 
     static void gc_promise_unmarked(const SEXP promise) {
