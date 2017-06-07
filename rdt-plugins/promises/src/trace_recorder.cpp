@@ -79,6 +79,11 @@ string function_call_info_line(TraceLinePrefix prefix, const closure_info_t &inf
     else
         stream << " location=" << info.loc;
 
+    if (info.callsite.empty())
+        stream << " callsite=<unknown>";
+    else
+        stream << " callsite=" << info.callsite;
+
     stream << " compiled=" << (info.fn_compiled ? "true" : "false");
 
     stream << " arguments={";
@@ -136,6 +141,11 @@ string builtin_or_special_call_info_line(TraceLinePrefix prefix, const builtin_i
         stream << " location=<unknown>";
     else
         stream << " location=" << info.loc;
+
+    if (info.callsite.empty())
+        stream << " callsite=<unknown>";
+    else
+        stream << " callsite=" << info.callsite;
 
     stream << " compiled=" << (info.fn_compiled ? "true" : "false");
 
@@ -206,7 +216,6 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
             stream << " lifestyle=virgin";
             break;
     }
-
 
     bool compiled = (info.prom_type == sexp_type::BCODE);
 
