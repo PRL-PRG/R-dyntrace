@@ -14,7 +14,8 @@ get_function_by_id <- function(function_id, path="trace.sqlite")
     src_sqlite(path) %>% tbl("functions") %>% filter(id == function_id)
 
 get_function_aliases_by_id <- function(id, path="trace.sqlite")
-    src_sqlite(path) %>% tbl("function_names") %>% filter(function_id == id)
+-
+src_sqlite(path) %>% tbl("function_names") %>% filter(function_id == id)
 
 # Derive a call graph from a trace. This call graph agregates a concrete call tree by translating calls to function
 # definitions.

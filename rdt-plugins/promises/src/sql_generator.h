@@ -18,7 +18,7 @@ namespace sql_generator {
     typedef std::string sql_val_cell_t;
 
     sql_stmt_t make_insert_function_statement(sql_val_t id, sql_val_t location, sql_val_t definition, sql_val_t type, sql_val_t compiled);
-    sql_stmt_t make_insert_function_call_statement(sql_val_t id, sql_val_t ptr, sql_val_t name, sql_val_t location,  sql_val_t function_id, sql_val_t parent_call_id);
+    sql_stmt_t make_insert_function_call_statement(sql_val_t id, sql_val_t name, sql_val_t callsite,  sql_val_t function_id, sql_val_t parent_call_id);
     sql_stmt_t make_insert_arguments_statement(std::vector<sql_val_cell_t> & arguments, bool align);
 
     sql_stmt_t make_insert_promise_statement(sql_val_t id, sql_val_t type, sql_val_t original_type);

@@ -228,11 +228,6 @@ private:
             info.prom_original_type = info.prom_type;
         }
 
-        char *callsite = get_callsite();
-        if (callsite != NULL)
-            info.callsite = callsite;
-        free(callsite);
-
         return info;
     }
 

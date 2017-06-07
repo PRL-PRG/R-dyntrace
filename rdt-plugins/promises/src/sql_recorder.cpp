@@ -55,11 +55,11 @@ sql_stmt_t insert_call_statement(const call_info_t & info) {
     sql_val_t id = from_int(info.call_id);
     sql_val_t pointer = from_hex(info.call_ptr); // FIXME do we really need this?
     sql_val_t name = wrap_nullable_string(info.name);
-    sql_val_t location = wrap_nullable_string(info.loc);
     sql_val_t function_id = from_int(info.fn_id);
     sql_val_t parent_call_id = from_int(info.parent_call_id);
+    sql_val_t callsite = wrap_nullable_string(info.callsite);
 
-    return make_insert_function_call_statement(id, pointer, name, location, function_id, parent_call_id);
+    return make_insert_function_call_statement(id, name, callsite, function_id, parent_call_id);
 }
 
 sql_stmt_t insert_promise_statement(const prom_basic_info_t & info) {

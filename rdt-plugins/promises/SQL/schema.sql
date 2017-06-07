@@ -27,10 +27,10 @@ create table if not exists arguments (
 create table if not exists calls (
     --[ identity ]-------------------------------------------------------------
     id integer primary key, -- if CALL_ID is off this is equal to SEXP pointer
-    pointer integer not null,
+    -- pointer integer not null, -- we're not using this at all
     --[ data ]-----------------------------------------------------------------
     function_name text,
-    location text,
+    callsite text,
     --[ relations ]------------------------------------------------------------
     function_id integer not null,
     parent_id integer not null, -- ID of call that executed current call
