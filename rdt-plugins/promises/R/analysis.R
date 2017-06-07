@@ -419,7 +419,7 @@ pretty_unagreggated_report <- function(path="trace.sqlite", file="trace.report.t
 
     handle_call <- function(call.row) {
         args <- (arguments %>% filter(function_id == call.row$function_id) %>% arrange(position) %>% data.frame)$argument_name
-        signature <- paste(call.row$function_name, " <- function(", args, ") ...", sep="")
+        signature <- paste(c(call.row$function_name, " <- function(", paste(args, sep=","), ") ..."), sep="")
         type <- if (call.row$call_type == 0) "closure" else
                 if (call.row$call_type == 1) "built-in" else
                 if (call.row$call_type == 2) "special" else
@@ -427,7 +427,7 @@ pretty_unagreggated_report <- function(path="trace.sqlite", file="trace.report.t
 
 
         write(paste("    CALL:", call.row$call_id), file, append=TRUE)
-        write(paste("        signature:", signature), file, append=TRUE)
+        write(paste(c("        signature:", signature)), file, append=TRUE)
         write(paste("        called by:", call.row$parent_id), file, append=TRUE)
         write(paste("        type:", type), file, append=TRUE)
         write(paste("        location:", call.row$call_location), file, append=TRUE)
