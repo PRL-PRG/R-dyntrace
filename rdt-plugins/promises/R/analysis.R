@@ -406,6 +406,8 @@ pretty_unagreggated_report <- function(path="trace.sqlite", file="trace.report.t
         data.frame
    
     handle_function <- function(fun.row) {
+        #print(fun.row %>% as.data.frame)
+
         write(paste("FUNCTION:", fun.row$function_id), file, append=TRUE)
         write(paste("    location:", fun.row$location), file, append=TRUE)
         write(paste("    definition:\n        ", gsub("\n", "\n        ", fun.row$definition), sep=""), file, append=TRUE)
@@ -419,16 +421,20 @@ pretty_unagreggated_report <- function(path="trace.sqlite", file="trace.report.t
     }
 
     handle_call <- function(call.row) {
+        #print(call.row %>% as.data.frame)
+
         args <- (arguments %>% filter(function_id == call.row$function_id) %>% arrange(position) %>% data.frame)$argument_name
-        signature <- paste(c(call.row$function_name, " <- function(", paste(args, sep=","), ") ..."), sep="")
+        arg_string <- if(call.row$call_type == 0) paste(args, collapse=",") else "..."
+        signature <- paste(c(call.row$function_name, " <- function(", arg_string, ")"), sep="", collapse="")
+
         type <- if (call.row$call_type == 0) "closure" else
                 if (call.row$call_type == 1) "built-in" else
                 if (call.row$call_type == 2) "special" else
-                if (tcall.row$call_ype == 3) "primitive" else NULL
+                if (call.row$call_type == 3) "primitive" else NULL
 
 
         write(paste("    CALL:", call.row$call_id), file, append=TRUE)
-        write(paste(c("        signature:", signature)), file, append=TRUE)
+        write(paste("        signature:", signature), file, append=TRUE)
         write(paste("        called by:", call.row$parent_id), file, append=TRUE)
         write(paste("        type:", type), file, append=TRUE)
         write(paste("        location:", call.row$call_location), file, append=TRUE)
@@ -444,12 +450,16 @@ pretty_unagreggated_report <- function(path="trace.sqlite", file="trace.report.t
     }
 
     handle_promise <- function(prom.row) {
+        print(prom.row %>% as.data.frame)
+
         promise_type <- humanize_promise_type(prom.row$promise_type, prom.row$original_type)
 
-        event_type <- if (prom.row$event_type == 15) "promise forced" else 
-                     if(prom.row$event_type == 0) "promise lookup" else NULL
+        event_type <- if (is.na(prom.row$event_type)) "promise unused" else
+                      if (prom.row$event_type == 15) "promise forced" else
+                      if (prom.row$event_type == 0) "promise lookup" else NULL
 
-        lifestyle <- if(prom.row$lifestyle == 1) "local" else
+        lifestyle <- if(is.na(prom.row$lifestyle)) "virgin" else
+                     if(prom.row$lifestyle == 1) "local" else
                      if(prom.row$lifestyle == 2) "passed down" else
                      if(prom.row$lifestyle == 3) "escaped" else NULL
 
@@ -466,4 +476,4 @@ pretty_unagreggated_report <- function(path="trace.sqlite", file="trace.report.t
     }
 
     functions %>% group_by(function_id) %>% do(handle_function(.))
-}
+}`
