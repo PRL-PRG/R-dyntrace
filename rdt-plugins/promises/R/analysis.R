@@ -359,6 +359,10 @@ write_unagreggated_results <- function(results, file="trace.txt", ...) {
 }
 
 humanize_promise_type = function(type, fallback_type=NULL)
+    if(is.na(type)) {
+        if(is.null(fallback_type)) "NA"
+        else paste("NA", Recall(fallback_type), sep=" ")
+    } else
     if(type == 0) "NIL" else
     if(type == 1) "SYM" else
     if(type == 2) "LIST" else
@@ -450,7 +454,7 @@ pretty_unagreggated_report <- function(path="trace.sqlite", file="trace.report.t
     }
 
     handle_promise <- function(prom.row) {
-        print(prom.row %>% as.data.frame)
+        #print(prom.row %>% as.data.frame)
 
         promise_type <- humanize_promise_type(prom.row$promise_type, prom.row$original_type)
 
@@ -476,4 +480,4 @@ pretty_unagreggated_report <- function(path="trace.sqlite", file="trace.report.t
     }
 
     functions %>% group_by(function_id) %>% do(handle_function(.))
-}`
+}
