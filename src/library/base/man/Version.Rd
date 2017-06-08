@@ -1,6 +1,6 @@
 % File src/library/base/man/Version.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2015 R Core Team
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{R.Version}
@@ -64,7 +64,7 @@ version
   under which it is currently running (for which see
   \code{\link{Sys.info}}).
 
-  Note that OS names might not be what you expect: for example OS X
+  Note that OS names might not be what you expect: for example macOS
   Mavericks 10.9.4 identifies itself as \samp{darwin13.3.0}, Linux
   usually as \samp{linux-gnu} and Solaris 10 as \samp{solaris2.10}.
 }
@@ -80,8 +80,19 @@ R.version$os # to check how lucky you are ...
 plot(0) # any plot
 mtext(R.version.string, side = 1, line = 4, adj = 1) # a useful bottom-right note
 
-## a good way to detect OS X:
-if(grepl("^darwin", R.version$os)) message("running on OS X")
+## a good way to detect macOS:
+if(grepl("^darwin", R.version$os)) message("running on macOS")
+
+## Short R version string, ("space free", useful in file/directory names;
+##                          also fine for unreleased versions of R):
+shortRversion <- function() {
+   rvs <- R.version.string
+   if(grepl("devel", (st <- R.version$status)))
+       rvs <- sub(paste0(" ",st," "), "-devel_", rvs, fixed=TRUE)
+   gsub("[()]", "", gsub(" ", "_", sub(" version ", "-", rvs)))
+}
+\donttest{shortRversion()}
+\dontshow{stopifnot(identical(grep(" ", shortRversion()), integer(0)))}
 }
 \keyword{environment}
 \keyword{sysdata}

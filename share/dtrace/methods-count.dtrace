@@ -1,6 +1,0 @@
-#!/usr/sbin/dtrace -Zs 
-
-R*:::function-entry
-{
-    @[copyinstr(arg0)] = count();
-}

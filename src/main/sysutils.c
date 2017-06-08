@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
+ *  Copyright (C) 1997-2017   The R Core Team
  *  Copyright (C) 1995-1996   Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997-2014   The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@
 #include <R_ext/Riconv.h>
 #include <Rinterface.h>
 #include <errno.h>
+#include <rlocale.h>
 
 /*
   See ../unix/system.txt for a description of some of these functions.
@@ -49,6 +50,8 @@
 #ifdef HAVE_SYS_STAT_H
 # include <sys/stat.h>
 #endif
+
+static int isDir(char *path);
 
 #ifdef HAVE_AQUA
 int (*ptr_CocoaSystem)(const char*);
@@ -104,11 +107,11 @@ Rboolean attribute_hidden R_HiddenFile(const char *name)
 
 static char * fixmode(const char *mode)
 {
-    /* Rconnection can have a mode of 4 chars plus a null; we might
-     * add one char */
-    static char fixedmode[6];
-    fixedmode[4] = '\0';
-    strncpy(fixedmode, mode, 4);
+    /* Rconnection can have a mode of 4 chars plus a ccs= setting plus a null; we might
+     * add one char if neither b nor t is specified. */
+    static char fixedmode[20];
+    fixedmode[19] = '\0';
+    strncpy(fixedmode, mode, 19);
     if (!strpbrk(fixedmode, "bt")) {
 	strcat(fixedmode, "t");
     }
@@ -117,9 +120,9 @@ static char * fixmode(const char *mode)
 
 static wchar_t * wcfixmode(const wchar_t *mode)
 {
-    static wchar_t wcfixedmode[6];
-    wcfixedmode[4] = L'\0';
-    wcsncpy(wcfixedmode, mode, 4);
+    static wchar_t wcfixedmode[20];
+    wcfixedmode[19] = L'\0';
+    wcsncpy(wcfixedmode, mode, 19);
     if (!wcspbrk(wcfixedmode, L"bt")) {
 	wcscat(wcfixedmode, L"t");
     }
@@ -229,6 +232,11 @@ SEXP attribute_hidden do_interactive(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden do_tempdir(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     checkArity(op, args);
+    Rboolean check = asLogical(CAR(args));
+    if(check && !isDir(R_TempDir)) {
+	R_TempDir = NULL;
+	R_reInitTempDir(/* die_on_fail = */ FALSE);
+    }
     return mkString(R_TempDir);
 }
 
@@ -366,11 +374,11 @@ SEXP attribute_hidden do_getenv(SEXP call, SEXP op, SEXP args, SEXP env)
 	wchar_t **w;
 	for (i = 0, w = _wenviron; *w != NULL; i++, w++)
 	    n = max(n, wcslen(*w));
-	N = 3*n+1;
+	N = 4*n+1;
 	char buf[N];
 	PROTECT(ans = allocVector(STRSXP, i));
 	for (i = 0, w = _wenviron; *w != NULL; i++, w++) {
-	    wcstoutf8(buf, *w, N); buf[N-1] = '\0';
+	    wcstoutf8(buf, *w, sizeof(buf));
 	    SET_STRING_ELT(ans, i, mkCharCE(buf, CE_UTF8));
 	}
 #else
@@ -389,10 +397,10 @@ SEXP attribute_hidden do_getenv(SEXP call, SEXP op, SEXP args, SEXP env)
 	    if (w == NULL)
 		SET_STRING_ELT(ans, j, STRING_ELT(CADR(args), 0));
 	    else {
-		int n = wcslen(w), N = 3*n+1; /* UCS-2 maps to <=3 UTF-8 */
+		int n = wcslen(w), N = 4*n+1; /* UTF-16 maps to <= 4 UTF-8 */
 		R_CheckStack2(N);
 		char buf[N];
-		wcstoutf8(buf, w, N); buf[N-1] = '\0'; /* safety */
+		wcstoutf8(buf, w, sizeof(buf));
 		SET_STRING_ELT(ans, j, mkCharCE(buf, CE_UTF8));
 	    }
 #else
@@ -744,6 +752,7 @@ cetype_t getCharCE(SEXP x)
 void * Riconv_open (const char* tocode, const char* fromcode)
 {
 #if defined Win32 || __APPLE__
+// These two support "utf8"
 # ifdef Win32
     const char *cp = "ASCII";
 #  ifndef SUPPORT_UTF8_WIN32 /* Always, at present */
@@ -760,7 +769,11 @@ void * Riconv_open (const char* tocode, const char* fromcode)
     else if(!*fromcode) return iconv_open(tocode, cp);
     else return iconv_open(tocode, fromcode);
 #else
-    return iconv_open(tocode, fromcode);
+// "utf8" is not valid but people keep on using it
+    const char *to = tocode, *from = fromcode;
+    if(strcasecmp(tocode, "utf8") == 0) to = "UTF-8";
+    if(strcasecmp(fromcode, "utf8") == 0) from = "UTF-8";
+    return iconv_open(to, from);
 #endif
 }
 
@@ -876,20 +889,22 @@ next_char:
 	    /* This must be the first byte */
 	    size_t clen;
 	    wchar_t wc;
+	    Rwchar_t ucs;
 	    clen = utf8toucs(&wc, inbuf);
 	    if(clen > 0 && inb >= clen) {
+	    	if (IS_HIGH_SURROGATE(wc))
+	    	    ucs = utf8toucs32(wc, inbuf);
+	    	else
+	    	    ucs = (Rwchar_t) wc;
 		inbuf += clen; inb -= clen;
-# ifndef Win32
-		if((unsigned int) wc < 65536) {
-# endif
-		    snprintf(outbuf, 9, "<U+%04X>", (unsigned int) wc);
+		if(ucs < 65536) {
+		// gcc 7 objects to this with unsigned int
+		    snprintf(outbuf, 9, "<U+%04X>", (unsigned short) ucs);
 		    outbuf += 8; outb -= 8;
-# ifndef Win32
 		} else {
-		    snprintf(outbuf, 13, "<U+%08X>", (unsigned int) wc);
+		    snprintf(outbuf, 13, "<U+%08X>", ucs);
 		    outbuf += 12; outb -= 12;
 		}
-# endif
 	    } else {
 		snprintf(outbuf, 5, "<%02x>", (unsigned char)*inbuf);
 		outbuf += 4; outb -= 4;
@@ -1548,13 +1563,19 @@ extern char * mkdtemp (char *template);
 # include <ctype.h>
 #endif
 
-void attribute_hidden InitTempDir()
+void R_reInitTempDir(int die_on_fail)
 {
     char *tmp, *tm, tmp1[PATH_MAX+11], *p;
 #ifdef Win32
     char tmp2[PATH_MAX];
     int hasspace = 0;
 #endif
+
+#define ERROR_MAYBE_DIE(MSG_)			\
+    if(die_on_fail)				\
+	R_Suicide(MSG_);			\
+    else					\
+	errorcall(R_NilValue, MSG_)
 
     if(R_TempDir) return; /* someone else set it */
     tmp = NULL; /* getenv("R_SESSION_TMPDIR");   no longer set in R.sh */
@@ -1585,7 +1606,9 @@ void attribute_hidden InitTempDir()
 	snprintf(tmp1, PATH_MAX+11, "%s/RtmpXXXXXX", tm);
 #endif
 	tmp = mkdtemp(tmp1);
-	if(!tmp) R_Suicide(_("cannot create 'R_TempDir'"));
+	if(!tmp) {
+	    ERROR_MAYBE_DIE(_("cannot create 'R_TempDir'"));
+	}
 #ifndef Win32
 # ifdef HAVE_SETENV
 	if(setenv("R_SESSION_TMPDIR", tmp, 1))
@@ -1609,12 +1632,16 @@ void attribute_hidden InitTempDir()
     size_t len = strlen(tmp) + 1;
     p = (char *) malloc(len);
     if(!p)
-	R_Suicide(_("cannot allocate 'R_TempDir'"));
+	ERROR_MAYBE_DIE(_("cannot allocate 'R_TempDir'"));
     else {
 	R_TempDir = p;
 	strcpy(R_TempDir, tmp);
 	Sys_TempDir = R_TempDir;
     }
+}
+
+void attribute_hidden InitTempDir() {
+    R_reInitTempDir(/* die_on_fail = */ TRUE);
 }
 
 char * R_tmpnam(const char * prefix, const char * tempdir)
@@ -1624,7 +1651,7 @@ char * R_tmpnam(const char * prefix, const char * tempdir)
 
 /* NB for use with multicore: parent and all children share the same
    session directory and run in parallel.
-   So as from 2.14.1, we make sure getpic() is part of the process.
+   So as from 2.14.1, we make sure getpid() is part of the process.
 */
 char * R_tmpnam2(const char *prefix, const char *tempdir, const char *fileext)
 {
@@ -1829,9 +1856,9 @@ SEXP attribute_hidden do_glob(SEXP call, SEXP op, SEXP args, SEXP env)
     {
 	wchar_t *w = globbuf.gl_pathv[i];
 	char *buf;
-	int nb = wcstoutf8(NULL, w, 0);
-	buf = R_AllocStringBuffer(nb+1, &cbuff);
-	wcstoutf8(buf, w, nb+1); buf[nb] = '\0'; /* safety check */
+	int nb = wcstoutf8(NULL, w, INT_MAX);
+	buf = R_AllocStringBuffer(nb, &cbuff);
+	wcstoutf8(buf, w, nb);
 	SET_STRING_ELT(ans, i, mkCharCE(buf, CE_UTF8));
     }
 #else

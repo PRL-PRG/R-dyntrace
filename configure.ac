@@ -2,7 +2,7 @@
 ###
 ### Process this file with autoconf to produce a configure script.
 ###
-### Copyright (C) 1998-2016 R Core Team
+### Copyright (C) 1998-2017 R Core Team
 ###
 ### This file is part of R.
 ###
@@ -56,10 +56,13 @@ AH_TOP([#ifndef R_CONFIG_H
 AH_BOTTOM([
 #endif /* not R_CONFIG_H */])
 
-## The gettext macros call AC_GNU_SOURCE early, so all the
-## C compiling makes use of that.  If it is ever removed, we
-## would need it or something similar here.
-
+## We call AC_GNU_SOURCE early (it is a prerequisite for the gettext
+## macros), so all the C compiling makes use of that.  Nowadays it calls
+## AC_USE_SYSTEM_EXTENSIONS ....
+## This sets _GNU_SOURCE, so glibc defines all its extensions
+## (_POSIX_C_SOURCE, _XOPEN_SOURCE, _BSD_SOURCE, __USE_MISC) and these
+## unlock declarations of non-C99 functions and constants.  
+## Ditto for __EXTENSIONS__ on Solaris and _ALL_SOURCE on AIX.
 
 ### ** Platform.
 
@@ -75,14 +78,14 @@ AC_DEFINE_UNQUOTED(R_OS, "${host_os}",
 
 ## exclude some unsupported OSes
 case "${host_os}" in
-   ## Darwin 1.3.1 was OS X 10.0, 1.4.1 was 10.1, 5 is 10.2 etc
+   ## Darwin 1.3.1 was macOS 10.0, 1.4.1 was 10.1, 5 is 10.2 etc
    ## with 13 being 10.9.  We no longer support < 10.6 (Snow Leopard)
    ## https://en.wikipedia.org/wiki/Darwin_OS
    darwin1.*)
-     AC_MSG_ERROR([The earliest supported OS X is 10.6.]
+     AC_MSG_ERROR([The earliest supported macOS is 10.6.]
      ;; 
   darwin[[56789]]*)
-     AC_MSG_ERROR([The earliest supported OS X is 10.6.]
+     AC_MSG_ERROR([The earliest supported macOS is 10.6.]
      ;; 
   aix[123]*|aix4.[01]*)
     ## These need a form of linking we no longer support
@@ -221,8 +224,8 @@ fi],
 
 ## Allow the user to specify building an R framework (Darwin).
 AC_ARG_ENABLE([R-framework],
-[AS_HELP_STRING([--enable-R-framework@<:@=DIR@:>@],[OS X only: build R framework (if possible), and specify
-                 its installation prefix @<:@yes, /Library/Frameworks@:>@])],
+[AS_HELP_STRING([--enable-R-framework@<:@=DIR@:>@],[macOS only: build R framework (if possible), and specify
+                 its installation prefix @<:@no, /Library/Frameworks@:>@])],
 [want_R_framework="${enableval}"],
 [want_R_framework=no])
 ## Can only build frameworks on Darwin.
@@ -254,7 +257,7 @@ fi
 AM_CONDITIONAL(WANT_R_FRAMEWORK, [test "x${want_R_framework}" = xyes])
 
 ## Allow the user to specify building R as a shared library.
-## (but a 'dynamic library' in the terminology of OS X).
+## (but a 'dynamic library' in the terminology of macOS).
 ## <NOTE>
 ## Building a framework implies building R shared libraries, hence the
 ## strange default.
@@ -347,14 +350,14 @@ AC_ARG_WITH([blas],
 [AS_HELP_STRING([--with-blas],[use system BLAS library (if available), or specify it @<:@no@:>@])],
 [R_ARG_USE(blas)],
 [use_blas=unset])
-# default is "no" except on OS X
+# default is "no" except on macOS
 
 ## LAPACK.
 AC_ARG_WITH([lapack],
 [AS_HELP_STRING([--with-lapack],[use system LAPACK library (if available), or specify it @<:@no@:>@])],
 [R_ARG_USE(lapack)],
 [use_lapack=unset])
-# default is "no" except on OS X
+# default is "no" except on macOS
 
 ## Readline.
 AC_ARG_WITH([readline],
@@ -364,7 +367,7 @@ AC_ARG_WITH([readline],
 
 ## Aqua.
 AC_ARG_WITH([aqua],
-[AS_HELP_STRING([--with-aqua],[OS X only: use Aqua (if available) @<:@yes@:>@])],
+[AS_HELP_STRING([--with-aqua],[macOS only: use Aqua (if available) @<:@yes@:>@])],
 [if test "${withval}" = no; then
   want_aqua=no
 else
@@ -606,7 +609,7 @@ R_PROG_PAGER
 AC_PATH_PROGS(TAR, [${TAR} gtar gnutar tar], "")
 ## TeXMF stuff
 R_PROG_TEXMF
-## Unzip && zip && gzip && bip2
+## Unzip & zip & gzip & bip2
 AC_PATH_PROGS(R_UNZIPCMD, [${UNZIP} unzip], "")
 AC_PATH_PROGS(R_ZIPCMD, [${ZIP} zip], "")
 AC_PATH_PROGS(R_GZIPCMD, [${GZIP} gzip], true)
@@ -615,13 +618,19 @@ AC_PATH_PROGS(R_BZIPCMD, [${BZIP} bzip2], "")
 R_PROG_BROWSER
 ## PDF viewer
 R_PROG_PDFVIEWER
-## Noweb
+## Noweb - used for maintainer mode only
 AC_PATH_PROG(NOTANGLE, notangle, false)
+if test "x${use_maintainer_mode}" = xyes; then
+  if test "${NOTANGLE}" = false ; then
+    AC_MSG_ERROR([Building R in maintainer mode requires notangle.])
+  fi
+fi
 ## javareconf needs this
 AC_PATH_PROG(REALPATH, realpath, false)
 
 
-## cairographics needs pkg-config
+## Search for cairographics needs pkg-config, 
+## helps find jpeg, libpng and libtiff.
 AC_PATH_PROG(PKGCONF, pkg-config , [], 
 	     [$PATH:/usr/local/bin:/ext/bin:/ext:/sw/bin:/opt/bin])
 AC_ARG_VAR([PKGCONF], [path to pkg-config utility])
@@ -629,14 +638,22 @@ AC_ARG_VAR([PKG_CONFIG_PATH], [directories to add to pkg-config's search path])
 AC_ARG_VAR([PKG_CONFIG_LIBDIR], [path overriding pkg-config's default search path])
 
 AC_PROG_CC
-
 AC_PROG_GCC_TRADITIONAL
+AC_GNU_SOURCE ## see note above
+
 AC_PROG_CPP
 R_PROG_CPP_CPPFLAGS
-## see if the user set FFLAGS: used for Intel compilers
+
+## see if the user set FFLAGS: used for Intel compilers below
 userFFLAGS=${FFLAGS}
 R_PROG_F77
+
 AC_PROG_CXX
+## check this actually compiles
+R_PROG_CXX
+
+### R_PROG_CXX98FLAG
+
 AC_PROG_CXXCPP
 if test "${CXXCPP}" = "${CXX} -E"; then
   CXXCPP0="\$(CXX) -E"
@@ -644,8 +661,8 @@ else
   CXXCPP0=${CXXCPP}
 fi
 AC_SUBST(CXXCPP0)
+
 R_GCC4_VISIBILITY
-AC_GNU_SOURCE ## needed for libintl
 
 AC_PROG_OBJC
 ## unfortunately autoconf sets OBJC to gcc even if there is no working compiler
@@ -710,7 +727,7 @@ esac
 
 ## Record name of environment variable which tells the dynamic linker
 ## where to find shlibs (typically, 'LD_LIBRARY_PATH').
-## Used in etc/ldpaths: As from R 3.0.0 override what libtool thinks on OS X
+## Used in etc/ldpaths: As from R 3.0.0 override what libtool thinks on macOS
 ## http://hublog.hubmed.org/archives/001192.html suggests this was in 10.4
 ## However, as from 10.11 this variable is not passed down to shells.
 case "${host_os}" in
@@ -746,7 +763,7 @@ AC_SUBST(LIBM)
 AC_CHECK_LIB(m, sin)
 case "${host_os}" in
   darwin*)
-    ## OS X >= 10.3 include dlcompat in libSystem
+    ## macOS >= 10.3 include dlcompat in libSystem
     ## This is ancient history
     ## SI says we want '-lcc_dynamic' on Darwin, although currently
     ## https://developer.apple.com/documentation/MacOSX/ has nothing
@@ -781,13 +798,19 @@ if test "${use_readline}" = yes; then
                               AC_CHECK_LIB(termlib, main)))
     AC_CHECK_LIB(readline, rl_callback_read_char)
     use_readline="${ac_cv_lib_readline_rl_callback_read_char}"
+    if test "${use_readline}" = yes; then
+      use_readline="${ac_cv_header_readline_readline_h}"
+    fi
   fi
-  ## the NetBSD version as used in OS X does not have this
-  AC_CHECK_FUNCS(history_truncate_file)
   if test "${use_readline}" = no; then
     AC_MSG_ERROR([--with-readline=yes (default) and headers/libs are not available])
   else
-    R_CHECK_FUNCS([rl_completion_matches], 
+    ## the NetBSD emulation supplied by macOS does not have this
+    AC_CHECK_FUNCS(history_truncate_file)
+    ## rl_completion_matches is >= 4.2.
+    ## rl_resize_terminal is >= 4.0 ane we use it only for >= 6.3.
+    ## rl_callback_sigcleanup is in pre-releases for 7.0, not yet used.
+    R_CHECK_FUNCS([rl_callback_sigcleanup rl_completion_matches rl_resize_terminal rl_sort_completion_matches], 
 [#include <stdio.h>
 #include <readline/readline.h>]
                  )
@@ -810,30 +833,27 @@ AC_HEADER_SYS_WAIT
 ## Some of these are also checked for when Autoconf computes the default
 ## includes.
 ##
-## The following headers are POSIX: dlfcn.h fcntl.h glob.h grp.h
-## pwd.h strings.h sys/resource.h sys/select.h sys/socket.h 
-## sys/stat.h sys/time.h sys/times.h sys/utsname.h unistd.h utime.h
-## dl.h seems to be for HP-UX
-## floatingpoint.h is on FreeBSD and Solaris, originating in SysV.  
-## (It is probably only used for fpsetmask on FreeBSD).
-## fpu_control.h is only used on Linux, for the obsolete __setfpucw.
+## The following headers are POSIX,
+## We use sched.h for Linux-specific features (affinity)
+AC_CHECK_HEADERS(dlfcn.h fcntl.h glob.h grp.h pwd.h sched.h strings.h \
+  sys/resource.h sys/select.h sys/socket.h sys/stat.h sys/time.h \
+  sys/times.h sys/utsname.h unistd.h utime.h)
+## dl.h is used in src/unix/hpdlfcn.c included from src/unix/dynload.c on HP-UX
+## features.h is used by date-time code on Linux.
+## floatingpoint.h is used for fpsetmask on FreeBSD.
 ## sys/param.h is one way to get PATH_MAX.
-## sched.h is POSIX, but we use it for Linux-specific features (affinity)
-## stdalign.h is C11.
-AC_CHECK_HEADERS(arpa/inet.h dl.h dlfcn.h elf.h features.h fcntl.h \
-  floatingpoint.h fpu_control.h glob.h grp.h langinfo.h \
-  netdb.h netinet/in.h pwd.h sched.h strings.h \
-  sys/param.h sys/resource.h sys/select.h sys/socket.h \
-  sys/stat.h sys/time.h sys/times.h sys/utsname.h unistd.h utime.h)
-## </NOTE>
+AC_CHECK_HEADERS(arpa/inet.h dl.h elf.h features.h floatingpoint.h \
+  langinfo.h netdb.h netinet/in.h sys/param.h)
 ## stdalign.h is C11.
 AC_CHECK_HEADERS(stdalign.h)
-## <NOTE>
 ## These are C99 headers but some C code (written to work also
 ## without assuming C99) may need the corresponding conditionals.
 AC_CHECK_HEADERS(errno.h inttypes.h limits.h locale.h stdarg.h stdbool.h \
                  stdint.h string.h)
 ## only vsnprintf.c requires stdarg.h
+
+## We also use without checking sys/sysctl.h, but only on *BSD and macOS
+## The default includes check for sys/types.h (POSIX), which we use unconditionally
 ## </NOTE>
 
 R_HEADER_SETJMP
@@ -842,7 +862,7 @@ R_HEADER_GLIBC2
 ### * Checks for types.
 
 AC_TYPE_SIGNAL
-## xz needs uint64_t
+## liblzma uses uint64_t: used unconditionally in src/main/util.c
 AC_TYPE_UINT64_T
 AC_CHECK_TYPES([int64_t, int_fast64_t])
 AC_TYPE_PID_T
@@ -854,7 +874,7 @@ AH_TEMPLATE([blkcnt_t],
              Apparently necessary to fix a GCC bug on AIX?])
 R_TYPE_SOCKLEN
 AC_CHECK_TYPES([stack_t], , , [#include <signal.h>])
-## These are optional C99 types, which we typedef in Defn.h if absent.
+## These are optional C99 types, which we used to typedef in Defn.h if absent.
 ## There seems some confusion as to where they should be defined:
 ## the standard says stdint.h but drafts and Solaris 8 have inttypes.h.
 ## It seems all systems having stdint.h include it in inttypes.h, and
@@ -962,40 +982,6 @@ case "${host_cpu}" in
     ## We used to add -mieee-fp here, but it seems it is really a
     ## linker flag for old Linuxen adding -lieee to a non-shared link.
     ;;
-  alpha*)
-    ## <NOTE>
-    ## * IEEE math
-    ## We really need to use @option{-ieee_with_inexact} (called
-    ## @option{-mieee-with-inexact} for GCC) for the C compiler:
-    ## @option{-ieee} (or @option{-mieee}) are not enough.
-    ## According to <Albrecht.Gebhardt@uni-klu.ac.at> and Luke Tierney
-    ## <luke@stat.uiowa.edu>, @option{-fpe3} is what we want for the
-    ## native Fortran 77 compiler: seems that not all versions map
-    ## @option{-ieee} to @option{-fpe3}.
-    ## What about the C++ compilers?
-    if test "${GCC}" = yes; then
-      R_PROG_CC_FLAG([-mieee-with-inexact],
-                     R_SH_VAR_ADD(R_XTRA_CFLAGS, [-mieee-with-inexact]))
-    else
-      R_PROG_CC_FLAG([-ieee_with_inexact],
-                     R_SH_VAR_ADD(R_XTRA_CFLAGS, [-ieee_with_inexact]))
-    fi
-    if test "${G77}" = yes; then
-      R_PROG_F77_FLAG([-mieee],
-                      R_SH_VAR_ADD(R_XTRA_FFLAGS, [-mieee]))
-    else
-      R_PROG_F77_FLAG([-fpe3],
-                      R_SH_VAR_ADD(R_XTRA_FFLAGS, [-fpe3]))
-    fi
-    if test "${GXX}" = yes; then
-      R_PROG_CXX_FLAG([-mieee],
-                      R_SH_VAR_ADD(R_XTRA_CXXFLAGS, [-mieee]))
-    else
-      R_PROG_CXX_FLAG([-ieee],
-                      R_SH_VAR_ADD(R_XTRA_CXXFLAGS, [-ieee]))
-    fi
-    ## </NOTE>
-    ;;
 esac
 
 AH_TEMPLATE([HAVE_NO_SYMBOL_UNDERSCORE],
@@ -1016,6 +1002,7 @@ case "${host_os}" in
     fi
     ;;
   darwin*)
+    ## which these days mean macOS
     AC_DEFINE(HAVE_NO_SYMBOL_UNDERSCORE)
     ;;
   hpux*)
@@ -1030,22 +1017,6 @@ case "${host_os}" in
 	;;
     esac
     AC_CHECK_LIB(dld, shl_load, [R_XTRA_LIBS="-ldld ${R_XTRA_LIBS}"])
-    ;;
-  irix*)
-    R_C_OPTIEEE
-    ## <NOTE>
-    ## We really should test explictly whether the Fortran and C++
-    ## compilers *need* '-OPT:IEEE_NaN_inf=ON'.  Currently, all we do is
-    ## check whether the non-GNU tools *accept* the flag.
-    if test "${G77}" != yes; then
-      R_PROG_F77_FLAG([-OPT:IEEE_NaN_inf=ON],
-                      R_SH_VAR_ADD(R_XTRA_FFLAGS, [-OPT:IEEE_NaN_inf=ON]))
-    fi
-    if test "${GXX}" != yes; then
-      R_PROG_CXX_FLAG([-OPT:IEEE_NaN_inf=ON],
-                      R_SH_VAR_ADD(R_XTRA_CXXFLAGS, [-OPT:IEEE_NaN_inf=ON]))
-    fi
-    ## </NOTE>
     ;;
   linux*)
     case  "${CC}" in
@@ -1139,9 +1110,6 @@ case "${host_os}" in
       AC_DEFINE(HAVE_NO_SYMBOL_UNDERSCORE)
     fi
     ;;
-  osf*)
-    AC_DEFINE(HAVE_NO_SYMBOL_UNDERSCORE)
-    ;;  
 esac
 
 if test "${SAFE_FFLAGS+set}" != set; then
@@ -1157,6 +1125,7 @@ AC_SUBST(CFLAGS)
 AC_SUBST(MAIN_CFLAGS)
 AC_SUBST(SHLIB_CFLAGS)
 AC_SUBST(CXXFLAGS)
+AC_SUBST(CXXSTD)
 AC_SUBST(SHLIB_CXXFLAGS)
 AC_SUBST(FFLAGS)
 AC_SUBST(SAFE_FFLAGS)
@@ -1247,7 +1216,7 @@ if test -n "${XMKMF}"; then
   fi
   cxx=`"${srcdir}/tools/GETMAKEVAL" CXX`
   cxx=`echo ${cxx} | sed "s/ .*//"`
-  if test -n "${cxx}" ; then
+  if test -n "${cxx}" -a  -n "${CXX}"; then
     r_cxx_cmd=`echo ${CXX} | sed "s/ .*//"`
     if test "`which ${cxx}`" = "`which ${r_cxx_cmd}`"; then
       cxxpicflags=`"${srcdir}/tools/GETMAKEVAL" CXXPICFLAGS`
@@ -1376,7 +1345,7 @@ rm -f libconftest${DYLIB_EXT} conftest.c
     ## * libRblas must be 2-level, dyn lookup because of xerbla which is undefined
     cpicflags="${darwin_pic}"
     cxxpicflags="${darwin_pic}"
-    ## OS X does not have a Fortran compiler, so this is speculative
+    ## macOS does not have a Fortran compiler, so this is speculative
     fpicflags="${darwin_pic}"
     shlib_cxxldflags="${shlib_ldflags}"
     ;;
@@ -1418,13 +1387,6 @@ rm -f libconftest${DYLIB_EXT} conftest.c
     if test "${GXX}" = yes; then
       shlib_cxxldflags="-shared -fPIC"
     fi
-    ;;
-  irix*)
-    cpicflags=
-    cxxpicflags=
-    fpicflags=
-    shlib_ldflags="-shared"
-    shlib_cxxldflags="-shared"
     ;;
   linux*aout)			# GNU Linux/aout
     sed '/HAVE_ELF_H/d' confdefs.h > tmp.h ; mv tmp.h confdefs.h
@@ -1509,12 +1471,6 @@ rm -f libconftest${DYLIB_EXT} conftest.c
         ;;
     esac
     ;;
-  osf*)
-    cpicflags=
-    cxxpicflags=
-    fpicflags=
-    shlib_ldflags="-shared"
-    ;;
   solaris*)
 ## SPARC has only an 8k global object table, 1024 entries on 64-bit,
 ## so need PIC not pic.  They are the same on other Solaris platforms.
@@ -1588,7 +1544,7 @@ R_SH_VAR_ADD(MAIN_LDFLAGS, [${main_ldflags}])
 : ${CPICFLAGS="${cpicflags}"}
 if test -z "${CPICFLAGS}"; then
   case "${host_os}" in
-    aix*|irix*|mingw*|osf*)
+    aix*|mingw*)
       ;;
     *)
       AC_MSG_WARN([I could not determine CPICFLAGS.])
@@ -1600,7 +1556,7 @@ fi
 : ${FPICFLAGS="${fpicflags}"}
 if test -z "${FPICFLAGS}"; then
   case "${host_os}" in
-    aix*|irix*|mingw*|osf*)
+    aix*|mingw*)
       ;;
     *)
       AC_MSG_WARN([I could not determine FPICFLAGS.])
@@ -1610,13 +1566,12 @@ if test -z "${FPICFLAGS}"; then
 fi
 
 : ${CXXPICFLAGS="${cxxpicflags}"}
-if test -z "${CXXPICFLAGS}"; then
+if test -n "${CXX}" -a -z "${CXXPICFLAGS}"; then
   case "${host_os}" in
-    aix*|irix*|mingw*|osf*)
+    aix*|mingw*)
       ;;
     *)
       warn_cxxpicflags="I could not determine CXXPICFLAGS."
-      AC_MSG_WARN([${warn_cxxpicflags}])
       ;;
   esac
 fi
@@ -1644,7 +1599,7 @@ if test -z "${SHLIB_CXXLD}"; then
   fi
   R_SH_VAR_ADD(SHLIB_CXXLDFLAGS, [${shlib_cxxldflags}])
 fi
-if test -z "${SHLIB_CXXLDFLAGS}"; then
+if test  -n "${CXX}" -a -z "${SHLIB_CXXLDFLAGS}"; then
   warn_shlib_cxxldflags="I could not determine SHLIB_CXXLDFLAGS"
   AC_MSG_WARN([${warn_shlib_cxxldflags}])
 fi
@@ -1743,8 +1698,11 @@ AC_SUBST(STATICR1)
 AC_SUBST(STATICR2)
 AC_SUBST(R_DYLIB_EXT)
 
-## C++11 and later
-R_CXX1X
+## Test support for C++ standards
+R_STDCXX([98], [CXX98], [CXX])
+R_STDCXX([11], [CXX11], [CXX])
+R_STDCXX([14], [CXX14], [CXX11])
+R_STDCXX([17], [CXX17], [CXX14])
 
 ### OpenMP.
 
@@ -1862,7 +1820,7 @@ AC_CHECK_LIB(sunmath, cospi)
 ## Functions from ISO/IEC TS 18661-4:2015 C11 extensions.
 ## For now, do not define _GNU_SOURCE here.
 ## All but pown have long been in Solaris' libsunmath
-## OS X has __cospi __sinpi __tanpi
+## macOS has __cospi __sinpi __tanpi
 AC_CHECK_FUNCS([atanpi atan2pi cospi exp10 pown sinpi tanpi __cospi __sinpi __tanpi], 
 [#define __STDC_WANT_IEC_60559_FUNCS_EXT__ 1
 #include <math.h>
@@ -1884,6 +1842,25 @@ if test "${ac_cv_have_decl_popen}" = "no"; then
    AC_MSG_ERROR([Building R requires the 'popen' system call])
 fi
 R_CHECK_FUNCS([getline], [#include <stdio.h>])
+R_CHECK_FUNCS([select], 
+[#ifdef HAVE_SYS_SELECT_H
+#include <sys/select.h>  /* POSIX >= 2001 */
+#endif
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>  /* Earlier POSIX, HP-UX? */
+#endif])
+case "${host_os}" in
+  mingw*|windows*|winnt)
+  ;;
+  *)
+  if test "${ac_cv_have_decl_select}" = "no"; then
+     AC_MSG_ERROR([Building R on Unix requires the 'select' system call])
+  fi
+  if test "${ac_cv_header_sys_select_h}" = "no" -a "${ac_cv_header_sys_times_h} = "no""; then
+     AC_MSG_ERROR([Building R on Unix requires either <sys/select.h> or <sys/time.h>])
+  fi
+  ;;
+esac
 ## Windows has neither setenv nor unsetenv
 R_CHECK_FUNCS([setenv unsetenv], [#include <stdlib.h>])
 R_CHECK_FUNCS([getrlimit getrusage getpriority], [#include <sys/resource.h>])
@@ -1903,7 +1880,9 @@ R_CHECK_FUNCS([access chdir execv ftruncate getcwd geteuid getuid link readlink 
 R_CHECK_FUNCS([sched_setaffinity sched_getaffinity], [#include <sched.h>])
 ## utime was declared obsolescent in POSIX 2008 (use utimes instead)
 R_CHECK_FUNCS([utime], [#include <utime.h>])
-## clock_gettime is POSIX 1993, but not on OS X
+## POSIX.1-2008 preferred form
+R_CHECK_FUNCS([utimensat], [#include <sys/stat.h>])
+## clock_gettime is POSIX 1993, but not on macOS prior to 10.12 (Sierra)
 ## Some OSes need -lrt: Linux (for glibc versions before 2.17), Solaris,
 ## not FreeBSD. 
 ## Unsurprising, as POSIX 2008 moved it from its timers section to base.
@@ -1915,10 +1894,10 @@ R_CHECK_FUNCS([clock_gettime timespec_get], [#include <time.h>])
 ## It is not always declared, so we do not require a declaration.
 AC_CHECK_FUNCS(putenv)
 AC_CHECK_DECLS([putenv], , , [#include <stdlib.h>])
-## this is a GNU extension so usually hidden.  Not on Solaris
+## this is a GNU extension so usually hidden.  Not in Solaris 10
 AC_CHECK_FUNCS(vasprintf)
 AC_CHECK_DECLS([vasprintf], , , [#include <stdio.h>])
-## mempcpy is a GNU extension used by the included gettext.  Not on Solaris
+## mempcpy is a GNU extension used by the included gettext.  Not in Solaris 10
 AC_CHECK_FUNCS(mempcpy)
 ## realpath is POSIX 2001 (and BSD)
 ## Some early GNU libc systems had it in unistd.h.
@@ -1932,6 +1911,14 @@ AC_CHECK_DECLS([realpath], , , [#include <stdlib.h>
 R_CHECK_FUNCS([glob], [#ifdef HAVE_GLOB_H
 # include <glob.h>
 #endif])
+AC_CHECK_FUNCS([dladdr dlsym])
+AC_CHECK_DECLS([dladdr,dlsym], , , [#include<dlfcn.h>])
+AC_CHECK_DECLS([RTLD_DEFAULT,RTLD_NEXT], , , [#include<dlfcn.h>])
+AC_CHECK_HEADERS([thread.h])
+R_CHECK_FUNCS([thr_stksegment], [
+#include <thread.h>
+#include <signal.h>
+])
 
 ## Lots of uses of getwd(), file.access(), Sys.glob().
 ## We don't need times() except as a fallback for getrusage and
@@ -2007,17 +1994,16 @@ fi
 AC_SUBST(RMATH_HAVE_LOG1P)
 
 ## Do we need substitutes?
-## mkdtemp is not on Solaris, added in POSIX 2008
-## strdup strncasecmp were first required in POSIX 2008.
+## mkdtemp is not on Solaris 10, added in POSIX 2008
+## strdup strncasecmp were first required in POSIX 2001.
 AC_REPLACE_FUNCS([mkdtemp strdup strncasecmp])
 ## Enable declarations in Defn.h?
 AC_CHECK_DECLS([mkdtemp, strdup, strncasecmp])
 
 AC_SEARCH_LIBS(connect, [socket])
-# gethostbyname was removed in POSIX 2008 (in favour of getaddrinfo, POSIX 2004)
+# gethostbyname was removed in POSIX 2008 (in favour of getaddrinfo, POSIX 2001)
 AC_SEARCH_LIBS(gethostbyname, [nsl socket])
 AC_SEARCH_LIBS(xdr_string, [nsl tirpc])
-R_FUNC___SETFPUCW
 R_FUNC_CALLOC
 if test "${ac_cv_have_decl_isfinite}" = "yes"; then
 R_FUNC_ISFINITE
@@ -2040,6 +2026,7 @@ if test "${use_internal_tzcode}" != yes; then
 fi
 
 R_C99_COMPLEX
+R_FUNC_CTANH
 
 ## BSD extensions
 AC_CACHE_CHECK([whether 'struct tm' includes tm_zone],
@@ -2212,7 +2199,7 @@ AM_CONDITIONAL(USE_VECLIB_G95FIX, [test "x${use_veclib_g95fix}" = xyes])
 AM_CONDITIONAL(USE_EXTERNAL_BLAS, [test "${acx_blas_ok}" = "yes"])
 
 ## LAPACK.
-## The default has already been set on OS X: otherwise it is "no"
+## The default has already been set on macOS: otherwise it is "no"
 ## and so this test fails.
 if test "${use_lapack}" = "yes"; then
   R_LAPACK_LIBS
@@ -2516,7 +2503,7 @@ if test "${ac_cv_fc_compiler_gnu}" = yes; then
 fi
 case "${host_os}" in
   darwin*)
-     ## OS X does not have a Fortran compiler, so this is speculative
+     ## macOS does not have a Fortran compiler, so this is speculative
     fcpicflags="${darwin_pic}"
     ;;
   hpux*)
@@ -2549,7 +2536,7 @@ esac
 : ${FCPICFLAGS="${fcpicflags}"}
 if test -z "${FCPICFLAGS}"; then
   case "${host_os}" in
-    aix*|irix*|mingw*|osf*)
+    aix*|mingw*)
       ;;
     *)
       AC_MSG_WARN([I could not determine FCPICFLAGS.])
@@ -2579,8 +2566,8 @@ LIBS="${LIBS1} ${LIBS2}"
 ## '/usr/lib', so that the entries from '/etc/ld.so.conf' are not
 ## shadowed (otherwise, e.g. optimized ATLAS libs would not be used).
 
-## On OS X (Darwin) this used to have /usr/X11R6/lib
-## which shadows the OpenGL framework but we add nothing on OS X ....
+## On macOS (Darwin) this used to have /usr/X11R6/lib
+## which shadows the OpenGL framework but we add nothing on macOS ....
 case "${host_os}" in
   linux*)
     r_ld_library_defaults="/usr/lib64:/lib64:/usr/lib:/lib"
@@ -2657,18 +2644,7 @@ AC_SUBST(XTRA_INTL_CPPFLAGS)
 AM_CONDITIONAL(USE_NLS, [test "x${USE_NLS}" = xyes])
 AM_CONDITIONAL(BUILD_LIBINTL, [test "x${USE_INCLUDED_LIBINTL}" = xyes])
 
-### * bug fixes
-# PR#9375 claims that sh on OSF1 is not POSIX-compliant and that is 
-# not a bug in the OS: we add a workaround for such benighted OSes
-case "${host_os}" in
-  osf*)
-    OSF_SH_BUG='"${1+@}"'
-  ;;
-  *)
-    OSF_SH_BUG='"${@}"'
-  ;;
-esac
-AC_SUBST(OSF_SH_BUG)
+R_OPENMP_SIMDRED
 
 ### shell for use in scripts: we allow R_SHELL to set the script,
 ### since some AIX systems have zsh as sh.
@@ -2809,8 +2785,11 @@ AC_OUTPUT
 ## configure variables to config.status.
 ## </NOTE>
 r_c_compiler="${CC} ${R_XTRA_CFLAGS} ${CFLAGS}"
-r_cxx_compiler="${CXX} ${R_XTRA_CXXFLAGS} ${CXXFLAGS}"
-r_cxx1x_compiler="${CXX1X} ${CXX1XSTD} ${CXX1XFLAGS}"
+r_cxx_compiler="${CXX} ${CXXSTD} ${R_XTRA_CXXFLAGS} ${CXXFLAGS}"
+r_cxx98_compiler="${CXX98} ${CXX98STD} ${CXX98FLAGS}"
+r_cxx11_compiler="${CXX11} ${CXX11STD} ${CXX11FLAGS}"
+r_cxx14_compiler="${CXX14} ${CXX14STD} ${CXX14FLAGS}"
+r_cxx17_compiler="${CXX17} ${CXX17STD} ${CXX17FLAGS}"
 r_f77_compiler="${F77} ${R_XTRA_FFLAGS} ${FFLAGS}"
 r_f95_compiler="${FC} ${FCFLAGS}"
 r_objc_compiler="${OBJC} ${OBJCFLAGS}"
@@ -2936,8 +2915,11 @@ R is now configured for ${host}
   C compiler:                ${r_c_compiler}
   Fortran 77 compiler:       ${r_f77_compiler}
 
-  C++ compiler:              ${r_cxx_compiler}
-  C++11 compiler:            ${r_cxx1x_compiler}
+  Default C++ compiler:      ${r_cxx_compiler}
+  C++98 compiler:            ${r_cxx98_compiler}
+  C++11 compiler:            ${r_cxx11_compiler}
+  C++14 compiler:            ${r_cxx14_compiler}
+  C++17 compiler:            ${r_cxx17_compiler}
   Fortran 90/95 compiler:    ${r_f95_compiler}
   Obj-C compiler:	     ${r_objc_compiler}
 

@@ -1,6 +1,6 @@
 
-R version 3.3.1 RC (2016-06-14 r70774) -- "Bug in Your Hair"
-Copyright (C) 2016 The R Foundation for Statistical Computing
+R Under development (unstable) (2017-05-14 r72675) -- "Unsuffered Consequences"
+Copyright (C) 2017 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -18,7 +18,7 @@ Type 'q()' to quit R.
 > #### Test 64-bit date-time functions.
 > 
 > ## R's internal fixes are used on 32-bit platforms.
-> ## OS X gets these wrong: see HAVE_WORKING_64BIT_MKTIME
+> ## macOS gets these wrong: see HAVE_WORKING_64BIT_MKTIME
 > 
 > Sys.setenv(TZ = "UTC")
 > (z <- as.POSIXct("1848-01-01 12:00"))

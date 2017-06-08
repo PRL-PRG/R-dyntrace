@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2015  The R Core Team
+ *  Copyright (C) 1997--2016  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@
 #include <Internal.h>
 #include <R_ext/Random.h>
 
-/* Normal generator is not actually set here but in nmath/snorm.c */
+/* Normal generator is not actually set here but in ../nmath/snorm.c */
 #define RNG_DEFAULT MERSENNE_TWISTER
 #define N01_DEFAULT INVERSION
 
@@ -51,6 +51,7 @@ static RNGtype RNG_kind = RNG_DEFAULT;
 
 /* .Random.seed == (RNGkind, i_seed[0],i_seed[1],..,i_seed[n_seed-1])
  * or           == (RNGkind) or missing  [--> Randomize]
+ * where  RNGkind :=  RNG_kind  +  100 * N01_kind   currently in  outer(0:7, 100*(0:5), "+")
  */
 
 typedef struct {
@@ -337,7 +338,7 @@ static void Randomize(RNGtype kind)
     RNG_Init(kind, TimeToSeed());
 }
 
-static void GetRNGkind(SEXP seeds)
+static Rboolean GetRNGkind(SEXP seeds)
 {
     /* Load RNG_kind, N01_kind from .Random.seed if present */
     int tmp, *is;
@@ -345,7 +346,7 @@ static void GetRNGkind(SEXP seeds)
 
     if (isNull(seeds))
 	seeds = GetSeedsFromVar();
-    if (seeds == R_UnboundValue) return;
+    if (seeds == R_UnboundValue) return TRUE;
     if (!isInteger(seeds)) {
 	if (seeds == R_MissingArg) /* How can this happen? */
 	    error(_("'.Random.seed' is a missing argument with no default"));
@@ -386,11 +387,12 @@ static void GetRNGkind(SEXP seeds)
 	goto invalid;
     }
     RNG_kind = newRNG; N01_kind = newN01;
-    return;
+    return FALSE;
 invalid:
     RNG_kind = RNG_DEFAULT; N01_kind = N01_DEFAULT;
     Randomize(RNG_kind);
-    return;
+    PutRNGstate(); // write out to .Random.seed
+    return TRUE;
 }
 
 
@@ -400,12 +402,12 @@ void GetRNGstate()
     int len_seed;
     SEXP seeds;
 
-    /* look only in the workspace */
     seeds = GetSeedsFromVar();
     if (seeds == R_UnboundValue) {
 	Randomize(RNG_kind);
     } else {
-	GetRNGkind(seeds);
+	/* this might re-set the generator */
+	if(GetRNGkind(seeds)) return;
 	len_seed = RNG_Table[RNG_kind].n_seed;
 	/* Not sure whether this test is needed: wrong for USER_UNIF */
 	if(LENGTH(seeds) > 1 && LENGTH(seeds) < len_seed + 1)
@@ -776,4 +778,32 @@ static void RNG_Init_R_KT(Int32 seed)
     memcpy(dummy, INTEGER(ans), 100*sizeof(int));
     UNPROTECT(3);
     KT_pos = 100;
+}
+
+/* Our PRNGs have at most 32 bit of precision. All generators except
+   Knuth-TAOCP, Knuth-TAOCP-2002, and possibly the user-supplied ones
+   have 31 or 32 bits bits of precision; the others are assumed to
+   have at least at least 25. */
+static R_INLINE double ru()
+{
+    double U = 33554432.0;
+    return (floor(U*unif_rand()) + unif_rand())/U;
+}
+
+double R_unif_index(double dn)
+{
+    double cut = INT_MAX;
+
+    switch(RNG_kind) {
+    case KNUTH_TAOCP:
+    case USER_UNIF:
+    case KNUTH_TAOCP2:
+	cut = 33554431.0; /* 2^25 - 1 */
+ 	break;
+    default:
+ 	break;
+   }
+
+    double u = dn > cut ? ru() : unif_rand();
+    return floor(dn * u);
 }

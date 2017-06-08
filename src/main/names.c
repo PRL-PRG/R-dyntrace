@@ -1,8 +1,8 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
+ *  Copyright (C) 1997--2017  The R Core Team
+ *  Copyright (C) 2003--2017  The R Foundation
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2016  The R Core Team
- *  Copyright (C) 2003--2016  The R Foundation
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -153,7 +153,8 @@ FUNTAB R_FunTab[] =
 {"Recall",	do_recall,	0,	210,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
 {"delayedAssign",do_delayed,	0,	111,	4,	{PP_FUNCALL, PREC_FN,	  0}},
 {"makeLazy",	do_makelazy,	0,	111,	5,	{PP_FUNCALL, PREC_FN,	  0}},
-{"identical",	do_identical,	0,	11,	7,	{PP_FUNCALL, PREC_FN,	  0}},
+{"identical",	do_identical,	0,	11,	8,	{PP_FUNCALL, PREC_FN,	  0}},
+{"C_tryCatchHelper",do_tryCatchHelper,0,11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 
 
 /* Binary Operators, all primitives */
@@ -195,9 +196,11 @@ FUNTAB R_FunTab[] =
 
 /* Primitives */
 
+{"...elt",      do_dotsElt,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
+{"...length",   do_dotsLength,	0,	1,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"length",	do_length,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"length<-",	do_lengthgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT,	1}},
-{"c",/* bind.c:*/do_c,		0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
+{"c",/* bind.c: */ do_c,	0,	1,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"oldClass",	do_class,	0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"oldClass<-",	do_classgets,	0,	1,	2,	{PP_FUNCALL, PREC_LEFT, 1}},
 {"class",	R_do_data_class,0,	1,	1,	{PP_FUNCALL, PREC_FN,	0}},
@@ -646,6 +649,7 @@ FUNTAB R_FunTab[] =
 {"Version",	do_version,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"machine",	do_machine,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"commandArgs", do_commandArgs, 0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
+{"internalsID",	do_internalsID,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	  0}},
 
 #ifdef Win32
 {"system",	do_system,	0,	211,	5,	{PP_FUNCALL, PREC_FN,	0}},
@@ -741,7 +745,6 @@ FUNTAB R_FunTab[] =
 {"inspect",	do_inspect,	0,	111,	-1,	{PP_FUNCALL, PREC_FN,	0}},
 {"address",     do_address,     0,       11,     1,     {PP_FUNCALL, PREC_FN, 0}},
 {"refcnt",      do_refcnt,      0,       11,     1,     {PP_FUNCALL, PREC_FN, 0}},
-{"mem.limits",	do_memlimits,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
 {"merge",	do_merge,	0,	11,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"capabilities",do_capabilities,0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"capabilitiesX11",do_capabilitiesX11,0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
@@ -771,7 +774,7 @@ FUNTAB R_FunTab[] =
 {"dir.exists",	do_direxists,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"dir.create",	do_dircreate,	0,	111,	4,	{PP_FUNCALL, PREC_FN,	0}},
 {"tempfile",	do_tempfile,	0,	11,	3,	{PP_FUNCALL, PREC_FN,	0}},
-{"tempdir",	do_tempdir,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
+{"tempdir",	do_tempdir,	0,	11,	1,	{PP_FUNCALL, PREC_FN,	0}},
 {"R.home",	do_Rhome,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"date",	do_date,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"Sys.getenv",	do_getenv,	0,	11,	2,	{PP_FUNCALL, PREC_FN,	0}},
@@ -960,6 +963,7 @@ FUNTAB R_FunTab[] =
 {"La_svd",	do_lapack,	400,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
 {"La_svd_cmplx",do_lapack,	401,	11,	5,	{PP_FUNCALL, PREC_FN,	0}},
 {"La_version",	do_lapack,	1000,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
+{"La_library",	do_lapack,	1001,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
 
 {"bcprofcounts",do_bcprofcounts,0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"bcprofstart",	do_bcprofstart,	0,	11,	0,	{PP_FUNCALL, PREC_FN,	0}},
@@ -1100,6 +1104,7 @@ static void SymbolShortcuts(void)
     R_BaseSymbol = install("base");
     R_SpecSymbol = install("spec");
     R_NamespaceEnvSymbol = install(".__NAMESPACE__.");
+    R_AsCharacterSymbol = install("as.character");
 
     R_dot_Generic = install(".Generic");
     R_dot_Method = install(".Method");
@@ -1138,6 +1143,15 @@ SEXP attribute_hidden installDDVAL(int n) {
 }
 
 
+static SEXP mkSymMarker(SEXP pname)
+{
+    SEXP ans = allocSExp(SYMSXP);
+    SET_SYMVALUE(ans, ans);
+    SET_ATTRIB(ans, R_NilValue);
+    SET_PRINTNAME(ans, pname);
+    return ans;
+}
+
 /* initialize the symbol table */
 void attribute_hidden InitNames()
 {
@@ -1145,21 +1159,13 @@ void attribute_hidden InitNames()
     if (!(R_SymbolTable = (SEXP *) calloc(HSIZE, sizeof(SEXP))))
 	R_Suicide("couldn't allocate memory for symbol table");
 
-    /* R_UnboundValue */
-    R_UnboundValue = allocSExp(SYMSXP);
-    SET_SYMVALUE(R_UnboundValue, R_UnboundValue);
-    SET_PRINTNAME(R_UnboundValue, R_NilValue);
-    SET_ATTRIB(R_UnboundValue, R_NilValue);
-    /* R_MissingArg */
-    R_MissingArg = allocSExp(SYMSXP);
-    SET_SYMVALUE(R_MissingArg, R_MissingArg);
-    SET_PRINTNAME(R_MissingArg, mkChar(""));
-    SET_ATTRIB(R_MissingArg, R_NilValue);
-    /* R_RestartToken */
-    R_RestartToken = allocSExp(SYMSXP);
-    SET_SYMVALUE(R_RestartToken, R_RestartToken);
-    SET_PRINTNAME(R_RestartToken, mkChar(""));
-    SET_ATTRIB(R_RestartToken, R_NilValue);
+    /* Create marker values */
+    R_UnboundValue = mkSymMarker(R_NilValue);
+    R_MissingArg = mkSymMarker(mkChar(""));
+    R_InBCInterpreter = mkSymMarker(mkChar("<in-bc-interp>"));
+    R_RestartToken = mkSymMarker(mkChar(""));
+    R_CurrentExpression = mkSymMarker(mkChar("<current-expression>"));
+
     /* String constants (CHARSXP values) */
     /* Note: we don't want NA_STRING to be in the CHARSXP cache, so that
        mkChar("NA") is distinct from NA_STRING */
@@ -1187,7 +1193,7 @@ void attribute_hidden InitNames()
     for (int i = 0; Spec_name[i]; i++)
 	SET_SPECIAL_SYMBOL(install(Spec_name[i]));
 
-    R_initAsignSymbols();
+    R_initAssignSymbols();
     initializeDDVALSymbols();
     R_initialize_bcode();
 }
@@ -1220,6 +1226,9 @@ SEXP install(const char *name)
     return (sym);
 }
 
+/* This function is equivalent to install(CHAR(charSXP)), but faster.
+   Like the equivalent code pattern, it discards the encoding information,
+   hence in almost all cases installTrChar should be used, instead. */
 SEXP installChar(SEXP charSXP)
 {
     SEXP sym;

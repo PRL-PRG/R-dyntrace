@@ -1,6 +1,6 @@
 % File src/library/stats/man/nlminb.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2014 R Core Team
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{nlminb}
@@ -51,17 +51,12 @@ nlminb(start, objective, gradient = NULL, hessian = NULL, \dots,
   applicable, \code{gradient} and \code{hessian}.  The parameter vector
   will be coerced to double.
 
-  The PORT documentation is at
-  \url{http://netlib.bell-labs.com/cm/cs/cstr/153.pdf}.
+  %% The PORT documentation is at
+  %% \url{http://netlib.bell-labs.com/cm/cs/cstr/153.pdf}.
 
-  The parameter vector passed to \code{objective}, \code{gradient} and
-  \code{hessian} had special semantics prior to \R 3.1.0 and was shared
-  between calls.  The functions should not copy it.
-
-  If any of the functions returns \code{NA} or \code{NaN} the internal code
-  could infinite-loop in \R prior to 2.15.2: this is now an error for
-  the gradient and Hessian, and such values for function evaluation are
-  replaced by \code{+Inf} with a warning.
+  If any of the functions returns \code{NA} or \code{NaN} this is an
+  error for the gradient and Hessian, and such values for function
+  evaluation are replaced by \code{+Inf} with a warning.
 }
 % see PR#15052.
 \value{
@@ -107,7 +102,15 @@ nlminb(start, objective, gradient = NULL, hessian = NULL, \dots,
       objective function value.}% ETA0  42
   }
 }
-\source{ \url{http://netlib.bell-labs.com/netlib/port/} }
+\source{
+  \url{http://www.netlib.org/port/}
+}
+\references{
+  David M. Gay (1990),
+  Usage summary for selected optimization routines.
+  Computing Science Technical Report 153, AT&T Bell Laboratories, Murray
+  Hill.
+}  
 \author{
   \R port: Douglas Bates and Deepayan Sarkar.
 

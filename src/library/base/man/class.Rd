@@ -1,6 +1,6 @@
 % File src/library/base/man/class.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2010 R Core Team
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{class}
@@ -36,14 +36,25 @@ oldClass(x) <- value
   Here, we describe the so called \dQuote{S3} classes (and methods). For
   \dQuote{S4} classes (and methods), see \sQuote{Formal classes} below.
 
+  %% Implementation: -> R_data_class(*, FALSE) ../../../main/attrib.c
   Many \R objects have a \code{class} attribute, a character vector
   giving the names of the classes from which the object \emph{inherits}.
+  (Functions \code{oldClass} and \code{oldClass<-} get and set the
+  attribute, which can also be done directly.)
+
+  %% the (n == 0) clause in R_data_class():
   If the object does not have a class attribute, it has an implicit
-  class, \code{"matrix"}, \code{"array"} or the result of
-  \code{\link{mode}(x)} (except that integer vectors have implicit class
-  \code{"integer"}).  (Functions \code{oldClass} and
-  \code{oldClass<-} get and set the attribute, which can also be done
-  directly.)
+  class, notably \code{"matrix"}, \code{"array"}, \code{"function"} or
+  \code{"numeric"} or the result of
+  \code{\link{typeof}(x)} (which is similar to \code{\link{mode}(x)}),
+  but for type \code{"language"} and \code{\link{mode}} \code{"call"},
+  where the following extra classes exist for the corresponding function
+  \code{\link{call}}s:
+  \code{if}, \code{while}, \code{for}, \code{=}, \code{<-}, \code{(},
+  \code{\{}, \code{call}.
+
+  Note that \code{\link{NULL}} objects cannot have attributes (hence not
+  classes) and attempting to assign a class is an error.
 
   When a generic function \code{fun} is applied to an object with class
   attribute \code{c("first", "second")}, the system searches for a
@@ -84,9 +95,9 @@ oldClass(x) <- value
   on the \code{oldClass} for efficiency, and \link{internal generic}s
   only dispatch on objects for which \code{\link{is.object}} is true.
 
-  In some versions of \R, assigning a zero-length vector with
-  \code{class} removes the class: in others it is an error (whereas it
-  works for \code{oldClass}.  It is clearer to always assign \code{NULL}
+  In older versions of \R, assigning a zero-length vector with
+  \code{class} removed the class: it is now an error (whereas it
+  still works for \code{oldClass}).  It is clearer to always assign \code{NULL}
   to remove the class.
 }
 
@@ -99,8 +110,9 @@ oldClass(x) <- value
   only the first.  However, S3 method selection attempts to treat objects
   from an S4 class as if they had the appropriate S3 class attribute, as
   does \code{inherits}.  Therefore, S3 methods can be defined for S4
-  classes.  See the \sQuote{\link{Classes}} and \sQuote{\link{Methods}}
-  help pages for details.
+  classes.  See the \sQuote{\link[methods]{Introduction}} and \sQuote{\link{Methods_for_S3}}
+  help pages for basic information on S4 methods and for the relation
+  between these and S3 methods.
 
   The replacement version of the function sets the class to the value
   provided.  For classes that have a formal definition, directly
@@ -129,6 +141,14 @@ class(x) <- c("a", "b")
 inherits(x,"a") #TRUE
 inherits(x, "a", TRUE) # 1
 inherits(x, c("a", "b", "c"), TRUE) # 1 2 0
+
+class( quote(pi) )           # "name"
+## regular calls
+class( quote(sin(pi*x)) )    # "class"
+## special calls
+class( quote(x <- 1) )       # "<-"
+class( quote((1 < 2)) )      # "("
+class( quote( if(8<3) pi ) ) # "if"
 }
 \keyword{methods}
 \keyword{classes}

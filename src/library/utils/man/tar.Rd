@@ -1,6 +1,6 @@
 % File src/library/utils/man/tar.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 2009-2015 R Core Team
+% Copyright 2009-2016 R Core Team
 % Distributed under GPL 2 or later
 
 \name{tar}
@@ -129,6 +129,25 @@ tar(tarfile, files = NULL,
   (10KB).  Implementations which pad differ on whether the block padding
   should occur before or after compression (or both): padding was
   designed for improved performance on physical tape drives.
+  
+  The \sQuote{ustar} format records file modification times to a
+  resolution of 1 second: on file systems with higher resolution it is
+  conventional to discard fractional seconds.
+}
+
+\note{
+  For users of macOS (formerly OS X).  Apple's HFS and HFS+ file systems
+  have a legacy concept of \sQuote{resource forks} dating from classic
+  Mac OS and rarely used nowadays.  Apple's version of \command{tar}
+  stores these as separate files in the tarball with names prefixed by
+  \file{._}, and unpacks such files into resource forks (if possible):
+  other ways of unpacking (including \code{\link{untar}} in \R) unpack
+  them as separate files.
+
+  When argument \code{tar} is set to the command \command{tar} on macOS,
+  environment variable \env{COPYFILE_DISABLE=1} is set, which for the
+  system version of \command{tar} prevents these separate files being
+  included in the tarball.
 }
 
 \seealso{

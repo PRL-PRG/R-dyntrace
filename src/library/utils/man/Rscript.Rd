@@ -1,6 +1,6 @@
 % File src/library/utils/man/Rscript.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2013 R Core Team
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{Rscript}
@@ -30,7 +30,10 @@
   front-end is convenient for writing \samp{#!} scripts since it is an
   executable and takes \code{file} directly as an argument.  Options
   \option{--slave --no-restore} are always supplied: these imply
-  \option{--no-save}.  (The standard Windows command line has no concept
+  \option{--no-save}. Arguments that contain spaces cannot be specified
+  directly on the \samp{#!} line, because spaces and tabs are interpreted as
+  delimiters and there is no way to protect them from this interpretation on
+  the \samp{#!} line. (The standard Windows command line has no concept
   of \samp{#!} scripts, but Cygwin shells do.)
 
   \emph{Either} one or more \option{-e} options or \code{file} should
@@ -89,6 +92,9 @@ Rscript -e "date()" -e "format(Sys.time(), \\"\%a \%b \%d \%X \%Y\\")"
 # in other shells, e.g. bash or tcsh, prefer
 Rscript -e 'date()' -e 'format(Sys.time(), "\%a \%b \%d \%X \%Y")'
 #endif
+
+# Get the same initial packages in the same order as default R:
+Rscript --default-packages=methods,datasets,utils,grDevices,graphics,stats -e 'sessionInfo()'
 
 ## example #! script for a Unix-alike
 

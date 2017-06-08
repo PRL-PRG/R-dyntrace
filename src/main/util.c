@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2015  The R Core Team
+ *  Copyright (C) 1997--2017  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -54,6 +54,8 @@ void NORET F77_SYMBOL(rexitc)(char *msg, int *nchar);
 #ifdef __cplusplus
 }
 #endif
+
+#include <rlocale.h>
 
 /* Many small functions are included from ../include/Rinlinedfuns.h */
 
@@ -613,6 +615,19 @@ static void isort_with_index(int *x, int *indx, int n)
 }
 
 
+// body(x) without attributes "srcref", "srcfile", "wholeSrcref" :
+// NOTE: Callers typically need  PROTECT(R_body_no_src(.))
+SEXP R_body_no_src(SEXP x) {
+    SEXP b = PROTECT(duplicate(BODY_EXPR(x)));
+    /* R's removeSource() works *recursively* on the body()
+       in  ../library/utils/R/sourceutils.R  but that seems unneeded (?) */
+    setAttrib(b, R_SrcrefSymbol, R_NilValue);
+    setAttrib(b, R_SrcfileSymbol, R_NilValue);
+    setAttrib(b, R_WholeSrcrefSymbol, R_NilValue);
+    UNPROTECT(1);
+    return b;
+}
+
 /* merge(xinds, yinds, all.x, all.y) */
 /* xinds, yinds are along x and y rows matching into the (numeric)
    common indices, with 0 for non-matches.
@@ -651,10 +666,10 @@ SEXP attribute_hidden do_merge(SEXP call, SEXP op, SEXP args, SEXP rho)
     isort_with_index(INTEGER(yi), iy, ny);
 
     /* 1. determine result sizes */
-    for (i = 0; i < nx; i++) 
-	if (INTEGER(xi)[i] > 0) break; 
+    for (i = 0; i < nx; i++)
+	if (INTEGER(xi)[i] > 0) break;
     nx_lone = i;
-    for (i = 0; i < ny; i++) 
+    for (i = 0; i < ny; i++)
 	if (INTEGER(yi)[i] > 0) break;
     ny_lone = i;
     double dnans = 0;
@@ -727,7 +742,7 @@ SEXP static intern_getwd(void)
 	wchar_t wbuf[PATH_MAX+1];
 	int res = GetCurrentDirectoryW(PATH_MAX, wbuf);
 	if(res > 0) {
-	    wcstoutf8(buf, wbuf, PATH_MAX+1);
+	    wcstoutf8(buf, wbuf, sizeof(buf));
 	    R_UTF8fixslash(buf);
 	    PROTECT(rval = allocVector(STRSXP, 1));
 	    SET_STRING_ELT(rval, 0, mkCharCE(buf, CE_UTF8));
@@ -790,7 +805,7 @@ SEXP attribute_hidden do_setwd(SEXP call, SEXP op, SEXP args, SEXP rho)
 SEXP attribute_hidden do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     SEXP ans, s = R_NilValue;	/* -Wall */
-    char sp[4*PATH_MAX];
+    char sp[4*PATH_MAX+1];
     wchar_t  buf[PATH_MAX], *p;
     const wchar_t *pp;
     int i, n;
@@ -813,8 +828,7 @@ SEXP attribute_hidden do_basename(SEXP call, SEXP op, SEXP args, SEXP rho)
 		while (p >= buf && *p == L'/') *(p--) = L'\0';
 	    }
 	    if ((p = wcsrchr(buf, L'/'))) p++; else p = buf;
-	    memset(sp, 0, 4*PATH_MAX); /* safety */
-	    wcstoutf8(sp, p, 4*wcslen(p) + 1);
+	    wcstoutf8(sp, p, sizeof(sp));
 	    SET_STRING_ELT(ans, i, mkCharCE(sp, CE_UTF8));
 	}
     }
@@ -867,7 +881,7 @@ SEXP attribute_hidden do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP ans, s = R_NilValue;	/* -Wall */
     wchar_t buf[PATH_MAX], *p;
     const wchar_t *pp;
-    char sp[4*PATH_MAX];
+    char sp[4*PATH_MAX+1];
     int i, n;
 
     checkArity(op, args);
@@ -896,7 +910,7 @@ SEXP attribute_hidden do_dirname(SEXP call, SEXP op, SEXP args, SEXP rho)
 			  && (p > buf+2 || *(p-1) != L':')) --p;
 		    p[1] = L'\0';
 		}
-		wcstoutf8(sp, buf, 4*wcslen(buf)+1);
+		wcstoutf8(sp, buf, sizeof(sp));
 	    }
 	    SET_STRING_ELT(ans, i, mkCharCE(sp, CE_UTF8));
 	}
@@ -1018,7 +1032,7 @@ const char *getTZinfo(void)
     const char *p = getenv("TZ");
     if(p) return p;
 #ifdef HAVE_REALPATH
-    // This works on Linux, OS X and *BSD: other known OSes set TZ.
+    // This works on Linux, macOS and *BSD: other known OSes set TZ.
     static char abspath[PATH_MAX+1] = "";
     if(abspath[0]) return abspath + 20;
     if(realpath("/etc/localtime", abspath))
@@ -1184,8 +1198,27 @@ int attribute_hidden utf8clen(char c)
     return 1 + utf8_table4[c & 0x3f];
 }
 
-/* These return the result in wchar_t, but does assume
-   wchar_t is UCS-2/4 and so are for internal use only */
+static Rwchar_t
+utf16toucs(wchar_t high, wchar_t low) 
+{
+    return 0x10000 + ((int) (high & 0x3FF) << 10 ) + (int) (low & 0x3FF);
+}
+
+/* Return the low UTF-16 surrogate from a UTF-8 string; assumes all testing has been done. */
+static wchar_t
+utf8toutf16low(const char *s)
+{
+    return (unsigned int) LOW_SURROGATE_START | ((s[2] & 0x0F) << 6) | (s[3] & 0x3F);
+}
+
+Rwchar_t attribute_hidden
+utf8toucs32(wchar_t high, const char *s)
+{
+    return utf16toucs(high, utf8toutf16low(s));
+}
+
+/* These return the result in wchar_t.  If wchar_t is 16 bit (e.g. UTF-16LE on Windows
+   only the high surrogate is returned; call utf8toutf16low next. */
 size_t attribute_hidden
 utf8toucs(wchar_t *wc, const char *s)
 {
@@ -1218,17 +1251,24 @@ utf8toucs(wchar_t *wc, const char *s)
 	    if(byte == 0xFFFE || byte == 0xFFFF) return (size_t)-1;
 	    return 3;
 	} else return (size_t)-1;
-    }
-    if(sizeof(wchar_t) < 4) return (size_t)-2;
-    /* So now handle 4,5.6 byte sequences with no testing */
-    if (byte < 0xf8) {
+    
+    } else if (byte < 0xf8) {
 	if(strlen(s) < 4) return (size_t)-2;
-	*w = (wchar_t) (((byte & 0x0F) << 18)
+	if (((s[1] & 0xC0) == 0x80) && ((s[2] & 0xC0) == 0x80) && ((s[3] & 0xC0) == 0x80)) {
+	    unsigned int cvalue = (((byte & 0x0F) << 18)
 			| (unsigned int) ((s[1] & 0x3F) << 12)
 			| (unsigned int) ((s[2] & 0x3F) << 6)
 			| (s[3] & 0x3F));
-	return 4;
-    } else if (byte < 0xFC) {
+	    if(sizeof(wchar_t) < 4) /* Assume UTF-16 and return high surrogate.  Users need to call utf8toutf16low next. */
+		*w = (wchar_t) ((cvalue - 0x10000) >> 10) | 0xD800;
+	    else
+		*w = (wchar_t) cvalue;
+	    return 4;
+	} else return (size_t)-1;
+    }
+    if(sizeof(wchar_t) < 4) return (size_t)-2;
+    /* So now handle 5.6 byte sequences with no testing */
+    if (byte < 0xFC) {
 	if(strlen(s) < 5) return (size_t)-2;
 	*w = (wchar_t) (((byte & 0x0F) << 24)
 			| (unsigned int) ((s[1] & 0x3F) << 12)
@@ -1263,6 +1303,11 @@ utf8towcs(wchar_t *wc, const char *s, size_t n)
 	    if (m == 0) break;
 	    res ++;
 	    if (res >= n) break;
+	    if (IS_HIGH_SURROGATE(*p)) {
+	    	*(++p) = utf8toutf16low(t);
+	    	res ++;
+	    	if (res >= n) break;
+	    }
 	}
     else
 	for(t = s; ; res++, t += m) {
@@ -1278,49 +1323,53 @@ static const unsigned int utf8_table1[] =
   { 0x7f, 0x7ff, 0xffff, 0x1fffff, 0x3ffffff, 0x7fffffff};
 static const unsigned int utf8_table2[] = { 0, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc};
 
-static size_t Rwcrtomb(char *s, const wchar_t wc)
+/* s is NULL, or it contains at least n bytes.  Just write a a terminator if it's not big enough. */
+
+static size_t Rwcrtomb32(char *s, Rwchar_t cvalue, size_t n)
 {
     register size_t i, j;
-    unsigned int cvalue = (unsigned int) wc;
-    char buf[10], *b;
-
-    b = s ? s : buf;
-    if(cvalue == 0) {*b = 0; return 0;}
+    if (!n) return 0;
+    if (s) *s = 0;    /* Simplifies exit later */
+    if(cvalue == 0) return 0;
     for (i = 0; i < sizeof(utf8_table1)/sizeof(int); i++)
 	if (cvalue <= utf8_table1[i]) break;
-    b += i;
-    for (j = i; j > 0; j--) {
-	*b-- = (char) (0x80 | (cvalue & 0x3f));
-	cvalue >>= 6;
+    if (i >= n - 1) return 0;  /* need space for terminal null */
+    if (s) {
+    	s += i;
+    	for (j = i; j > 0; j--) {
+	    *s-- = (char) (0x80 | (cvalue & 0x3f));
+	    cvalue >>= 6;
+        }
+    	*s = (char) (utf8_table2[i] | cvalue);
     }
-    *b = (char) (utf8_table2[i] | cvalue);
     return i + 1;
 }
 
+/* on input, wc is a string encoded in UTF-16 or UCS-2 or UCS-4.
+   s can be a buffer of size n>=0 chars, or NULL.  If n=0 or s=NULL, nothing is written. 
+   The return value is the number of chars including the terminating null.  If the
+   buffer is not big enough, the result is truncated but still null-terminated */
 attribute_hidden // but used in windlgs
 size_t wcstoutf8(char *s, const wchar_t *wc, size_t n)
 {
-    ssize_t m, res=0;
+    size_t m, res=0;
     char *t;
     const wchar_t *p;
-    if(s) {
-	for(p = wc, t = s; ; p++) {
-	    m  = (ssize_t) Rwcrtomb(t, *p);
-	    if(m <= 0) break;
-	    res += m;
-	    if(res >= n) break;
+    if (!n) return 0;
+    for(p = wc, t = s; ; p++) {
+    	if (IS_SURROGATE_PAIR(*p, *(p+1))) {
+    	    Rwchar_t cvalue =  ((*p & 0x3FF) << 10) + (*(p+1) & 0x3FF) + 0x010000;
+	    m = Rwcrtomb32(t, cvalue, n - res);
+	    p++;
+    	} else 
+    	    m = Rwcrtomb32(t, (Rwchar_t)(*p), n - res);
+    	if (!m) break;
+	res += m;
+	if (t)
 	    t += m;
-	}
-    } else {
-	for(p = wc; ; p++) {
-	    m  = (ssize_t) Rwcrtomb(NULL, *p);
-	    if(m <= 0) break;
-	    res += m;
-	}
     }
-    return (size_t) res;
+    return res + 1;
 }
-
 
 /* A version that reports failure as an error */
 size_t Mbrtowc(wchar_t *wc, const char *s, size_t n, mbstate_t *ps)
@@ -1679,7 +1728,16 @@ double R_strtod5(const char *str, char **endptr, char dec,
 	    for (n = 0; *p >= '0' && *p <= '9'; p++) n = (n < MAX_EXPONENT_PREFIX) ? n * 10 + (*p - '0') : n;
 	    if (ans != 0.0) { /* PR#15976:  allow big exponents on 0 */
 		expn += expsign * n;
-		if(exph > 0) expn -= exph;
+		if(exph > 0) {
+		    if (expn - exph < -122) {	/* PR#17199:  fac may overflow below if expn - exph is too small.  
+		                                   2^-122 is a bit bigger than 1E-37, so should be fine on all systems */
+		    	for (n = exph, fac = 1.0; n; n >>= 1, p2 *= p2)
+			    if (n & 1) fac *= p2;
+			ans /= fac;
+			p2 = 2.0;
+		    } else
+			expn -= exph;
+		}
 		if (expn < 0) {
 		    for (n = -expn, fac = 1.0; n; n >>= 1, p2 *= p2)
 			if (n & 1) fac *= p2;
@@ -1774,7 +1832,7 @@ SEXP attribute_hidden do_enc2(SEXP call, SEXP op, SEXP args, SEXP env)
     check1arg(args, call, "x");
 
     if (!isString(CAR(args)))
-	errorcall(call, "argumemt is not a character vector");
+	errorcall(call, "argument is not a character vector");
     ans = CAR(args);
     for (i = 0; i < XLENGTH(ans); i++) {
 	el = STRING_ELT(ans, i);
@@ -1801,7 +1859,7 @@ SEXP attribute_hidden do_enc2(SEXP call, SEXP op, SEXP args, SEXP env)
 #ifdef USE_ICU
 # include <locale.h>
 #ifdef USE_ICU_APPLE
-/* Mac OS X is missing the headers */
+/* macOS is missing the headers */
 typedef int UErrorCode; /* really an enum these days */
 struct UCollator;
 typedef struct UCollator UCollator;
@@ -2211,19 +2269,32 @@ SEXP attribute_hidden do_tabulate(SEXP call, SEXP op, SEXP args, SEXP rho)
     SEXP in = CAR(args), nbin = CADR(args);
     if (TYPEOF(in) != INTSXP)  error("invalid input");
     R_xlen_t n = XLENGTH(in);
-    /* FIXME: could in principle be a long vector */
     int nb = asInteger(nbin);
     if (nb == NA_INTEGER || nb < 0)
 	error(_("invalid '%s' argument"), "nbin");
-    SEXP ans = allocVector(INTSXP, nb);
-    int *x = INTEGER(in), *y = INTEGER(ans);
-    if (nb) memset(y, 0, nb * sizeof(int));
-    for(R_xlen_t i = 0 ; i < n ; i++)
-	if (x[i] != NA_INTEGER && x[i] > 0 && x[i] <= nb) y[x[i] - 1]++;
+    int *x = INTEGER(in);
+    SEXP ans;
+#ifdef LONG_VECTOR_SUPPORT
+    if (n > INT_MAX) {
+	ans = allocVector(REALSXP, nb);
+	double *y = REAL(ans);
+	if (nb) memset(y, 0, nb * sizeof(double));
+	for(R_xlen_t i = 0 ; i < n ; i++)
+	    if (x[i] != NA_INTEGER && x[i] > 0 && x[i] <= nb) y[x[i] - 1]++;
+    } else
+#endif
+    {
+	ans = allocVector(INTSXP, nb);
+	int *y = INTEGER(ans);
+	if (nb) memset(y, 0, nb * sizeof(int));
+	for(R_xlen_t i = 0 ; i < n ; i++)
+	    if (x[i] != NA_INTEGER && x[i] > 0 && x[i] <= nb) y[x[i] - 1]++;
+    }
     return ans;
 }
 
-/* .Internal(findInterval(vec, x, rightmost.closed, all.inside,  left.open))
+/* Note: R's findInterval( x , vec, ...)  has first two arguments swapped !
+ * .Internal(findInterval(vec, x, rightmost.closed, all.inside,  left.open))
  *                         xt  x    right             inside       leftOp
  * x can be a long vector but xt cannot since the result is integer
 */

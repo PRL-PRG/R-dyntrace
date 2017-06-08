@@ -1,6 +1,6 @@
 ### R.m4 -- extra macros for configuring R		-*- Autoconf -*-
 ###
-### Copyright (C) 1998-2015 R Core Team
+### Copyright (C) 1998-2017 R Core Team
 ###
 ### This file is part of R.
 ###
@@ -537,6 +537,32 @@ esac
 ])# R_C_INLINE
 
 ### * C++ compiler and its characteristics.
+
+## R_PROG_CXX
+## ----------
+## Check whether the C++ compiler can compile code
+AC_DEFUN([R_PROG_CXX],
+[AC_CACHE_CHECK([whether ${CXX} ${CXXFLAGS} can compile C++ code],
+[r_cv_prog_cxx],
+[AC_LANG_PUSH([C++])dnl
+r_save_CXX="${CXX}"
+CXX="${CXX} ${CXXSTD}"
+AC_COMPILE_IFELSE([AC_LANG_SOURCE(
+[#ifndef __cplusplus
+# error "not a C++ compiler"
+#endif
+#include <cmath>
+])],
+          [r_cv_prog_cxx=yes], [r_cv_prog_cxx=no])
+CXX="${r_save_CXX}"	  
+AC_LANG_POP([C++])dnl
+])
+if test "${r_cv_prog_cxx}" = no; then
+  CXX=
+  CXXFLAGS=
+  CXXSTD=
+fi
+])# R_PROG_CXX
 
 ## R_PROG_CXX_M
 ## ------------
@@ -1438,36 +1464,6 @@ AC_SUBST(OBJCXX)
 
 
 ### * Library functions
-
-## R_FUNC___SETFPUCW
-## -----------------
-AC_DEFUN([R_FUNC___SETFPUCW],
-[AC_CHECK_FUNC(__setfpucw,
-[AC_CACHE_CHECK([whether __setfpucw is needed],
-	        [r_cv_func___setfpucw_needed],
-[AC_RUN_IFELSE([AC_LANG_SOURCE([[
-int main () {
-#include <fpu_control.h>
-#include <stdlib.h>
-#if defined(_FPU_DEFAULT) && defined(_FPU_IEEE)
-  exit(_FPU_DEFAULT != _FPU_IEEE);
-#endif
-  exit(0);
-}
-]])],
-              [r_cv_func___setfpucw_needed=no],
-              [r_cv_func___setfpucw_needed=yes],
-              [r_cv_func___setfpucw_needed=no])])
-if test "x${r_cv_func___setfpucw_needed}" = xyes; then
-  AC_DEFINE(NEED___SETFPUCW, 1,
-	    [Define if your system needs __setfpucw() to control
-             FPU rounding.
-             This was used to control floating point precision,
-             rounding and floating point exceptions on older Linux
-             systems.
-             As of GLIBC 2.1 this function is not used anymore.])
-fi])
-])# R_FUNC___SETFPUCW
 
 ## R_FUNC_CALLOC
 ## -------------
@@ -2445,7 +2441,7 @@ if test -z "${TCLTK_CPPFLAGS}"; then
 fi
 ## TK_XINCLUDES should be empty for Aqua Tk, so earlier test was wrong
 ## Our code does not include any X headers, but tk.h may ....
-## That is true even on OS X, but Aqua Tk has a private version of
+## That is true even on macOS, but Aqua Tk has a private version of
 ## X11 headers, and we want that one and not the XQuartz one.
 if test "${have_tcltk}" = yes; then
   if test "${found_tk_by_config}" = yes; then
@@ -2734,7 +2730,7 @@ if test "${acx_blas_ok}" = no; then
 fi
 
 ## Now check if zdotu works (fails on AMD64 with the wrong compiler;
-## also fails on OS X with Accelerate/vecLib and gfortran; 
+## also fails on macOS with Accelerate/vecLib and gfortran; 
 ## but in that case we have a work-around using USE_VECLIB_G95FIX)
 
 if test "${acx_blas_ok}" = yes; then
@@ -3154,7 +3150,7 @@ caddr_t hello() {
 ## ------
 ## If selected, try finding system pcre library and headers.
 ## RedHat put the headers in /usr/include/pcre.
-## There are known problems < 8.10, and important bug fixes in 8.32
+## JIT was possible in >= 8.20 , and important bug fixes in 8.32
 AC_DEFUN([R_PCRE],
 [AC_CHECK_LIB(pcre, pcre_fullinfo, [have_pcre=yes], [have_pcre=no])
 if test "${have_pcre}" = yes; then
@@ -3167,7 +3163,7 @@ fi
 if test "x${have_pcre}" = xyes; then
 r_save_LIBS="${LIBS}"
 LIBS="-lpcre ${LIBS}"
-AC_CACHE_CHECK([if PCRE version >= 8.10, < 10.0 and has UTF-8 support], [r_cv_have_pcre810],
+AC_CACHE_CHECK([if PCRE version >= 8.20, < 10.0 and has UTF-8 support], [r_cv_have_pcre820],
 [AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #ifdef HAVE_PCRE_PCRE_H
 #include <pcre/pcre.h>
@@ -3180,7 +3176,7 @@ int main() {
 #ifdef PCRE_MAJOR
 #if PCRE_MAJOR > 8
   exit(1);
-#elif PCRE_MAJOR == 8 && PCRE_MINOR >= 10
+#elif PCRE_MAJOR == 8 && PCRE_MINOR >= 20
 {
     int ans;
     int res = pcre_config(PCRE_CONFIG_UTF8, &ans);
@@ -3193,9 +3189,9 @@ int main() {
   exit(1);
 #endif
 }
-]])], [r_cv_have_pcre810=yes], [r_cv_have_pcre810=no], [r_cv_have_pcre810=no])])
+]])], [r_cv_have_pcre820=yes], [r_cv_have_pcre820=no], [r_cv_have_pcre820=no])])
 fi
-if test "x${r_cv_have_pcre810}" != xyes; then
+if test "x${r_cv_have_pcre820}" != xyes; then
   have_pcre=no
   LIBS="${r_save_LIBS}"
 else
@@ -3219,8 +3215,8 @@ int main() {
 fi
 
 AC_MSG_CHECKING([whether PCRE support suffices])
-if test "x${r_cv_have_pcre810}" != xyes; then
-  AC_MSG_ERROR([pcre >= 8.10 library and headers are required])
+if test "x${r_cv_have_pcre820}" != xyes; then
+  AC_MSG_ERROR([pcre >= 8.20 library and headers are required])
 else
   AC_MSG_RESULT([yes])
 fi
@@ -3262,7 +3258,7 @@ if test "x${r_cv_have_bzlib}" = xno; then
 fi
 AC_MSG_CHECKING([whether bzip2 support suffices])
 if test "x${have_bzlib}" = xyes; then
-  AC_MSG_RESULT([no])
+  AC_MSG_RESULT([yes])
   LIBS="-lbz2 ${LIBS}"
 else
   AC_MSG_ERROR([bzip2 library and headers are required])
@@ -3433,7 +3429,7 @@ fi
 ## -------
 ## Look for iconv, possibly in libiconv.
 ## Need to include <iconv.h> as this may define iconv as a macro.
-## libiconv, e.g. on OS X, has iconv as a macro and needs -liconv.
+## libiconv, e.g. on macOS, has iconv as a macro and needs -liconv.
 AC_DEFUN([R_ICONV],
 [AC_CHECK_HEADERS(iconv.h)
 ## need to ignore cache for this as it may set LIBS
@@ -3666,13 +3662,19 @@ done
 ])# R_CHECK_FUNCS
 
 ## R_GCC4_VISIBILITY
-## Sets up suitable macros for visibility attributes in gcc4/gfortran
+## Sets up suitable macros for visibility attributes in gcc/gfortran
+## Also accepted on clang (which defines __GNUC__). 
+## Intel also defines __GNUC__ but is excluded below, and
+## Solaris <= 12.4 rejected -Werror, but 12.5 did not.
 AC_DEFUN([R_GCC4_VISIBILITY],
 [AC_CACHE_CHECK([whether __attribute__((visibility())) is supported],
                 [r_cv_visibility_attribute],
 [cat > conftest.c <<EOF
 int foo __attribute__ ((visibility ("hidden"))) = 1;
 int bar __attribute__ ((visibility ("default"))) = 1;
+#ifndef __GNUC__
+# error unsupported compiler
+#endif
 EOF
 r_cv_visibility_attribute=no
 if AC_TRY_COMMAND(${CC-cc} -Werror -S conftest.c -o conftest.s 1>&AS_MESSAGE_LOG_FD); then
@@ -3699,8 +3701,8 @@ if test "${r_cv_prog_cc_vis}" = yes; then
     C_VISIBILITY="-fvisibility=hidden"
   fi
 fi
-## Need to exclude Intel compilers, where this does not work.
-## The flag is documented, and is effective but also hides
+## Need to exclude Intel compilers, where this does not work correctly.
+## The flag is documented and is effective, but also hides
 ## unsatisfied references. We cannot test for GCC, as icc passes that test.
 case  "${CC}" in
   ## Intel compiler: note that -c99 may have been appended
@@ -4096,56 +4098,62 @@ if test "x${r_cv_working_mktime}" = xyes; then
 fi
 ])# R_FUNC_MKTIME
 
-## R_CXX1X
-## -------
-## Support for C++11 and later, for use in packages.
-AC_DEFUN([R_CXX1X],
+## R_STDCXX
+## --------
+## Support for C++ standards (C++98, C++11, C++14, C++17), for use in packages.
+## R_STDCXX(VERSION, PREFIX, DEFAULT)
+AC_DEFUN([R_STDCXX],
 [r_save_CXX="${CXX}"
 r_save_CXXFLAGS="${CXXFLAGS}"
 
-: ${CXX1X=${CXX}}
-: ${CXX1XFLAGS=${CXXFLAGS}}
-: ${CXX1XPICFLAGS=${CXXPICFLAGS}}
+: ${$2=${$3}}
+: ${$2FLAGS=${$3FLAGS}}
+: ${$2PICFLAGS=${$3PICFLAGS}}
 
-CXX="${CXX1X} ${CXX1XSTD}"
-CXXFLAGS="${CXX1XFLAGS} ${CXX1XPICFLAGS}"
+CXX="${$2} ${$2STD}"
+CXXFLAGS="${$2FLAGS} ${$2PICFLAGS}"
 AC_LANG_PUSH([C++])dnl
-AX_CXX_COMPILE_STDCXX_11([noext], [optional])
+AX_CXX_COMPILE_STDCXX([$1], [], [optional])
 AC_LANG_POP([C++])dnl Seems the macro does not always get this right
 CXX="${r_save_CXX}"
 CXXFLAGS="${r_save_CXXFLAGS}"
-if test "${HAVE_CXX11}" = "1"; then
-  CXX1XSTD="${CXX1XSTD} ${switch}"
+if test "${HAVE_CXX$1}" = "1"; then
+dnl for aesthetics avoid leading space
+  if test "${$2STD}"x = "x";  then
+    $2STD="${switch}"
+  else
+    $2STD="${$2STD} ${switch}"
+  fi
 else
-  CXX1X=""
-  CXX1XSTD=""
-  CXX1XFLAGS=""
-  CXX1XPICFLAGS=""
+  $2=""
+  $2STD=""
+  $2FLAGS=""
+  $2PICFLAGS=""
 fi
 
-AC_SUBST(CXX1X)
-AC_SUBST(CXX1XSTD)
-AC_SUBST(CXX1XFLAGS)
-AC_SUBST(CXX1XPICFLAGS)
-if test -z "${SHLIB_CXX1XLD}"; then
-  SHLIB_CXX1XLD="\$(CXX1X) \$(CXX1XSTD)"
+AC_SUBST($2)
+AC_SUBST($2STD)
+AC_SUBST($2FLAGS)
+AC_SUBST($2PICFLAGS)
+if test -z "${SHLIB_$2LD}"; then
+  SHLIB_$2LD="\$($2) \$($2STD)"
 fi
-AC_SUBST(SHLIB_CXX1XLD)
-: ${SHLIB_CXX1XLDFLAGS=${SHLIB_CXXLDFLAGS}}
-AC_SUBST(SHLIB_CXX1XLDFLAGS)
+AC_SUBST(SHLIB_$2LD)
+: ${SHLIB_$2LDFLAGS=${SHLIB_$3LDFLAGS}}
+AC_SUBST(SHLIB_$2LDFLAGS)
 
-AC_ARG_VAR([CXX1X], [C++11 compiler command])
-AC_ARG_VAR([CXX1XSTD],
-           [special flag for compiling and for linking C++11 code, e.g. -std=c++11])
-AC_ARG_VAR([CXX1XFLAGS], [C++11 compiler flags])
-AC_ARG_VAR([CXX1XPICFLAGS],
-           [special flags for compiling C++11 code to be turned into a
+AC_ARG_VAR([$2], [C++$1 compiler command])
+AC_ARG_VAR([$2STD],
+           [special flag for compiling and for linking C++$1 code, e.g. -std=c++$1])
+AC_ARG_VAR([$2FLAGS], [C++$1 compiler flags])
+AC_ARG_VAR([$2PICFLAGS],
+           [special flags for compiling C++$1 code to be turned into a
             shared object])
-AC_ARG_VAR([SHLIB_CXX1XLD],
+AC_ARG_VAR([SHLIB_$2LD],
            [command for linking shared objects which contain object
-            files from the C++11 compiler])
-AC_ARG_VAR([SHLIB_CXX1XLDFLAGS], [special flags used by SHLIB_CXX1XLD])
-])# R_CXX1X
+            files from the C++$1 compiler])
+AC_ARG_VAR([SHLIB_$2LDFLAGS], [special flags used by SHLIB_$2LD])
+])# R_STDCXX
 
 ## R_LIBCURL
 ## ----------------
@@ -4166,14 +4174,14 @@ if test -n "${CURL_CONFIG}"; then
     CURL_LIBS=`${CURL_CONFIG} --libs`
   fi
 fi
-r_save_CPPFLAGS="${CPPLAGS}"
+r_save_CPPFLAGS="${CPPFLAGS}"
 CPPFLAGS="${CURL_CPPFLAGS} ${CPPFLAGS}"
 r_save_LIBS="${LIBS}"
 LIBS="${CURL_LIBS} ${LIBS}"
 AC_CHECK_HEADERS(curl/curl.h, [have_libcurl=yes], [have_libcurl=no])
 
 if test "x${have_libcurl}" = "xyes"; then
-AC_CACHE_CHECK([if libcurl is version 7 and >= 7.28.0], [r_cv_have_curl728],
+AC_CACHE_CHECK([if libcurl is version 7 and >= 7.22.0], [r_cv_have_curl722],
 [AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <stdlib.h>
 #include <curl/curl.h>
@@ -4182,7 +4190,7 @@ int main()
 #ifdef LIBCURL_VERSION_MAJOR
 #if LIBCURL_VERSION_MAJOR > 7
   exit(1);
-#elif LIBCURL_VERSION_MAJOR == 7 && LIBCURL_VERSION_MINOR >= 28
+#elif LIBCURL_VERSION_MAJOR == 7 && LIBCURL_VERSION_MINOR >= 22
   exit(0);
 #else
   exit(1);
@@ -4191,9 +4199,9 @@ int main()
   exit(1);
 #endif
 }
-]])], [r_cv_have_curl728=yes], [r_cv_have_curl728=no], [r_cv_have_curl728=no])])
+]])], [r_cv_have_curl722=yes], [r_cv_have_curl722=no], [r_cv_have_curl722=no])])
 fi
-if test "x${r_cv_have_curl728}" = xno; then
+if test "x${r_cv_have_curl722}" = xno; then
   have_libcurl=no
 fi
 
@@ -4217,17 +4225,104 @@ if test "x${r_cv_have_curl_https}" = xno; then
   have_libcurl=no
 fi
 if test "x${have_libcurl}" = xyes; then
-  AC_DEFINE(HAVE_LIBCURL, 1, [Define if your system has libcurl >= 7.28.0 with support for https.])
+  AC_DEFINE(HAVE_LIBCURL, 1, [Define if your system has libcurl >= 7.22.0 with support for https.])
   CPPFLAGS="${r_save_CPPFLAGS}"
   LIBS="${r_save_LIBS}"
   AC_SUBST(CURL_CPPFLAGS)
   AC_SUBST(CURL_LIBS)
 else
-  AC_MSG_ERROR([libcurl >= 7.28.0 library and headers are required with support for https])
+  AC_MSG_ERROR([libcurl >= 7.22.0 library and headers are required with support for https])
 fi
 ])# R_LIBCURL
 
+## R_OPENMP_SIMDRED
+## ------------
+## Support for SIMD reduction on '+' (part of OpenMP 4.0) in C compiler.
+AC_DEFUN([R_OPENMP_SIMDRED],
+[AC_CACHE_CHECK([whether OpenMP SIMD reduction is supported],
+                [r_cv_openmp_simdred],
+[
+AC_LANG_PUSH(C)
+r_save_CFLAGS="${CFLAGS}"
+CFLAGS="${CFLAGS} ${R_OPENMP_CFLAGS}"
+AC_RUN_IFELSE([AC_LANG_SOURCE([[
+#include <stdlib.h>
 
+double ssum(double *x, int n) {
+/* SIMD reduction is supported since OpenMP 4.0. The value of _OPENMP is
+   unreliable in some compilers, so we do not test its value. */
+#if defined(_OPENMP) 
+    double s = 0;
+    #pragma omp simd reduction(+:s)
+    for(int i = 0; i < n; i++)
+        s += x[i];
+    return s;
+#else
+    exit(1);
+    return 0; /* not reachable */
+#endif
+}
+
+int main() {
+    /* use volatiles to reduce the risk of the
+       computation being inlined and constant-folded */
+    volatile double xv[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+    volatile int n = 8;
+    double x[8], s;
+    int i;
+    
+    for(i = 0; i < 8; i++) x[i] = xv[i];
+    s = ssum(x, n);
+    if (s == 36) exit(0);
+    exit(2);
+}
+]])],
+              [r_cv_openmp_simdred=yes],
+              [r_cv_openmp_simdred=no],
+              [r_cv_openmp_simdred=no])
+CFLAGS="${r_save_CFLAGS}"
+])
+if test "x${r_cv_openmp_simdred}" = xyes; then
+  AC_DEFINE(HAVE_OPENMP_SIMDRED, 1,
+            [Define if your OpenMP 4 implementation fully supports SIMD reduction])
+fi
+])# R_OPENMP_SIMDRED
+
+## R_FUNC_CTANH
+## ------------
+## Old versions of GLIBC have a bug due to which e.g. ctanh(0+365i) is NaN.
+## The problem exists also in RHEL6.
+AC_DEFUN([R_FUNC_CTANH],
+[AC_CACHE_CHECK([for working ctanh], [r_cv_func_ctanh_works],
+[AC_RUN_IFELSE([AC_LANG_SOURCE([[
+#include <complex.h>
+#include <stdlib.h>
+#include "confdefs.h"
+int main () {
+#ifdef HAVE_CTANH
+  volatile double complex z1 = 0;
+  volatile double complex z2 = 365;
+
+  z1 = ctanh(z1);
+  z2 = ctanh(z2);
+
+  if (creal(z1) != 0 || cimag(z1) != 0 || creal(z2) != 1 || cimag(z2) != 0)
+    exit(1);
+  else
+    exit(0);
+#else
+  exit(1);
+#endif
+}
+]])],
+               [r_cv_func_ctanh_works=yes],
+               [r_cv_func_ctanh_works=no],
+               [r_cv_func_ctanh_works=no])])
+if test "x${r_cv_func_ctanh_works}" = xyes; then
+  AC_DEFINE(HAVE_WORKING_CTANH, 1,
+            [Define if ctanh() exists and is working correctly.])
+fi
+])# R_FUNC_CTANH
 
 ### Local variables: ***
 ### mode: outline-minor ***

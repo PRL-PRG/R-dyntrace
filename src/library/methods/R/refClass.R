@@ -203,6 +203,10 @@ envRefSetField <- function(object, field,
         reg.finalizer(selfEnv, function(x) x$.self$finalize(), TRUE)
     lockBinding(".self", selfEnv)
     lockBinding(".refClassDef", selfEnv)
+    ## validObject was called from the S4 initialize; check that
+    ## a method specified for the ref. class is satisfied, if there is one
+    if(is(classDef@validity, "function"))
+        validObject(.Object)
     .Object
 }
 
@@ -578,6 +582,8 @@ getRefSuperClasses <- function(classes, classDefs) {
     ## allow either name=function, ... or a single list
     if(length(methodDefs) == 1 && is.list(methodDefs[[1]]))
         methodDefs <- methodDefs[[1]]
+    ## append existing local methods, so they are re-analysed for new method names
+    methodDefs <- c(methodDefs, .thisClassMethods(methodsEnv, def@className))
     mnames <- names(methodDefs)
     if(is.null(mnames) || !all(nzchar(mnames)))
         stop("arguments to methods() must be named, or one named list")
@@ -1293,7 +1299,8 @@ showRefClassDef <- function(object, title = "Reference Class") {
 ## declare field and method names global to avoid spurious
 ## messages from codetools
 .declareVariables <- function(def, env) {
-    utils::globalVariables(c(names(def@fieldClasses), names(def@refMethods)),
+    utils::globalVariables(c(names(def@fieldClasses), names(def@refMethods),
+                             ".self"),
                            env)
 }
 
@@ -1374,4 +1381,16 @@ getMethodsAndAccessors <- function(Class) {
     attr(object, ".xData") <- newEnv
     assign(".self", object, envir = newEnv)
     object
+}
+
+## return a list of all the methods from this class previously stored in
+## the class's methods environment
+.thisClassMethods <- function(methodsEnv, className) {
+    value <- list()
+    for(what in names(methodsEnv)) {
+        def <- get(what, envir = methodsEnv)
+        if(is(def, "refMethodDef") && def@refClassName == className)
+            value[[what]] <- def@.Data # the function only
+    }
+    value
 }

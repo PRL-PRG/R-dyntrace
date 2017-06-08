@@ -398,9 +398,11 @@ rematchDefinition <- function(definition, generic, mnames, fnames, signature)
 	trailingArgs <- fnames[seq.int(to = length(fnames), length.out = ntrail)]
 	if(!identical(	mnames[seq.int(to = length(mnames), length.out = ntrail)],
 		      trailingArgs))
-	    stop(gettextf("arguments (%s) after '...' in the generic must appear in the method, in the same place at the end of the argument list",
-			  paste(trailingArgs, collapse=", ")),
-                 call. = TRUE, domain = NA)
+	    stop(gettextf("%s arguments (%s) after %s in the generic must appear in the method, in the same place at the end of the argument list",
+                          .renderSignature(generic@generic, signature),
+			  paste(sQuote(trailingArgs), collapse = ", "),
+                          sQuote("...")),
+                 call. = FALSE, domain = NA)
 	newCallNames <- character(length(newCall))
 	newCallNames[seq.int(to = length(newCallNames), length.out = ntrail)] <-
 	    trailingArgs
@@ -414,19 +416,25 @@ rematchDefinition <- function(definition, generic, mnames, fnames, signature)
     generic
 }
 
-unRematchDefinition <- function(definition)
+
+isRematched <- function(definition)
 {
-    ## undo the effects of rematchDefiniition, if it was used.
+    ## detect the effects of rematchDefinition, if it was used.
     ## Has the obvious disadvantage of depending on the implementation.
     ## If we considered the rematching part of the API, a cleaner solution
     ## would be to include the "as given to setMethod" definition as a slot
+
     bdy <- body(definition)
     if(.identC(class(bdy),"{") && length(bdy) > 1L) {
         bdy <- bdy[[2L]]
-        if(.identC(class(bdy), "<-") &&
-           identical(bdy[[2L]], as.name(".local")))
-            definition <- bdy[[3L]]
-    }
+        .identC(class(bdy), "<-") && identical(bdy[[2L]], as.name(".local"))
+    } else FALSE
+}
+
+unRematchDefinition <- function(definition)
+{
+    if(isRematched(definition))
+        definition <-  body(definition)[[2]][[3]] # value in assignmt to .local
     definition
 }
 
@@ -529,7 +537,7 @@ getGeneric <-
             ##  fdef <- def <- .makeGenericForCache(def)
             pkg <- prev@package
             if(identical(pkg, newpkg)) { # redefinition
-                assign(name, def, envir = table)
+                table[[name]] <- def
                 return(fdef)
             }
             prev <- list(prev)          # start a per-package list
@@ -546,7 +554,7 @@ getGeneric <-
     }
 
     .getMethodsTable(fdef)              # force initialization
-    assign(name, def, envir = table)
+    table[[name]] <- def
     fdef
 }
 
@@ -807,14 +815,19 @@ cacheMetaData <-
     ## to update class and method information.
     pkg <- getPackageName(where)
     classes <- getClasses(where)
-    for(cl in classes) {
-        cldef <- (if(attach) get(classMetaName(cl), where) # NOT getClassDef, it will use cache
-                  else  getClassDef(cl, searchWhere))
-        if(is(cldef, "classRepresentation")) {
-            if(attach) {
-                .cacheClass(cl, cldef, is(cldef, "ClassUnionRepresentation"), where)
-            }
-            else if(identical(cldef@package, pkg)) {
+    if (attach) {
+        for(cl in classes) {
+            ## NOT getClassDef, it will use cache
+            cldef <- get(classMetaName(cl), where)
+            if(is(cldef, "classRepresentation"))
+                .cacheClass(cl, cldef, is(cldef, "ClassUnionRepresentation"),
+                            where)
+        }
+    } else {
+        for(cl in classes) {
+            cldef <- getClassDef(cl, searchWhere)
+            if(is(cldef, "classRepresentation") &&
+               identical(cldef@package, pkg)) {
                 .uncacheClass(cl, cldef)
                 .removeSuperclassBackRefs(cl, cldef, searchWhere)
             }
@@ -1481,20 +1494,10 @@ getGroupMembers <- function(group, recursive = FALSE, character = TRUE)
     (is.name(value) && nzchar(as.character(value)) )
     fg <- formals(generic)
     mg <- formals(method)
-    mgn <- names(mg)
-    changed <- FALSE
-    for(what in names(fg)) {
-        i <- match(what, mgn, 0L)
-        if(i > 0L) {
-            deflt <- mg[[i]]
-            if(!(emptyDefault(deflt) || identical(deflt, fg[[what]]))) {
-                fg[[what]] <- deflt
-                changed <- TRUE
-            }
-        }
-    }
-    if(changed)
-        formals(generic) <- fg
+    emptyDef <- vapply(mg, emptyDefault, logical(1L))
+    mg <- mg[!emptyDef]
+    i <- match(names(fg), names(mg))
+    formals(generic)[!is.na(i)] <- mg[i[!is.na(i)]]
     generic
 }
 
@@ -1505,7 +1508,7 @@ getGroupMembers <- function(group, recursive = FALSE, character = TRUE)
     if(!is.null(ns))
         asNamespace(ns)
     else {
-        i <- match(paste("package", what, sep=":"), search())
+        i <- match(paste0("package:", what), search())
         if(is.na(i))
             .GlobalEnv
         else
@@ -1553,10 +1556,10 @@ getGroupMembers <- function(group, recursive = FALSE, character = TRUE)
     if(!is(f, "genericFunction") || !identical(f@signature, "..."))
         stop("argument f must be a generic function with signature \"...\"")
     def <- .standardGenericDots
-    fenv <- environment(f)
-    environment(def) <- fenv
-    assign("standardGeneric", def, envir = fenv)
-    assign(".dotsCall", .makeDotsCall(formalArgs(f)), envir = fenv)
+    body(def) <- eval(call("substitute", body(def),
+                           list(.dotsMethod=as.name(f@generic))))
+    environment(def) <- environment(f)
+    assign("standardGeneric", def, envir = environment(f))
     f
 }
 
@@ -1573,25 +1576,14 @@ utils::globalVariables(c(".MTable", ".AllMTable", ".dotsCall"))
     if(is.null(method))
         stop(gettextf("no method or default matching the \"...\" arguments in %s",
                       deparse(sys.call(sys.parent()), nlines = 1)), domain = NA)
-    assign(".Method", method, envir = env)
-    eval(.dotsCall, env)
-}
-
-
-.quoteCall <- quote(.Method(...))
-.makeDotsCall <- function(formals)
-{
-    call <- .quoteCall
-    if(length(formals)  > 1L) {
-        idots <- match("...", formals)
-        for(what in formals[-idots]) {
-            ## the following nonsense is required to get the names in the call
-            ## expression to be empty for ... and there for other args
-            eval(substitute(call$NAME <- as.name(WHAT),
-                            list(NAME = as.name(what), WHAT = what)))
-        }
-    }
-    call
+    mc <- match.call(sys.function(sys.parent()), sys.call(sys.parent()),
+                     expand.dots=FALSE, envir=parent.frame(2))
+    args <- names(mc)[-1L]
+    mc[args] <- lapply(args, as.name)
+    names(mc)[names(mc) == "..."] <- ""
+    mc[[1L]] <- quote(.dotsMethod)
+    assign(name, method, env)
+    eval(mc, env)
 }
 
 .selectDotsMethod <- function(classes, mtable, allmtable)
@@ -1720,7 +1712,7 @@ if(FALSE) {
         ## else, an error
         classi <- classes[[i]]
         pkgi <- pkgs[[i]]
-        classDefi <- getClass(classi, where = where)
+        classDefi <- getClassDef(classi, where=if (pkgi == "") where else pkgi)
         if(checkDups && classi %in% multipleClasses()) { # hardly ever, we hope
             clDefsi <- get(classi, envir = .classTable)
             if(nzchar(pkgi) && pkgi %in% names(clDefsi))
@@ -1921,4 +1913,13 @@ evalqOnLoad <- function(expr, where = topenv(parent.frame()), aname = "")
         2L
     else
         0L
+}
+
+## test whether this function could be an S3 generic, either
+## a primitive or a function calling UseMethod()
+isS3Generic <- function(fdef) {
+    if(is.primitive(fdef))
+        identical(typeof(fdef), "builtin")
+    else
+        "UseMethod" %in% .getGlobalFuns(fdef) # from refClass.R
 }

@@ -18,7 +18,7 @@
  */
 
 /*  This file was contributed by Ei-ji Nakama.
- *  It exports locale2charset for use in gram.y, and rlocale.c on MacOS X.
+ *  It exports locale2charset for use in gram.y, and rlocale.c on macOS.
  *  And sysutils.c, grDevices/src/devPS.c
  */
 
@@ -34,16 +34,15 @@
  *                                or                                 *
  *         cc -o localecharset -DDEBUG_TEST=2  localecharset.c       *
  *********************************************************************/
-#ifdef DEBUG_TEST
-#define SPRINT(x) printf("%6d:" #x "=%s\n", __LINE__, x)
-#define DPRINT(x) printf("%6d:" #x "=%d\n", __LINE__, x)
-#define HAVE_STRING_H
-#endif
-
-
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
+#endif
+
+#ifdef DEBUG_TEST
+#define SPRINT(x) printf("%6d:" #x "=%s\n", __LINE__, x)
+#define DPRINT(x) printf("%6d:" #x "=%d\n", __LINE__, x)
+//#define HAVE_STRING_H
 #endif
 
 #include <string.h>
@@ -509,7 +508,7 @@ static const name_value known[] = {
     {"euccn", "GB2312"},
     {"big5-hkscs", "BIG5-HKSCS"},
 #ifdef __APPLE__
-    /* known additional Apple encodings (see locale -a) up to Mac OS X 10.5,
+    /* known additional Apple encodings (see locale -a) up to macOS 10.5,
        unlike other systems they correspond directly */
     {"iso8859-1", "ISO8859-1"},
     {"iso8859-2", "ISO8859-2"},
@@ -704,7 +703,7 @@ const char *locale2charset(const char *locale)
     }
 
 #ifdef __APPLE__
-    /* on Mac OS X *all* real locales w/o encoding part are UTF-8 locales
+    /* on macOS *all* real locales w/o encoding part are UTF-8 locales
        (C and POSIX are virtual and taken care of previously) */
     return "UTF-8";
 #else

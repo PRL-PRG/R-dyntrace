@@ -16,12 +16,12 @@ detectCores(all.tests = FALSE, logical = TRUE)
   \item{all.tests}{Logical: if true apply all known tests.}
   \item{logical}{Logical: if possible, use the number of physical CPUs/cores
     (if \code{FALSE}) or logical CPUs (if \code{TRUE}).  Currently this
-    is honoured only on Linux, OS X, Sparc Solaris and Windows.}
+    is honoured only on Linux, macOS, Sparc Solaris and Windows.}
 }
 \details{
   This attempts to detect the number of available CPU cores.
 
-  It has methods to do so for Linux, OS X, FreeBSD, OpenBSD, Solaris,
+  It has methods to do so for Linux, macOS, FreeBSD, OpenBSD, Solaris,
   Irix and Windows.  \code{detectCores(TRUE)} could be tried on other
   Unix-alike systems.
 
@@ -36,13 +36,13 @@ detectCores(all.tests = FALSE, logical = TRUE)
   default it counts logical (e.g., hyperthreaded) CPUs and not physical
   cores or packages.
 
-  Under OS X there is a further distinction between \sQuote{available in
+  Under macOS there is a further distinction between \sQuote{available in
     the current power management mode} and \sQuote{could be available
     this boot}, and this function returns the first.
 
 #ifdef windows
   Only versions of Windows since XP SP3 are supported.  Microsoft
-  documents that \code{logical = FALSE} it will report the number of
+  documents that with \code{logical = FALSE} it will report the number of
   cores on Vista or later, but the number of physical CPU packages on XP
   or Server 2003: however it reported correctly on the XP systems we
   tested.

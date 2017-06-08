@@ -1,6 +1,6 @@
 % File src/library/parallel/man/unix/mcparallel.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 2009-2014 R Core Team
+% Copyright 2009-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{mcparallel}
@@ -118,18 +118,18 @@ mccollect(jobs, wait = TRUE, timeout = 0, intermediate = FALSE)
 }
 
 \note{
-  Package \CRANpkg{multicore} also exported functions \code{collect} and
-  \code{parallel}.  These names are easily masked (for example package
-  \CRANpkg{lattice} also has a function \code{parallel}) and they are not
-  supplied in this package.
+    Prior to \R 3.4.0 and on a 32-bit platform, the \link{serialize}d
+  result from each forked process is limited to \eqn{2^{31} - 1}{2^31 -
+    1} bytes.  (Returning very large results via serialization is
+  inefficient and should be avoided.)
 }
 
 
 \author{
   Simon Urbanek and R Core.
 
-  Derived from the \CRANpkg{multicore} package (but with different
-  handling of the RNG stream).
+  Derived from the \pkg{multicore} package formerly on
+  \acronym{CRAN}. (but with different handling of the RNG stream).
 }
 \seealso{
   \code{\link{pvec}}, \code{\link{mclapply}}
@@ -140,10 +140,13 @@ q <- mcparallel(1:20)
 # wait for both jobs to finish and collect all results
 res <- mccollect(list(p, q))
 
+## IGNORE_RDIFF_BEGIN
+## reports process ids, so not reproducible
 p <- mcparallel(1:10)
 mccollect(p, wait = FALSE, 10) # will retrieve the result (since it's fast)
 mccollect(p, wait = FALSE)     # will signal the job as terminating
 mccollect(p, wait = FALSE)     # there is no longer such a job
+## IGNORE_RDIFF_END
 
 \dontshow{set.seed(123, "L'Ecuyer"); mc.reset.stream()}
 # a naive parallel lapply can be created using mcparallel alone:

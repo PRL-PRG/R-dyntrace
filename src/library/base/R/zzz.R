@@ -1,7 +1,7 @@
 #  File src/library/base/R/zzz.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2015 The R Core Team
+#  Copyright (C) 1995-2017 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -56,6 +56,8 @@ is.name <- is.symbol
 .ArgsEnv <- new.env(hash = TRUE, parent = emptyenv())
 
 assign("%*%", function(x, y) NULL, envir = .ArgsEnv)
+assign("...length", function() NULL, envir = .ArgsEnv)
+assign("...elt", function(n) NULL, envir = .ArgsEnv)
 assign(".C", function(.NAME, ..., NAOK = FALSE, DUP = TRUE, PACKAGE,
                       ENCODING) NULL,
        envir = .ArgsEnv)
@@ -219,7 +221,9 @@ assign("as.integer", function(x, ...) UseMethod("as.integer"),
 assign("as.logical", function(x, ...) UseMethod("as.logical"),
        envir = .GenericArgsEnv)
 #assign("as.raw", function(x) UseMethod("as.raw"), envir = .GenericArgsEnv)
-assign("c", function(..., recursive = FALSE) UseMethod("c"),
+## Conceptually, this is the argument list of  *default* method, not the generic :
+## assign("c", function(..., recursive = FALSE, use.names = TRUE) UseMethod("c"),
+assign("c", function(...) UseMethod("c"),
        envir = .GenericArgsEnv)
 #assign("dimnames", function(x) UseMethod("dimnames"), envir = .GenericArgsEnv)
 assign("dim<-", function(x, value) UseMethod("dim<-"), envir = .GenericArgsEnv)

@@ -1,7 +1,7 @@
 #  File src/library/utils/R/packages2.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2016 The R Core Team
+#  Copyright (C) 1995-2017 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -264,7 +264,7 @@ install.packages <-
         ## the only known reliable way is to try it
         ok <- dir.exists(lib) # dir might not exist, PR#14311
         if(ok) {
-            fn <- file.path(lib, paste("_test_dir", Sys.getpid(), sep = "_"))
+            fn <- file.path(lib, paste0("_test_dir_", Sys.getpid()))
             unlink(fn, recursive = TRUE) # precaution
             res <- try(dir.create(fn, showWarnings = FALSE))
             if(inherits(res, "try-error") || !res) ok <- FALSE
@@ -277,25 +277,14 @@ install.packages <-
         userdir <- unlist(strsplit(Sys.getenv("R_LIBS_USER"),
                                    .Platform$path.sep))[1L]
 	if(interactive()) {
-	    ask.yes.no <- function(msg) {
-                ##' returns "no" for "no",  otherwise 'ans', a string
-		msg <- gettext(msg)
-		if(.Platform$OS.type == "windows") {
-                    flush.console() # so warning is seen
-		    ans <- winDialog("yesno", sprintf(msg, sQuote(userdir)))
-		    if(ans != "YES") "no" else ans
-		} else {
-		    ans <- readline(paste(sprintf(msg, userdir), " (y/n) "))
-		    if(substr(ans, 1L, 1L) == "n") "no" else ans
-		}
-	    }
-	    ans <- ask.yes.no("Would you like to use a personal library instead?")
-	    if(identical(ans, "no")) stop("unable to install packages")
+	    ans <- askYesNo(gettext("Would you like to use a personal library instead?"), default = FALSE)
+	    if(!isTRUE(ans)) stop("unable to install packages")
 
 	    lib <- userdir
 	    if(!file.exists(userdir)) {
-		ans <- ask.yes.no("Would you like to create a personal library\n%s\nto install packages into?")
-		if(identical(ans, "no")) stop("unable to install packages")
+		ans <- askYesNo(gettextf("Would you like to create a personal library\n%s\nto install packages into?",
+		                        sQuote(userdir)), default = FALSE) 
+		if(!isTRUE(ans)) stop("unable to install packages")
 		if(!dir.create(userdir, recursive = TRUE))
                     stop(gettextf("unable to create %s", sQuote(userdir)),
                          domain = NA)
@@ -371,12 +360,12 @@ install.packages <-
 
 
     ## Look at type == "both"
-    ## NB it is only safe to use binary packages with a Mac OS X
+    ## NB it is only safe to use binary packages with a macOS
     ## build that uses the same R foundation layout as CRAN since
     ## paths in DSOs are hard-coded.
     if (type == "both") {
         if (type2 == "source")
-            stop("type == \"both\" can only be used on Windows or a CRAN build for Mac OS X")
+            stop("type == \"both\" can only be used on Windows or a CRAN build for macOS")
         if (!missing(contriburl) || !is.null(available)) type <- type2
     }
 
@@ -427,9 +416,9 @@ install.packages <-
                         ngettext(sum(later & hasSrc),
                                  "Do you want to install from sources the package which needs compilation?",
                                  "Do you want to install from sources the packages which need compilation?")
-                    message(msg, domain = NA)
-                    res <- readline("y/n: ")
-                    if(res != "y") later <- later & !hasSrc
+                    res <- askYesNo(msg)
+                    if (is.na(res)) stop("Cancelled by user")
+                    if(!isTRUE(res)) later <- later & !hasSrc
                 } else if (action == "never") {
                     cat("  Binaries will be installed\n")
                     later <- later & !hasSrc
@@ -449,9 +438,9 @@ install.packages <-
                 msg <- strwrap(paste(msg, collapse = " "), exdent = 2)
                 message(paste(msg, collapse = "\n"), domain = NA)
                 if(action == "interactive" && interactive()) {
-                    message("Do you want to attempt to install these from sources?")
-                    res <- readline("y/n: ")
-                    if(res != "y") pkgs <- setdiff(pkgs, s2)
+                    res <- askYesNo("Do you want to attempt to install these from sources?")
+                    if (is.na(res)) stop("Cancelled by user")
+                    if(!isTRUE(res)) pkgs <- setdiff(pkgs, s2)
                 } else if(action == "never") {
                     cat("  These will not be installed\n")
                     pkgs <- setdiff(pkgs, s2)
@@ -539,7 +528,7 @@ install.packages <-
 
     if(.Platform$OS.type == "windows") {
         if(substr(type, 1L, 10L) == "mac.binary")
-            stop("cannot install MacOS X binary packages on Windows")
+            stop("cannot install macOS binary packages on Windows")
 
         if(type %in% "win.binary") {
             ## include local .zip files
@@ -565,7 +554,7 @@ install.packages <-
     } else {
         if(substr(type, 1L, 10L) == "mac.binary") {
             if(!grepl("darwin", R.version$platform))
-                stop("cannot install MacOS X binary packages on this platform")
+                stop("cannot install macOS binary packages on this platform")
             .install.macbinary(pkgs = pkgs, lib = lib, contriburl = contriburl,
                                method = method, available = available,
                                destdir = destdir,
@@ -623,7 +612,7 @@ install.packages <-
             Sys.setenv(R_LIBS = libpath)
             on.exit(Sys.setenv(R_LIBS = oldrlibs))
         } else
-            env <- paste("R_LIBS", shQuote(libpath), sep = "=")
+            env <- paste0("R_LIBS=", shQuote(libpath))
         ## </NOTE>
     }
 

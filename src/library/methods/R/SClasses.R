@@ -1,7 +1,7 @@
 #  File src/library/methods/R/SClasses.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2015 The R Core Team
+#  Copyright (C) 1995-2016 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -35,9 +35,8 @@ setClass <-
         if(!missing(representation))
             stop("Argument \"representation\" cannot be used if argument \"slots\" is supplied")
         properties <- inferProperties(slots, "slot")
-        classDef <- makeClassRepresentation(Class, properties,contains, prototype, package,
-                                             validity, access, version, sealed, where = where)
-        superClasses <- names(classDef@contains)
+        classDef <- makeClassRepresentation(Class, properties, contains, prototype, package,
+                                            validity, access, version, sealed, where = where)
     }
     else if(is(representation, "classRepresentation")) {
         ## supplied a class definition object
@@ -47,7 +46,6 @@ setClass <-
             stop("only arguments 'Class' and 'where' can be supplied when argument 'representation' is a 'classRepresentation' object")
         if(length(classDef@package) == 0L)
             classDef@package <- package # the default
-        superClasses <- allNames(classDef@contains)
     }
     else {
         ## catch the special case of a single class name as the representation
@@ -57,10 +55,10 @@ setClass <-
         slots <- nzchar(allNames(representation))
         superClasses <- c(as.character(representation[!slots]), contains)
         properties <- representation[slots]
-        classDef <- makeClassRepresentation(Class, properties,superClasses, prototype, package,
-                                             validity, access, version, sealed, where = where)
-        superClasses <- names(classDef@contains)
+        classDef <- makeClassRepresentation(Class, properties, superClasses, prototype, package,
+                                            validity, access, version, sealed, where = where)
     }
+    superClasses <- names(classDef@contains)
     classDef <- completeClassDefinition(Class, classDef, where, doExtends = FALSE)
     ## uncache an old definition for this package, if one is cached
     .uncacheClass(Class, classDef)
@@ -69,6 +67,8 @@ setClass <-
         classDef@sealed <- FALSE # to allow setIs to work anyway; will be reset later
         assignClassDef(Class, classDef, where)
         badContains <- character()
+### FIXME: need to iterate over contains, not superclass to get
+### package for getClassDef()
         for(class2 in superClasses) {
             if(is(try(setIs(Class, class2, classDef = classDef, where = where)), "try-error"))
                 badContains <- c(badContains, class2)
@@ -233,20 +233,26 @@ makeClassRepresentation <-
 getClassDef <-
   ## Get the definition of the class supplied as a string.
   function(Class, where = topenv(parent.frame()), package = packageSlot(Class),
-           inherits = TRUE, resolve.msg = getOption("getClass.msg", default=TRUE))
+           inherits = TRUE)
 {
-    value <- if(inherits) #includes both the lookup and Class being already a definition
-	.getClassFromCache(Class, where, package=package, resolve.msg=resolve.msg)
-    ## else NULL # want to force a search for the metadata in this case (Why?)
+    if(inherits) {
+                 value <- .getClassesFromCache(Class)
+                 if(is.list(value))
+                     value <- .resolveClassList(value, where, package)
+    } else
+        value <- NULL
+    
     if(is.null(value)) {
-	cname <-
-	    classMetaName(if(length(Class) > 1L)
+	cname <- classMetaName(if(length(Class) > 1L)
 			  ## S3 class; almost certainly has no packageSlot,
 			  ## but we'll continue anyway
 			  Class[[1L]] else Class)
 	## a string with a package slot strongly implies the class definition
 	## should be in that package.
-	if(identical(nzchar(package), TRUE)) {
+        if(is.character(where)) {
+            package <- where
+        }
+	if(isTRUE(nzchar(package))) {
 	    whereP <- .requirePackage(package)
 	    value <- get0(cname, whereP, inherits = inherits) # NULL if not existing
 	}
@@ -260,13 +266,10 @@ getClass <-
   ## Get the complete definition of the class supplied as a string,
   ## including all slots, etc. in classes that this class extends.
   function(Class, .Force = FALSE,
-	   where = .classEnv(Class, topenv(parent.frame()), FALSE),
-           resolve.msg = getOption("getClass.msg", default=TRUE))
+	   where = .classEnv(Class, topenv(parent.frame()), FALSE))
 {
-    value <- .getClassFromCache(Class, where, resolve.msg=resolve.msg) # the quick way
+    value <- getClassDef(Class, where)
     if(is.null(value)) {
-        value <- getClassDef(Class, where, resolve.msg=resolve.msg) # searches
-        if(is.null(value)) {
             if(!.Force)
                 stop(gettextf("%s is not a defined class",
                               dQuote(Class)),
@@ -274,7 +277,6 @@ getClass <-
             else
                 value <- makeClassRepresentation(Class, package = "base",
                                                  virtual = TRUE, where = where)
-        }
     }
     value
 }
@@ -377,8 +379,7 @@ slotNames <- function(x)
 }
 
 
-removeClass <-  function(Class, where = topenv(parent.frame()),
-                         resolve.msg = getOption("removeClass.msg", default=TRUE)) {
+removeClass <-  function(Class, where = topenv(parent.frame())) {
     if(missing(where)) {
        classEnv <- .classEnv(Class, where, FALSE)
         classWhere <- findClass(Class, where = classEnv)
@@ -401,7 +402,7 @@ removeClass <-  function(Class, where = topenv(parent.frame()),
       subclasses <- names(classDef@subclasses)
       found <- vapply(subclasses, isClass, NA, where = where, USE.NAMES=TRUE)
       for(what in subclasses[found])
-          .removeSuperClass(what, Class, resolve.msg=resolve.msg)
+          .removeSuperClass(what, Class)
     }
     .removeSuperclassBackRefs(Class, classDef, classWhere)
     .uncacheClass(Class, classDef)
@@ -524,7 +525,7 @@ validObject <- function(object, test = FALSE, complete = FALSE)
 	superClass <- exti@superClass
 	if(!exti@simple && !is(object, superClass))
 	    next ## skip conditional relations that don't hold for this object
-	superDef <- getClassDef(superClass, where = where)
+	superDef <- getClassDef(superClass, package = packageSlot(exti))
 	if(is.null(superDef)) {
 	    errors <- c(errors,
 			paste0("superclass \"", superClass,

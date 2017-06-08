@@ -12,7 +12,7 @@ make clean &&
 make -j8 &&
 
 cd rdt-plugins/promises &&
-make clean &&
+#make clean &&
 cmake . &&
 make &&
 cd ../.. 

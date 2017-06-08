@@ -1,7 +1,7 @@
 #  File src/library/tools/R/QC.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2016 The R Core Team
+#  Copyright (C) 1995-2017 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -66,6 +66,10 @@ langElts <- c("(", "{", ":", "~",
 	      "[", "[[", "[[<-", "[<-", "@", "@<-", "$", "$<-",
 	      "&&", "||",
 	      "break", "for", "function", "if", "next", "repeat", "return", "while")
+
+## Code "existing conceptually" in base,
+## typically function names of default methods for .Primitive s:
+conceptual_base_code <- c("c.default")
 
 ##' a "default" print method used "below" (in several *.R):
 .print.via.format <- function(x, ...) {
@@ -182,16 +186,19 @@ function(package, dir, lib.loc = NULL)
         ## to the package in their package slot, so eliminate any
         ## foreign generic functions from code_objs
         if(.isMethodsDispatchOn()) {
+            is <- methods::is           # speed
             code_objs <-
                 Filter(function(f) {
-                    ## NB: this get() is expensive as it loads every object
-                    fdef <- get(f, envir = code_env)
-                    if(methods::is(fdef, "genericFunction"))
+                    fdef <- code_env[[f]] # faster than get()
+                    ## Running methods::is() on data sets can trigger
+                    ## loading additional packages for which startup
+                    ## messages et al need suppressing ...
+                    if(suppressMessages(is(fdef, "genericFunction")))
                         fdef@package == pkgname
                     else
                         TRUE
                 },
-                       code_objs)
+                code_objs)
         }
 
         ## Allow group generics to be undocumented other than in base.
@@ -219,8 +226,8 @@ function(package, dir, lib.loc = NULL)
         ## </NOTE>
         ## The bad ones:
         S4_classes <-
-            S4_classes[!sapply(S4_classes,
-                               function(u) utils:::topicName("class", u))
+            S4_classes[!vapply(S4_classes, utils:::topicName, " ",
+                               type = "class", USE.NAMES=FALSE)
                        %in% all_doc_topics]
         undoc_things <-
             c(undoc_things, list("S4 classes" = unique(S4_classes)))
@@ -360,8 +367,9 @@ function(package, dir, lib.loc = NULL,
                 unique(c(objects_in_code, objects_in_ns, ns_S3_methods))
             objects_in_ns <- setdiff(objects_in_ns, objects_in_code)
         }
-        else
-            objects_in_code_or_namespace <- objects_in_code
+	else { ## typically only 'base'
+	    objects_in_code_or_namespace <- objects_in_code
+	}
         package_name <- package
     }
     else {
@@ -437,6 +445,7 @@ function(package, dir, lib.loc = NULL,
             sort(names(baseenv()))
         objects_in_code <-
             c(objects_in_code,
+	      conceptual_base_code,
               Filter(.is_primitive_in_base, objects_in_base),
               c(".First.lib", ".Last.lib", ".Random.seed",
                 ".onLoad", ".onAttach", ".onDetach", ".onUnload"))
@@ -506,8 +515,9 @@ function(package, dir, lib.loc = NULL,
             !identical(as.logical(Sys.getenv("_R_CHECK_CODOC_S4_METHODS_")),
                        FALSE)
         if(check_S4_methods) {
+            unRematchDef <- methods::unRematchDefinition
             get_formals_from_method_definition <- function(m)
-                formals(methods::unRematchDefinition(m))
+		formals(unRematchDef(m))
             lapply(.get_S4_generics(code_env),
                    function(f) {
                        mlist <- .get_S4_methods_list(f, code_env)
@@ -561,14 +571,14 @@ function(package, dir, lib.loc = NULL,
     names(db) <- db_names <- .Rd_get_names_from_Rd_db(db)
 
     ## pkg-defunct.Rd is not expected to list arguments
-    ind <- db_names %in% paste(package_name, "defunct", sep = "-")
+    ind <- db_names %in% paste0(package_name, "-defunct")
     db <- db[!ind]
     db_names <- db_names[!ind]
 
     db_usages <- lapply(db, .Rd_get_section, "usage")
     db_usages <- lapply(db_usages, .parse_usage_as_much_as_possible)
-    ind <- as.logical(sapply(db_usages,
-                             function(x) !is.null(attr(x, "bad_lines"))))
+    ind <- vapply(db_usages,
+                  function(x) !is.null(attr(x, "bad_lines")), NA, USE.NAMES=FALSE)
     bad_lines <- lapply(db_usages[ind], attr, "bad_lines")
 
     bad_doc_objects <- list()
@@ -585,17 +595,16 @@ function(package, dir, lib.loc = NULL,
 
         ## Get variable names and data set usages first, mostly for
         ## curiosity.
-        ind <- ! sapply(exprs, is.call)
+        ind <- ! vapply(exprs, is.call, NA)
         if(any(ind)) {
             variables_in_usages <-
                 c(variables_in_usages,
                   sapply(exprs[ind], deparse))
             exprs <- exprs[!ind]
         }
-        ind <- as.logical(sapply(exprs,
-                                 function(e)
-                                 (length(e) == 2L)
-                                 && e[[1L]] == as.symbol("data")))
+        ind <- vapply(exprs, function(e) (length(e) == 2L) &&
+                                         e[[1L]] == as.symbol("data"),
+                      NA, USE.NAMES=FALSE)
         if(any(ind)) {
             data_sets <- sapply(exprs[ind],
                                 function(e) as.character(e[[2L]]))
@@ -606,8 +615,7 @@ function(package, dir, lib.loc = NULL,
             exprs <- exprs[!ind]
         }
         ## Split out replacement function usages.
-        ind <- as.logical(sapply(exprs,
-                                 .is_call_from_replacement_function_usage))
+        ind <- vapply(exprs, .is_call_from_replacement_function_usage, NA, USE.NAMES=FALSE)
         replace_exprs <- exprs[ind]
         exprs <- exprs[!ind]
         ## Ordinary functions.
@@ -666,7 +674,7 @@ function(package, dir, lib.loc = NULL,
         ## by comparing the explicit \usage entries for S4 methods to
         ## what is actually in the code.  We most likely also should do
         ## something similar for S3 methods.
-        ind <- grep(.S4_method_markup_regexp, functions)
+        ind <- grepl(.S4_method_markup_regexp, functions)
         if(any(ind))
             functions <- functions[!ind]
         ## </FIXME>
@@ -718,7 +726,7 @@ function(package, dir, lib.loc = NULL,
                 (is.call(b <- body(f))
                  && identical(as.character(b[[1L]]), ".Defunct"))
             }
-            functions[!sapply(functions, is_defunct)]
+            functions[!vapply(functions, is_defunct, NA, USE.NAMES=FALSE)]
         }
     objects_missing_from_usages <-
         if(!has_namespace) character() else {
@@ -919,7 +927,7 @@ function(package, lib.loc = NULL)
     ## Currently, we only return the names of all classes checked.
     ## </NOTE>
 
-    bad_Rd_objects <- structure(NULL, class = "codocClasses")
+    bad_Rd_objects <- structure(list(), class = "codocClasses")
 
     ## Argument handling.
     if(length(package) != 1L)
@@ -960,7 +968,8 @@ function(package, lib.loc = NULL)
     ## we do the vectorized metadata computations first, and try to
     ## subscript whenever possible.
 
-    idx <- sApply(lapply(db, .Rd_get_doc_type), identical, "class")
+    idx <- vapply(lapply(db, .Rd_get_doc_type), identical, NA, "class",
+		  USE.NAMES=FALSE)
     if(!any(idx)) return(bad_Rd_objects)
     db <- db[idx]
     stats <- c(n.S4classes = length(S4_classes), n.db = length(db))
@@ -982,7 +991,7 @@ function(package, lib.loc = NULL)
     aliases <- unlist(aliases[idx], use.names = FALSE)
 
     Rd_slots <- lapply(db, .Rd_get_section, "Slots", FALSE)
-    idx <- sapply(Rd_slots, length) > 0L
+    idx <- lengths(Rd_slots) > 0L
     if(!any(idx)) return(bad_Rd_objects)
     db <- db[idx]; aliases <- aliases[idx]; Rd_slots <- Rd_slots[idx]
     stats["n.final"] <- length(db)
@@ -1010,7 +1019,8 @@ function(package, lib.loc = NULL)
 		      use.names=FALSE))
     }
 
-    S4topics <- sApply(S4_classes, utils:::topicName, type="class")
+    S4topics <- vapply(S4_classes, utils:::topicName, " ",
+                       type="class", USE.NAMES=FALSE)
     S4_checked <- S4_classes[has.a <- S4topics %in% aliases]
     idx <- match(S4topics[has.a], aliases)
     for(icl in seq_along(S4_checked)) {
@@ -1084,7 +1094,7 @@ function(package, lib.loc = NULL)
     ## Currently, we only return the names of all data frames checked.
     ## </NOTE>
 
-    bad_Rd_objects <- structure(NULL, class = "codocData")
+    bad_Rd_objects <- structure(list(), class = "codocData")
 
     ## Argument handling.
     if(length(package) != 1L)
@@ -1516,7 +1526,7 @@ function(x, ...)
                              function(nm) {
                                  c(gettextf("Bad \\usage lines found in documentation object '%s':",
                                             nm),
-                                   paste(" ", bad_lines[[nm]]))
+                                   paste0("  ", bad_lines[[nm]]))
                              })),
                "")
 
@@ -2149,13 +2159,13 @@ function(package, dir, file, lib.loc = NULL,
     if(check_DUP) attr(bad_exprs, "dup_false") <- dup_false
     if (length(bad_pkg)) {              # check against dependencies.
         bases <- .get_standard_package_names()$base
-        bad <- bad_pkg[!bad_pkg %in% bases]
+        bad <- bad_pkg %w/o% bases
         if (length(bad)) {
             depends <- .get_requires_from_package_db(db, "Depends")
             imports <- .get_requires_from_package_db(db, "Imports")
             suggests <- .get_requires_from_package_db(db, "Suggests")
             enhances <- .get_requires_from_package_db(db, "Enhances")
-            bad <- bad[!bad %in% c(depends, imports, suggests, enhances)]
+            bad <- bad %w/o% c(depends, imports, suggests, enhances)
             attr(bad_exprs, "undeclared") <- bad
         }
     }
@@ -2438,7 +2448,10 @@ function(package, dir, lib.loc = NULL)
                         functions_in_code),
                  .get_S3_generics_as_seen_from_package(dir,
                                                        !missing(package),
-                                                       FALSE),
+                                                       TRUE),
+                 ## This had 'FALSE' for a long time, in which case we
+                 ## miss the primitive generics regarded as language
+                 ## elements.
                  S3_group_generics, S3_primitive_generics))
     ## <FIXME>
     ## Not yet:
@@ -2490,6 +2503,8 @@ function(package, dir, lib.loc = NULL)
                       setdiff(delta, objects_in_code))
             }
         }
+
+        if(any(g == langElts)) next
 
         for(m in methods)
             ## Both all() and all.equal() are generic.
@@ -2960,10 +2975,10 @@ function(dir, force_suggests = TRUE, check_incoming = FALSE,
             ## These need both to be declared and installed
             ## If people explicitly state 'utils' they ought really to
             ## declare it, but skip for now.
-            bad <- VB[! VB %in% c(package_name, "utils", depends, imports, suggests)]
+            bad <- VB %w/o% c(package_name, "utils", depends, imports, suggests)
             if(length(bad))
                 bad_depends$required_for_checking_but_not_declared <- bad
-            bad2 <- VB[! VB %in% c(package_name, installed)]
+            bad2 <- VB %w/o% c(package_name, installed)
             bad2 <- setdiff(bad2, bad)
             if(length(bad2))
                 bad_depends$required_for_checking_but_not_installed <- bad2
@@ -3330,20 +3345,20 @@ function(x, ...)
         writeLines(gettext("Malformed Depends or Suggests or Imports or Enhances field."))
         if(length(bad$bad_dep_entry)) {
             tmp <- c(gettext("Offending entries:"),
-                     paste(" ", bad$bad_dep_entry),
+                     paste0("  ", bad$bad_dep_entry),
                      strwrap(gettextf("Entries must be names of packages optionally followed by '<=' or '>=', white space, and a valid version number in parentheses.")))
             writeLines(tmp)
         }
         if(length(bad$bad_dep_op)) {
             tmp <- c(gettext("Entries with infeasible comparison operator:"),
-                     paste(" ", bad$bad_dep_entry),
+                     paste0("  ", bad$bad_dep_entry),
                      strwrap(gettextf("Only operators '<=' and '>=' are possible.")))
 
             writeLines(tmp)
         }
         if(length(bad$bad_dep_version)) {
             tmp <- c(gettext("Entries with infeasible version number:"),
-                     paste(" ", bad$bad_dep_version),
+                     paste0("  ", bad$bad_dep_version),
                      strwrap(gettextf("Version numbers must be sequences of at least two non-negative integers, separated by single '.' or '-'.")))
             writeLines(tmp)
         }
@@ -3479,14 +3494,43 @@ function(aar, strict = FALSE)
                 out$bad_authors_at_R_field_has_no_author <- TRUE
             else {
                 attr(out, "Author") <- s
-                if(strict) {
-                    ## Specifically check for persons with missing or
-                    ## non-standard roles.
-                    s <- format(aar[sapply(aar,
-                                           utils:::.format_person_for_plain_author_spec)
-                                    == ""])
-                    if(length(s))
-                        out$bad_authors_at_R_field_has_author_without_role <- s
+                if(strict >= 1L) {
+                    has_no_name <-
+                        vapply(aar,
+                               function(e)
+                               is.null(e$given) && is.null(e$family),
+                               NA)
+                    if(any(has_no_name)) {
+                        out$bad_authors_at_R_field_has_persons_with_no_name <-
+                            format(aar[has_no_name])
+                    }
+                    has_no_role <-
+                        vapply(aar,
+                               function(e) is.null(e$role),
+                               NA)
+                    if(any(has_no_role)) {
+                        out$bad_authors_at_R_field_has_persons_with_no_role <-
+                            format(aar[has_no_role])
+                    }
+                }
+                if(strict >= 2L) {
+                    if(all(has_no_name |
+                           vapply(aar,
+                                  function(e)
+                                  is.na(match("aut", e$role)),
+                                  NA)))
+                        out$bad_authors_at_R_field_has_no_author_roles <- TRUE
+                    non_standard_roles <-
+                        lapply(aar$role, setdiff,
+                               utils:::MARC_relator_db_codes_used_with_R)
+                    ind <- lengths(non_standard_roles) > 0L
+                    if(any(ind)) {
+                        out$bad_authors_at_R_field_has_persons_with_nonstandard_roles <-
+                            sprintf("%s: %s",
+                                    format(aar[ind]),
+                                    sapply(non_standard_roles[ind], paste,
+                                           collapse = ", "))
+                    }
                 }
             }
         }
@@ -3535,28 +3579,41 @@ function(x)
     c(character(),
       if(length(bad <- x[["bad_authors_at_R_field"]])) {
           c(gettext("Malformed Authors@R field:"),
-            paste(" ", bad))
+            paste0("  ", bad))
       },
       if(length(bad <- x[["bad_authors_at_R_field_for_author"]])) {
           c(gettext("Cannot extract Author field from Authors@R field:"),
-            paste(" ", bad))
+            paste0("  ", bad))
       },
       if(length(x[["bad_authors_at_R_field_has_no_author"]])) {
-          gettext("Authors@R field gives no person with author role.")
+          gettext("Authors@R field gives no person with name and roles.")
       },
       if(length(bad <-
-                x[["bad_authors_at_R_field_has_author_without_role"]])) {
-          c(gettext("Authors@R field gives persons with no valid roles:"),
-            paste(" ", bad))
+                x[["bad_authors_at_R_field_has_persons_with_no_name"]])) {
+          c(gettext("Authors@R field gives persons with no name:"),
+            paste0("  ", bad))
+      },
+      if(length(bad <-
+                x[["bad_authors_at_R_field_has_persons_with_no_role"]])) {
+          c(gettext("Authors@R field gives persons with no role:"),
+            paste0("  ", bad))
+      },
+      if(length(x[["bad_authors_at_R_field_has_no_author_roles"]])) {
+          gettext("Authors@R field gives no person with name and author role")
+      },
+      if(length(bad <-
+                x[["bad_authors_at_R_field_has_persons_with_nonstandard_roles"]])) {
+          c(gettext("Authors@R field gives persons with non-standard roles:"),
+            paste0("  ", bad))
       },
       if(length(bad <- x[["bad_authors_at_R_field_for_maintainer"]])) {
           c(gettext("Cannot extract Maintainer field from Authors@R field:"),
-            paste(" ", bad))
+            paste0("  ", bad))
       },
       if(length(bad <-
                 x[["bad_authors_at_R_field_too_many_maintainers"]])) {
           c(gettext("Authors@R field gives more than one person with maintainer role:"),
-            paste(" ", bad))
+            paste0("  ", bad))
       },
       if(length(x[["bad_authors_at_R_field_has_no_valid_maintainer"]])) {
           strwrap(gettext("Authors@R field gives no person with maintainer role, valid email address and non-empty name."))
@@ -3721,11 +3778,11 @@ function(x, ...)
       },
       if(length(y <- x$bad_extensions)) {
           c(gettext("License components with restrictions not permitted:"),
-            paste(" ", y))
+            paste0("  ", y))
       },
       if(length(y <- x$miss_extension)) {
           c(gettext("License components which are templates and need '+ file LICENSE':"),
-            paste(" ", y))
+            paste0("  ", y))
       }
       )
 }
@@ -3747,7 +3804,8 @@ function(dir, makevars = c("Makevars.in", "Makevars"))
     mfile <- paths[1L]
     make <- Sys.getenv("MAKE")
     if(make == "") make <- "make"
-    command <- sprintf("%s -f %s -f %s -f %s",
+    ## needs a target to avoid targets in src/Makevars
+    command <- sprintf("%s -f %s -f %s -f %s makevars_test",
                        make,
                        shQuote(file.path(R.home("share"), "make",
                                          "check_vars_ini.mk")),
@@ -3760,7 +3818,7 @@ function(dir, makevars = c("Makevars.in", "Makevars"))
     if(!length(lines) || inherits(lines, "error"))
         return(bad_flags)
 
-    prefixes <- c("CPP", "C", "CXX", "CXX1X", "F", "FC", "OBJC", "OBJCXX")
+    prefixes <- c("CPP", "C", "CXX", "CXX98", "CXX11", "CXX14", "CXX17", "F", "FC", "OBJC", "OBJCXX")
 
     uflags_re <- sprintf("^(%s)FLAGS: *(.*)$",
                          paste(prefixes, collapse = "|"))
@@ -3788,11 +3846,15 @@ function(dir, makevars = c("Makevars.in", "Makevars"))
     bad_flags_regexp <-
         sprintf("^-(%s)$",
                 paste(c("O.*",
-                        "W",
+                        "W", # same as -Wextra in GCC.
+                        "w", # GCC, Solaris inhibit all warnings
                         "W[^l].*", # -Wl, might just be portable
                         "ansi", "pedantic", "traditional",
-                        "f.*", "m.*", "std.*",
+                        "f.*", "m.*", "std.*", # includes -fopenmp
+                        "isystem", # gcc and clones
                         "x",
+                        "cpp", # gfortran
+                        "g",  # not portable, waste of space
                         "q"),
                       collapse = "|"))
     for(i in seq_along(lines)) {
@@ -3884,6 +3946,9 @@ function(package, lib.loc = NULL)
                    envir = compat)
         }
         if(.Platform$OS.type != "windows") {
+            assign("askYesNoWinDialog",
+                   function(msg, ...) {},
+                   envir = compat)
             assign("bringToTop", function (which = grDevices::dev.cur(), stay = FALSE) {},
                    envir = compat)
             assign("choose.dir",
@@ -3999,7 +4064,7 @@ function(package, lib.loc = NULL)
 	    }
     }
     checkMethodUsagePackage <- function (pack, ...) {
-	pname <- paste("package", pack, sep = ":")
+	pname <- paste0("package:", pack)
 	if (!pname %in% search())
 	    stop("package must be loaded", domain = NA)
 	checkMethodUsageEnv(if (isNamespaceLoaded(pack))
@@ -4115,20 +4180,20 @@ function(package, dir, lib.loc = NULL)
     if(!missing(package)) {
         aliases1 <- Rd_aliases(package, lib.loc = lib.loc)
         if(!length(aliases1))
-            return(structure(NULL, class = "check_Rd_xrefs"))
+            return(structure(list(), class = "check_Rd_xrefs"))
         aliases <- c(aliases, list(aliases1))
         db <- .build_Rd_xref_db(package, lib.loc = lib.loc)
     } else {
         aliases1 <- Rd_aliases(dir = dir)
         if(!length(aliases1))
-            return(structure(NULL, class = "check_Rd_xrefs"))
+            return(structure(list(), class = "check_Rd_xrefs"))
         aliases <- c(aliases, list(aliases1))
         db <- .build_Rd_xref_db(dir = dir)
     }
 
     ## Flatten the xref db into one big matrix.
     db <- cbind(do.call("rbind", db), rep(names(db), sapply(db, NROW)))
-    if(nrow(db) == 0L) return(structure(NULL, class = "check_Rd_xrefs"))
+    if(nrow(db) == 0L) return(structure(list(), class = "check_Rd_xrefs"))
 
     ## fixup \link[=dest] form
     anchor <- db[, 2L]
@@ -4142,7 +4207,7 @@ function(package, dir, lib.loc = NULL)
         paste0("[", db[have_anchor, 2L], "]{", db[have_anchor, 1L], "}")
 
     ## Check the targets from the non-anchored xrefs.
-    db[!have_anchor, "bad"] <- !( db[!have_anchor, 1L] %in% unlist(aliases))
+    db[!have_anchor, "bad"] <- db[!have_anchor, 1L] %notin% unlist(aliases)
 
     ## and then check the anchored ones if we can.
     have_colon <- grepl(":", anchor, fixed = TRUE)
@@ -4284,7 +4349,7 @@ function(pkgDir)
             utf8 <<- utf8 + sum(enc == "UTF-8")
             bytes <<- bytes + sum(enc == "bytes")
             unk <- xx[enc == "unknown"]
-            ind <- .Call(check_nonASCII2, unk)
+            ind <- .Call(C_check_nonASCII2, unk)
             if(length(ind)) {
                 non_ASCII <<- c(non_ASCII, unk[ind])
                 where <<- c(where, rep.int(ds, length(ind)))
@@ -4626,7 +4691,7 @@ function(dir, respect_quotes = FALSE)
                                         OS_subdirs = OS_subdirs)
         for(f in R_files) {
             text <- readLines(file.path(code_dir, f), warn = FALSE)
-            if(.Call(check_nonASCII, text, !respect_quotes))
+            if(.Call(C_check_nonASCII, text, !respect_quotes))
                 wrong_things <- c(wrong_things, f)
         }
     }
@@ -4746,15 +4811,15 @@ function(x, ...)
             msg <- gsub("\n", "\n  ", sub("[^:]*: *", "", xi$Error),
 			perl = TRUE, useBytes = TRUE)
             writeLines(c(sprintf("Error in file '%s':", xi$File),
-                         paste(" ", msg)))
+                         paste0("  ", msg)))
         }
         if(len <- length(xi$Warnings))
             writeLines(c(sprintf(ngettext(len,
                                           "Warning in file %s:",
                                           "Warnings in file %s:"),
                                  sQuote(xi$File)),
-                         paste(" ", gsub("\n\n", "\n  ", xi$Warnings,
-					 perl = TRUE, useBytes = TRUE))))
+                         paste0("  ", gsub("\n\n", "\n  ", xi$Warnings,
+                                           perl = TRUE, useBytes = TRUE))))
     }
     invisible(x)
 }
@@ -5891,7 +5956,7 @@ function(dir, testdir, lib.loc = NULL)
     od <- setwd(testsrcdir)
     on.exit(setwd(od))
     Rinfiles <- dir(".", pattern="\\.Rin$") # only trackOjs has *.Rin
-    Rfiles <- dir(".", pattern="\\.R$")
+    Rfiles <- dir(".", pattern="\\.[rR]$")
     .check_packages_used_helper(db, c(Rinfiles, Rfiles))
 }
 
@@ -6070,7 +6135,7 @@ function(x, ...)
                           "Found possibly global 'T' or 'F' in the examples of the following Rd files:"
                           )
           c(strwrap(msg),
-            paste(" ", x$bad_examples))
+            paste0("  ", x$bad_examples))
       })
 }
 
@@ -6097,7 +6162,8 @@ function(package, dir, lib.loc = NULL, details = TRUE)
             tab <- get(methods:::.TableMetaName(f, attr(f, "package")),
                        envir = code_env)
             ## The S4 'system' does **copy** base code into packages ....
-            any(unlist(eapply(tab, function(v) !inherits(v, "derivedDefaultMethod") && any(codetools::findGlobals(v) %in% ".Internal"))))
+            any(unlist(eapply(tab, function(v) !inherits(v, "derivedDefaultMethod") &&
+                                   any(codetools::findGlobals(v) %in% ".Internal"))))
         })
         gens[unlist(x)]
     }
@@ -6492,24 +6558,30 @@ function(x, ...)
 
 ### * .check_package_CRAN_incoming
 
+## localOnly means to skip tests requiring Internet access.
+## These are all done first.
+
 .check_package_CRAN_incoming <-
-function(dir)
+function(dir, localOnly = FALSE)
 {
     out <- list()
     class(out) <- "check_package_CRAN_incoming"
 
     meta <- .get_package_metadata(dir, FALSE)
-    info <- analyze_license(meta["License"])
+    lic_info <- analyze_license(meta["License"])
     ## Use later to indicate changes from FOSS to non-FOSS licence.
-    foss <- info$is_verified
+    foss <- lic_info$is_verified
     ## Record to notify about components extending a base license which
     ## permits extensions.
-    if(length(extensions <- info$extensions) &&
+    if(length(extensions <- lic_info$extensions) &&
+       ((length(components <- extensions$components) != 1L) ||
+        (.license_component_is_for_stub_and_ok(components,
+                                               dir) != 0L)) &&
        any(ind <- extensions$extensible)) {
         out$extensions <- extensions$components[ind]
         out$pointers <-
             Filter(length,
-                   lapply(info$pointers,
+                   lapply(lic_info$pointers,
                           function(p) {
                               fp <- file.path(dir, p)
                               if(file_test("-f", fp)) {
@@ -6538,6 +6610,33 @@ function(dir)
     out$Maintainer_needs_quotes <-
         grepl("[,]", display, useBytes = TRUE) && !grepl('^".*"$', display, useBytes = TRUE)
     out$empty_Maintainer_name <- !nzchar(display)
+    ## Try to catch bad maintainer fields which give more than one
+    ## person.  In principle, the field should be of the form
+    ##   DISPLAY-NAME <ANGLE-ADDR>
+    ## with the former (for simplicity) either a single quoted string,
+    ## or several atoms.  (There are cases where <ANGLE-ADDR> does not
+    ## follow whitespace, so simple tokenizing via scan() does not quite
+    ## work.)
+    check_maintainer_address <- function(s) {
+        re <- paste0("^",
+                     "[[:space:]]*",
+                     "([^<]*|\"([^\"]|\\\\\")*\")", # display-name
+                     "[[:space:]]*",
+                     "(<[^>]+>)",           # angle-addr
+                     "[[:space:]]*",
+                     "(.*)",                # rest?
+                     "[[:space:]]*",
+                     "$")
+        s <- unlist(regmatches(s, regexec(re, s)))
+        length(s) && (s[5L] == "") ## && (s[2L] != "")
+        ## (Adding the test for s[2L] would check for non-empty
+        ## display-name which we already do separately.)
+    }
+    ## NOTE: perhaps whitespace should be canonicalized further above?
+    maintainer <- gsub("\n", " ", meta["Maintainer"])
+    out$Maintainer_invalid_or_multi_person <-
+        ((maintainer != "ORPHANED") &&
+         !check_maintainer_address(maintainer))
 
     ver <- meta["Version"]
     if(is.na(ver))
@@ -6566,257 +6665,18 @@ function(dir)
             out$spelling <- a
     }
 
-    urls <- .get_standard_repository_URLs()
-
-    parse_description_field <- function(desc, field, default = TRUE)
-    {
-        tmp <- desc[field]
-        if (is.na(tmp)) default
-        else switch(tmp,
-                    "yes"=, "Yes" =, "true" =, "True" =, "TRUE" = TRUE,
-                    "no" =, "No" =, "false" =, "False" =, "FALSE" = FALSE,
-                    default)
-    }
-
-    ## If a package has a FOSS license, check whether any of its strong
-    ## recursive dependencies restricts use.
-    if(foss) {
-        available <-
-            utils::available.packages(utils::contrib.url(urls, "source"),
-                                      filters =
-                                      c("R_version", "duplicates"))
-        ## We need the current dependencies of the package (so batch
-        ## upload checks will not necessarily do "the right thing").
-        package <- meta["Package"]
-        depends <- c("Depends", "Imports", "LinkingTo")
-        ## Need to be careful when merging the dependencies of the
-        ## package (in case it is not yet available).
-        if(!is.na(pos <- match(package, rownames(available)))) {
-            available[package, depends] <- meta[depends]
-        } else {
-            entry <- rbind(meta[colnames(available)])
-            rownames(entry) <- package
-            available <- rbind(available, entry)
-        }
-        ldb <- analyze_licenses(available[, "License"], available)
-        depends <- unlist(package_dependencies(package, available,
-                                               recursive = TRUE))
-        ru <- ldb$restricts_use
-        pnames_restricts_use_TRUE <- rownames(available)[!is.na(ru) & ru]
-        pnames_restricts_use_NA <- rownames(available)[is.na(ru)]
-        bad <- intersect(depends, pnames_restricts_use_TRUE)
-        if(length(bad))
-            out$depends_with_restricts_use_TRUE <- bad
-        bad <- intersect(depends, pnames_restricts_use_NA)
-        if(length(bad))
-            out$depends_with_restricts_use_NA <- bad
-        bv <- parse_description_field(meta, "BuildVignettes", TRUE)
-        if (!bv) out$foss_with_BuildVignettes <- TRUE
-    }
+    parse_description_field <- function(desc, field, default=TRUE)
+        str_parse_logic(desc[field], default=default)
 
     ## Check for possibly mis-spelled field names.
     nms <- names(meta)
     stdNms <- .get_standard_DESCRIPTION_fields()
     nms <- nms[is.na(match(nms, stdNms)) &
-               !grepl("^(X-CRAN|Repository/R-Forge)", nms)]
+               !grepl("^(X-CRAN|Repository/R-Forge|VCS/|Config/)", nms)]
     if(length(nms) && ## Allow maintainer notes  <stdName>Note :
        length(nms <- nms[is.na(match(nms, paste0(stdNms,"Note")))]))
         out$fields <- nms
 
-    ## We do not want to use utils::available.packages() for now, as
-    ## this unconditionally filters according to R version and OS type.
-    ## <FIXME>
-    ## This is no longer true ...
-    ## </FIXME>
-    .repository_db <- function(u) {
-        con <- gzcon(url(sprintf("%s/src/contrib/PACKAGES.gz", u), "rb"))
-        on.exit(close(con))
-        ## hopefully all these fields are ASCII, or we need to re-encode.
-        cbind(read.dcf(con,
-                       c(.get_standard_repository_db_fields(), "Path")),
-              Repository = u)
-
-    }
-    db <- tryCatch(lapply(urls, .repository_db), error = identity)
-    if(inherits(db, "error")) {
-        message("NB: need Internet access to use CRAN incoming checks")
-        ## Actually, all repositories could be local file:// mirrors.
-        return(out)
-    }
-    db <- do.call(rbind, db)
-
-    ## Note that .get_standard_repository_URLs() puts the CRAN master first.
-    CRAN <- urls[1L]
-
-    ## Check for CRAN repository db overrides and possible conflicts.
-    con <- url(sprintf("%s/src/contrib/PACKAGES.in", CRAN))
-    odb <- read.dcf(con)
-    close(con)
-    ## For now (2012-11-28), PACKAGES.in is all ASCII, so there is no
-    ## need to re-encode.  Eventually, it might be in UTF-8 ...
-    entry <- odb[odb[, "Package"] == meta["Package"], ]
-    entry <- entry[!is.na(entry) &
-                   !(names(entry) %in% c("Package", "X-CRAN-History"))]
-    if(length(entry)) {
-        ## Check for conflicts between package license implications and
-        ## repository overrides.  Note that the license info predicates
-        ## are logicals (TRUE, NA or FALSE) and the repository overrides
-        ## are character ("yes", missing or "no").
-        if(!is.na(iif <- info$is_FOSS) &&
-           !is.na(lif <- entry["License_is_FOSS"]) &&
-           ((lif == "yes") != iif))
-            out$conflict_in_license_is_FOSS <- lif
-        if(!is.na(iru <- info$restricts_use) &&
-           !is.na(lru <- entry["License_restricts_use"]) &&
-           ((lru == "yes") != iru))
-            out$conflict_in_license_restricts_use <- lru
-
-        fmt <- function(s)
-            unlist(lapply(s,
-                          function(e) {
-                              paste(strwrap(e, indent = 2L, exdent = 4L),
-                                    collapse = "\n")
-                          }))
-        nms <- names(entry)
-        ## Report all overrides for visual inspection.
-        entry <- fmt(sprintf("  %s: %s", nms, entry))
-        names(entry) <- nms
-        out$overrides <- entry
-        fields <- intersect(names(meta), nms)
-        if(length(fields)) {
-            ## Find fields where package metadata and repository
-            ## overrides are in conflict.
-            ind <- ! unlist(Map(identical,
-                                fmt(sprintf("  %s: %s", fields, meta[fields])),
-                                entry[fields]))
-            if(any(ind))
-                out$conflicts <- fields[ind]
-        }
-    }
-
-    archive_db <- CRAN_archive_db()
-    packages_in_CRAN_archive <- names(archive_db)
-
-    ## Package names must be unique within standard repositories when
-    ## ignoring case.
-    package <- meta["Package"]
-    packages <- db[, "Package"]
-    if(! package %in% packages) out$new_submission <- TRUE
-    clashes <- character()
-    pos <- which((tolower(packages) == tolower(package)) &
-                 (packages != package))
-    if(length(pos))
-        clashes <-
-            sprintf("%s [%s]", packages[pos], db[pos, "Repository"])
-    ## If possible, also catch clashes with archived CRAN packages
-    ## (which might get un-archived eventually).
-    if(length(packages_in_CRAN_archive)) {
-        pos <- which((tolower(packages_in_CRAN_archive) ==
-                      tolower(package)) &
-                     (packages_in_CRAN_archive != package))
-        if(length(pos)) {
-            clashes <-
-                c(clashes,
-                  sprintf("%s [CRAN archive]",
-                          packages_in_CRAN_archive[pos]))
-        }
-    }
-    if(length(clashes))
-        out$bad_package <- list(package, clashes)
-
-    ## Is this duplicated from another repository?
-    repositories <- db[(packages == package) &
-                       (db[, "Repository"] != CRAN),
-                       "Repository"]
-    if(length(repositories))
-        out$repositories <- repositories
-
-    ## Does this have strong dependencies not in mainstream
-    ## repositories?  This should not happen, and hence is not compared
-    ## against possibly given additional repositories.
-    strong_dependencies <-
-        setdiff(unique(c(.extract_dependency_package_names(meta["Depends"]),
-                         .extract_dependency_package_names(meta["Imports"]),
-                         .extract_dependency_package_names(meta["LinkingTo"]))),
-                c(.get_standard_package_names()$base, db[, "Package"]))
-    if(length(strong_dependencies)) {
-        out$strong_dependencies_not_in_mainstream_repositories <-
-            strong_dependencies
-    }
-
-    ## Does this have Suggests or Enhances not in mainstream
-    ## repositories?
-    suggests_or_enhances <-
-        setdiff(unique(c(.extract_dependency_package_names(meta["Suggests"]),
-                         .extract_dependency_package_names(meta["Enhances"]))),
-                c(.get_standard_package_names()$base, db[, "Package"]))
-    if(length(suggests_or_enhances)) {
-        out$suggests_or_enhances_not_in_mainstream_repositories <-
-            suggests_or_enhances
-    }
-    if(!is.na(aurls <- meta["Additional_repositories"])) {
-        aurls <- .read_additional_repositories_field(aurls)
-        ## Get available packages separately for each given URL, so that
-        ## we can spot the ones which do not provide any packages.
-        adb <-
-            tryCatch(lapply(aurls,
-                            function(u) {
-                                utils::available.packages(utils::contrib.url(u,
-                                                                             "source"),
-                                                          filters =
-                                                              c("R_version",
-                                                                "duplicates"))
-                            }),
-                     error = identity)
-        if(inherits(adb, "error")) {
-            out$additional_repositories_analysis_failed_with <-
-                conditionMessage(adb)
-        } else {
-            ## Check for additional repositories with no packages.
-            ind <- sapply(adb, NROW) == 0L
-            if(any(ind))
-                out$additional_repositories_with_no_packages <-
-                    aurls[ind]
-            ## Merge available packages dbs and remove duplicates.
-            adb <- do.call(rbind, adb)
-            adb <- utils:::available_packages_filters_db$duplicates(adb)
-            ## Ready.
-            dependencies <- unique(c(strong_dependencies, suggests_or_enhances))
-            pos <- match(dependencies, rownames(adb), nomatch = 0L)
-            ind <- (pos > 0L)
-            tab <- matrix(character(), nrow = 0L, ncol = 3L)
-            if(any(ind))
-                tab <- rbind(tab,
-                             cbind(dependencies[ind],
-                                   "yes",
-                                   adb[pos[ind], "Repository"]))
-            ind <- !ind
-            if(any(ind))
-                tab <- rbind(tab,
-                             cbind(dependencies[ind],
-                                   "no",
-                                   "?"))
-            ## Map Repository fields to URLs, and determine unused
-            ## URLs.
-            ## Note that available.packages() possibly adds Path
-            ## information in the Repository field, so matching
-            ## given contrib URLs to these fields is not trivial.
-            unused <- character()
-            for(u in aurls) {
-                cu <- utils::contrib.url(u, "source")
-                ind <- substring(tab[, 3L], 1, nchar(cu)) == cu
-                if(any(ind)) {
-                    tab[ind, 3L] <- u
-                } else {
-                    unused <- c(unused, u)
-                }
-            }
-            if(length(unused))
-                tab <- rbind(tab, cbind("?", "?", unused))
-            dimnames(tab) <- NULL
-            out$additional_repositories_analysis_results <- tab
-        }
-    }
 
     uses <- character()
     BUGS <- character()
@@ -7027,34 +6887,47 @@ function(dir)
     if(grepl("^(The|This|A|In this|In the) package", descr))
         out$descr_bad_start <- TRUE
     if(!isTRUE(out$descr_bad_start) && !grepl("^['\"]?[[:upper:]]", descr))
-       out$descr_bad_initial <- TRUE
+        out$descr_bad_initial <- TRUE
+    descr <- strwrap(descr)
+    if(any(ind <- grepl("[^<]https?://", descr))) {
+        ## Could try to filter out the matches for DOIs and arXiv ids
+        ## noted differently below: not entirely straightforward when
+        ## matching wrapped texts for to ease reporting ...
+        out$descr_bad_URLs <- descr[ind]
+    }
+    if(any(ind <- grepl("https?://.*doi.org/", descr)))
+        out$descr_bad_DOIs <- descr[ind]
+    if(any(ind <- grepl("https?://arxiv.org", descr)))
+        out$descr_bad_arXiv_ids <- descr[ind]
+
+    skip_dates <-
+        config_val_to_logical(Sys.getenv("_R_CHECK_CRAN_INCOMING_SKIP_DATES_",
+                                         "FALSE"))
 
     ## Check Date
     date <- trimws(as.vector(meta["Date"]))
     if(!is.na(date)) {
         dd <- strptime(date, "%Y-%m-%d", tz = "GMT")
         if (is.na(dd)) out$bad_date <- TRUE
-        else if((as.Date(dd) < Sys.Date() - 31) &&
-                !config_val_to_logical(Sys.getenv("_R_CHECK_CRAN_INCOMING_SKIP_DATES_",
-                                                  "FALSE")))
+        else if(!skip_dates && (as.Date(dd) < Sys.Date() - 31))
             out$old_date <- TRUE
     }
 
-    ## Check URLs.
-    if(capabilities("libcurl")) {
-        ## Be defensive about building the package URL db.
-        bad <- tryCatch(check_url_db(url_db_from_package_sources(dir)),
-                        error = identity)
-        if(inherits(bad, "error") || NROW(bad))
-            out$bad_urls <- bad
-    } else out$no_url_checks <- TRUE
-
-    ## Check DOIs.
-    if(capabilities("libcurl")) {
-        bad <- tryCatch(check_doi_db(doi_db_from_package_sources(dir)),
-                        error = identity)
-        if(inherits(bad, "error") || NROW(bad))
-            out$bad_dois <- bad
+    ## Check build time stamp
+    ptime <- trimws(as.vector(meta["Packaged"]))
+    if(is.na(ptime)) {
+        out$build_time_stamp_msg <-
+            "The build time stamp is missing."
+    } else {
+        ts <- strptime(ptime, "%Y-%m-%d", tz = "GMT")
+        if(is.na(ts)) {
+            out$build_time_stamp_msg <-
+                "The build time stamp has invalid/outdated format."
+        }
+        else if(!skip_dates && (as.Date(ts) < Sys.Date() - 31)) {
+            out$build_time_stamp_msg <-
+                "This build time stamp is over a month old."
+        }
     }
 
     ## Are there non-ASCII characters in the R source code without a
@@ -7093,6 +6966,282 @@ function(dir)
                        unset = NA_character_)
     if(!is.na(size) && (as.integer(size) > 5000000))
         out$size_of_tarball <- size
+
+    ## Check URLs.
+    if(!capabilities("libcurl") && !localOnly)
+        out$no_url_checks <- TRUE
+    else {
+        bad <- tryCatch(check_url_db(url_db_from_package_sources(dir),
+                                     remote = !localOnly),
+                        error = identity)
+        if(inherits(bad, "error")) {
+            out$bad_urls <- bad
+        } else if(NROW(bad)) {
+            ## When checking a new submission, take the canonical CRAN
+            ## package URL as ok, and signal variants using http instead
+            ## of https as non-canonical instead of showing "not found".
+            prefix <- "https://cran.r-project.org/package="
+            ncp <- nchar(prefix)
+            ind <- ((substring(tolower(bad$URL), 1L, ncp) == prefix) &
+                    (substring(bad$URL, ncp + 1L) == package))
+            if(any(ind))
+                bad <- bad[!ind, ]
+            prefix <- "http://cran.r-project.org/package="
+            ncp <- nchar(prefix)
+            ind <- ((substring(tolower(bad$URL), 1L, ncp) == prefix) &
+                    (substring(bad$URL, ncp + 1L) == package))
+            if(any(ind))
+                bad[ind, c("Status", "Message")] <- ""
+            if(NROW(bad))
+                out$bad_urls <- bad
+        }
+    }
+
+    ## Checks from here down require Internet access, so drop out now if we
+    ## don't want that.
+    if (localOnly)
+        return(out)
+
+    urls <- .get_standard_repository_URLs()
+
+    ## If a package has a FOSS license, check whether any of its strong
+    ## recursive dependencies restricts use.
+    if(!localOnly && foss) {
+        available <-
+            utils::available.packages(utils::contrib.url(urls, "source"),
+                                      filters =
+                                      c("R_version", "duplicates"))
+        ## We need the current dependencies of the package (so batch
+        ## upload checks will not necessarily do "the right thing").
+        package <- meta["Package"]
+        depends <- c("Depends", "Imports", "LinkingTo")
+        ## Need to be careful when merging the dependencies of the
+        ## package (in case it is not yet available).
+        if(!is.na(pos <- match(package, rownames(available)))) {
+            available[package, depends] <- meta[depends]
+        } else {
+            entry <- rbind(meta[colnames(available)])
+            rownames(entry) <- package
+            available <- rbind(available, entry)
+        }
+        ldb <- analyze_licenses(available[, "License"], available)
+        depends <- unlist(package_dependencies(package, available,
+                                               recursive = TRUE))
+        ru <- ldb$restricts_use
+        pnames_restricts_use_TRUE <- rownames(available)[!is.na(ru) & ru]
+        pnames_restricts_use_NA <- rownames(available)[is.na(ru)]
+        bad <- intersect(depends, pnames_restricts_use_TRUE)
+        if(length(bad))
+            out$depends_with_restricts_use_TRUE <- bad
+        bad <- intersect(depends, pnames_restricts_use_NA)
+        if(length(bad))
+            out$depends_with_restricts_use_NA <- bad
+        bv <- parse_description_field(meta, "BuildVignettes", TRUE)
+        if (!bv) out$foss_with_BuildVignettes <- TRUE
+    }
+
+    ## We do not want to use utils::available.packages() for now, as
+    ## this unconditionally filters according to R version and OS type.
+    ## <FIXME>
+    ## This is no longer true ...
+    ## </FIXME>
+    .repository_db <- function(u) {
+        con <- gzcon(url(sprintf("%s/src/contrib/PACKAGES.gz", u), "rb"))
+        on.exit(close(con))
+        ## hopefully all these fields are ASCII, or we need to re-encode.
+        cbind(read.dcf(con,
+                       c(.get_standard_repository_db_fields(), "Path")),
+              Repository = u)
+
+    }
+    db <- tryCatch(lapply(urls, .repository_db), error = identity)
+    if(inherits(db, "error")) {
+        message("NB: need Internet access to use CRAN incoming checks")
+        ## Actually, all repositories could be local file:// mirrors.
+        return(out)
+    }
+    db <- do.call(rbind, db)
+
+    ## Note that .get_standard_repository_URLs() puts the CRAN master first.
+    CRAN <- urls[1L]
+
+    ## Check for CRAN repository db overrides and possible conflicts.
+    con <- url(sprintf("%s/src/contrib/PACKAGES.in", CRAN))
+    odb <- read.dcf(con)
+    close(con)
+    ## For now (2012-11-28), PACKAGES.in is all ASCII, so there is no
+    ## need to re-encode.  Eventually, it might be in UTF-8 ...
+    entry <- odb[odb[, "Package"] == meta["Package"], ]
+    entry <- entry[!is.na(entry) &
+                   !(names(entry) %in% c("Package", "X-CRAN-History"))]
+    if(length(entry)) {
+        ## Check for conflicts between package license implications and
+        ## repository overrides.  Note that the license info predicates
+        ## are logicals (TRUE, NA or FALSE) and the repository overrides
+        ## are character ("yes", missing or "no").
+        if(!is.na(iif <- lic_info$is_FOSS) &&
+           !is.na(lif <- entry["License_is_FOSS"]) &&
+           ((lif == "yes") != iif))
+            out$conflict_in_license_is_FOSS <- lif
+        if(!is.na(iru <- lic_info$restricts_use) &&
+           !is.na(lru <- entry["License_restricts_use"]) &&
+           ((lru == "yes") != iru))
+            out$conflict_in_license_restricts_use <- lru
+
+        fmt <- function(s)
+            unlist(lapply(s,
+                          function(e) {
+                              paste(strwrap(e, indent = 2L, exdent = 4L),
+                                    collapse = "\n")
+                          }))
+        nms <- names(entry)
+        ## Report all overrides for visual inspection.
+        entry <- fmt(sprintf("  %s: %s", nms, entry))
+        names(entry) <- nms
+        out$overrides <- entry
+        fields <- intersect(names(meta), nms)
+        if(length(fields)) {
+            ## Find fields where package metadata and repository
+            ## overrides are in conflict.
+            ind <- ! unlist(Map(identical,
+                                fmt(sprintf("  %s: %s", fields, meta[fields])),
+                                entry[fields]))
+            if(any(ind))
+                out$conflicts <- fields[ind]
+        }
+    }
+
+    archive_db <- CRAN_archive_db()
+    packages_in_CRAN_archive <- names(archive_db)
+
+    ## Package names must be unique within standard repositories when
+    ## ignoring case.
+    package <- meta["Package"]
+    packages <- db[, "Package"]
+    if(! package %in% packages) out$new_submission <- TRUE
+    clashes <- character()
+    pos <- which((tolower(packages) == tolower(package)) &
+                 (packages != package))
+    if(length(pos))
+        clashes <-
+            sprintf("%s [%s]", packages[pos], db[pos, "Repository"])
+    ## If possible, also catch clashes with archived CRAN packages
+    ## (which might get un-archived eventually).
+    if(length(packages_in_CRAN_archive)) {
+        pos <- which((tolower(packages_in_CRAN_archive) ==
+                      tolower(package)) &
+                     (packages_in_CRAN_archive != package))
+        if(length(pos)) {
+            clashes <-
+                c(clashes,
+                  sprintf("%s [CRAN archive]",
+                          packages_in_CRAN_archive[pos]))
+        }
+    }
+    if(length(clashes))
+        out$bad_package <- list(package, clashes)
+
+    ## Is this duplicated from another repository?
+    repositories <- db[(packages == package) &
+                       (db[, "Repository"] != CRAN),
+                       "Repository"]
+    if(length(repositories))
+        out$repositories <- repositories
+
+    ## Does this have strong dependencies not in mainstream
+    ## repositories?  This should not happen, and hence is not compared
+    ## against possibly given additional repositories.
+    strong_dependencies <-
+        setdiff(unique(c(.extract_dependency_package_names(meta["Depends"]),
+                         .extract_dependency_package_names(meta["Imports"]),
+                         .extract_dependency_package_names(meta["LinkingTo"]))),
+                c(.get_standard_package_names()$base, db[, "Package"]))
+    if(length(strong_dependencies)) {
+        out$strong_dependencies_not_in_mainstream_repositories <-
+            strong_dependencies
+    }
+
+    ## Does this have Suggests or Enhances not in mainstream
+    ## repositories?
+    suggests_or_enhances <-
+        setdiff(unique(c(.extract_dependency_package_names(meta["Suggests"]),
+                         .extract_dependency_package_names(meta["Enhances"]))),
+                c(.get_standard_package_names()$base, db[, "Package"]))
+    if(length(suggests_or_enhances)) {
+        out$suggests_or_enhances_not_in_mainstream_repositories <-
+            suggests_or_enhances
+    }
+    if(!is.na(aurls <- meta["Additional_repositories"])) {
+        aurls <- .read_additional_repositories_field(aurls)
+        ## Get available packages separately for each given URL, so that
+        ## we can spot the ones which do not provide any packages.
+        adb <-
+            tryCatch(lapply(aurls,
+                            function(u) {
+                                utils::available.packages(utils::contrib.url(u,
+                                                                             "source"),
+                                                          filters =
+                                                              c("R_version",
+                                                                "duplicates"))
+                            }),
+                     error = identity)
+        if(inherits(adb, "error")) {
+            out$additional_repositories_analysis_failed_with <-
+                conditionMessage(adb)
+        } else {
+            ## Check for additional repositories with no packages.
+            ind <- sapply(adb, NROW) == 0L
+            if(any(ind))
+                out$additional_repositories_with_no_packages <-
+                    aurls[ind]
+            ## Merge available packages dbs and remove duplicates.
+            adb <- do.call(rbind, adb)
+            adb <- utils:::available_packages_filters_db$duplicates(adb)
+            ## Ready.
+            dependencies <- unique(c(strong_dependencies, suggests_or_enhances))
+            pos <- match(dependencies, rownames(adb), nomatch = 0L)
+            ind <- (pos > 0L)
+            tab <- matrix(character(), nrow = 0L, ncol = 3L)
+            if(any(ind))
+                tab <- rbind(tab,
+                             cbind(dependencies[ind],
+                                   "yes",
+                                   adb[pos[ind], "Repository"]))
+            ind <- !ind
+            if(any(ind))
+                tab <- rbind(tab,
+                             cbind(dependencies[ind],
+                                   "no",
+                                   "?"))
+            ## Map Repository fields to URLs, and determine unused
+            ## URLs.
+            ## Note that available.packages() possibly adds Path
+            ## information in the Repository field, so matching
+            ## given contrib URLs to these fields is not trivial.
+            unused <- character()
+            for(u in aurls) {
+                cu <- utils::contrib.url(u, "source")
+                ind <- substring(tab[, 3L], 1, nchar(cu)) == cu
+                if(any(ind)) {
+                    tab[ind, 3L] <- u
+                } else {
+                    unused <- c(unused, u)
+                }
+            }
+            if(length(unused))
+                tab <- rbind(tab, cbind("?", "?", unused))
+            dimnames(tab) <- NULL
+            out$additional_repositories_analysis_results <- tab
+        }
+    }
+
+    ## Check DOIs.
+    if(capabilities("libcurl")) {
+        bad <- tryCatch(check_doi_db(doi_db_from_package_sources(dir)),
+                        error = identity)
+        if(inherits(bad, "error") || NROW(bad))
+            out$bad_dois <- bad
+    }
 
     ## Is this an update for a package already on CRAN?
     db <- db[(packages == package) &
@@ -7191,7 +7340,9 @@ function(x, ...)
                                            collapse = " ")))))
       else
           "No maintainer field in DESCRIPTION file",
-      fmt(c(if(x$empty_Maintainer_name)
+      fmt(c(if(x$Maintainer_invalid_or_multi_person)
+                "The maintainer field is invalid or specifies more than one person",
+            if(x$empty_Maintainer_name)
                 'The maintainer field lacks a name',
             if(x$Maintainer_needs_quotes)
                 'The display-name part of the maintainer field should be enclosed in ""')
@@ -7236,11 +7387,11 @@ function(x, ...)
                       collapse = "\n"),
             if(length(y <- x$extensions)) {
                 paste(c("License components with restrictions and base license permitting such:",
-                        paste(" ", y),
+                        paste0("  ", y),
                         unlist(lapply(x$pointers,
                                       function(e) {
                                           c(sprintf("File '%s':", e[1L]),
-                                            paste(" ", e[-1L]))
+                                            paste0("  ", e[-1L]))
                                       }))),
                       collapse = "\n")
             })),
@@ -7311,7 +7462,7 @@ function(x, ...)
               },
               if(length(y <- x$additional_repositories_analysis_failed_with)) {
                   paste(c("Using Additional_repositories specification failed with:",
-                          paste(" ", y)),
+                          paste0("  ", y)),
                         collapse = "\n")
               },
               if(length(y <- x$additional_repositories_analysis_results)) {
@@ -7324,7 +7475,7 @@ function(x, ...)
               },
               if(length(y <- x$additional_repositories_with_no_packages)) {
                   paste(c("Additional repositories with no packages:",
-                          paste(" ", y)),
+                          paste0("  ", y)),
                         collapse = "\n")
               })),
       if(length(y <- x$uses)) {
@@ -7378,7 +7529,7 @@ function(x, ...)
             },
             if(length(y <- x$citation_error)) {
                 paste(c("Reading CITATION file fails with",
-                        paste(" ", y),
+                        paste0("  ", y),
                         "when package is not installed."),
                       collapse = "\n")
             })),
@@ -7392,24 +7543,39 @@ function(x, ...)
                                 "Found the following (possibly) invalid URLs:"
                             else
                                 "Found the following (possibly) invalid URL:",
-                            paste(" ", gsub("\n", "\n    ", format(y)))),
+                            paste0("  ", gsub("\n", "\n    ", format(y)))),
                           collapse = "\n")
             },
             if(length(y) && any(nzchar(z <- y$CRAN))) {
-                ind <-
-                    grepl("https?://cran.r-project.org/web/packages/[.[:alnum:]]+(|/|/index.html)$",
-                          z, ignore.case = TRUE)
-                paste(c(if(any(ind)) {
+                ul <- tolower(z)
+                indp <- (grepl("^https?://cran.r-project.org/web/packages",
+                               ul) &
+                         !grepl("^https?://cran.r-project.org/web/packages/[.[:alnum:]]+(html|pdf|rds)$",
+                                ul))
+                indv <- grepl("https?://cran.r-project.org/web/views/[[:alnum:]]+[.]html$",
+                              ul)
+                paste(c(if(any(indp)) {
                             c("  The canonical URL of the CRAN page for a package is ",
-                              "  https://cran.r-project.org/package=pkgname")
+                              "    https://CRAN.R-project.org/package=pkgname")
                         },
-                        if(any(nzchar(z) & !ind)) {
-                            "  A canonical CRAN URL starts with https://cran.r-project.org/"
+                        if(any(indv)) {
+                            c("  The canonical URL of the CRAN page for a task view is ",
+                              "    https://CRAN.R-project.org/view=viewname")
+                        },
+                        if(any(nzchar(z) & !indp & !indv)) {
+                            "  Canonical CRAN.R-project.org URLs use https."
                         }),
                       collapse = "\n")
             },
             if(length(y) && any(nzchar(y$Spaces))) {
                 "  Spaces in an http[s] URL should probably be replaced by %20"
+            },
+            if(length(y) && any(ind <- nzchar(z <- y$R))) {
+                ul <- tolower(z[ind])
+                elts <- unique(sub("^http://([^.]+)[.].*", "\\1", ul))
+                paste(sprintf("  Canonical %s.R-project.org URLs use https.",
+                              elts),
+                      collapse = "\n")
             },
             if(length(y <- x$no_url_checks) && y) {
                 "Checking URLs requires 'libcurl' support in the R build"
@@ -7424,7 +7590,7 @@ function(x, ...)
                               "Found the following (possibly) invalid DOIs:"
                           else
                               "Found the following (possibly) invalid DOI:",
-                          paste(" ", gsub("\n", "\n    ", format(y)))),
+                          paste0("  ", gsub("\n", "\n    ", format(y)))),
                         collapse = "\n")
           }),
       if(length(y <- x$R_files_non_ASCII)) {
@@ -7450,13 +7616,33 @@ function(x, ...)
             },
             if(length(x$descr_bad_start)) {
                 "The Description field should not start with the package name,\n  'This package' or similar."
-            })),
+            },
+            if(length(y <- x$descr_bad_URLs)) {
+                paste(c("The Description field contains",
+                        paste0("  ", y),
+                        "Please enclose URLs in angle brackets (<...>)."),
+                      collapse = "\n")
+            },
+            if(length(y <- x$descr_bad_DOIs)) {
+                paste(c("The Description field contains",
+                        paste0("  ", y),
+                        "Please write DOIs as <doi:10.prefix/suffix>."),
+                      collapse = "\n")
+            },
+            if(length(y <- x$descr_bad_arXiv_ids)) {
+                paste(c("The Description field contains",
+                        paste0("  ", y),
+                        "Please write arXiv ids as <arXiv:YYMM.NNNNN>."),
+                      collapse = "\n")
+            }
+            )),
       fmt(c(if(length(x$bad_date)) {
                 "The Date field is not in ISO 8601 yyyy-mm-dd format."
             },
             if(length(x$old_date)) {
                 "The Date field is over a month old."
             })),
+      if(length(y <- x$build_time_stamp_msg)) y,
       if(length(y <- x$size_of_tarball))
           paste("Size of tarball:", y, "bytes")
       )
@@ -7515,8 +7701,7 @@ function(package, dir, lib.loc = NULL)
 
     files_grouped_by_names <- split(files, names)
     files_with_duplicated_names <-
-        files_grouped_by_names[sapply(files_grouped_by_names,
-                                      length) > 1L]
+        files_grouped_by_names[lengths(files_grouped_by_names) > 1L]
     if(length(files_with_duplicated_names))
         out$files_with_duplicated_names <-
             files_with_duplicated_names
@@ -7525,8 +7710,7 @@ function(package, dir, lib.loc = NULL)
         split(rep.int(files, lengths(aliases)),
               unlist(aliases, use.names = FALSE))
     files_with_duplicated_aliases <-
-        files_grouped_by_aliases[sapply(files_grouped_by_aliases,
-                                      length) > 1L]
+        files_grouped_by_aliases[lengths(files_grouped_by_aliases) > 1L]
     if(length(files_with_duplicated_aliases))
         out$files_with_duplicated_aliases <-
             files_with_duplicated_aliases
@@ -8040,7 +8224,7 @@ function(x)
 .package_env <-
 function(package_name)
 {
-    as.environment(paste("package", package_name, sep = ":"))
+    as.environment(paste0("package:", package_name))
 }
 
 ### ** .parse_text_as_much_as_possible
@@ -8095,12 +8279,12 @@ function(x)
     ## bad_lines attribute.
     txt <- gsub("(<<?see below>>?)", "`\\1`", txt)
     ## \usage is only 'verbatim-like'
-    ## <FIXME>
-    ## 'LanguageClasses.Rd' in package methods has '"\{"' in its usage.
-    ## But why should it use the backslash escape?
-    txt <- gsub("\\{", "{", txt, fixed = TRUE)
-    txt <- gsub("\\}", "}", txt, fixed = TRUE)
-    ## </FIXME>
+    ## ## <FIXME>
+    ## ## 'LanguageClasses.Rd' in package methods has '"\{"' in its usage.
+    ## ## But why should it use the backslash escape?
+    ## txt <- gsub("\\{", "{", txt, fixed = TRUE)
+    ## txt <- gsub("\\}", "}", txt, fixed = TRUE)
+    ## ## </FIXME>
     ## now any valid escape by \ is
     ##   \a \b \f \n \r \t \u \U \v \x \' \" \\ or \octal
     txt <- gsub("(^|[^\\])\\\\($|[^abfnrtuUvx0-9'\"\\])",
@@ -8123,9 +8307,9 @@ function(x)
 function(msg, x)
 {
     xx <- strwrap(paste(sQuote(x), collapse = " "), exdent = 2L)
-    if (length(xx) > 1L || (nchar(msg) + nchar(xx) + 1L > 75L))
+    if (length(xx) > 1L || nchar(msg) + nchar(xx) + 1L > 75L)
         c(msg, .pretty_format(x))
-    else paste(msg, xx, sep = " ")
+    else paste(msg, xx)
 }
 
 ### ** .pretty_print

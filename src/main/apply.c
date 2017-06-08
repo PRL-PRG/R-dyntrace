@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2000-2015  The R Core Team
+ *  Copyright (C) 2000-2016  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -136,7 +136,7 @@ SEXP attribute_hidden do_vapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 	/* Build call: FUN(XX[[<ind>]], ...) */
 
 	SEXP isym = install("i");
-	PROTECT(ind = allocVector(INTSXP, 1));
+	PROTECT(ind = allocVector(realIndx ? REALSXP : INTSXP, 1));
 	defineVar(isym, ind, rho);
 	SET_NAMED(ind, 1);
 
@@ -352,11 +352,11 @@ SEXP attribute_hidden do_rapply(SEXP call, SEXP op, SEXP args, SEXP rho)
 static Rboolean islistfactor(SEXP X)
 {
     int i, n = length(X);
-
-    if(n == 0) return FALSE;
+    
     switch(TYPEOF(X)) {
     case VECSXP:
     case EXPRSXP:
+        if(n == 0) return NA_LOGICAL;
 	for(i = 0; i < LENGTH(X); i++)
 	    if(!islistfactor(VECTOR_ELT(X, i))) return FALSE;
 	return TRUE;
@@ -396,11 +396,15 @@ SEXP attribute_hidden do_islistfactor(SEXP call, SEXP op, SEXP args, SEXP rho)
 	default:
 	    goto do_ans;
 	}
-	for(i = 0; i < LENGTH(X); i++)
-	    if(!islistfactor(VECTOR_ELT(X, i))) {
+        lans = FALSE;
+	for(i = 0; i < LENGTH(X); i++) {
+            Rboolean isfactor = islistfactor(VECTOR_ELT(X, i));
+	    if(!isfactor) {
 		lans = FALSE;
 		break;
-	    }
+	    } else if (isfactor == TRUE)
+                lans = TRUE;
+        }
     }
 do_ans:
     return ScalarLogical(lans);

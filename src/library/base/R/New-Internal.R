@@ -1,7 +1,7 @@
 #  File src/library/base/R/New-Internal.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2015 The R Core Team
+#  Copyright (C) 1995-2016 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -18,7 +18,8 @@
 
 geterrmessage <- function() .Internal(geterrmessage())
 
-try <- function(expr, silent = FALSE) {
+try <- function(expr, silent = FALSE,
+                outFile = getOption("try.outFile", default = stderr())) {
     tryCatch(expr, error = function(e) {
         call <- conditionCall(e)
         if (! is.null(call)) {
@@ -31,8 +32,7 @@ try <- function(expr, silent = FALSE) {
             dcall <- deparse(call)[1L]
             prefix <- paste("Error in", dcall, ": ")
             LONG <- 75L # to match value in errors.c
-            msg <- conditionMessage(e)
-            sm <- strsplit(msg, "\n")[[1L]]
+            sm <- strsplit(conditionMessage(e), "\n")[[1L]]
             w <- 14L + nchar(dcall, type="w") + nchar(sm[1L], type="w")
             ## this could be NA if any of this is invalid in a MBCS
             if(is.na(w))
@@ -46,7 +46,7 @@ try <- function(expr, silent = FALSE) {
         ## geterrmessage().
         .Internal(seterrmessage(msg[1L]))
         if (! silent && identical(getOption("show.error.messages"), TRUE)) {
-            cat(msg, file = stderr())
+            cat(msg, file = outFile)
             .Internal(printDeferredWarnings())
         }
         invisible(structure(msg, class = "try-error", condition = e))
@@ -98,6 +98,7 @@ rbind <- function(..., deparse.level = 1)
 # convert deparsing options to bitmapped integer
 
 .deparseOpts <- function(control) {
+    if(!length(control)) return(0) # fast exit
     opts <- pmatch(as.character(control),
                    ## the exact order of these is determined by the integer codes in
                    ## ../../../include/Defn.h
@@ -115,7 +116,7 @@ rbind <- function(..., deparse.level = 1)
         opts <- unique(c(opts[opts != 1L], 2L,3L,4L,5L,6L,8L)) # not (7,9:11)
     if(10L %in% opts && 11L %in% opts)
         stop('"hexNumeric" and "digits17" are mutually exclusive')
-    return(sum(2^(opts-2)))
+    sum(2^(opts-2))
 }
 
 deparse <-
@@ -293,6 +294,7 @@ curlGetHeaders <- function(url, redirect = TRUE, verify = TRUE)
 
 
 lengths <- function(x, use.names=TRUE) .Internal(lengths(x, use.names))
+
 
 ## base has no S4 generics
 .noGenerics <- TRUE

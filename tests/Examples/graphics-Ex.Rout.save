@@ -1,6 +1,6 @@
 
-R version 3.3.1 RC (2016-06-14 r70774) -- "Bug in Your Hair"
-Copyright (C) 2016 The R Foundation for Statistical Computing
+R Under development (unstable) (2017-05-14 r72675) -- "Unsuffered Consequences"
+Copyright (C) 2017 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -392,14 +392,14 @@ Warning in bxp(list(stats = c(7, 11, 14, 18.5, 23, 7, 12, 16.5, 18, 21,  :
 > ## boxplot on a matrix:
 > mat <- cbind(Uni05 = (1:100)/21, Norm = rnorm(100),
 +              `5T` = rt(100, df = 5), Gam2 = rgamma(100, shape = 2))
-> boxplot(as.data.frame(mat),
-+         main = "boxplot(as.data.frame(mat), main = ...)")
+> boxplot(mat) # directly, calling boxplot.matrix()
+> 
+> ## boxplot on a data frame:
+> df. <- as.data.frame(mat)
 > par(las = 1) # all axis labels horizontal
-> boxplot(as.data.frame(mat), main = "boxplot(*, horizontal = TRUE)",
-+         horizontal = TRUE)
+> boxplot(df., main = "boxplot(*, horizontal = TRUE)", horizontal = TRUE)
 > 
 > ## Using 'at = ' and adding boxplots -- example idea by Roger Bivand :
-> 
 > boxplot(len ~ dose, data = ToothGrowth,
 +         boxwex = 0.25, at = 1:3 - 0.2,
 +         subset = supp == "VC", col = "yellow",
@@ -412,6 +412,13 @@ Warning in bxp(list(stats = c(7, 11, 14, 18.5, 23, 7, 12, 16.5, 18, 21,  :
 +         subset = supp == "OJ", col = "orange")
 > legend(2, 9, c("Ascorbic acid", "Orange juice"),
 +        fill = c("yellow", "orange"))
+> 
+> ## With less effort (slightly different) using factor *interaction*:
+> boxplot(len ~ dose:supp, data = ToothGrowth,
++         boxwex = 0.5, col = c("orange", "yellow"),
++         main = "Guinea Pigs' Tooth Growth",
++         xlab = "Vitamin C dose mg", ylab = "tooth length",
++         sep = ":", lex.order = TRUE, ylim = c(0, 35), yaxs = "i")
 > 
 > ## more examples in  help(bxp)
 > 
@@ -937,6 +944,7 @@ Female Yes                89  17 202 131  94  24
 > hist(.leap.seconds, "years", freq = TRUE)
 > hist(.leap.seconds,
 +      seq(ISOdate(1970, 1, 1), ISOdate(2020, 1, 1), "5 years"))
+> rug(.leap.seconds, lwd=2)
 > 
 > ## 100 random dates in a 10-week period
 > random.dates <- as.Date("2001/1/1") + 70*stats::runif(100)
@@ -1041,20 +1049,26 @@ Warning in plot.histogram(r, freq = freq1, col = col, border = border, angle = a
 > 
 > ## A function to use identify to select points, and overplot the
 > ## points with another symbol as they are selected
-> identifyPch <- function(x, y = NULL, n = length(x), pch = 19, ...)
+> identifyPch <- function(x, y = NULL, n = length(x), plot = FALSE, pch = 19, ...)
 + {
 +     xy <- xy.coords(x, y); x <- xy$x; y <- xy$y
-+     sel <- rep(FALSE, length(x)); res <- integer(0)
++     sel <- rep(FALSE, length(x))
 +     while(sum(sel) < n) {
-+         ans <- identify(x[!sel], y[!sel], n = 1, plot = FALSE, ...)
++         ans <- identify(x[!sel], y[!sel], labels = which(!sel), n = 1, plot = plot, ...)
 +         if(!length(ans)) break
 +         ans <- which(!sel)[ans]
 +         points(x[ans], y[ans], pch = pch)
 +         sel[ans] <- TRUE
-+         res <- c(res, ans)
 +     }
-+     res
++     ## return indices of selected points
++     which(sel)
 + }
+> 
+> if(dev.interactive()) { ## use it
++   x <- rnorm(50); y <- rnorm(50)
++   plot(x,y); identifyPch(x,y) # how fast to get all?
++ }
+> 
 > 
 > 
 > 
@@ -1850,7 +1864,7 @@ armed.forces
 > lx <- seq(1, 5, length = 41)
 > yl <- expression(e^{-frac(1,2) * {log[10](x)}^2})
 > y <- exp(-.5*lx^2)
-> op <- par(mfrow = c(2,1), mar = par("mar")+c(0,1,0,0))
+> op <- par(mfrow = c(2,1), mar = par("mar")-c(1,0,2,0), mgp = c(2, .7, 0))
 > plot(10^lx, y, log = "xy", type = "l", col = "purple",
 +      main = "Log-Log plot", ylab = yl, xlab = "x")
 > plot(10^lx, y, log = "xy", type = "o", pch = ".", col = "forestgreen",
@@ -1858,8 +1872,9 @@ armed.forces
 +      axes = FALSE, frame.plot = TRUE)
 > my.at <- 10^(1:5)
 > axis(1, at = my.at, labels = formatC(my.at, format = "fg"))
-> at.y <- 10^(-5:-1)
-> axis(2, at = at.y, labels = formatC(at.y, format = "fg"), col.axis = "red")
+> e.y <- -5:-1 ; at.y <- 10^e.y
+> axis(2, at = at.y, col.axis = "red", las = 1,
++      labels = as.expression(lapply(e.y, function(E) bquote(10^.(E)))))
 > par(op)
 > 
 > 
@@ -2066,7 +2081,7 @@ N
 > points.default # to see how it calls "plot.xy(xy.coords(x, y), ...)"
 function (x, y = NULL, type = "p", ...) 
 plot.xy(xy.coords(x, y), type = type, ...)
-<bytecode: 0x29093c8>
+<bytecode: 0x2350470>
 <environment: namespace:graphics>
 > 
 > 
@@ -2936,7 +2951,7 @@ function (xy = 1, warn.log = TRUE)
     u <- par("usr")
     xy * c(u[2L] - u[1L], u[4L] - u[3L])/par("pin")
 }
-<bytecode: 0x3ee75b0>
+<bytecode: 0x2729a20>
 <environment: namespace:graphics>
 > 
 > ## plot labels offset 0.12 inches to the right
@@ -3016,7 +3031,7 @@ function (xy = 1, warn.log = TRUE)
 > ###
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  1.809 0.027 1.836 0 0 
+Time elapsed:  1.988 0.032 2.026 0 0 
 > grDevices::dev.off()
 null device 
           1 

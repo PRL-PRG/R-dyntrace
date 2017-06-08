@@ -28,7 +28,12 @@ clean_pids <- function(e)
 
 mcfork <- function(estranged = FALSE) {
     r <- .Call(C_mc_fork, estranged)
-    processClass <- if (!r[1L]) "masterProcess" else
+
+    # Disable JIT in the child process because it could lead to repeated
+    # compilation of the same functions in each forked R process. Ideally
+    # the compiled code would propagate to other processes, but it is not
+    # currently possible.
+    processClass <- if (!r[1L]) { compiler::enableJIT(0) ; "masterProcess" }  else
     		    if (is.na(r[2L])) "estrangedProcess" else "childProcess"
     structure(list(pid = r[1L], fd = r[2:3]), class = c(processClass, "process"))
 }
@@ -89,7 +94,7 @@ processID <- function(process) {
               domain = NA)
 }
 
-# unused
+# unused in the package
 sendChildStdin <- function(child, what)
 {
     if (inherits(child, "process") || is.list(child)) child <- processID(child)

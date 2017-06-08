@@ -1,6 +1,6 @@
 % File src/library/base/man/tapply.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2015 R Core Team
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{tapply}
@@ -12,20 +12,33 @@
   levels of certain factors.
 }
 \usage{
-tapply(X, INDEX, FUN = NULL, \dots, simplify = TRUE)
+tapply(X, INDEX, FUN = NULL, \dots, default = NA, simplify = TRUE)
 }
 \arguments{
-  \item{X}{an atomic object, typically a vector.}
-  \item{INDEX}{list of one or more factors, each of same length as
-    \code{X}.  The elements are coerced to factors by \code{\link{as.factor}}.}
+  \item{X}{an \R object for which a \code{\link{split}} method
+    exists.  Typically vector-like, allowing subsetting with
+    \code{\link{[}}.}
+  \item{INDEX}{a \code{\link{list}} of one or more \code{\link{factor}}s,
+    each of same length as \code{X}.  The elements are coerced to
+    factors by \code{\link{as.factor}}.}
   \item{FUN}{the function to be applied, or \code{NULL}.  In the case of
     functions like \code{+}, \code{\%*\%}, etc., the function name must
     be backquoted or quoted.  If \code{FUN} is \code{NULL}, tapply
     returns a vector which can be used to subscript the multi-way array
     \code{tapply} normally produces.}
   \item{\dots}{optional arguments to \code{FUN}: the Note section.}
-  \item{simplify}{If \code{FALSE}, \code{tapply} always returns an array
-    of mode \code{"list"}.  If \code{TRUE} (the default), then if
+  \item{default}{(only in the case of simplification to an array) the
+    value with which the array is initialized as
+    \code{\link{array}(default, dim = ..)}.  Before \R 3.4.0, this
+    was hard coded to \code{\link{array}()}'s default \code{NA}.  If it
+    is \code{NA} (the default), the missing value of the answer type,
+    e.g. \code{\link{NA_real_}}, is chosen (\code{\link{as.raw}(0)} for
+    \code{"raw"}).  In a numerical case, it may be set, e.g., to
+    \code{FUN(integer(0))}, e.g., in the case of \code{FUN = sum} to
+    \code{0} or \code{0L}.}
+  \item{simplify}{logical; if \code{FALSE}, \code{tapply} always returns
+    an array of mode \code{"list"}; in other words, a \code{\link{list}}
+    with a \code{\link{dim}} attribute.  If \code{TRUE} (the default), then if
     \code{FUN} always returns a scalar, \code{tapply} returns an array
     with the mode of the scalar.}
 }
@@ -88,13 +101,18 @@ table(groups)
 tapply(warpbreaks$breaks, warpbreaks[,-1], sum)
 tapply(warpbreaks$breaks, warpbreaks[, 3, drop = FALSE], sum)
 
-n <- 17; fac <- factor(rep(1:3, length = n), levels = 1:5)
+n <- 17; fac <- factor(rep_len(1:3, n), levels = 1:5)
 table(fac)
 tapply(1:n, fac, sum)
+tapply(1:n, fac, sum, default = 0) # maybe more desirable
 tapply(1:n, fac, sum, simplify = FALSE)
 tapply(1:n, fac, range)
 tapply(1:n, fac, quantile)
-
+tapply(1:n, fac, length) ## NA's
+tapply(1:n, fac, length, default = 0) # == table(fac)
+\dontshow{stopifnot(all.equal(
+  unname(unclass(table(fac))),
+  unname(        tapply(1:n, fac, length, default = 0))))}
 ## example of ... argument: find quarterly means
 tapply(presidents, cycle(presidents), mean, na.rm = TRUE)
 

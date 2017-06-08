@@ -1,7 +1,7 @@
 #  File src/library/utils/R/packages.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2016 The R Core Team
+#  Copyright (C) 1995-2017 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -30,6 +30,11 @@ function(contriburl = contrib.url(repos, type), method,
 	fields <- unique(c(requiredFields, fields))
     }
 
+    max_age <-
+        as.numeric(Sys.getenv("R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE",
+                              "86400"))
+    timestamp <- Sys.time()
+
     res <- matrix(NA_character_, 0L, length(fields) + 1L,
 		  dimnames = list(NULL, c(fields, "Repository")))
 
@@ -38,55 +43,86 @@ function(contriburl = contrib.url(repos, type), method,
         if(localcran) {
             ## see note in download.packages
             if(substring(repos, 1L, 8L) == "file:///") {
-                tmpf <- paste(substring(repos, 8L), "PACKAGES", sep = "/")
+                tmpf <- paste0(substring(repos, 8L), "/PACKAGES")
                 if(.Platform$OS.type == "windows") {
                     if(length(grep("^/[A-Za-z]:", tmpf)))
                         tmpf <- substring(tmpf, 2L)
                 }
             } else {
-                tmpf <- paste(substring(repos, 6L), "PACKAGES", sep = "/")
+                tmpf <- paste0(substring(repos, 6L), "/PACKAGES")
             }
-            res0 <- read.dcf(file = tmpf)
-            if(length(res0)) rownames(res0) <- res0[, "Package"]
+            res0 <- if(file.exists(dest <- paste0(tmpf, ".rds")))
+                readRDS(dest)
+            else
+                read.dcf(file = tmpf)
+            if(length(res0))
+                rownames(res0) <- res0[, "Package"]
         } else {
+            used_dest <- FALSE
             dest <- file.path(tempdir(),
                               paste0("repos_", URLencode(repos, TRUE), ".rds"))
             if(file.exists(dest)) {
-                res0 <- readRDS(dest)
-            } else {
-                tmpf <- tempfile()
-                on.exit(unlink(tmpf))
-
-                ## Two kinds of errors can happen: PACKAGES.gz may not
-                ## exist, or a junk error page that is not a valid dcf
-                ## file may be returned.  Handle both, and continue to
-                ## subsequent repositories...
-
+                age <- difftime(timestamp, file.mtime(dest),
+                                units = "secs")
+                if(isTRUE(age < max_age)) {
+                    res0 <- readRDS(dest)
+                    used_dest <- TRUE
+                    ## Be defensive ...
+                    if(length(res0))
+                        rownames(res0) <- res0[, "Package"]
+                }
+                else
+                    unlink(dest)        # Cache too old.
+            }
+            if(!used_dest) {
+                ## Try .rds and readRDS(), and then .gz or plain DCF and
+                ## read.dcf(), catching problems from both missing or
+                ## invalid files.
+                need_dest <- FALSE
                 op <- options(warn = -1L)
-                ## FIXME: this should check the return value == 0L
                 z <- tryCatch({
-                    ## This is a binary file
-                    download.file(url = paste(repos, "PACKAGES.gz", sep = "/"),
-                                  destfile = tmpf, method = method,
+                    download.file(url = paste0(repos, "/PACKAGES.rds"),
+                                  destfile = dest, method = method,
                                   cacheOK = FALSE, quiet = TRUE, mode = "wb")
                 }, error = identity)
-                if (inherits(z, "error"))
+                options(op)
+                if(!inherits(z, "error"))
+                    z <- res0 <- tryCatch(readRDS(dest),
+                                          error = identity)
+
+                if(inherits(z, "error")) {
+                    ## Downloading or reading .rds failed, so try the
+                    ## DCF variants.
+                    need_dest <- TRUE
+                    tmpf <- tempfile()
+                    on.exit(unlink(tmpf))
+                    op <- options(warn = -1L)
+                    ## FIXME: this should check the return value == 0L
                     z <- tryCatch({
-                        ## read.dcf is going to interpret CRLF as LF, so use
-                        ## binary mode to avoid CRLF.
-                        download.file(url = paste(repos, "PACKAGES", sep = "/"),
+                        ## This is a binary file
+                        download.file(url = paste0(repos, "/PACKAGES.gz"),
                                       destfile = tmpf, method = method,
                                       cacheOK = FALSE, quiet = TRUE, mode = "wb")
-                    }, error=identity)
-                options(op)
+                    }, error = identity)
+                    if(inherits(z, "error"))
+                        z <- tryCatch({
+                            ## read.dcf is going to interpret CRLF as
+                            ## LF, so use binary mode to avoid CRLF.
+                            download.file(url = paste0(repos, "/PACKAGES"),
+                                          destfile = tmpf, method = method,
+                                          cacheOK = FALSE, quiet = TRUE, mode = "wb")
+                        }, error=identity)
+                    options(op)
 
-                if (!inherits(z, "error"))
-                    z <- res0 <- tryCatch(read.dcf(file = tmpf), error=identity)
-                    
-                unlink(tmpf)
-                on.exit()                    
+                    if (!inherits(z, "error"))
+                        z <- res0 <- tryCatch(read.dcf(file = tmpf),
+                                              error = identity)
 
-                if (inherits(z, "error")) {
+                    unlink(tmpf)
+                    on.exit()
+                }
+
+                if(inherits(z, "error")) {
                     warning(gettextf("unable to access index for repository %s",
                                      repos),
                             ":\n  ", conditionMessage(z),
@@ -94,9 +130,15 @@ function(contriburl = contrib.url(repos, type), method,
                     next
                 }
 
-                ## Do we want to cache an empty result?
-                if(length(res0)) rownames(res0) <- res0[, "Package"]
-                saveRDS(res0, dest, compress = TRUE)
+                if(length(res0)) {
+                    rownames(res0) <- res0[, "Package"]
+                    ## Do not cache empty results.
+                    if(need_dest)
+                        saveRDS(res0, dest, compress = TRUE)
+                } else if(!need_dest) {
+                    ## download.file() gave an empty .rds
+                    unlink(dest)
+                }
             } # end of download vs cached
         } # end of localcran vs online
         if (length(res0)) {
@@ -320,12 +362,12 @@ update.packages <- function(lib.loc = NULL, repos = getOption("repos"),
                 "Version", old[k, "ReposVer"], "available at",
                 simplifyRepos(old[k, "Repository"], type))
             cat("\n")
-            answer <- substr(readline("Update (y/N/c)?  "), 1L, 1L)
-            if(answer == "c" | answer == "C") {
+            answer <- askYesNo("Update?")
+            if(is.na(answer)) {
                 cat("cancelled by user\n")
                 return(invisible())
             }
-            if(answer == "y" | answer == "Y")
+            if(isTRUE(answer))
                 update <- rbind(update, old[k,])
         }
         update
@@ -595,9 +637,9 @@ installed.packages <-
             ## it is actually 32-bit on some systems)
             enc <- sprintf("%d_%s", nchar(base), .Call(C_crc64, base))
             dest <- file.path(tempdir(), paste0("libloc_", enc, ".rds"))
-            if(file.exists(dest) &&
-               file.mtime(dest) > file.mtime(lib) &&
-               (val <- readRDS(dest))$base == base)
+            test <- file.exists(dest) && file.mtime(dest) > file.mtime(lib) &&
+                (val <- readRDS(dest))$base == base
+            if(isTRUE(as.vector(test)))
                 ## use the cache file
                 retval <- rbind(retval, val$value)
             else {
@@ -820,35 +862,27 @@ getCRANmirrors <- function(all = FALSE, local.only = FALSE)
                 all = all, local.only = local.only)
 }
 
-.chooseMirror <- function(m, label, graphics, ind, useHTTPS)
+.chooseMirror <- function(m, label, graphics, ind)
 {
     if(is.null(ind) && !interactive())
         stop("cannot choose a ", label, " mirror non-interactively")
     if (length(ind))
         res <- as.integer(ind)[1L]
     else {
-    	isHTTPS <- startsWith(m[, "URL"], "https")
+    	isHTTPS <- (startsWith(m[, "URL"], "https") &
+                    grepl("secure_mirror_from_master",
+                          m[, "Comment"],
+                          fixed = TRUE))
     	mHTTPS <- m[isHTTPS,]
     	mHTTP <- m[!isHTTPS,]
-    	if (useHTTPS) {
-    	    m <- mHTTPS
-    	    if (!nrow(m)) {
-    	    	useHTTPS <- FALSE
-    	    	m <- mHTTP
-    	    }
-    	}
-    	httpLabel <- paste("HTTP", label, "mirror")
-    	if (useHTTPS) {
-    	    httpsLabel <- paste("HTTPS", label, "mirror")
-    	    res <- menu(c(m[, 1L], "(HTTP mirrors)"), graphics, httpsLabel)
-    	    if (res > nrow(m)) {
-    	    	m <- mHTTP
-    	    	res <- menu(m[, 1L], graphics, httpLabel)
-    	    }
-    	} else {
-    	    m <- mHTTP
-    	    res <- menu(m[, 1L], graphics, httpLabel)
-    	}
+        httpsLabel <- paste("Secure", label, "mirrors")
+        httpLabel <- paste("Other", label, "mirrors")
+        m <- mHTTPS
+        res <- menu(c(m[, 1L], "(other mirrors)"), graphics, httpsLabel)
+        if (res > nrow(m)) {
+            m <- mHTTP
+            res <- menu(m[, 1L], graphics, httpLabel)
+        }
     }
     if (res > 0L) {
         URL <- m[res, "URL"]
@@ -858,11 +892,10 @@ getCRANmirrors <- function(all = FALSE, local.only = FALSE)
 }
 
 chooseCRANmirror <- function(graphics = getOption("menu.graphics"), ind = NULL,
-                             useHTTPS = getOption("useHTTPS", TRUE),
                              local.only = FALSE)
 {
     m <- getCRANmirrors(all = FALSE, local.only = local.only)
-    url <- .chooseMirror(m, "CRAN", graphics, ind, useHTTPS)
+    url <- .chooseMirror(m, "CRAN", graphics, ind)
     if (length(url)) {
         repos <- getOption("repos")
         repos["CRAN"] <- url
@@ -872,13 +905,12 @@ chooseCRANmirror <- function(graphics = getOption("menu.graphics"), ind = NULL,
 }
 
 chooseBioCmirror <- function(graphics = getOption("menu.graphics"), ind = NULL,
-                             useHTTPS = getOption("useHTTPS", TRUE),
                              local.only = FALSE)
 {
     m <- .getMirrors("https://bioconductor.org/BioC_mirrors.csv",
                      file.path(R.home("doc"), "BioC_mirrors.csv"),
                      all = FALSE, local.only = local.only)
-    url <- .chooseMirror(m, "BioC", graphics, ind, useHTTPS)
+    url <- .chooseMirror(m, "BioC", graphics, ind)
     if (length(url))
         options(BioC_mirror = url)
     invisible()

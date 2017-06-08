@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2015  The R Core Team
+ *  Copyright (C) 1997--2017  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -126,7 +126,10 @@ void R_setupHistory()
 }
 
 #if defined(HAVE_SYS_RESOURCE_H) && defined(HAVE_GETRLIMIT)
-/* on MacOS X it seems sys/resource.h needs sys/time.h first */
+/*
+  Needed by AIX and formerly by macOS (but not by POSIX).
+  http://www.ibm.com/support/knowledgecenter/ssw_aix_61/com.ibm.aix.basetrf1/getrlimit_64.htm
+ */
 # ifdef HAVE_SYS_TIME_H
 #  include <sys/time.h>
 # endif
@@ -161,6 +164,12 @@ static char* unescape_arg(char *p, char* avp) {
     return p;
 }
 
+/* for thr_stksegment */
+#if defined(HAVE_THREAD_H)
+# include <thread.h>
+#endif
+#include <signal.h> /* thr_stksegment */
+
 int Rf_initialize_R(int ac, char **av)
 {
     int i, ioff = 1, j;
@@ -178,6 +187,9 @@ int Rf_initialize_R(int ac, char **av)
 
 #if defined(HAVE_SYS_RESOURCE_H) && defined(HAVE_GETRLIMIT)
 {
+    /* getrlimit is POSIX:
+       http://pubs.opengroup.org/onlinepubs/9699919799/functions/getrlimit.html
+    */
     struct rlimit rlim;
 
     {
@@ -188,13 +200,68 @@ int Rf_initialize_R(int ac, char **av)
     }
 
     if(getrlimit(RLIMIT_STACK, &rlim) == 0) {
-	unsigned long lim1, lim2;
-	lim1 = (unsigned long) rlim.rlim_cur;
-	lim2 = (unsigned long) rlim.rlim_max; /* Usually unlimited */
-	R_CStackLimit = lim1 < lim2 ? lim1 : lim2;
+	/* 'unlimited' is represented by RLIM_INFINITY, which is a
+	   very large (but maybe not the largest) representable value.
+
+	   The standard allows the values RLIM_SAVED_CUR and
+	   RLIB_SAVED_MAX, apparently used on 32-bit AIX.  
+	   (http://www.ibm.com/support/knowledgecenter/ssw_aix_61/com.ibm.aix.basetrf1/getrlimit_64.htm)
+
+	   These may or may not be different from RLIM_INFINITY (they
+	   are the same on Linux and macOS but not Solaris where they
+	   are larger).  We will assume that unrepresentable limits
+	   are very large.
+
+	   This is cautious: it is extremely unlikely that the soft
+	   limit is either unlimited or unrepresentable.
+	*/
+	rlim_t lim = rlim.rlim_cur;
+#if defined(RLIM_SAVED_CUR) && defined(RLIM_SAVED_MAX)
+	if (lim == RLIM_SAVED_CUR || lim == RLIM_SAVED_MAX) 
+	    lim = RLIM_INFINITY;
+#endif
+	if (lim != RLIM_INFINITY) R_CStackLimit = (uintptr_t) lim;
     }
 #if defined(HAVE_LIBC_STACK_END)
-    R_CStackStart = (uintptr_t) __libc_stack_end;
+    {
+	R_CStackStart = (uintptr_t) __libc_stack_end;
+	/* The libc stack end is not exactly at the stack start, so one
+	   cannot access __libc_stack_end - R_CStackLimit/getrlimit + 1. We
+	   have to find the real stack start that matches getrlimit.
+
+	   A modern alternative to __libc_stack_end and to parsing /proc/maps
+	   directly is pthread_getattr_np; it doesn't provide the exact stack
+	   start, either, but provides a matching stack size smaller than 
+	   the one obtained from getrlimit. However, pthread_getattr_np
+	   may have not worked properly on old Linux distributions. */
+	
+	/* based on GDB relocatable.c */
+	FILE *f;
+	f = fopen("/proc/self/maps", "r");
+	if (f) {
+	    for(;;) {
+		int c;
+		unsigned long start, end;
+
+		if (fscanf(f, "%lx-%lx", &start, &end) == 2 &&
+		    R_CStackStart >= (uintptr_t)start &&
+		    R_CStackStart < (uintptr_t)end) {
+		    
+		    /* would this be ok for R_CStackDir == -1? */
+		    R_CStackStart = (uintptr_t) ((R_CStackDir == 1) ? end : start);
+		    break;
+		}
+		for(c = getc(f); c != '\n' && c != EOF; c = getc(f));
+		if (c == EOF) {
+		    /* could also abort here, but R will usually work with
+		       R_CStackStart set just for __libc_stack_end */
+		    fprintf(stderr, "WARNING: Error parsing /proc/self/maps!\n");
+		    break;
+		}
+	    }
+	    fclose(f);
+	}
+    }
 #elif defined(HAVE_KERN_USRSTACK)
     {
 	/* Borrowed from mzscheme/gc/os_dep.c */
@@ -204,6 +271,19 @@ int Rf_initialize_R(int ac, char **av)
 	(void) sysctl(nm, 2, &base, &len, NULL, 0);
 	R_CStackStart = (uintptr_t) base;
     }
+#elif defined(HAVE_THR_STKSEGMENT)
+    {
+	/* Solaris */
+	stack_t stack;
+	if (thr_stksegment(&stack))
+	    R_Suicide("Cannot obtain stack information (thr_stksegment).");
+	R_CStackStart = (uintptr_t) stack.ss_sp;
+	/* This _may_ have to be adjusted for a (perhaps theoretical) platform
+	   where the stack would grow upwards.
+
+	   The stack size could be updated based on stack.ss_size, but experiments
+	   suggest getrlimit is safe here. */
+    }
 #else
     if(R_running_as_main_program) {
 	/* This is not the main program, but unless embedded it is
@@ -211,10 +291,9 @@ int Rf_initialize_R(int ac, char **av)
 	R_CStackStart = (uintptr_t) &i + (6000 * R_CStackDir);
     }
 #endif
-    if(R_CStackStart == -1) R_CStackLimit = -1; /* never set */
+    if(R_CStackStart == (uintptr_t)(-1)) R_CStackLimit = (uintptr_t)(-1); /* never set */
 
-    /* printf("stack limit %ld, start %lx dir %d \n", R_CStackLimit,
-	      R_CStackStart, R_CStackDir); */
+    /* setup_Rmainloop includes (disabled) code to test stack detection */
 }
 #endif
 
@@ -465,4 +544,32 @@ int R_EditFiles(int nfile, const char **file, const char **title,
 	return 0;
     }
     return 1;
+}
+
+/* Returns the limit on the number of open files. On error or when no
+   limit is known, returns a negative number. */
+int R_GetFDLimit() {
+
+#if defined(HAVE_SYS_RESOURCE_H) && defined(HAVE_GETRLIMIT)
+    struct rlimit rlim;
+    /* Historically this was RLIMIT_OFILE on BSD, but we require the
+       POSIX version.
+
+       Most often RLIM_INFINITY >= INT_MAX, but not on some 32-bit
+       systems.  On all current systems the limit will be at most a
+       few thousand.
+
+       Note that 'unlimited' here probably does not mean it:
+       e.g. there is a kernel limit of OPEN_MAX on macOS.
+    */
+    if (getrlimit(RLIMIT_NOFILE, &rlim) == 0) {
+	rlim_t lim = rlim.rlim_cur;
+#if defined(RLIM_SAVED_CUR) && defined(RLIM_SAVED_MAX)
+	if (lim == RLIM_SAVED_CUR || lim == RLIM_SAVED_MAX) 
+	    lim = RLIM_INFINITY;
+#endif
+	return (int)((lim > INT_MAX) ? INT_MAX : lim);
+    }
+#endif
+    return -1;
 }

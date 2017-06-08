@@ -1,6 +1,6 @@
 % File src/library/base/man/ns-load.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2016 R Core Team
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{ns-load}
@@ -60,6 +60,9 @@ isNamespaceLoaded(name)
   hook function named \code{\link{.onLoad}} as an internal variable in
   the name space (it should not be exported).  Partial loading is used
   to support installation with lazy-loading.
+
+  Optionally the package licence is checked during loading: see section
+  \sQuote{Licenses} in the help for \code{\link{library}}.
 
   \code{loadNamespace} does not attach the name space it loads to the
   search path.  \code{attachNamespace} can be used to attach a frame
@@ -122,12 +125,12 @@ isNamespaceLoaded(name)
             identical(isNamespaceLoaded(quote(foo)), FALSE),
             identical(isNamespaceLoaded(quote(stats)), statL))
 
-hasM <- isNamespaceLoaded("MASS") # (to restore if needed)
-Mns <- asNamespace("MASS") # loads it if not already
-stopifnot(   isNamespaceLoaded("MASS"))
-unloadNamespace(Mns) # unloading the NS 'object'
-stopifnot( ! isNamespaceLoaded("MASS"))
-if (hasM) loadNamespace("MASS") # (restoring previous state)
+hasS <- isNamespaceLoaded("splines") # (to restore if needed)
+Sns <- asNamespace("splines") # loads it if not already
+stopifnot(   isNamespaceLoaded("splines"))
+unloadNamespace(Sns) # unloading the NS 'object'
+stopifnot( ! isNamespaceLoaded("splines"))
+if (hasS) loadNamespace("splines") # (restoring previous state)
 }
 \keyword{data}
 \keyword{utilities}

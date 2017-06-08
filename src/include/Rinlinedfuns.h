@@ -11,7 +11,7 @@
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU Lesser General Public License for more details.
+ *  GNU General Public License for more details.
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, a copy is available at
@@ -271,6 +271,13 @@ INLINE_FUN SEXP list5(SEXP s, SEXP t, SEXP u, SEXP v, SEXP w)
     return s;
 }
 
+INLINE_FUN SEXP list6(SEXP s, SEXP t, SEXP u, SEXP v, SEXP w, SEXP x)
+{
+    PROTECT(s);
+    s = CONS(s, list5(t, u, v, w, x));
+    UNPROTECT(1);
+    return s;
+}
 
 /* Destructive list append : See also ``append'' */
 
@@ -494,6 +501,8 @@ INLINE_FUN Rboolean isFrame(SEXP s)
     return FALSE;
 }
 
+/* DIFFERENT than R's  is.language(.) in ../main/coerce.c [do_is(), case 301:]
+ *                                    which is   <=>  SYMSXP || LANGSXP || EXPRSXP */
 INLINE_FUN Rboolean isLanguage(SEXP s)
 {
     return (s == R_NilValue || TYPEOF(s) == LANGSXP);

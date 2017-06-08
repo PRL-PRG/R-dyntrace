@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2015  The R Core Team
+ *  Copyright (C) 1997--2017  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -704,6 +704,20 @@ void R_SetWin32(Rstart Rp)
 	/* printf("stackbase %lx, size %lx\n", top, top-bottom); */
 	R_CStackStart = top;
 	R_CStackLimit = top - bottom;
+
+	/* The stack detection above is not precise, in fact the stack will
+	   not be able to grow that large. As documented, at least one page
+	   from the space will be used as a guard page. Starting from the
+	   top (high address), the stack is formed by committed area, the
+	   guard page, and reserved area. The guard is used for on-demand
+	   growing of the committed area and shrinking of the reserve.
+	   Experiments show that the reserve would not shrink to less than
+	   2 pages (Win7, 32bit). This is not documented and was not tested 
+	   in other versions of Windows.*/
+	if (R_CStackLimit > 4*4096)
+	    R_CStackLimit -= 4*4096;
+
+	/* setup_Rmainloop includes (disabled) code to test stack detection */
     }
 
     R_CStackDir = 1;
@@ -1174,4 +1188,15 @@ void setup_term_ui(void)
 void saveConsoleTitle(void)
 {
     GetConsoleTitle(oldtitle, 512);
+}
+
+
+/* On Windows, the number of open files is essentially unlimited.
+ * This function returns 16,777,216 based on
+ * https://blogs.technet.microsoft.com/markrussinovich/2009/09/29/pushing-the-limits-of-windows-handles
+ */
+int R_GetFDLimit()
+{
+    long limit = 16L*1024L*1024L;
+    return (limit > INT_MAX) ? INT_MAX : limit;
 }

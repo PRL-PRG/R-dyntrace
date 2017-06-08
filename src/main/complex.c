@@ -23,10 +23,16 @@
 #include <config.h>
 #endif
 
-/* Note: gcc may warn in several places about C99 features as extensions.
-   This is a very-long-standing GCC bug, http://gcc.gnu.org/PR7263
+/* Note: gcc -peantic may warn in several places about C99 features 
+   as extensions.
+   This was a very-long-standing GCC bug, http://gcc.gnu.org/PR7263
    The system <complex.h> header can work around it: some do.
+   It should have been resolved (after a decade) in 2012.
 */
+
+#if defined(HAVE_CTANH) && !defined(HAVE_WORKING_CTANH)
+#undef HAVE_CTANH
+#endif
 
 #if 0
 /* For testing substitute fns */
@@ -58,49 +64,13 @@
 
 #include "arithmetic.h"		/* complex_*  */
 #include <complex.h>
+#include "Rcomplex.h"		/* I, C99_COMPLEX2, SET_C99_COMPLEX, toC99 */
 #include <R_ext/Itermacros.h>
 
 
 /* interval at which to check interrupts, a guess */
 #define NINTERRUPT 10000000
 
-
-/* GCC has problems with header files on e.g. Solaris.
-   That OS defines the imaginary type, but GCC does not.
-   Probably needed elsewhere, e.g. AIX, HP-UX (PR#15083)
-   And use on Win32/64 suppresses warnings.
-   The warning is also seen on Mac OS 10.5, but not later.
-*/
-#if defined(__GNUC__) && (defined(__sun__) || defined(__hpux__) || defined(Win32))
-# undef  I
-# define I (__extension__ 1.0iF)
-#endif
-
-
-/*
-   Note: this could use the C11 CMPLX() macro.
-   As could mycpow, z_tan and some of the substitutes.
- */
-static R_INLINE double complex toC99(Rcomplex *x)
-{
-#if __GNUC__
-    double complex ans = (double complex) 0; /* -Wall */
-    __real__ ans = x->r;
-    __imag__ ans = x->i;
-    return ans;
-#else
-    return x->r + x->i * I;
-#endif
-}
-#define C99_COMPLEX2(x, i) toC99(COMPLEX(x) + i)
-
-static R_INLINE void
-SET_C99_COMPLEX(Rcomplex *x, R_xlen_t i, double complex value)
-{
-    Rcomplex *ans = x+i;
-    ans->r = creal(value);
-    ans->i = cimag(value);
-}
 
 SEXP attribute_hidden complex_unary(ARITHOP_TYPE code, SEXP s1, SEXP call)
 {
@@ -152,7 +122,7 @@ static R_INLINE double complex R_cpow_n(double complex X, int k)
   2) On Mingw (but not Mingw-w64) the system cpow is explicitly linked
      against the (slow) MSVCRT pow, and gets (0+0i)^Y as 0+0i for all Y.
 
-  3) PPC Mac OS X crashes on powers of 0+0i (at least under Rosetta).
+  3) PPC macOS crashed on powers of 0+0i (at least under Rosetta).
   Really 0i^-1 should by Inf+NaNi, but getting that portably seems too hard.
   (C1x's CMPLX will eventually be possible.)
 */
@@ -517,14 +487,6 @@ static double complex csinh(double complex z)
 }
 #endif
 
-#ifndef HAVE_CTANH
-#define ctanh R_ctanh
-static double complex ctanh(double complex z)
-{
-    return -I * ctan(z * I); /* A&S 4.5.9 */
-}
-#endif
-
 static double complex z_tan(double complex z)
 {
     double y = cimag(z);
@@ -540,6 +502,15 @@ static double complex z_tan(double complex z)
     }
     return r;
 }
+
+#ifndef HAVE_CTANH
+#define ctanh R_ctanh
+static double complex ctanh(double complex z)
+{
+    return -I * z_tan(z * I); /* A&S 4.5.9 */
+}
+#endif
+
 
 /* Don't rely on the OS at the branch cuts */
 
@@ -705,7 +676,7 @@ SEXP attribute_hidden complex_math2(SEXP call, SEXP op, SEXP args, SEXP env)
     case 10004: /* signif */
 	f = z_prec; break;
     default:
-	errorcall_return(call, _("unimplemented complex function"));
+	error_return(_("unimplemented complex function"));
     }
 
     PROTECT(sa = coerceVector(CAR(args), CPLXSXP));
@@ -731,7 +702,7 @@ SEXP attribute_hidden complex_math2(SEXP call, SEXP op, SEXP args, SEXP env)
 	}
     });
     if (naflag)
-	warningcall(call, "NaNs produced in function \"%s\"", PRIMNAME(op));
+	warning("NaNs produced in function \"%s\"", PRIMNAME(op));
     if(n == na) {
 	SHALLOW_DUPLICATE_ATTRIB(sy, sa);
     } else if(n == nb) {

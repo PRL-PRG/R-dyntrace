@@ -1,7 +1,7 @@
 #  File src/library/utils/R/sessionInfo.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2016 The R Core Team
+#  Copyright (C) 1995-2017 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -56,10 +56,10 @@ sessionInfo <- function(package = NULL)
                        ver <- sub(".*<string>", "", ver)
                        ver <- sub("</string>$", "", ver)
                        ver1 <- strsplit(ver, ".", fixed = TRUE)[[1L]][2L]
-                       sprintf("OS X %s (%s)", ver,
+                       sprintf("%s %s %s",
+                               ifelse(as.numeric(ver1) < 12, "OS X", "macOS"),
                                switch(ver1,
-                                      "4" = "Tiger",
-                                      "5" = "Leopard",
+                                      ## 10.6 is earliest that can be installed
                                       "6" = "Snow Leopard",
                                       "7" = "Lion",
                                       "8" = "Mountain Lion",
@@ -67,7 +67,7 @@ sessionInfo <- function(package = NULL)
                                       "10" = "Yosemite",
                                       "11" = "El Capitan",
                                       "12" = "Sierra",
-                                     "unknown"))
+                                      ""), ver)
                    },
                    "SunOS" = {
                        ver <- system('uname -r', intern = TRUE)
@@ -103,11 +103,15 @@ sessionInfo <- function(package = NULL)
         pkgDesc <- c(pkgDesc, lapply(loadedOnly, packageDescription))
         z$loadedOnly <- pkgDesc[loadedOnly]
     }
+    z$matprod <- as.character(options("matprod"))
+    es <- extSoftVersion()
+    z$BLAS <- as.character(es["BLAS"]) #drop name
+    z$LAPACK <- La_library()
     class(z) <- "sessionInfo"
     z
 }
 
-print.sessionInfo <- function(x, locale=TRUE, ...)
+print.sessionInfo <- function(x, locale = TRUE, ...)
 {
     mkLabel <- function(L, n) {
         vers <- sapply(L[[n]], function(x) x[["Version"]])
@@ -119,7 +123,19 @@ print.sessionInfo <- function(x, locale=TRUE, ...)
     cat("Platform: ", x$platform, "\n", sep = "")
     if (!is.null(x$running)) cat("Running under: ",  x$running, "\n", sep = "")
     cat("\n")
-    if(locale){
+    cat("Matrix products: ", x$matprod, "\n", sep = "")
+    blas <- x$BLAS
+    if (is.null(blas)) blas <- ""
+    lapack <- x$LAPACK
+    if (is.null(lapack)) lapack <- ""
+    if (blas == lapack && nzchar(blas))
+        cat("BLAS/LAPACK: ", blas, "\n", sep = "")
+    else {
+        if (nzchar(blas)) cat("BLAS: ", blas, "\n", sep = "")
+        if (nzchar(lapack)) cat("LAPACK: ", lapack, "\n", sep = "")
+    }
+    cat("\n")
+    if(locale) {
         cat("locale:\n")
 	print(strsplit(x$locale, ";", fixed=TRUE)[[1]], quote=FALSE, ...)
         cat("\n")
@@ -128,49 +144,66 @@ print.sessionInfo <- function(x, locale=TRUE, ...)
     print(x$basePkgs, quote=FALSE, ...)
     if(!is.null(x$otherPkgs)){
         cat("\nother attached packages:\n")
-	print(mkLabel(x, "otherPkgs"), quote=FALSE, ...)
+	print(mkLabel(x, "otherPkgs"), quote = FALSE, ...)
     }
     if(!is.null(x$loadedOnly)){
         cat("\nloaded via a namespace (and not attached):\n")
-	print(mkLabel(x, "loadedOnly"), quote=FALSE, ...)
+	print(mkLabel(x, "loadedOnly"), quote = FALSE, ...)
     }
     invisible(x)
 }
 
-toLatex.sessionInfo <- function(object, locale=TRUE, ...)
+##' From a list of packageDescription()s,
+##' construct string  "<p1>~<ver>, <p2>~<ver>, ..., <pn>~<ver>"
+toLatexPDlist <- function(pdList, sep = "~") {
+    if(length(ver <- vapply(pdList, `[[`, "", "Version"))) {
+	ver <- ver[sort(names(ver))]
+	paste(names(ver), ver, sep = sep, collapse = ", ")
+    } else ver
+}
+
+toLatex.sessionInfo <- function(object, locale = TRUE, ...)
 {
-    opkgver <- sapply(object$otherPkgs, function(x) x$Version)
-    nspkgver <- sapply(object$loadedOnly, function(x) x$Version)
     z <- c("\\begin{itemize}\\raggedright",
            paste0("  \\item ", object$R.version$version.string,
                   ", \\verb|", object$R.version$platform, "|"))
-
-    if(locale){
+    if(locale) {
         z <- c(z,
                paste0("  \\item Locale: \\verb|",
                       gsub(";","|, \\\\verb|", object$locale) , "|"))
     }
+    z <- c(z,
+           paste0("  \\item Running under: \\verb|",
+                  gsub(";","|, \\\\verb|", object$running) , "|"))
+    z <- c(z, paste0("  \\item Matrix products: ", object$matprod))
+    blas <- object$BLAS
+    if (is.null(blas)) blas <- ""
+    lapack <- object$LAPACK
+    if (is.null(lapack)) lapack <- ""
+
+    if (blas == lapack && nzchar(blas))
+        z <- c(z, paste0("  \\item BLAS/LAPACK: \\verb|", blas, "|"))
+    else {
+        if (nzchar(blas))
+            z <- c(z, paste0("  \\item BLAS: \\verb|", blas, "|"))
+        if (nzchar(lapack))
+            z <- c(z, paste0("  \\item LAPACK: \\verb|", lapack, "|"))
+    }
 
     z <- c(z, strwrap(paste("\\item Base packages: ",
-                         paste(sort(object$basePkgs), collapse = ", ")),
+			    paste(sort(object$basePkgs), collapse = ", ")),
                       indent = 2, exdent = 4))
 
-    if(length(opkgver)){
-        opkgver <- opkgver[sort(names(opkgver))]
+    if(length(o.ver <- toLatexPDlist(object$otherPkg)))
         z <- c(z,
                strwrap(paste("  \\item Other packages: ",
-                             paste(names(opkgver), opkgver, sep = "~",
-                                   collapse = ", ")),
+			     o.ver),
                        indent = 2, exdent = 4))
-    }
-    if(length(nspkgver)){
-        nspkgver <- nspkgver[sort(names(nspkgver))]
+    if(length(n.ver <- toLatexPDlist(object$loadedOnly)))
         z <- c(z,
                strwrap(paste("  \\item Loaded via a namespace (and not attached): ",
-                             paste(names(nspkgver), nspkgver, sep = "~",
-                                   collapse = ", ")),
+			     n.ver),
                        indent = 2, exdent = 4))
-    }
     z <- c(z, "\\end{itemize}")
     class(z) <- "Latex"
     z

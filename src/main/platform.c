@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1998--2015 The R Core Team
+ *  Copyright (C) 1998--2017 The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -43,6 +43,9 @@
 #include <Rinterface.h>
 #include <Fileio.h>
 #include <ctype.h>			/* toupper */
+#include <limits.h>
+#include <string.h>
+#include <stdlib.h>			/* for realpath */
 #include <time.h>			/* for ctime */
 
 # include <errno.h>
@@ -171,8 +174,8 @@ static void Init_R_Platform(SEXP rho)
     SET_VECTOR_ELT(value, 4, mkString("little"));
 #endif
 /* pkgType should be "mac.binary" for CRAN build *only*, not for all
-   AQUA builds. Also we want to be able to use "mac.binary.leopard",
-   "mac.binary.mavericks" and similar. */
+   AQUA builds. Also we want to be able to use "mac.binary.mavericks",
+   "mac.binary.el-capitan" and similar. */
 #ifdef PLATFORM_PKGTYPE
     SET_VECTOR_ELT(value, 5, mkString(PLATFORM_PKGTYPE));
 #else /* unix default */
@@ -569,10 +572,13 @@ SEXP attribute_hidden do_filesymlink(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    LOGICAL(ans)[i] = 0;
 	else {
 #ifdef Win32
-	    wchar_t from[PATH_MAX+1], *to;
+	    wchar_t from[PATH_MAX+1], *to, *p;
 	    struct _stati64 sb;
 	    from[PATH_MAX] = L'\0';
-	    wcsncpy(from, filenameToWchar(STRING_ELT(f1, i%n1), TRUE), PATH_MAX);
+	    p = filenameToWchar(STRING_ELT(f1, i%n1), TRUE);
+	    if (wcslen(p) >= PATH_MAX)
+	    	error(_("'%s' path too long"), "from");
+	    wcsncpy(from, p, PATH_MAX);
 	    /* This Windows system call does not accept slashes */
 	    for (wchar_t *p = from; *p; p++) if (*p == L'/') *p = L'\\';
 	    to = filenameToWchar(STRING_ELT(f2, i%n2), TRUE);
@@ -643,9 +649,11 @@ SEXP attribute_hidden do_filelink(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    LOGICAL(ans)[i] = 0;
 	else {
 #ifdef Win32
-	    wchar_t from[PATH_MAX+1], *to;
-	    from[PATH_MAX] = L'\0';
-	    wcsncpy(from, filenameToWchar(STRING_ELT(f1, i%n1), TRUE), PATH_MAX);
+	    wchar_t from[PATH_MAX+1], *to, *p;
+	    p = filenameToWchar(STRING_ELT(f1, i%n1), TRUE);
+	    if (wcslen(p) >= PATH_MAX)
+	    	error(_("'%s' path too long"), "from");
+	    wcscpy(from, p);
 	    to = filenameToWchar(STRING_ELT(f2, i%n2), TRUE);
 	    LOGICAL(ans)[i] = CreateHardLinkW(to, from, NULL) != 0;
 	    if(!LOGICAL(ans)[i]) {
@@ -874,7 +882,42 @@ SEXP attribute_hidden do_fileinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    REAL(atime)[i] = (double) STAT_TIMESPEC(sb, st_atim).tv_sec
 		+ 1e-9 * (double) STAT_TIMESPEC(sb, st_atim).tv_nsec;
 #else
-	    /* FIXME: there are higher-resolution ways to do this on Windows */
+#ifdef Win32
+#define WINDOWS_TICK 10000000
+#define SEC_TO_UNIX_EPOCH 11644473600LL
+	    {
+		FILETIME c_ft, a_ft, m_ft; 
+		HANDLE h;
+		int success = 0;
+		h = CreateFileW(wfn, 0,
+		                FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE,
+		                NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+		if (h != INVALID_HANDLE_VALUE) {
+		    int res  = GetFileTime(h, &c_ft, &a_ft, &m_ft);
+		    CloseHandle(h);
+		    if (res) { 
+			ULARGE_INTEGER time;
+			time.LowPart = m_ft.dwLowDateTime;
+			time.HighPart = m_ft.dwHighDateTime;
+			REAL(mtime)[i] = (((double) time.QuadPart) / WINDOWS_TICK - SEC_TO_UNIX_EPOCH);
+			time.LowPart = c_ft.dwLowDateTime;
+			time.HighPart = c_ft.dwHighDateTime;
+			REAL(ctime)[i] = (((double) time.QuadPart) / WINDOWS_TICK - SEC_TO_UNIX_EPOCH);
+			time.LowPart = a_ft.dwLowDateTime;
+			time.HighPart = a_ft.dwHighDateTime;
+			REAL(atime)[i] = (((double) time.QuadPart) / WINDOWS_TICK - SEC_TO_UNIX_EPOCH);
+			success = 1;
+		    }
+		} else
+		    warning(_("cannot open file '%ls': %s"),
+		            wfn, formatError(GetLastError()));
+		if (!success) {
+		    REAL(mtime)[i] = NA_REAL;
+		    REAL(ctime)[i] = NA_REAL;
+		    REAL(atime)[i] = NA_REAL;	
+	        }
+	    }
+#else
 	    REAL(mtime)[i] = (double) sb.st_mtime;
 	    REAL(ctime)[i] = (double) sb.st_ctime;
 	    REAL(atime)[i] = (double) sb.st_atime;
@@ -883,6 +926,7 @@ SEXP attribute_hidden do_fileinfo(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    REAL(ctime)[i] += STAT_TIMESPEC_NS (sb, st_ctim);
 	    REAL(atime)[i] += STAT_TIMESPEC_NS (sb, st_atim);
 # endif
+#endif
 #endif
 	    if (extras) {
 #ifdef UNIX_EXTRAS
@@ -1851,7 +1895,13 @@ SEXP attribute_hidden do_pathexpand(SEXP call, SEXP op, SEXP args, SEXP rho)
     for (i = 0; i < n; i++) {
 	SEXP tmp = STRING_ELT(fn, i);
 	if (tmp != NA_STRING) {
+#ifndef Win32
 	    tmp = markKnown(R_ExpandFileName(translateChar(tmp)), tmp);
+#else
+/* Windows can have files and home directories that aren't representable in the native encoding (e.g. latin1), so
+   we need to translate everything to UTF8.  */
+	    tmp = mkCharCE(R_ExpandFileNameUTF8(translateCharUTF8(tmp)), CE_UTF8);
+#endif
 	}
 	SET_STRING_ELT(ans, i, tmp);
     }
@@ -2152,7 +2202,10 @@ SEXP attribute_hidden do_dircreate(SEXP call, SEXP op, SEXP args, SEXP env)
     if (show == NA_LOGICAL) show = 0;
     recursive = asLogical(CADDR(args));
     if (recursive == NA_LOGICAL) recursive = 0;
-    wcscpy(dir, filenameToWchar(STRING_ELT(path, 0), TRUE));
+    p = filenameToWchar(STRING_ELT(path, 0), TRUE);
+    if (wcslen(p) >= MAX_PATH)
+    	error(_("'%s' too long"), "path");
+    wcsncpy(dir, p, MAX_PATH);
     for (p = dir; *p; p++) if (*p == L'/') *p = L'\\';
     /* remove trailing slashes */
     p = dir + wcslen(dir) - 1;
@@ -2204,7 +2257,7 @@ static void copyFileTime(const wchar_t *from, const wchar_t * to)
     hFrom = CreateFileW(from, GENERIC_READ, 0, NULL, OPEN_EXISTING,
 			FILE_FLAG_BACKUP_SEMANTICS, NULL);
     if (hFrom == INVALID_HANDLE_VALUE) return;
-    int res  = GetFileTime(hFrom, NULL, &modft, NULL);
+    int res  = GetFileTime(hFrom, NULL, NULL, &modft);
     CloseHandle(hFrom);
     if(!res) return;
 
@@ -2347,17 +2400,19 @@ SEXP attribute_hidden do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
 	dates = asLogical(CAR(args));
 	if (dates == NA_LOGICAL)
 	    error(_("invalid '%s' argument"), "copy.dates");
-	wcsncpy(dir,
-		filenameToWchar(STRING_ELT(to, 0), TRUE),
-		PATH_MAX);
+	p = filenameToWchar(STRING_ELT(to, 0), TRUE);
+	if (wcslen(p) >= PATH_MAX)
+	    error(_("'%s' path too long"), "to");
+	wcsncpy(dir, p, PATH_MAX);
 	dir[PATH_MAX - 1] = L'\0';
 	if (*(dir + (wcslen(dir) - 1)) !=  L'\\')
 	    wcsncat(dir, L"\\", PATH_MAX);
 	for (i = 0; i < nfiles; i++) {
 	    if (STRING_ELT(fn, i) != NA_STRING) {
-		wcsncpy(from,
-			filenameToWchar(STRING_ELT(fn, i), TRUE),
-			PATH_MAX);
+	    	p = filenameToWchar(STRING_ELT(fn, i), TRUE);
+	    	if (wcslen(p) >= PATH_MAX)
+	    	    error(_("'%s' path too long"), "from");
+		wcsncpy(from, p, PATH_MAX);
 		from[PATH_MAX - 1] = L'\0';
 		if(wcslen(from)) {
 		    /* If there was a trailing sep, this is a mistake */
@@ -2392,11 +2447,14 @@ SEXP attribute_hidden do_filecopy(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 #else
 
-# ifdef HAVE_UTIMES
-#  include <sys/time.h>
-# elif defined(HAVE_UTIME)
-#  include <utime.h>
-# endif
+#if defined(HAVE_UTIMENSAT)
+# include <fcntl.h>
+# include <sys/stat.h>
+#elif defined(HAVE_UTIMES)
+# include <sys/time.h>
+#elif defined(HAVE_UTIME)
+# include <utime.h>
+#endif
 
 static void copyFileTime(const char *from, const char * to)
 {
@@ -2413,7 +2471,13 @@ static void copyFileTime(const char *from, const char * to)
     ftime = (double) sb.st_mtime;
 #endif
 
-#if defined(HAVE_UTIMES)
+#if defined(HAVE_UTIMENSAT)
+    struct timespec times[2];
+
+    times[0].tv_sec = times[1].tv_sec = (int)ftime;
+    times[0].tv_nsec = times[1].tv_nsec = (int)(1e9*(ftime - (int)ftime));
+    utimensat(AT_FDCWD, to, times, 0);
+#elif defined(HAVE_UTIMES)
     struct timeval times[2];
 
     times[0].tv_sec = times[1].tv_sec = (int)ftime;
@@ -2781,14 +2845,15 @@ SEXP attribute_hidden do_Cstack_info(SEXP call, SEXP op, SEXP args, SEXP rho)
 }
 
 #ifdef Win32
-static int winSetFileTime(const char *fn, time_t ftime)
+static int winSetFileTime(const char *fn, double ftime)
 {
     SYSTEMTIME st;
     FILETIME modft;
     struct tm *utctm;
     HANDLE hFile;
+    time_t ftimei = (time_t) ftime;
 
-    utctm = gmtime(&ftime);
+    utctm = gmtime(&ftimei);
     if (!utctm) return 0;
 
     st.wYear         = (WORD) utctm->tm_year + 1900;
@@ -2798,7 +2863,7 @@ static int winSetFileTime(const char *fn, time_t ftime)
     st.wHour         = (WORD) utctm->tm_hour;
     st.wMinute       = (WORD) utctm->tm_min;
     st.wSecond       = (WORD) utctm->tm_sec;
-    st.wMilliseconds = (WORD) 0;
+    st.wMilliseconds = (WORD) 1000*(ftime - ftimei);
     if (!SystemTimeToFileTime(&st, &modft)) return 0;
 
     hFile = CreateFile(fn, GENERIC_WRITE, 0, NULL, OPEN_EXISTING,
@@ -2815,20 +2880,28 @@ do_setFileTime(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
     const char *fn = translateChar(STRING_ELT(CAR(args), 0));
-    int ftime = asInteger(CADR(args)), res;
+    double ftime = asReal(CADR(args));
+    int res;
 
 #ifdef Win32
-    res  = winSetFileTime(fn, (time_t)ftime);
+    res  = winSetFileTime(fn, ftime);
+#elif defined(HAVE_UTIMENSAT)
+    struct timespec times[2];
+
+    times[0].tv_sec = times[1].tv_sec = (int)ftime;
+    times[0].tv_nsec = times[1].tv_nsec = (int)(1e9*(ftime - (int)ftime));
+
+    res = utimensat(AT_FDCWD, fn, times, 0) == 0;
 #elif defined(HAVE_UTIMES)
     struct timeval times[2];
 
-    times[0].tv_sec = times[1].tv_sec = ftime;
-    times[0].tv_usec = times[1].tv_usec = 0;
+    times[0].tv_sec = times[1].tv_sec = (int)ftime;
+    times[0].tv_usec = times[1].tv_usec = (int)(1e6*(ftime - (int)ftime));
     res = utimes(fn, times) == 0;
 #elif defined(HAVE_UTIME)
     struct utimbuf settime;
 
-    settime.actime = settime.modtime = ftime;
+    settime.actime = settime.modtime = (int)ftime;
     res = utime(fn, &settime) == 0;
 #endif
     return ScalarLogical(res);
@@ -2919,12 +2992,37 @@ void u_getVersion(UVersionInfo versionArray);
 # include <gnu/libc-version.h>
 #endif
 
+#ifdef HAVE_LIBREADLINE
+// that ensures we have this header
+# include <readline/readline.h>
+#endif
+
+#if defined(HAVE_REALPATH) && defined(HAVE_DECL_REALPATH) && !HAVE_DECL_REALPATH
+extern char *realpath(const char *path, char *resolved_path);
+#endif
+
+#ifdef HAVE_DLFCN_H
+#include <dlfcn.h> /* for dladdr, dlsym */
+#endif
+
+#if defined(HAVE_DLADDR) && defined(HAVE_DECL_DLADDR) && !HAVE_DECL_DLADDR
+extern int dladdr(void *addr, Dl_info *info);
+#endif
+
+#if defined(HAVE_DLSYM) && defined(HAVE_DECL_DLSYM) && !HAVE_DECL_DLSYM
+extern void *dlsym(void *handle, const char *symbol);
+#endif
+
+/* extSoftVersion only detects versions of libraries that are available
+   without loading any modules; libraries available via modules are
+   treated individually (libcurlVersion(), La_version(), etc)
+*/
 SEXP attribute_hidden
 do_eSoftVersion(SEXP call, SEXP op, SEXP args, SEXP rho)
 {
     checkArity(op, args);
-    SEXP ans = PROTECT(allocVector(STRSXP, 7));
-    SEXP nms = PROTECT(allocVector(STRSXP, 7));
+    SEXP ans = PROTECT(allocVector(STRSXP, 9));
+    SEXP nms = PROTECT(allocVector(STRSXP, 9));
     setAttrib(ans, R_NamesSymbol, nms);
     unsigned int i = 0;
     char p[256];
@@ -2967,6 +3065,76 @@ do_eSoftVersion(SEXP call, SEXP op, SEXP args, SEXP rho)
 #endif
     SET_STRING_ELT(ans, i, mkChar(p));
     SET_STRING_ELT(nms, i++, mkChar("iconv"));
+#ifdef HAVE_LIBREADLINE
+    SET_STRING_ELT(ans, i, mkChar(rl_library_version));
+#else
+    SET_STRING_ELT(ans, i, mkChar(""));
+#endif
+    SET_STRING_ELT(nms, i++, mkChar("readline"));
+
+    SET_STRING_ELT(ans, i, mkChar(""));
+
+#if defined(HAVE_DLADDR) && defined(HAVE_REALPATH) && defined(HAVE_DLSYM) \
+    && defined(HAVE_DECL_RTLD_DEFAULT) && HAVE_DECL_RTLD_DEFAULT \
+    && defined(HAVE_DECL_RTLD_NEXT) && HAVE_DECL_RTLD_NEXT
+
+    /* Look for blas function dgemm and try to figure out in which
+       binary/shared library is it defined. This is based on experimentation
+       and heuristics, and depends on implementation details
+       of dynamic linkers.
+    */
+#ifdef HAVE_F77_UNDERSCORE
+    char *dgemm_name = "dgemm_";
+#else
+    char *dgemm_name = "dgemm";
+#endif
+
+    Rboolean ok = TRUE;
+
+    void *dgemm_addr = dlsym(RTLD_DEFAULT, dgemm_name);
+
+    Dl_info dl_info1, dl_info2;
+
+    if (!dladdr((void *)do_eSoftVersion, &dl_info1)) ok = FALSE;
+    if (!dladdr((void *)dladdr, &dl_info2)) ok = FALSE;
+
+    if (ok && !strcmp(dl_info1.dli_fname, dl_info2.dli_fname)) {
+
+	/* dladdr is not inside R, hence we probably have the PLT for
+	   dynamically linked symbols; lets use dlsym(RTLD_NEXT) to
+	   get the real address for dgemm.
+
+	   PLT is used on Linux and on Solaris when the main binary
+	   is _not_ position independent. PLT is not used on macOS.
+	*/
+	if (dgemm_addr != NULL) {
+
+	    /* If dgemm_addr is NULL, dgemm is statically linked and
+	       we are on Linux. On Solaris, dgemm_addr is never NULL.
+	    */
+	    void *dgemm_next_addr = dlsym(RTLD_NEXT, dgemm_name);
+	    if (dgemm_next_addr != NULL)
+
+		/* If dgemm_next_addr is NULL, dgemm is statically linked.
+		   Otherwise, it is linked dynamically and dgemm_next_addr
+		   is its true address (dgemm points to PLT).
+
+		   On Linux, dgemm_next_addr is only NULL here when
+		   dgemm is export-dynamic (yet statically linked).
+		*/
+		dgemm_addr = dgemm_next_addr;
+	}
+    }
+
+    char buf[PATH_MAX+1];
+    if (ok && dladdr(dgemm_addr, &dl_info1)) {
+	char *res = realpath(dl_info1.dli_fname, buf);
+	if (res)
+	    SET_STRING_ELT(ans, i, mkChar(res));
+    }
+#endif
+    SET_STRING_ELT(nms, i++, mkChar("BLAS"));
+
     UNPROTECT(2);
     return ans;
 }
@@ -2979,7 +3147,7 @@ SEXP attribute_hidden do_syssleep(SEXP call, SEXP op, SEXP args, SEXP rho)
     checkArity(op, args);
     double time = asReal(CAR(args));
     if (ISNAN(time) || time < 0.)
-	errorcall(call, _("invalid '%s' value"), "time");
+	error(_("invalid '%s' value"), "time");
     Rsleep(time);
     return R_NilValue;
 }

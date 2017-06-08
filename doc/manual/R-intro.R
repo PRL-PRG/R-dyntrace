@@ -123,9 +123,9 @@ incomes <- c(60, 49, 40, 61, 64, 60, 59, 54, 62, 69, 70, 42, 56,
 incmeans <- tapply(incomes, statef, mean)
 incmeans
 
-stderr <- function(x) sqrt(var(x)/length(x))
+stdError <- function(x) sqrt(var(x)/length(x))
 
-incster <- tapply(incomes, statef, stderr)
+incster <- tapply(incomes, statef, stdError)
 incster
 
 ##
@@ -195,8 +195,7 @@ z <- outer(x, y, f)
 
 d <- outer(0:9, 0:9)
 fr <- table(outer(d, d, "-"))
-plot(as.numeric(names(fr)), fr, type="h",
-     xlab="Determinant", ylab="Frequency")
+plot(fr, xlab="Determinant", ylab="Frequency")
 
 ##
 

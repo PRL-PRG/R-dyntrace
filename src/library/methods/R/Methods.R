@@ -507,17 +507,20 @@ setMethod <-
     if(!hasMethods) {
         ## create using the visible non-generic as a pattern and default method
         setGeneric(f, where = where)
+        doMessage <- !isS3Generic(fdef)
         fdef <- getGeneric(f, where = where)
-        thisPackage <- getPackageName(where)
-        thisPName <- if(identical(thisPackage, ".GlobalEnv"))
-            "the global environment" else paste("package", sQuote(thisPackage))
-        if(identical(as.character(fdef@package), thisPackage))
-          message(gettextf("Creating a generic function from function %s in %s",
-                           sQuote(f), thisPName), domain = NA)
-        else
-          message(gettextf("Creating a generic function for %s from package %s in %s",
-                           sQuote(f), sQuote(fdef@package), thisPName),
-                  domain = NA)
+        if(doMessage) {
+            thisPackage <- getPackageName(where)
+            thisPName <- if(identical(thisPackage, ".GlobalEnv"))
+                             "the global environment" else paste("package", sQuote(thisPackage))
+            if(identical(as.character(fdef@package), thisPackage))
+                message(gettextf("Creating a generic function from function %s in %s",
+                                 sQuote(f), thisPName), domain = NA)
+            else
+                message(gettextf("Creating a generic function for %s from package %s in %s",
+                                 sQuote(f), sQuote(fdef@package), thisPName),
+                        domain = NA)
+        }
     }
     else if(identical(gwhere, NA)) {
         ## better be a primitive since getGeneric returned a generic, but none was found
@@ -669,7 +672,10 @@ findMethod <- function(f, signature, where = topenv(parent.frame())) {
     for(i in seq_along(where)) {
         wherei <- where[[i]]
         table <- get(fM, wherei, inherits=FALSE)
-        mi <- .findMethodInTable(signature, table, fdef)
+        ## because we are using the table from the package, we must
+        ## search for both the unexpanded & expanded signature, which
+        ## .findMethodInTable does not do.
+        mi <- .findMethodForFdef(signature, table, fdef)
         found[i] <- !is.null(mi)
     }
     value <- where[found]
@@ -1519,7 +1525,8 @@ registerImplicitGenerics <- function(what = .ImplicitGenericsTable(where),
 	return(gettextf("value classes differ: %s, %s",
                         .dQ(gpString(f1@valueClass)),
                         .dQ(gpString(f2@valueClass))))
-    if(!identical(body(f1d), body(f2d)))
+    if(!identical(body(utils::removeSource(f1d)),
+                  body(utils::removeSource(f2d))))
 	return("function body differs")
     if(!identical(f1@signature, f2@signature))
 	return(gettextf("signatures differ:  (%s), (%s)",

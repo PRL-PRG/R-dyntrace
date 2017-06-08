@@ -1,6 +1,6 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
- *  Copyright (C) 2000-2016  The R Core Team.
+ *  Copyright (C) 2000-2017  The R Core Team.
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -78,7 +78,7 @@ those limits where there is a 64-bit time_t and the conversions work
 there is code below to extrapolate from 1902-2037.
 
 Path 2) was added for R 3.1.0 and is the only one supported on
-Windows: it is the default on OS X.  The only currently (Jan 2014)
+Windows: it is the default on macOS.  The only currently (Jan 2014)
 known OS with 64-bit time_t and complete tables is Linux.
 
 */
@@ -299,14 +299,12 @@ static Rboolean have_broken_mktime(void)
 }
 
 #ifndef HAVE_POSIX_LEAPSECONDS
-/* There have (2015/07) been 26 leapseconds: see .leap.seconds in R
- */
-static int n_leapseconds = 26;
-static const time_t leapseconds[] =
+static int n_leapseconds = 27; // 2017-01, sync with .leap.seconds in R (!)
+static const time_t leapseconds[] = // dput(unclass(.leap.seconds)) :
 {  78796800, 94694400,126230400,157766400,189302400,220924800,252460800,
   283996800,315532800,362793600,394329600,425865600,489024000,567993600,
   631152000,662688000,709948800,741484800,773020800,820454400,867715200,
-   915148800,1136073600,1230768000,1341100800,1435708800};
+   915148800,1136073600,1230768000,1341100800,1435708800,1483228800};
 #endif
 
 static double guess_offset (stm *tm)
@@ -409,7 +407,7 @@ static double mktime0 (stm *tm, const int local)
     }
     if(!local) return mktime00(tm);
 
-/* OS X 10.9 gives -1 for dates prior to 1902, and ignores DST after 2037 */
+/* macOS 10.9 gives -1 for dates prior to 1902, and ignores DST after 2037 */
 #ifdef HAVE_WORKING_64BIT_MKTIME
     if(sizeof(time_t) == 8)
 	OK = !have_broken_mktime() || tm->tm_year >= 70;
@@ -759,12 +757,12 @@ SEXP attribute_hidden do_asPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
     setAttrib(ans, install("tzone"), tzone);
     SEXP nm = getAttrib(x, R_NamesSymbol);
     if(nm != R_NilValue) setAttrib(VECTOR_ELT(ans, 5), R_NamesSymbol, nm);
-    UNPROTECT(6);
-
     if(settz) reset_tz(oldtz);
+    UNPROTECT(6);
     return ans;
 }
 
+// .Internal(as.POSIXct(x, tz)) -- called only from  as.POSIXct.POSIXlt()
 SEXP attribute_hidden do_asPOSIXct(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP stz, x, ans;
@@ -777,7 +775,7 @@ SEXP attribute_hidden do_asPOSIXct(SEXP call, SEXP op, SEXP args, SEXP env)
 
     checkArity(op, args);
     PROTECT(x = duplicate(CAR(args))); /* coerced below */
-    if(!isVectorList(x) || LENGTH(x) < 9)
+    if(!isVectorList(x) || LENGTH(x) < 9) // must be 'POSIXlt'
 	error(_("invalid '%s' argument"), "x");
     if(!isString((stz = CADR(args))) || LENGTH(stz) != 1)
 	error(_("invalid '%s' value"), "tz");
@@ -807,9 +805,10 @@ SEXP attribute_hidden do_asPOSIXct(SEXP call, SEXP op, SEXP args, SEXP env)
     if(n > 0) {
 	for(int i = 0; i < 6; i++)
 	    if(nlen[i] == 0)
-		error(_("zero-length component in non-empty \"POSIXlt\" structure"));
+		error(_("zero-length component [[%d]] in non-empty \"POSIXlt\" structure"),
+		      i+1);
 	if(nlen[8] == 0)
-	    error(_("zero-length component in non-empty \"POSIXlt\" structure"));
+	    error(_("zero-length component [[%d]] in non-empty \"POSIXlt\" structure"), 9);
     }
     /* coerce fields to integer or real */
     SET_VECTOR_ELT(x, 0, coerceVector(VECTOR_ELT(x, 0), REALSXP));
@@ -829,7 +828,7 @@ SEXP attribute_hidden do_asPOSIXct(SEXP call, SEXP op, SEXP args, SEXP env)
 	tm.tm_mon   = INTEGER(VECTOR_ELT(x, 4))[i%nlen[4]];
 	tm.tm_year  = INTEGER(VECTOR_ELT(x, 5))[i%nlen[5]];
 	/* mktime ignores tm.tm_wday and tm.tm_yday */
-	tm.tm_isdst = isgmt ? 0:INTEGER(VECTOR_ELT(x, 8))[i%nlen[8]];
+	tm.tm_isdst = isgmt ? 0 : INTEGER(VECTOR_ELT(x, 8))[i%nlen[8]];
 	if(!R_FINITE(secs) || tm.tm_min == NA_INTEGER ||
 	   tm.tm_hour == NA_INTEGER || tm.tm_mday == NA_INTEGER ||
 	   tm.tm_mon == NA_INTEGER || tm.tm_year == NA_INTEGER)
@@ -888,7 +887,7 @@ SEXP attribute_hidden do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 	if(needTZ) settz = set_tz(tz1, oldtz);
     }
 
-    /* workaround for glibc/FreeBSD/MacOS X strftime: they have
+    /* workaround for glibc/FreeBSD/macOS strftime: they have
        non-POSIX/C99 time zone components
      */
     memset(&tm, 0, sizeof(tm));
@@ -905,7 +904,8 @@ SEXP attribute_hidden do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
     if(n > 0) {
 	for(int i = 0; i < 9; i++)
 	    if(nlen[i] == 0)
-		error(_("zero-length component in non-empty \"POSIXlt\" structure"));
+		error(_("zero-length component [[%d]] in non-empty \"POSIXlt\" structure"),
+		      i+1);
     }
     R_xlen_t N = (n > 0) ? ((m > n) ? m : n) : 0;
     SEXP ans = PROTECT(allocVector(STRSXP, N));
@@ -916,6 +916,8 @@ SEXP attribute_hidden do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 #else
     Rboolean have_zone = LENGTH(x) >= 10 && XLENGTH(VECTOR_ELT(x, 9)) == n;
 #endif
+    if(have_zone && !isString(VECTOR_ELT(x, 9)))
+	error(_("invalid component [[10]] in \"POSIXlt\" should be 'zone'"));
     for(R_xlen_t i = 0; i < N; i++) {
 	double secs = REAL(VECTOR_ELT(x, 0))[i%nlen[0]], fsecs = floor(secs);
 	// avoid (int) NAN
@@ -1028,6 +1030,7 @@ SEXP attribute_hidden do_formatPOSIXlt(SEXP call, SEXP op, SEXP args, SEXP env)
 }
 
 
+// .Internal(strptime(as.character(x), format, tz))
 SEXP attribute_hidden do_strptime(SEXP call, SEXP op, SEXP args, SEXP env)
 {
     SEXP x, sformat, ans, ansnames, klass, stz, tzone = R_NilValue;
@@ -1255,9 +1258,10 @@ SEXP attribute_hidden do_POSIXlt2D(SEXP call, SEXP op, SEXP args, SEXP env)
     if(n > 0) {
 	for(int i = 3; i < 6; i++)
 	    if(nlen[i] == 0)
-		error(_("zero-length component in non-empty \"POSIXlt\" structure"));
+		error(_("zero-length component [[%d]] in non-empty \"POSIXlt\" structure"),
+		      i+1);
 	if(nlen[8] == 0)
-	    error(_("zero-length component in non-empty \"POSIXlt\" structure"));
+	    error(_("zero-length component [[%d]] in non-empty \"POSIXlt\" structure"), 9);
     }
     /* coerce relevant fields to integer */
     for(int i = 3; i < 6; i++)

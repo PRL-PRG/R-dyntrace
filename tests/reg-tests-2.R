@@ -1753,6 +1753,11 @@ f <- function(...) stop()
 do.call(f, mtcars)
 traceback()
 
+## Debugger can handle a function that has a single function call as its body
+g <- function(fun) fun(1)
+debug(g)
+g(function(x) x+1)
+
 options(op)
 ## unlimited < 2.3.0
 
@@ -2339,7 +2344,7 @@ rbind(mapply(sprintf, forms,               nums),
 sink(con <- textConnection("of", "w")) ; c ; sink(NULL); close(con)
 of2 <- capture.output(print(c))
 stopifnot(identical(of2, of),
-          identical(of2, "function (..., recursive = FALSE)  .Primitive(\"c\")"))
+          identical(of2, "function (...)  .Primitive(\"c\")"))
 ## ^^ would have failed up to R 2.9.x
 foo
 print(foo, useSource = FALSE)
@@ -2418,7 +2423,7 @@ try(complete.cases(list(), list()))
 
 ## error messages from (C-level) evalList
 tst <- function(y) { stopifnot(is.numeric(y)); y+ 1 }
-try(tst())
+try(tst()) # even nicer since R 3.5.0's change to sequential stopifnot()
 try(c(1,,2))
 ## change in 2.8.0 made these less clear
 
@@ -3014,3 +3019,46 @@ DF.Dates$x2 <- c(1:6, NA)
 ## now, NA's show fine:
 summary(DF.Dates)
 ## 2 of 4  summary(.) above did not show NA's  in R <= 3.2.3
+
+
+## Printing complex matrix
+matrix(1i,2,13)
+## Spacing was wrong in R <= 3.2.4
+
+
+E <- expression(poly = x^3 - 3 * x^2)
+str(E)
+## no longer shows "structure(...., .Names = ..)"
+
+
+## summary(<logical>) working via table():
+logi <- c(NA, logical(3), NA, !logical(2), NA)
+summary(logi)
+summary(logi[!is.na(logi)])
+summary(TRUE)
+## was always showing counts for NA's even when 0 in  2.8.0 <= R <= 3.3.1
+ii <- as.integer(logi)
+summary(ii)
+summary(ii[!is.na(ii)])
+summary(1L)
+
+
+## str.default() for "AsIs" arrays
+str(I(m <- matrix(pi*1:4, 2)))
+## did look ugly (because of toString() for numbers) in R <= 3.3.1
+
+## check automatic coercions from double to integer
+
+# these should work due to coercion
+sprintf("%d", 1)
+sprintf("%d", NA_real_)
+sprintf("%d", c(1,2))
+sprintf("%d", c(1,NA))
+sprintf("%d", c(NA,1))
+
+# these should fail
+sprintf("%d", 1.1)
+sprintf("%d", c(1.1,1))
+sprintf("%d", c(1,1.1))
+sprintf("%d", NaN)
+sprintf("%d", c(1,NaN))

@@ -49,7 +49,7 @@ DEPENDS = $(SOURCES_C:.c=.d) $(EXTRA_SOURCES_C:.c=.d)
 SOURCES = $(SOURCES_C) $(SOURCES_F)
 OBJECTS = $(SOURCES_C:.c=.o) $(SOURCES_F:.f=.o) @LIBOBJS@ @ALLOCA@ @RDT_OBJ@
 HEADERS = \
-	RBufferUtils.h Rstrptime.h \
+	RBufferUtils.h Rcomplex.h Rstrptime.h \
 	arithmetic.h \
 	basedecl.h \
 	contour-common.h \
@@ -58,10 +58,12 @@ HEADERS = \
 	gzio.h \
 	qsort-body.c \
 	rlocale_data.h \
+	split-incl.c \
 	unzip.h \
 	valid_utf8.h \
 	xspline.c \
 	g_cntrlify.h g_control.h g_extern.h g_her_metr.h g_jis.h
+
 
 distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
 DISTFILES = Makefile.in Makefile.win \
@@ -107,8 +109,9 @@ libR_la_OBJECTS = $(OBJECTS)
 libR_la_LIBADD =  $(MAIN_OBJS) $(EXTRA_STATIC_LIBS) $(EXTRA_LIBS) @WANT_R_SHLIB_TRUE@ @USE_EXPORTFILES_TRUE@ -Wl,-bE:$(top_builddir)/etc/R.exp
 libR_la_DEPENDENCIES = $(STATIC_LIBS) $(R_TZONE) @WANT_R_SHLIB_TRUE@ @USE_EXPORTFILES_TRUE@ $(top_builddir)/etc/R.exp
 
-## The next is needed for OS X only at present
+## The next is needed for macOS only at present
 LIBR_LDFLAGS = @LIBR_LDFLAGS@
+
 
 all: R
 
@@ -223,7 +226,6 @@ clean:
 	@-rm -rf .libs _libs
 	@-rm -f *core Makedeps *.d *.o *.lo *.la *$(R_DYLIB_EXT) \
 	  $(R_binary) libR.a
-
 distclean: clean
 	@-rm -f Makefile
 maintainer-clean: distclean
@@ -246,3 +248,4 @@ distdir: $(DISTFILES)
 	done
 
 ## Automagically generated dependencies:
+

@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2016  The R Core Team
+ *  Copyright (C) 1997--2017  The R Core Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Pulic License as published by
@@ -176,10 +176,15 @@ int R_nchar(SEXP string, nchar_type type_,
 		return NA_INTEGER;
 	    } else {
 		wchar_t wc1;
+		Rwchar_t ucs;
 		int nc = 0;
 		for( ; *p; p += utf8clen(*p)) {
 		    utf8toucs(&wc1, p);
-		    nc += Ri18n_wcwidth(wc1);
+		    if (IS_HIGH_SURROGATE(wc1)) 
+		    	ucs = utf8toucs32(wc1, p);
+		    else
+		    	ucs = wc1;
+		    nc += Ri18n_wcwidth(ucs); 
 		}
 		return nc;
 	    }
@@ -220,11 +225,10 @@ SEXP attribute_hidden do_nchar(SEXP call, SEXP op, SEXP args, SEXP env)
 #else
     // will work also for code byte-compiled *before* 'keepNA' was introduced
     if (nargs < 3 || nargs > 4)
-	errorcall(call,
-		  ngettext("%d argument passed to '%s' which requires %d to %d",
-			   "%d arguments passed to '%s' which requires %d to %d",
+	error(ngettext("%d argument passed to '%s' which requires %d to %d",
+		       "%d arguments passed to '%s' which requires %d to %d",
 			   (unsigned long) nargs),
-		  nargs, PRIMNAME(op), 3, 4);
+	      nargs, PRIMNAME(op), 3, 4);
 #endif
     if (isFactor(CAR(args)))
 	error(_("'%s' requires a character vector"), "nchar()");
@@ -765,9 +769,9 @@ donewsc:
 		if (iswspace((int)wc[i])) mywcscpy(wc + i, wc + i + 1);
     }
 
-    int nb = (int) wcstoutf8(NULL, wc, 0);
-    char *cbuf = CallocCharBuf(nb+1);
-    wcstoutf8(cbuf, wc, nb + 1);
+    int nb = (int) wcstoutf8(NULL, wc, INT_MAX);
+    char *cbuf = CallocCharBuf(nb);
+    wcstoutf8(cbuf, wc, nb);
     SEXP ans = mkCharCE(cbuf, CE_UTF8);
     Free(cbuf);
     return ans;
@@ -983,9 +987,9 @@ SEXP attribute_hidden do_tolower(SEXP call, SEXP op, SEXP args, SEXP env)
 		    if (ienc == CE_UTF8) {
 			utf8towcs(wc, xi, nc + 1);
 			for (j = 0; j < nc; j++) wc[j] = towctrans(wc[j], tr);
-			nb = (int) wcstoutf8(NULL, wc, 0);
+			nb = (int) wcstoutf8(NULL, wc, INT_MAX);
 			cbuf = CallocCharBuf(nb);
-			wcstoutf8(cbuf, wc, nb + 1);
+			wcstoutf8(cbuf, wc, nb);
 			SET_STRING_ELT(y, i, mkCharCE(cbuf, CE_UTF8));
 		    } else {
 			mbstowcs(wc, xi, nc + 1);
@@ -1422,9 +1426,9 @@ SEXP attribute_hidden do_chartr(SEXP call, SEXP op, SEXP args, SEXP env)
 		    if (tbl) wc[j] = tbl->c_new;
 		}
 		if (ienc == CE_UTF8) {
-		    nb = (int) wcstoutf8(NULL, wc, 0);
+		    nb = (int) wcstoutf8(NULL, wc, INT_MAX);
 		    cbuf = CallocCharBuf(nb);
-		    wcstoutf8(cbuf, wc, nb + 1);
+		    wcstoutf8(cbuf, wc, nb);
 		    SET_STRING_ELT(y, i, mkCharCE(cbuf, CE_UTF8));
 		} else {
 		    nb = (int) wcstombs(NULL, wc, 0);
@@ -1544,7 +1548,7 @@ SEXP attribute_hidden do_strtrim(SEXP call, SEXP op, SEXP args, SEXP env)
 	    mbs_init(&mb_st);
 	    for (p = This, w0 = 0, q = buf; *p ;) {
 		nb =  (int) Mbrtowc(&wc, p, MB_CUR_MAX, &mb_st);
-		w0 = Ri18n_wcwidth(wc);
+		w0 = Ri18n_wcwidth((Rwchar_t)wc);
 		if (w0 < 0) { p += nb; continue; } /* skip non-printable chars */
 		wsum += w0;
 		if (wsum <= w) {
@@ -1624,7 +1628,7 @@ SEXP attribute_hidden stringSuffix(SEXP string, int fromIndex) {
 
 SEXP attribute_hidden do_strrep(SEXP call, SEXP op, SEXP args, SEXP env)
 {
-    SEXP d, s, x, n;
+    SEXP d, s, x, n, el;
     R_xlen_t is, ix, in, ns, nx, nn;
     const char *xi;
     int j, ni, nc;
@@ -1648,13 +1652,14 @@ SEXP attribute_hidden do_strrep(SEXP call, SEXP op, SEXP args, SEXP env)
     vmax = vmaxget();
     is = ix = in = 0;
     for(; is < ns; is++) {
+	el = STRING_ELT(x, ix);
 	ni = INTEGER(n)[in];
-	if((STRING_ELT(x, ix) == NA_STRING) || (ni == NA_INTEGER)) {
+	if((el == NA_STRING) || (ni == NA_INTEGER)) {
 	    SET_STRING_ELT(s, is, NA_STRING);
 	} else {
 	    if(ni < 0)
 		error(_("invalid '%s' value"), "times");
-	    xi = CHAR(STRING_ELT(x, ix));
+	    xi = CHAR(el);
 	    nc = (int) strlen(xi);
 
 	    /* check for feasible result length; use double to protect
@@ -1668,7 +1673,7 @@ SEXP attribute_hidden do_strrep(SEXP call, SEXP op, SEXP args, SEXP env)
 		strcpy(buf, xi);
 		buf += nc;
 	    }
-	    SET_STRING_ELT(s, is, markKnown(cbuf, STRING_ELT(x, ix)));
+	    SET_STRING_ELT(s, is, mkCharCE(cbuf, getCharCE(el)));
 	    Free(cbuf);
 	    vmaxset(vmax);
 	}

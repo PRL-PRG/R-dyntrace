@@ -2,11 +2,15 @@
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 2000-2016 The R Core Team.
  *
- *  This program is free software; you can redistribute it and/or modify
+ *  This header file is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU Lesser General Public License as published by
  *  the Free Software Foundation; either version 2.1 of the License, or
  *  (at your option) any later version.
  *
+ *  This file is part of R. R is distributed under the terms of the
+ *  GNU General Public License, either Version 2, June 1991 or Version 3,
+ *  June 2007. See doc/COPYRIGHTS for details of the copyright status of R.
+ *  
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -24,42 +28,54 @@
 # define USING_R
 #endif
 
-#ifndef NO_C_HEADERS
 /* same as Rmath.h: needed for cospi etc */
-# ifndef __STDC_WANT_IEC_60559_FUNCS_EXT__
-#  define __STDC_WANT_IEC_60559_FUNCS_EXT__ 1
-# endif
-/* The C++ headers in Solaris Studio are strict C++98, and many 
-   packages fail because of not using e.g. std::round 
-   or using C99 functions such as snprintf. 
+#ifndef __STDC_WANT_IEC_60559_FUNCS_EXT__
+# define __STDC_WANT_IEC_60559_FUNCS_EXT__ 1
+#endif
+/* The C++ headers in Solaris Studio are strict C++98, and 100+ 
+   packages would fail because of not using e.g. std::floor 
+   or using C99 functions such as 
+
+   erf exmp1 floorf fmin fminf fmax lgamma lround loglp round
+   snprintf strcasecmp trunc
+
+   We workaround the first, here and in Rmath.h.
+
+   DO_NOT_USE_CXX_HEADERS is legacy, left as a last resort.
 */
+#if defined(__cplusplus) && !defined(DO_NOT_USE_CXX_HEADERS)
+# include <cstdlib>
+# include <cstdio>
+# include <climits>
+# include <cmath>
 # ifdef __SUNPRO_CC
-#  define DO_NOT_USE_CXX_HEADERS
+using namespace std;
 # endif
-# if defined(__cplusplus) && !defined(DO_NOT_USE_CXX_HEADERS)
-#  include <cstdlib>
-#  include <cstdio>
-#  include <climits>
-#  include <cmath>
-# else
-#  include <stdlib.h> /* Not used by R itself, but widely assumed in packages */
-#  include <stdio.h>  /* Used by ca 200 packages, but not in R itself */
-#  include <limits.h> /* for INT_MAX */
-#  include <math.h>
-# endif 
+#else
+# include <stdlib.h> /* Not used by R itself, but widely assumed in packages */
+# include <stdio.h>  /* Used by ca 200 packages, but not in R itself */
+# include <limits.h> /* for INT_MAX */
+# include <math.h>
+#endif 
 /* 
-   math.h   is also included by R_ext/Arith.h, except in C++ code
-   stddef.h is included by R_ext/Memory.h
-   string.h is included by R_ext/RS.h
-   All guarded by NO_C_HEADERS.
+   math.h is also included by R_ext/Arith.h, except in C++ code
+   stddef.h (or cstddef) is included by R_ext/Memory.h
+   string.h (or cstring) is included by R_ext/RS.h
 */
-# if defined(__sun)
+#if defined(__sun)
 /* Solaris' stdlib.h includes a header which defines these (and more) */
-#  undef DO
-#  undef DS
-#  undef SO
-#  undef SS
-# endif
+# undef CS
+# undef DO
+# undef DS
+# undef ES
+# undef FS
+# undef GS
+# undef SO
+# undef SS
+#endif
+
+#ifdef NO_C_HEADERS
+# warning "use of NO_C_HEADERS is defunct and will be ignored"
 #endif
 
 #include <Rconfig.h>

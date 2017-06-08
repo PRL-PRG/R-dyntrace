@@ -1,7 +1,7 @@
 #  File src/library/methods/R/methodsTable.R
 #  Part of the R package, https://www.R-project.org
 #
-#  Copyright (C) 1995-2015 The R Core Team
+#  Copyright (C) 1995-2017 The R Core Team
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -73,7 +73,7 @@
            next # empty environment, ignore
        isDef <- vapply(objsWhat, is, logical(1L), "MethodDefinition")
        if (any(isDef)) {
-           sig <- utils::tail(objsWhat[isDef], 1L)@defined
+           sig <- objsWhat[[utils::tail(which(isDef), 1L)]]@defined
        } else {
            sig <- anySig
        }
@@ -710,7 +710,10 @@
       ## have package attribute--see .sigLabel
       defined <-  new("signature", fdef, c(defined@.Data, rep("ANY", n-m)))
     excluded <- c(prev, .sigLabel(defined))
-    methods <- .findInheritedMethods(defined, fdef, mtable = NULL, excluded = excluded)
+    allTable <- .getMethodsTable(fdef, inherited = TRUE)
+    methods <- .findInheritedMethods(defined, fdef, mtable = NULL,
+                                     table = allTable,
+                                     excluded = excluded)
     if(length(methods) == 0L) # use default method, maybe recursively.
         methods <- list(finalDefaultMethod(fdef@default)) #todo: put a label on it?
     if(length(methods) > 1L)
@@ -743,9 +746,19 @@
     stop("Internal error in finding inherited methods; didn't return a unique method", domain = NA)
 }
 
-.findMethodInTable <- function(signature, table, fdef = NULL)
+.findMethodForFdef <- function(signature, table, fdef = NULL) {
+    value <- .findMethodInTable(signature, table, fdef)
+    if(is.null(value) && is(fdef, "genericFunction")) { # try without expanding signature
+        fullSig <- .matchSigLength(signature, fdef, environment(fdef), FALSE)
+        if(!identical(fullSig, signature))
+            value <- .findMethodInTable(signature, table, fdef, FALSE)
+    }
+    value
+}
+
+.findMethodInTable <- function(signature, table, fdef = NULL , expdSig = TRUE)
 {
-    if(is(fdef, "genericFunction"))
+    if(is(fdef, "genericFunction") && expdSig)
         signature <- .matchSigLength(signature, fdef, environment(fdef), FALSE)
     label <- .sigLabel(signature)
 ##     allMethods <- objects(table, all.names=TRUE)
@@ -1007,6 +1020,11 @@
     ## check for missing direct objects; usually a non-existent AllMTable?
     if(any(is.na(match(direct, allObjects)))) {
         list2env(as.list(mtable, all.names=TRUE), allTable)
+    }
+    for (d in direct) {
+        m <- allTable[[d]]
+        if (is(m, "MethodWithNext"))
+            allTable[[d]] <- as(m, "MethodDefinition")
     }
     NULL
 }

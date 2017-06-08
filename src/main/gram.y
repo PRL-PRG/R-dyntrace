@@ -2,7 +2,7 @@
 /*
  *  R : A Computer Langage for Statistical Data Analysis
  *  Copyright (C) 1995, 1996, 1997  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1997--2015  The R Core Team
+ *  Copyright (C) 1997--2017  The R Core Team
  *  Copyright (C) 2009--2011  Romain Francois
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -480,22 +480,15 @@ static int prevparse[PUSHBACK_BUFSIZE];
 
 static int xxgetc(void)
 {
-    int c, oldpos;
+    int c;
 
     if(npush) c = pushback[--npush]; else  c = ptr_getc();
 
-    oldpos = prevpos;
     prevpos = (prevpos + 1) % PUSHBACK_BUFSIZE;
     prevbytes[prevpos] = ParseState.xxbyteno;
     prevlines[prevpos] = ParseState.xxlineno;  
     prevparse[prevpos] = ParseState.xxparseno;
-
-    /* We only advance the column for the 1st byte in UTF-8, so handle later bytes specially */
-    if (0x80 <= (unsigned char)c && (unsigned char)c <= 0xBF && known_to_be_utf8)  {
-    	ParseState.xxcolno--;   
-    	prevcols[prevpos] = prevcols[oldpos];
-    } else 
-    	prevcols[prevpos] = ParseState.xxcolno;
+    prevcols[prevpos] = ParseState.xxcolno;
     	
     if (c == EOF) {
 	EndOfFile = 1;
@@ -510,7 +503,9 @@ static int xxgetc(void)
     	ParseState.xxbyteno = 0;
     	ParseState.xxparseno += 1;
     } else {
-        ParseState.xxcolno++;
+        /* We only advance the column for the 1st byte in UTF-8, so handle later bytes specially */
+	if (!known_to_be_utf8 || (unsigned char)c < 0x80 || 0xC0 <= (unsigned char)c)
+            ParseState.xxcolno++;
     	ParseState.xxbyteno++;
     }
 
@@ -908,7 +903,7 @@ static SEXP xxfuncall(SEXP expr, SEXP args)
     SEXP ans, sav_expr = expr;
     if(GenerateCode) {
 	if (isString(expr))
-	    expr = installChar(STRING_ELT(expr, 0));
+	    expr = installTrChar(STRING_ELT(expr, 0));
 	PROTECT(expr);
 	if (length(CDR(args)) == 1 && CADR(args) == R_MissingArg && TAG(CDR(args)) == R_NilValue )
 	    ans = lang1(expr);
@@ -2284,7 +2279,7 @@ static SEXP mkStringUTF8(const ucs_t *wcs, int cnt)
 #ifdef WC_NOT_UNICODE
     for(char *ss = s; *wcs; wcs++) ss += ucstoutf8(ss, *wcs);
 #else
-    wcstoutf8(s, wcs, nb);
+    wcstoutf8(s, wcs, sizeof(s));
 #endif
     PROTECT(t = allocVector(STRSXP, 1));
     SET_STRING_ELT(t, 0, mkCharCE(s, CE_UTF8));
@@ -2440,7 +2435,14 @@ static int StringValue(int c, Rboolean forSymbol)
 		    else CTEXT_PUSH(c);
 		}
 		if (!val)
-		    error(_("nul character not allowed (line %d)"), ParseState.xxlineno);		
+		    error(_("nul character not allowed (line %d)"), ParseState.xxlineno);
+#ifdef Win32
+		if (0x010000 <= val && val <= 0x10FFFF) {   /* Need surrogate pair in Windows */
+		    val = val - 0x010000;
+		    WTEXT_PUSH( 0xD800 | (val >> 10) );
+		    val = 0xDC00 | (val & 0x03FF);
+		}
+#endif
 		WTEXT_PUSH(val);
 		use_wcs = TRUE;
 		continue;

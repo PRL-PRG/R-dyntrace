@@ -1,6 +1,6 @@
 % File src/library/base/man/connections.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2016 R Core Team
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{connections}
@@ -139,11 +139,10 @@ isIncomplete(con)
   \url{http://curl.haxx.se/libcurl/}) is required on a Unix-alike but
   optional on Windows.  Method \code{"default"} uses method
   \code{"internal"} for \samp{file:} URLs and \code{"libcurl"} for
-  \code{ftps:} URLs.  On a Unix-alike it uses \code{"internal"} for
-  \samp{http:} and \code{ftp:} URLs and \code{"libcurl"} for
-  \samp{https:} URLs; on Windows \code{"wininet"} for \samp{http:},
-  \code{ftp:} and \samp{https:} URLs.  Proxies can be specified: see
-  \code{\link{download.file}}.
+  \code{ftps:} URLs.  On a Unix-alike it uses \code{"libcurl"} for
+  \samp{http:}, \samp{https:} and \samp{ftp:} URLs; on Windows
+  \code{"wininet"} for \samp{http:}, \samp{ftp:} and \samp{https:} URLs.
+  Proxies can be specified: see \code{\link{download.file}}.
 
   For \code{gzfile} the description is the path to a file compressed by
   \command{gzip}: it can also open for reading uncompressed files and
@@ -231,10 +230,9 @@ isIncomplete(con)
 
   No attempt is made to decode a percent-encoded \samp{file:} URL: call
   \code{\link{URLdecode}} if necessary.
-
-  The \code{"internal"} method does not follow re-directed HTTP URLs:
-  both methods \code{"wininet"} (the default on Windows) and
-  \code{"libcurl"} do (including for HTTPS URLs).
+  
+  All the methods attempt to follow redirected HTTP URLs, but the
+  \code{"internal"} method is unable to follow redirections to HTTPS URLs.
 
   Server-side cached data is always accepted.
 
@@ -319,8 +317,8 @@ isIncomplete(con)
 
 \section{Compression}{
   \R supports \command{gzip}, \command{bzip2} and \command{xz}
-  compression (added in \R 2.10.0: also read-only support for its
-  precursor \code{lzma} compression).
+  compression (also read-only support for its precursor, \code{lzma}
+  compression).
 
   For reading, the type of compression (if any) can be determined from
   the first few bytes of the file.  Thus for \code{file(raw = FALSE)}
@@ -389,11 +387,7 @@ isIncomplete(con)
   \url{https://en.wikipedia.org/wiki/UTF-16}: the use of characters in
   the \sQuote{Supplementary Planes} which need surrogate pairs is very
   rare so \code{"UCS-2LE"} is an appropriate first choice (as it is more
-  widely implemented).  
-  
-  One caveat:  \R's implementation of \code{"UCS-2LE"} and similar for 
-  output does not currently work on Windows, and on Unix it will default 
-  to Unix-style line endings.  We recommend use of \code{UTF-8} instead.
+  widely implemented).
 
   As from \R 3.0.0 the encoding \code{"UTF-8-BOM"} is accepted for
   reading and will remove a Byte Order Mark if present (which it often
@@ -405,7 +399,8 @@ isIncomplete(con)
   Encoding names \code{"utf8"}, \code{"mac"} and \code{"macroman"} are
   not portable, and not supported on all current \R platforms.
   \code{"UTF-8"} is portable and \code{"macintosh"} is the official
-  (and most widely supported) name for \sQuote{Mac Roman}.
+  (and most widely supported) name for \sQuote{Mac Roman}.  (As from \R
+  3.4.0, \R maps \code{"utf8"} to \code{"UTF-8"} internally.)
 
   Requesting a conversion that is not supported is an error, reported
   when the connection is opened.  Exactly what happens when the
@@ -488,7 +483,7 @@ isIncomplete(con)
   (\url{http://www.vergenet.net/~conrad/software/xsel/}), for example by
   \code{pipe("xclip -i", "w")} for the primary selection.
 
-  OS X users can use \code{pipe("pbpaste")} and
+  macOS users can use \code{pipe("pbpaste")} and
   \code{pipe("pbcopy", "w")} to read from and write to that system's
   clipboard.
 #endif
@@ -497,7 +492,6 @@ isIncomplete(con)
   \R's connections are modelled on those in S version 4 (see Chambers,
   1998).  However \R goes well beyond the S model, for example in output
   text connections and URL, compressed and socket connections.
-
   The default open mode in \R is \code{"r"} except for socket connections.
   This differs from S, where it is the equivalent of \code{"r+"},
   known as \code{"*"}.
@@ -533,10 +527,10 @@ isIncomplete(con)
 
   \code{\link{gzcon}} to wrap \command{gzip} (de)compression around a
   connection.
-  
+
   \code{\link{options}} \code{HTTPUserAgent}, \code{internet.info} and
   \code{timeout} are used by some of the methods for URL connections.
-  
+
   \code{\link{memCompress}} for more ways to (de)compress and references
   on data compression.
 #ifdef windows
@@ -559,10 +553,12 @@ close(zz)
 readLines(zz <- gzfile("ex.gz"))
 close(zz)
 unlink("ex.gz")
+zz # an invalid connection
 
 zz <- bzfile("ex.bz2", "w")  # bzip2-ed file
 cat("TITLE extra line", "2 3 5 7", "", "11 13 17", file = zz, sep = "\n")
 close(zz)
+zz # print() method: invalid connection
 print(readLines(zz <- bzfile("ex.bz2")))
 close(zz)
 unlink("ex.bz2")
@@ -576,7 +572,9 @@ seek(Tfile, 0, rw = "r") # reset to beginning
 readLines(Tfile)
 cat("ghi\n", file = Tfile)
 readLines(Tfile)
+Tfile # -> print() :  "valid" connection
 close(Tfile)
+Tfile # -> print() :  "invalid" connection
 unlink("test1")
 
 ## We can do the same thing with an anonymous file.

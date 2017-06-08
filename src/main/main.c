@@ -1,7 +1,7 @@
 /*
  *  R : A Computer Language for Statistical Data Analysis
  *  Copyright (C) 1995, 1996  Robert Gentleman and Ross Ihaka
- *  Copyright (C) 1998-2015   The R Core Team
+ *  Copyright (C) 1998-2017   The R Core Team
  *  Copyright (C) 2002-2005  The R Foundation
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -555,12 +555,12 @@ static void sigactionSegv(int signum, siginfo_t *ip, void *context)
 		s = "invalid alignment";
 		break;
 #endif
-#ifdef BUS_ADRERR /* not on MacOS X, apparently */
+#ifdef BUS_ADRERR /* not on macOS, apparently */
 	    case BUS_ADRERR:
 		s = "non-existent physical address";
 		break;
 #endif
-#ifdef BUS_OBJERR /* not on MacOS X, apparently */
+#ifdef BUS_OBJERR /* not on macOS, apparently */
 	    case BUS_OBJERR:
 		s = "object specific hardware error";
 		break;
@@ -728,6 +728,29 @@ void setup_Rmainloop(void)
     char deferred_warnings[11][250];
     volatile int ndeferred_warnings = 0;
 
+#if 0 
+    /* testing stack base and size detection */
+    printf("stack limit %ld, start %lx dir %d \n",
+	(unsigned long) R_CStackLimit,
+        (unsigned long) R_CStackStart,
+	R_CStackDir);
+    uintptr_t firstb = R_CStackStart - R_CStackDir;
+    printf("first accessible byte %lx\n", (unsigned long) firstb);
+    if (R_CStackLimit != (uintptr_t)(-1)) {
+        uintptr_t lastb = R_CStackStart - R_CStackDir * R_CStackLimit;
+	printf("last accessible byte %lx\n", (unsigned long) lastb);
+    }
+    printf("accessing first byte...\n");
+    volatile char dummy = *(char *)firstb;
+    if (R_CStackLimit != (uintptr_t)(-1)) {
+	printf("accessing all bytes...\n");
+	/* have to access all bytes in order to map stack, e.g. on Linux */
+	for(uintptr_t o = 0; o < R_CStackLimit; o++)
+	    /* with exact bounds, o==-1 and o==R_CStackLimit will segfault */
+	    dummy = *((char *)firstb - R_CStackDir * o);
+    }
+#endif
+
     /* In case this is a silly limit: 2^32 -3 has been seen and
      * casting to intptr_r relies on this being smaller than 2^31 on a
      * 32-bit platform. */
@@ -819,8 +842,8 @@ void setup_Rmainloop(void)
     InitTempDir(); /* must be before InitEd */
     InitMemory();
     InitStringHash(); /* must be before InitNames */
-    InitNames();
     InitBaseEnv();
+    InitNames(); /* must be after InitBaseEnv to use R_EmptyEnv */
     InitGlobalEnv();
     InitDynload();
     InitOptions();
@@ -1141,8 +1164,18 @@ static int ParseBrowser(SEXP CExpr, SEXP rho)
 	    rval = 2;
 	    printwhere();
 	    /* SET_RDEBUG(rho, 1); */
+	} else if (!strcmp(expr, "r")) {
+	    SEXP hooksym = install(".tryResumeInterrupt");
+	    if (SYMVALUE(hooksym) != R_UnboundValue) {
+		SEXP hcall;
+		R_Busy(1);
+		PROTECT(hcall = LCONS(hooksym, R_NilValue));
+		eval(hcall, R_GlobalEnv);
+		UNPROTECT(1);
+	    }
 	}
     }
+
     return rval;
 }
 
@@ -1239,7 +1272,7 @@ SEXP attribute_hidden do_browser(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    R_Visible = FALSE;
 	}
 	R_GlobalContext = &thiscontext;
-	R_InsertRestartHandlers(&thiscontext, TRUE);
+	R_InsertRestartHandlers(&thiscontext, "browser");
 	R_ReplConsole(rho, savestack, browselevel+1);
 	endcontext(&thiscontext);
     }
@@ -1296,7 +1329,7 @@ SEXP attribute_hidden do_quit(SEXP call, SEXP op, SEXP args, SEXP rho)
 	return R_NilValue;
     }
     if( !isString(CAR(args)) )
-	errorcall(call, _("one of \"yes\", \"no\", \"ask\" or \"default\" expected."));
+	error(_("one of \"yes\", \"no\", \"ask\" or \"default\" expected."));
     tmp = CHAR(STRING_ELT(CAR(args), 0)); /* ASCII */
     if( !strcmp(tmp, "ask") ) {
 	ask = SA_SAVEASK;
@@ -1309,7 +1342,7 @@ SEXP attribute_hidden do_quit(SEXP call, SEXP op, SEXP args, SEXP rho)
     else if( !strcmp(tmp, "default") )
 	ask = SA_DEFAULT;
     else
-	errorcall(call, _("unrecognized value of 'save'"));
+	error(_("unrecognized value of 'save'"));
     status = asInteger(CADR(args));
     if (status == NA_INTEGER) {
 	warning(_("invalid 'status', 0 assumed"));
@@ -1370,8 +1403,8 @@ Rf_addTaskCallback(R_ToplevelCallback cb, void *data,
     }
 
     if(!name) {
-	char buf[10];
-	snprintf(buf, 10, "%d", which+1);
+	char buf[20];
+	snprintf(buf, 20, "%d", which+1);
 	el->name = strdup(buf);
     } else
 	el->name = strdup(name);
@@ -1473,7 +1506,10 @@ R_removeTaskCallback(SEXP which)
     Rboolean val;
 
     if(TYPEOF(which) == STRSXP) {
-	val = Rf_removeTaskCallbackByName(CHAR(STRING_ELT(which, 0)));
+	if (LENGTH(which) == 0)
+	    val = FALSE;
+	else
+	    val = Rf_removeTaskCallbackByName(CHAR(STRING_ELT(which, 0)));
     } else {
 	id = asInteger(which);
 	if (id != NA_INTEGER) val = Rf_removeTaskCallbackByIndex(id - 1);
@@ -1650,14 +1686,16 @@ void attribute_hidden dummy12345(void)
     F77_CALL(intpr)("dummy", &i, &i, &i);
 }
 
-/* Used in unix/system.c, avoid inlining by using an extern there.
-
-   This is intended to return a local address.
-   Use -Wno-return-local-addr when compiling.
- */
+/* Used in unix/system.c, avoid inlining by using an extern there. */
 uintptr_t dummy_ii(void)
 {
     int ii;
-    return (uintptr_t) &ii;
+
+    /* This is intended to return a local address. We could just return
+       (uintptr_t) &ii, but doing it indirectly through ii_addr avoids
+       a compiler warning (-Wno-return-local-addr would do as well).
+    */
+    volatile uintptr_t ii_addr = (uintptr_t) &ii;
+    return ii_addr;
 }
 #endif

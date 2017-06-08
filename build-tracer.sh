@@ -6,7 +6,7 @@ export R_KEEP_PKG_SOURCE=yes
 export CXX="g++ -std=c++14"
 
 cd rdt-plugins/promises &&
-make clean &&
+#make clean &&
 cmake . &&
 make &&
 cd ../.. 

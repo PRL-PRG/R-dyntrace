@@ -1,6 +1,6 @@
 
-R version 3.3.1 RC (2016-06-14 r70774) -- "Bug in Your Hair"
-Copyright (C) 2016 The R Foundation for Statistical Computing
+R Under development (unstable) (2017-05-14 r72675) -- "Unsuffered Consequences"
+Copyright (C) 2017 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -198,9 +198,9 @@ Levels: act nsw nt qld sa tas vic wa
    act    nsw     nt    qld     sa    tas    vic     wa 
 44.500 57.333 55.500 53.600 55.000 60.500 56.000 52.250 
 > 
-> stderr <- function(x) sqrt(var(x)/length(x))
+> stdError <- function(x) sqrt(var(x)/length(x))
 > 
-> incster <- tapply(incomes, statef, stderr)
+> incster <- tapply(incomes, statef, stdError)
 > incster
    act    nsw     nt    qld     sa    tas    vic     wa 
 1.5000 4.3102 4.5000 4.1061 2.7386 0.5000 5.2440 2.6575 
@@ -295,8 +295,7 @@ blocks 1 2 3 4 5 6
 > 
 > d <- outer(0:9, 0:9)
 > fr <- table(outer(d, d, "-"))
-> plot(as.numeric(names(fr)), fr, type="h",
-+      xlab="Determinant", ylab="Frequency")
+> plot(fr, xlab="Determinant", ylab="Frequency")
 > 
 > ##
 > 

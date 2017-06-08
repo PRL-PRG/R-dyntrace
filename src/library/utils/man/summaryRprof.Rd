@@ -1,6 +1,6 @@
 % File src/library/utils/man/summaryRprof.Rd
 % Part of the R package, https://www.R-project.org
-% Copyright 1995-2016 R Core Team
+% Copyright 1995-2017 R Core Team
 % Distributed under GPL 2 or later
 
 \name{summaryRprof}
@@ -107,13 +107,12 @@ summaryRprof(filename = "Rprof.out", chunksize = 5000,
   in addition to the timings.
 
   If \code{memory = "tseries"} a data frame giving memory statistics over
-  time.
+  time. Memory usage is in bytes.
 
   If \code{memory = "stats"} a \code{\link{by}} object giving memory statistics
-  by function.
+  by function. Memory usage is in bytes.
   
-  Prior to \R 2.15.3 an error was thrown if no events were recorded: now
-  zero-row data frames are returned.
+  If no events were recorded, a zero-row data frame is returned.
 }
 
 \seealso{
