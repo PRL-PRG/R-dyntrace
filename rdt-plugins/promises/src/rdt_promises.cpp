@@ -176,8 +176,10 @@ struct trace_promises {
             //Rprintf("Promise %#x deleted.\n", id);
         }
 
-        unsigned int promise_type = TYPEOF(PRCODE(promise));
-        prom_id_pair_t key(addr, promise_type);
+        unsigned int prom_type = TYPEOF(PRCODE(promise));
+        unsigned int orig_type = (prom_type == 21) ? TYPEOF(BODY_EXPR(PRCODE(promise))) : 0;
+        prom_key_t key(addr, prom_type, orig_type);
+
         STATE(promise_ids).erase(key);
     }
 

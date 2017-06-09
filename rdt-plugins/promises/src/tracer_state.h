@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <map>
+#include <tuple>
 
 #include "tracer_sexpinfo.h"
 
@@ -19,15 +20,16 @@
 using namespace std;
 
 typedef pair<call_id_t, function_type> call_stack_elem_t;
-typedef pair<prom_id_t, unsigned int> prom_id_pair_t;
+typedef tuple<prom_id_t, unsigned int, unsigned int> prom_key_t;
 
-struct prom_id_pair_hash {
+struct prom_id_triple_hash {
 public:
-    size_t operator () (const prom_id_pair_t &p) const {
-        auto h1 = hash<prom_id_t>{}(p.first);
-        auto h2 = hash<unsigned int>{}(p.second);
+    size_t operator () (const prom_key_t &p) const {
+        auto h1 = hash<prom_id_t>{}(get<0>(p));
+        auto h2 = hash<unsigned int>{}(get<1>(p));
+        auto h3 = hash<unsigned int>{}(get<2>(p));
         // super simple≥...
-        return (h1 << 8) | h2;
+        return (h1 << 16) | (h2 << 8) | h3;
     }
 };
 
@@ -45,7 +47,7 @@ struct tracer_state_t {
     unordered_map<prom_id_t, call_id_t> promise_origin; // Should be reset on each tracer pass
     unordered_set<prom_id_t> fresh_promises;
     // Map from promise address to promise ID;
-    unordered_map<prom_id_pair_t, prom_id_t, prom_id_pair_hash> promise_ids;
+    unordered_map<prom_key_t, prom_id_t, prom_id_triple_hash> promise_ids;
 
     call_id_t call_id_counter; // IDs assigned should be globally unique but we can reset it after each pass if overwrite is true)
     prom_id_t fn_id_counter; // IDs assigned should be globally unique but we can reset it after each pass if overwrite is true)

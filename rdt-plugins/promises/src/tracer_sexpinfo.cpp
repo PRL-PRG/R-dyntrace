@@ -24,9 +24,10 @@ prom_id_t get_promise_id(SEXP promise) {
     prom_addr_t prom_addr = get_sexp_address(promise);
     prom_id_t prom_id;
 
-    unsigned int promise_type = TYPEOF(PRCODE(promise));
+    unsigned int prom_type = TYPEOF(PRCODE(promise));
+    unsigned int orig_type = (prom_type == 21) ? TYPEOF(BODY_EXPR(PRCODE(promise))) : 0;
+    prom_key_t key(prom_addr, prom_type, orig_type);
 
-    const prom_id_pair_t key(prom_addr, promise_type);
     auto & promise_ids = STATE(promise_ids);
     auto it = promise_ids.find(key);
     if (it != promise_ids.end()){
@@ -53,7 +54,8 @@ prom_id_t make_promise_id(SEXP promise, bool negative) {
         prom_id = STATE(prom_id_counter)++;
     }
     unsigned int prom_type = TYPEOF(PRCODE(promise));
-    prom_id_pair_t key(prom_addr, prom_type);
+    unsigned int orig_type = (prom_type == 21) ? TYPEOF(BODY_EXPR(PRCODE(promise))) : 0;
+    prom_key_t key(prom_addr, prom_type, orig_type);
     STATE(promise_ids)[key] = prom_id;
 
     auto & already_inserted_negative_promises = STATE(already_inserted_negative_promises);
