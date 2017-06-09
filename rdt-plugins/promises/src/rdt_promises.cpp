@@ -137,7 +137,7 @@ struct trace_promises {
         info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(prom)));
 
         if (info.prom_type == sexp_type::BCODE) {
-            SEXP original_expression = BCODE_EXPR(PRCODE(prom));
+            SEXP original_expression = BODY_EXPR(PRCODE(prom));
             info.prom_original_type = static_cast<sexp_type>(TYPEOF(PRCODE(original_expression)));
         } else {
             info.prom_original_type = info.prom_type;

@@ -222,7 +222,7 @@ private:
         info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(promise_expression)));
 
         if (info.prom_type == sexp_type::BCODE) {
-            SEXP original_expression = BCODE_EXPR(PRCODE(promise_expression)); // TODO BCODE_CODE?
+            SEXP original_expression = BODY_EXPR(PRCODE(promise_expression));
             info.prom_original_type = static_cast<sexp_type>(TYPEOF(PRCODE(original_expression)));
         } else {
             info.prom_original_type = info.prom_type;
