@@ -233,6 +233,8 @@ where_are_promises_evaluated <- function(path="trace.sqlite") {
     promise_evaluations <- db %>% tbl("promise_evaluations") %>% filter(event_type == 15) %>% filter(promise_id > 0)
     promises <- db %>% tbl("promises")
 
+    total <- (promises %>% count %>% as.data.frame)$n
+
     lifestyles <-
         left_join(promises, promise_evaluations, by=c("id" = "promise_id")) %>%
         mutate(lifestyle = ifelse(lifestyle == 1, "local",
@@ -243,39 +245,13 @@ where_are_promises_evaluated <- function(path="trace.sqlite") {
                                                   "virgin")))))) %>%
         select(id, from_call_id, in_call_id, lifestyle)
 
-    lifestyles %>% group_by(lifestyle) %>% count(lifestyle)
+    lifestyles %>% group_by(lifestyle) %>% count(lifestyle) %>%
+    mutate(percent=((n*100/total))) %>% rename(number = n) %>%
+    group_by(lifestyle) %>%
+    do(mutate(., percent = paste(format(percent, digits=12), "%", sep="") ))
 }
 
 what_types_of_promises_are_there <- function(path="trace.sqlite") {
-    humanize_type = function(type, fallback_type=NULL) # TODO switch to humanize_promise_type
-        if(type == 0) "NIL" else
-        if(type == 1) "SYM" else
-        if(type == 2) "LIST" else
-        if(type == 3) "CLOS" else
-        if(type == 4) "ENV" else
-        if(type == 5) "PROM" else
-        if(type == 6) "LANG" else
-        if(type == 7) "SPECIAL" else
-        if(type == 8) "BUILTIN" else
-        if(type == 9) "CHAR" else
-        if(type == 10) "LGL" else
-        if(type == 13) "INT" else
-        if(type == 14) "REAL" else
-        if(type == 15) "CPLX" else
-        if(type == 16) "STR" else
-        if(type == 17) "DOT" else
-        if(type == 18) "ANY" else
-        if(type == 19) "VEC" else
-        if(type == 20) "EXPR" else
-        if(type == 21) {
-          if(is.null(fallback_type)) "BCODE"
-          else paste("BCODE", Recall(fallback_type), sep="->")
-        } else
-        if(type == 22) "EXTPTR" else
-        if(type == 23) "WEAKREF" else
-        if(type == 24) "RAW" else
-        if(type == 25) "S4" else NULL
-
     db <- load_trace(path)
 
     promises <- db %>% tbl("promises")
@@ -289,8 +265,9 @@ what_types_of_promises_are_there <- function(path="trace.sqlite") {
     types %>% 
       mutate(percent=((n*100/total))) %>%
       group_by(type, original_type) %>% 
-      do(mutate(., type_code = type, type = humanize_type(type, original_type))) %>%
-      group_by(type) %>% select(type, n, percent)
+      do(mutate(., type_code = type, type = humanize_promise_type(type, original_type), percent = paste(format(percent, digits=12), "%", sep="") )) %>%
+      rename(number=n) %>%
+      group_by(type) %>% select(type, number, percent)
 }
 
 basic_results_for_one_function <- function(function.id, db) {
@@ -299,8 +276,7 @@ basic_results_for_one_function <- function(function.id, db) {
     arguments <- db %>% tbl("arguments") %>% rename(argument_id = id)
     promises <- db %>% tbl("promises") %>% rename(promise_id = id, promise_type = type)
     promise_associations <- db %>% tbl("promise_associations")
-    promise_evaluations<- db %>% tbl("promise_evaluations") 
-    
+    promise_evaluations<- db %>% tbl("promise_evaluations")
 
     function_info <- functions %>% filter(function_id == function.id)     
     
