@@ -126,10 +126,10 @@ public:
         }
         free(location);
 
-//        char *callsite = get_callsite(1);
-//        if (callsite != NULL)
-//            info.callsite = callsite;
-//        free(callsite);
+        char *callsite = get_callsite(1);
+        if (callsite != NULL)
+            info.callsite = callsite;
+        free(callsite);
 
         info.call_ptr = get_sexp_address(rho);
         info.call_id = make_funcall_id(op);
@@ -168,10 +168,10 @@ public:
             info.loc = location;
         free(location);
 
-//        char *callsite = get_callsite(0);
-//        if (callsite != NULL)
-//            info.callsite = callsite;
-//        free(callsite);
+        char *callsite = get_callsite(0);
+        if (callsite != NULL)
+            info.callsite = callsite;
+        free(callsite);
 
         return info;
     }
@@ -206,9 +206,6 @@ private:
         if (name != NULL)
             info.name = name;
 
-        SEXP promise_expression = get_promise(symbol, rho);
-        info.prom_id = get_promise_id(promise_expression);
-
         call_stack_elem_t stack_elem = STATE(fun_stack).back();
         info.in_call_id = stack_elem.first;
 
@@ -219,10 +216,13 @@ private:
         else
             info.lifestyle = judge_promise_lifestyle(info.from_call_id);
 
+        SEXP promise_expression = get_promise(symbol, rho);
+        info.prom_id = get_promise_id(promise_expression);
+
         info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(promise_expression)));
 
         if (info.prom_type == sexp_type::BCODE) {
-            SEXP original_expression = BCODE_EXPR(PRCODE(promise_expression));
+            SEXP original_expression = BCODE_EXPR(PRCODE(promise_expression)); // TODO BCODE_CODE?
             info.prom_original_type = static_cast<sexp_type>(TYPEOF(PRCODE(original_expression)));
         } else {
             info.prom_original_type = info.prom_type;

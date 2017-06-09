@@ -5,6 +5,7 @@
 #include "tracer_sexpinfo.h"
 //#include "tracer_output.h"
 #include "tracer_state.h"
+#include <iostream>
 
 #include <rdt.h>
 
@@ -23,8 +24,11 @@ prom_id_t get_promise_id(SEXP promise) {
     prom_addr_t prom_addr = get_sexp_address(promise);
     prom_id_t prom_id;
 
+    unsigned int promise_type = TYPEOF(PRCODE(promise));
+
+    const prom_id_pair_t key(prom_addr, promise_type);
     auto & promise_ids = STATE(promise_ids);
-    auto it = promise_ids.find(prom_addr);
+    auto it = promise_ids.find(key);
     if (it != promise_ids.end()){
         prom_id = it->second;
     }
@@ -48,7 +52,12 @@ prom_id_t make_promise_id(SEXP promise, bool negative) {
     else {
         prom_id = STATE(prom_id_counter)++;
     }
-    STATE(promise_ids)[prom_addr] = prom_id;
+    unsigned int prom_type = TYPEOF(PRCODE(promise));
+    prom_id_pair_t key(prom_addr, prom_type);
+    STATE(promise_ids)[key] = prom_id;
+
+    auto & already_inserted_negative_promises = STATE(already_inserted_negative_promises);
+    already_inserted_negative_promises.insert(prom_id);
 
     return prom_id;
 }

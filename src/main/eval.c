@@ -1609,7 +1609,7 @@ static R_INLINE SEXP R_execClosure(SEXP call, SEXP newrho, SEXP sysparent,
 
     R_Srcref = getAttrib(op, R_SrcrefSymbol);
 
-RDT_HOOK(probe_function_entry, call, op, newrho);
+    RDT_HOOK(probe_function_entry, call, op, newrho);
 
     /* Debugging */
 

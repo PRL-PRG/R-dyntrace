@@ -176,7 +176,9 @@ struct trace_promises {
             //Rprintf("Promise %#x deleted.\n", id);
         }
 
-        STATE(promise_ids).erase(addr);
+        unsigned int promise_type = TYPEOF(PRCODE(promise));
+        prom_id_pair_t key(addr, promise_type);
+        STATE(promise_ids).erase(key);
     }
 
     static void jump_ctxt(const SEXP rho, const SEXP val) {
