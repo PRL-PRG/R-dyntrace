@@ -238,14 +238,16 @@ where_are_promises_evaluated <- function(path="trace.sqlite") {
         mutate(lifestyle = ifelse(lifestyle == 1, "local",
                            ifelse(lifestyle == 2, "branch-local",
                            ifelse(lifestyle == 3, "escaped",
-                                                  "virgin")))) %>%
+                           ifelse(lifestyle == 4, "local (immediate)",
+                           ifelse(lifestyle == 5, "branch-local (immediate)",
+                                                  "virgin")))))) %>%
         select(id, from_call_id, in_call_id, lifestyle)
 
     lifestyles %>% group_by(lifestyle) %>% count(lifestyle)
 }
 
 what_types_of_promises_are_there <- function(path="trace.sqlite") {
-    humanize_type = function(type, fallback_type=NULL)
+    humanize_type = function(type, fallback_type=NULL) # TODO switch to humanize_promise_type
         if(type == 0) "NIL" else
         if(type == 1) "SYM" else
         if(type == 2) "LIST" else
@@ -267,7 +269,7 @@ what_types_of_promises_are_there <- function(path="trace.sqlite") {
         if(type == 20) "EXPR" else
         if(type == 21) {
           if(is.null(fallback_type)) "BCODE"
-          else paste("BCODE", Recall(fallback_type), sep=" ")
+          else paste("BCODE", Recall(fallback_type), sep="->")
         } else
         if(type == 22) "EXTPTR" else
         if(type == 23) "WEAKREF" else
@@ -384,7 +386,7 @@ humanize_promise_type = function(type, fallback_type=NULL)
     if(type == 20) "EXPR" else
     if(type == 21) {
       if(is.null(fallback_type)) "BCODE"
-      else paste("BCODE", Recall(fallback_type), sep=" ")
+      else paste("BCODE", Recall(fallback_type), sep="->")
     } else
     if(type == 22) "EXTPTR" else
     if(type == 23) "WEAKREF" else
