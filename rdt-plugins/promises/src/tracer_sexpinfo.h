@@ -120,7 +120,9 @@ enum class lifestyle_type {
     VIRGIN = 0,
     LOCAL = 1,
     BRANCH_LOCAL = 2,
-    ESCAPED = 3
+    ESCAPED = 3,
+    IMMEDIATE_LOCAL = 4,
+    IMMEDIATE_BRANCH_LOCAL = 5
 };
 
 enum class sexp_type {

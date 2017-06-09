@@ -206,8 +206,14 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
         case lifestyle_type::LOCAL:
             stream << " lifestyle=local";
             break;
+        case lifestyle_type::IMMEDIATE_LOCAL:
+            stream << " lifestyle=immediate-local";
+            break;
         case lifestyle_type::BRANCH_LOCAL:
             stream << " lifestyle=branch-local";
+            break;
+        case lifestyle_type::IMMEDIATE_BRANCH_LOCAL:
+            stream << " lifestyle=immediate-branch-local";
             break;
         case lifestyle_type::ESCAPED:
             stream << " lifestyle=escaped";

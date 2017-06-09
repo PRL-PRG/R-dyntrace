@@ -176,26 +176,37 @@ public:
         return info;
     }
 
-//    prom_id_t promise_created_get_info(const SEXP prom) {
-//
-//    }
-
 private:
     lifestyle_type judge_promise_lifestyle(call_id_t from_call_id) {
-        int distance = 0;
+        int effective_distance = 0;
+        int actual_distance = 0;
         for (vector<call_stack_elem_t>::reverse_iterator i = STATE(fun_stack).rbegin(); i != STATE(fun_stack).rend(); ++i) {
             call_id_t cursor = i->first;
             function_type type = i->second;
 
-            if (cursor == from_call_id) {
-                return (distance == 0) ? lifestyle_type::LOCAL : lifestyle_type::BRANCH_LOCAL;
+            if (cursor == from_call_id)
+                if (effective_distance == 0) {
+                    if (actual_distance == 0){
+                        return lifestyle_type::IMMEDIATE_LOCAL;
+                    } else {
+                        return lifestyle_type::LOCAL;
+                    }
+                } else {
+                    if (effective_distance == 1) {
+                        return lifestyle_type::IMMEDIATE_BRANCH_LOCAL;
+                    } else {
+                        return lifestyle_type::BRANCH_LOCAL;
+                    }
+                }
+
+            if (cursor == 0) {
+                return lifestyle_type::ESCAPED; // reached root, parent must be in a different branch--promise escaped
             }
 
-            if (cursor == 0)
-                return lifestyle_type::ESCAPED; // reached root, parent must be in a different branch--promise escaped
-
-            if (type == function_type::BUILTIN | type == function_type::CLOSURE)
-                distance++;
+            actual_distance++;
+            if (type == function_type::BUILTIN || type == function_type::CLOSURE) {
+                effective_distance++;
+            }
         }
     }
 
