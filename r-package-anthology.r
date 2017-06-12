@@ -73,7 +73,8 @@ aux1.packages = c(
     "DAAGbio", 
     "oz",
     "randomForest",
-    "rpart"
+    "rpart",
+    "ape"
 )
 
 aux2.packages <- c(
@@ -96,7 +97,11 @@ aux2.packages <- c(
     "affy",
     "TxDb.Hsapiens.UCSC.hg19.knownGene",
     "BSgenome.Mmusculus.UCSC.mm10",
-    "BSgenome.Celegans.UCSC.ce2"    
+    "BSgenome.Celegans.UCSC.ce2",
+    'TxDb.Mmusculus.UCSC.mm10.knownGene',
+    'BatchJobs',
+    'RNAseqData.HNRNPC.bam.chr14',
+    'TxDb.Athaliana.BioMart.plantsmart22'
 )
 
 install_my_packages(aux1.packages, "auxiliary")
@@ -134,7 +139,7 @@ eval_all_vignettes_from_package <- function(package) {
         R.code.source <- parse(R.code.path)
         tryCatch(
             {
-                write(paste("Running vignette ", v, "for package ", package, sep = ""), file = stderr())
+                write(paste("Running vignette ", v, " for package ", package, sep = ""), file = stderr())
                 eval(R.code.source)
             },
             error = error.handler
