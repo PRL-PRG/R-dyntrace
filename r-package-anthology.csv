@@ -5,7 +5,7 @@ n;  package;                source; n.vignettes; output.size
 4;  stringr;                cran;   2;           
 5;  zoo;                    cran;   5;           
 6;  digest;                 cran;   1;           
-7;  gplot2;                 cran;   2;           
+7;  gplot2;                 base;   2;           
 8;  colorspace;             cran;   1;           
 9;  proto;                  cran;   2;           
 10; gamclass;               cran;   11;           

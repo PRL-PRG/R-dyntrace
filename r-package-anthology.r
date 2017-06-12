@@ -11,7 +11,10 @@ packages <- read.csv("r-package-anthology.csv",
                         comment.char="#", strip.white=TRUE)
 
 # Install CRAN packages
-install.packages((packages %>% filter(source == "cran"))$package)
+for (package in (packages %>% filter(source == "cran"))$package) {
+    write(paste("Instaling:", package, "(CRAN)"), stderr())
+    install.packages(package)
+}
 
 # Install additional packages needed by vignettes, but not listed as pkg
 # dependencies.
@@ -19,12 +22,13 @@ install.packages(c(
 #    "knitr",
 #    "nycflights",
     "chron",
-    "tseries",
+    "tseries"
 ))
 
 source("https://bioconductor.org/biocLite.R")
 biocLite()
 for (package in (packages %>% filter(source == "bioc"))$package) {
+    write(paste("Instaling:", package, "(bioconductor)"), stderr())
     biocLite(package)
 }
 
