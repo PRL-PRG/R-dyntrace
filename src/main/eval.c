@@ -738,12 +738,12 @@ SEXP eval(SEXP e, SEXP rho)
 	    RDT_HOOK(probe_specialsxp_exit, e, op, rho, tmp);
 	}
 	else if (TYPEOF(op) == BUILTINSXP) {
-	    RDT_HOOK(probe_builtin_entry, e, op, rho);
+	    RDT_HOOK(probe_builtin_entry, e, op, rho); // FIXME doesn't see Srcref
 
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
 	    const void *vmax = vmaxget();
 	    RCNTXT cntxt;
-	    PROTECT(tmp = evalList(CDR(e), rho, e, 0));
+	    PROTECT(tmp = evalList(CDR(e), rho, e, 0)); // FIXME move somewhere here?
 	    if (flag < 2) R_Visible = flag != 1;
 	    /* We used to insert a context only if profiling,
 	       but helps for tracebacks on .C etc. */
@@ -6544,7 +6544,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	flag = PRIMPRINT(fun);
 	R_Visible = flag != 1;
 	SEXP value;
-	RDT_HOOK(probe_builtin_entry, call, fun, rho);
+	RDT_HOOK(probe_builtin_entry, call, fun, rho); // FIXME other case: BC, not much i can do, though
 	if (R_Profiling && IS_TRUE_BUILTIN(fun)) {
 	    RCNTXT cntxt;
 	    SEXP oldref = R_Srcref;

@@ -126,7 +126,7 @@ public:
         }
         free(location);
 
-        char *callsite = get_callsite(1);
+        char *callsite = get_callsite(0);
         if (callsite != NULL)
             info.callsite = callsite;
         free(callsite);
@@ -177,7 +177,7 @@ public:
     }
 
 private:
-    lifestyle_type judge_promise_lifestyle(call_id_t from_call_id) {
+    tuple<lifestyle_type, int, int> judge_promise_lifestyle(call_id_t from_call_id) {
         int effective_distance = 0;
         int actual_distance = 0;
         for (vector<call_stack_elem_t>::reverse_iterator i = STATE(fun_stack).rbegin(); i != STATE(fun_stack).rend(); ++i) {
@@ -187,20 +187,20 @@ private:
             if (cursor == from_call_id)
                 if (effective_distance == 0) {
                     if (actual_distance == 0){
-                        return lifestyle_type::IMMEDIATE_LOCAL;
+                        return tuple<lifestyle_type, int, int>(lifestyle_type::IMMEDIATE_LOCAL, effective_distance, actual_distance);
                     } else {
-                        return lifestyle_type::LOCAL;
+                        return tuple<lifestyle_type, int, int>(lifestyle_type::LOCAL, effective_distance, actual_distance);
                     }
                 } else {
                     if (effective_distance == 1) {
-                        return lifestyle_type::IMMEDIATE_BRANCH_LOCAL;
+                        return tuple<lifestyle_type, int, int>(lifestyle_type::IMMEDIATE_BRANCH_LOCAL, effective_distance, actual_distance);
                     } else {
-                        return lifestyle_type::BRANCH_LOCAL;
+                        return tuple<lifestyle_type, int, int>(lifestyle_type::BRANCH_LOCAL, effective_distance, actual_distance);
                     }
                 }
 
             if (cursor == 0) {
-                return lifestyle_type::ESCAPED; // reached root, parent must be in a different branch--promise escaped
+                return tuple<lifestyle_type, int, int>(lifestyle_type::ESCAPED, -1, -1); // reached root, parent must be in a different branch--promise escaped
             }
 
             actual_distance++;
@@ -222,10 +222,16 @@ private:
 
         info.from_call_id = STATE(promise_origin)[info.prom_id];
 
-        if (info.in_call_id == info.from_call_id)
+        if (info.in_call_id == info.from_call_id) {
             info.lifestyle = lifestyle_type::LOCAL;
-        else
-            info.lifestyle = judge_promise_lifestyle(info.from_call_id);
+            info.effective_distance_from_origin = 0;
+            info.actual_distance_from_origin = 0;
+        } else {
+            auto lifestyle_info = judge_promise_lifestyle(info.from_call_id);
+            info.lifestyle = get<0>(lifestyle_info);
+            info.effective_distance_from_origin = get<1>(lifestyle_info);
+            info.actual_distance_from_origin = get<2>(lifestyle_info);
+        }
 
         SEXP promise_expression = get_promise(symbol, rho);
         info.prom_id = get_promise_id(promise_expression);
