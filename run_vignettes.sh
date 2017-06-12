@@ -4,6 +4,8 @@ CMD='bin/Rscript rdt-plugins/promises/R/benchmark.R'
 
 PACKAGES=
 
+bin/Rscript rdt-plugins/promises/R/compile_base.R || exit 1
+
 if [ $# -ge 1 ]
 then
     PACKAGES="$@"
