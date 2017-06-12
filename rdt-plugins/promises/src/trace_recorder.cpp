@@ -223,6 +223,9 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
             break;
     }
 
+    stream << " distance_from_origin=" << info.effective_distance_from_origin
+           << "/" << info.actual_distance_from_origin;
+
     bool compiled = (info.prom_type == sexp_type::BCODE);
 
     stream << " type=" << (compiled ? "bcode::" : "")

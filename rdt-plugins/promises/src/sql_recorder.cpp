@@ -99,11 +99,14 @@ sql_stmt_t insert_promise_evaluation_statement(prom_eval_t type, const prom_info
     sql_val_t from_call_id = from_int(info.from_call_id);
     sql_val_t in_call_id = from_int(info.in_call_id);
     sql_val_t lifestyle = from_int(tools::enum_cast(info.lifestyle));
+    sql_val_t effective_distance_from_origin = from_int(info.effective_distance_from_origin);
+    sql_val_t actual_distance_from_origin = from_int(info.actual_distance_from_origin);
 
     // in_call_id = current call
     // from_call_id = TODO what is it
 
-    return make_insert_promise_evaluation_statement(clock, event_type, promise_id, from_call_id, in_call_id, lifestyle);
+    return make_insert_promise_evaluation_statement(clock, event_type, promise_id, from_call_id, in_call_id, lifestyle,
+                                                    effective_distance_from_origin, actual_distance_from_origin);
 }
 
 /* Functions connecting to the outside world, create SQL and multiplex output. */

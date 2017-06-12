@@ -81,7 +81,7 @@ void compile_prepared_sql_statements() {
     prepared_sql_insert_promise =
             compile_sql_statement(make_insert_promise_statement("?", "?", "?"));
     prepared_sql_insert_promise_eval =
-            compile_sql_statement(make_insert_promise_evaluation_statement("?","?","?","?","?","?"));
+            compile_sql_statement(make_insert_promise_evaluation_statement("?","?","?","?","?","?","?","?"));
 
     prepared_sql_transaction_begin =
             compile_sql_statement(make_begin_transaction_statement());
@@ -222,6 +222,8 @@ sqlite3_stmt * populate_promise_evaluation_statement(prom_eval_t type, const pro
     sqlite3_bind_int(prepared_sql_insert_promise_eval, 4, info.from_call_id);
     sqlite3_bind_int(prepared_sql_insert_promise_eval, 5, info.in_call_id);
     sqlite3_bind_int(prepared_sql_insert_promise_eval, 6, tools::enum_cast(info.lifestyle));
+    sqlite3_bind_int(prepared_sql_insert_promise_eval, 7, info.effective_distance_from_origin);
+    sqlite3_bind_int(prepared_sql_insert_promise_eval, 8, info.actual_distance_from_origin);
 
     // in_call_id = current call
     // from_call_id = parent call, for which the promise was created
