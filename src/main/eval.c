@@ -4130,8 +4130,8 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
   SEXP y = GETSTACK(-1); \
   RDT_HOOK(probe_builtin_entry, opsym, call, rho); \
   SEXP tmp = do_fun(call, opval, opsym, x, y,rho); \
-  SETSTACK(-2, tmp);	\
   RDT_HOOK(probe_builtin_exit, opsym, call, rho, tmp); \
+  SETSTACK(-2, tmp);	\
   R_BCNodeStackTop--; \
   NEXT(); \
 } while(0)
