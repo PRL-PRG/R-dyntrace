@@ -13,7 +13,7 @@ n;  package;                source; n.vignettes; output.size
 12; caschrono;              cran;   10;          
 13; catdata;                cran;   45;
 14; Sleuth3;                cran;   13;                   
-15; corrplot;               cran;   1;           
+15; lmtest;                 cran;   1;           
 16; BMS;                    cran;   1;           
 17; Biostrings;             bioc;   5;            
 18; S4Vectors;              bioc;   2;           

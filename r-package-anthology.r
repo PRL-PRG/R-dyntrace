@@ -3,37 +3,40 @@
 #   sudo apt install gsl-bin libgsl-dbg libgsl-dev
 # - XML2
 #   sudo apt install xml2 libxml2-dev
-# - Set environment:
+# - MPFR
+#   sudo apt install libmpfr-dev libmpfr-doc libmpfr4 libmpfr4-dbg
+
+# optional
 #   sudo apt-get install xvfb
 #   nohup Xvfb :6 -screen 0 1280x1024x24 >/dev/null 2>&1
 #   export DISPLAY=:6
 
+# R_MAX_NUM_DLLS=
+
 # run as xvfb-run bin/R
 Sys.setenv("DISPLAY"=":0")
-
-library(dplyr)
 
 packages <- read.csv("r-package-anthology.csv", 
                         header=TRUE, sep=";", 
                         comment.char="#", strip.white=TRUE)
 
-# Install CRAN packages
-for (package in (packages %>% filter(source == "cran"))$package) {
-    write(paste("Instaling:", package, "(CRAN)"), stderr())
+install_my_packages <- function(packages, src, installer=install.packages) {
+    for (package in packages) {
+        write(paste("Instaling: ", package, " (", src, ")", sep=""), stderr())
+        
+        if(eval(parse(text=paste("require(", package, ")")))) {
+            write("  skipping, already installed", stderr())
+            next
+        }
     
-    if(eval(parse(text=paste("require(", package, ")")))) {
-        write("  skipping, already installed", stderr())
-        next
+        write(paste("Instaling:", package, "(CRAN)"), stderr())
+        installer(package)
     }
-
-    write(paste("Instaling:", package, "(CRAN)"), stderr())
-    install.packages(package)
 }
 
-# Install additional packages needed by vignettes, but not listed as pkg
-# dependencies.
-install.packages(c(
-#    "knitr",
+cran.packages = (packages[packages$source == "cran", ])$package
+bioc.packages = (packages[packages$source == "bioc", ])$pacages
+aux1.packages = c(
     "nycflights13",
     "Lahman",
     "chron",
@@ -52,30 +55,57 @@ install.packages(c(
     "SMIR",
     "gstat",
     "forecast",
-    
     "FitARMA",
     "polynom",
     "expsmooth",
     "RgoogleMaps",
-
     "Rmpfr",
     "TSA",
     "dse",
-))
+    "coin",
+    "MASS",
+    "fBasics",
+    "fGarch",
+    "SparseM",
+    "quantreg",
+    "splines",
+    "mlbench",
+    "DAAGbio", 
+    "oz",
+    "randomForest",
+    "rpart"
+)
 
+aux2.packages <- c(
+    "hgu95av2.db",
+    "rae230a.db",
+    "hom.Hs.inp.db",
+    "BiocStyle",
+    "Rsamtools",
+    "hgu95av2probe",
+    "ShortRead",
+    "hgu95av2cdf",
+    "graph",
+    "VariantAnnotation",
+    "BSgenome",
+    "pasillaBamSubset",
+    "TxDb.Dmelanogaster.UCSC.dm3.ensGene",
+    "airway",
+    "rae230aprobe",
+    "org.Mm.eg.db", 
+    "affy",
+    "TxDb.Hsapiens.UCSC.hg19.knownGene",
+    "BSgenome.Mmusculus.UCSC.mm10",
+    "BSgenome.Celegans.UCSC.ce2"    
+)
+
+install_my_packages(aux1.packages, "auxiliary")
+install_my_packages(cran.packages, "CRAN")
 
 source("https://bioconductor.org/biocLite.R")
 biocLite()
-for (package in (packages %>% filter(source == "bioc"))$package) {
-    write(paste("Instaling:", package, "(bioconductor)"), stderr())
-
-    if(eval(parse(text=paste("require(", package, ")")))) {
-        write("  skipping, already installed", stderr())
-        next
-    }
-
-    biocLite(package)
-}
+install_my_packages(aux2.packages, "bioconductor auxiliary", biocLite)
+install_my_packages(bioc.packages, "bioconductor", biocLite)
 
 # Patches for whatever I can patch
 # Error in vignette zoo for package zoo: Error in readChar(con, 5L, useBytes = TRUE): cannot open the connection
@@ -86,7 +116,7 @@ for (package in (packages %>% filter(source == "bioc"))$package) {
 
 
 # sanity check
-eval_all_vignettes_from_package <- function(package, ...) {
+eval_all_vignettes_from_package <- function(package) {
     result.set <- vignette(package = package)
     vignettes.in.package <- result.set$results[,3]
     index = 0

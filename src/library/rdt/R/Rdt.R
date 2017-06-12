@@ -99,4 +99,8 @@ run.all.vignettes.from.packages <- function(packages, executor = wrap.executor(R
 run.all.vignettes.from.all.packages <- function(executor = wrap.executor(Rdt), ...)
     run.all.vignettes.from.packages(unique(vignette()$results[,1]), executor = eval, ...)
 
+list_vignettes_in_package <- function(package) {
+    vignette(package = package)$results[,3]
+}
+
 # keep an empty line below this one
