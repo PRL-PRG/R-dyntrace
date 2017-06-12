@@ -74,7 +74,9 @@ aux1.packages = c(
     "oz",
     "randomForest",
     "rpart",
-    "ape"
+    "ape",
+    "HSAUR",
+    "xtable"
 )
 
 aux2.packages <- c(

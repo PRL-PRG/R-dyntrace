@@ -1,5 +1,5 @@
 n;  package;                source; n.vignettes; output.size
-1;  grid;                   base;   13;          
+1;  grid;                   base;   13;           
 2;  dplyr;                  cran;   8;           
 3;  rivr;                   cran;   3;           
 4;  stringr;                cran;   2;           
