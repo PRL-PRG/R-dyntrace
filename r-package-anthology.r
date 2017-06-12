@@ -35,7 +35,7 @@ install_my_packages <- function(packages, src, installer=install.packages) {
 }
 
 cran.packages = (packages[packages$source == "cran", ])$package
-bioc.packages = (packages[packages$source == "bioc", ])$pacages
+bioc.packages = (packages[packages$source == "bioc", ])$package
 aux1.packages = c(
     "nycflights13",
     "Lahman",
@@ -113,14 +113,6 @@ source("https://bioconductor.org/biocLite.R")
 biocLite()
 install_my_packages(aux2.packages, "bioconductor auxiliary", biocLite)
 install_my_packages(bioc.packages, "bioconductor", biocLite)
-
-# Patches for whatever I can patch
-# Error in vignette zoo for package zoo: Error in readChar(con, 5L, useBytes = TRUE): cannot open the connection
-# Error in vignette sha1 for package digest: Error: sha1() has not method for the 'terms', 'formula' class
-# Error in vignette figs6 for package gamclass: Error in eval(model$call$data, envir): object 'meuse' not found
-# Error in vignette rhoAMH-dilog for package copula: Error in mat2tex(rbind(k = k, `$a_k$` = as.character(ak)), stdout()): could not find function "mat2tex"
-# Error in vignette Frank-Rmpfr for package copula: Error in mpfr(thet, precBits = pBit): could not find function "mpfr"
-
 
 # sanity check
 eval_all_vignettes_from_package <- function(package) {
