@@ -36,7 +36,8 @@ install_my_packages <- function(packages, src, installer=install.packages) {
 
 cran.packages = (packages[packages$source == "cran", ])$package
 bioc.packages = (packages[packages$source == "bioc", ])$package
-aux1.packages = c(
+ aux.packages = c(
+    "limma",
     "nycflights13",
     "Lahman",
     "chron",
@@ -76,10 +77,9 @@ aux1.packages = c(
     "rpart",
     "ape",
     "HSAUR",
-    "xtable"
-)
-
-aux2.packages <- c(
+    "xtable",
+    "Rcpp",
+    "KernSmooth",
     "hgu95av2.db",
     "rae230a.db",
     "hom.Hs.inp.db",
@@ -103,15 +103,15 @@ aux2.packages <- c(
     'TxDb.Mmusculus.UCSC.mm10.knownGene',
     'BatchJobs',
     'RNAseqData.HNRNPC.bam.chr14',
-    'TxDb.Athaliana.BioMart.plantsmart22'
+    'TxDb.Athaliana.BioMart.plantsmart22',
+    "GO.db",
+    "MASS"
 )
-
-install_my_packages(aux1.packages, "auxiliary")
-install_my_packages(cran.packages, "CRAN")
 
 source("https://bioconductor.org/biocLite.R")
 biocLite()
-install_my_packages(aux2.packages, "bioconductor auxiliary", biocLite)
+install_my_packages(aux.packages, "auxiliary")
+install_my_packages(cran.packages, "CRAN")
 install_my_packages(bioc.packages, "bioconductor", biocLite)
 
 # sanity check
