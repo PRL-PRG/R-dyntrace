@@ -37,6 +37,9 @@ install_my_packages <- function(packages, src, installer=install.packages) {
 cran.packages = (packages[packages$source == "cran", ])$package
 bioc.packages = (packages[packages$source == "bioc", ])$package
  aux.packages = c(
+    "Rcpp",
+    "dplyr",
+    "tibble",
     "limma",
     "nycflights13",
     "Lahman",
@@ -78,7 +81,6 @@ bioc.packages = (packages[packages$source == "bioc", ])$package
     "ape",
     "HSAUR",
     "xtable",
-    "Rcpp",
     "KernSmooth",
     "hgu95av2.db",
     "rae230a.db",
@@ -105,7 +107,8 @@ bioc.packages = (packages[packages$source == "bioc", ])$package
     'RNAseqData.HNRNPC.bam.chr14',
     'TxDb.Athaliana.BioMart.plantsmart22',
     "GO.db",
-    "MASS"
+    "MASS",
+    "Biostrings"
 )
 
 source("https://bioconductor.org/biocLite.R")
