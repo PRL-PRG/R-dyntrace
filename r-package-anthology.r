@@ -99,6 +99,7 @@ bioc.packages = (packages[packages$source == "bioc", ])$package
     "rae230aprobe",
     "org.Mm.eg.db", 
     "affy",
+    "affydata",
     "TxDb.Hsapiens.UCSC.hg19.knownGene",
     "BSgenome.Mmusculus.UCSC.mm10",
     "BSgenome.Celegans.UCSC.ce2",
