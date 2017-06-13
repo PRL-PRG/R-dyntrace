@@ -113,7 +113,7 @@ bioc.packages = (packages[packages$source == "bioc", ])$package
 
 source("https://bioconductor.org/biocLite.R")
 biocLite()
-install_my_packages(aux.packages, "auxiliary")
+install_my_packages(aux.packages, "auxiliary", biocLite)
 install_my_packages(cran.packages, "CRAN")
 install_my_packages(bioc.packages, "bioconductor", biocLite)
 
@@ -149,6 +149,6 @@ eval_all_vignettes_from_package <- function(package) {
 
 for (package in packages$package) { 
     eval_all_vignettes_from_package(package) 
-    readline(prompt="Press [enter] to continue")
+    #:readline(prompt="Press [enter] to continue")
 }
 
