@@ -1,13 +1,13 @@
 # Run as: Rscript file argv
 
-library(compiler)
+#library(compiler)
 
 DIR="./"
 
 packages = commandArgs(trailingOnly = TRUE)
 
-for(src in list.files("src/library/base/R", pattern = "\\.Rc$", full.names=TRUE))
-    loadcmp(src)
+#for(src in list.files("src/library/base/R", pattern = "\\.Rc$", full.names=TRUE))
+#    loadcmp(src)
 
 custom.executor <- function(executor, path)
     function(expr, current_vignette, total_vignettes, vignette_name, vignette_package, ...) {
