@@ -66,6 +66,8 @@ create table if not exists promise_evaluations (
     from_call_id integer not null,
     in_call_id integer not null,
     lifestyle integer not null,
+    effective_distance_from_origin integer not null,
+    actual_distance_from_origin integer not null,
     --[ keys ]-----------------------------------------------------------------
     foreign key (promise_id) references promises,
     foreign key (from_call_id) references calls,

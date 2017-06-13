@@ -223,8 +223,11 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
             break;
     }
 
-    bool compiled = (info.prom_type == sexp_type::BCODE);
 
+    stream << " distance_from_origin=" << info.effective_distance_from_origin
+           << "/" << info.actual_distance_from_origin;
+
+    bool compiled = (info.prom_type == sexp_type::BCODE);
     stream << " type=" << (compiled ? "bcode::" : "")
            << sexp_type_to_string(compiled ? info.prom_original_type : info.prom_original_type) //tools::enum_cast
            << "\n";
