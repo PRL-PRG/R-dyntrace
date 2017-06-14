@@ -48,7 +48,8 @@ Promise lookups: `r n.promise.lookups` (+ `r n.alien.promise.lookups` alien)
 
 ## Promises
 
-(Alien promises are not taken into account.)
+Alien promises are promises which were created before we began tracing. We don't have all the information regarding them, so we generally ignore them, including in the data below. They also are a subject of a lot of lookups in functions from base::*, which we don't record to save disk space.
+
 ``` {r promises, include=FALSE}
 
 get_lifestyles <- function() {
@@ -195,8 +196,8 @@ pie(slices, labels)
 Effective distance is the distance from the call where a promise originated to the call in which it was evaluated. It is measured along the call graph (along inbound edges).  Since the data is gathered from a trace, the call graph is a tree.
 
 Special values:  
-`NA` - promise was not executed, there is no distance measure (a virgin promise)  
-`-1` - promise was executed but there is no path from the origin to the point evaluation (an escaped promise)  
+**NA** - promise was not executed, there is no distance measure (a virgin promise)  
+**-1** - promise was executed but there is no path from the origin to the point of evaluation (an escaped promise)  
 
 ``` {r distances, echo=FALSE, fig.width=12, fig.height=6}
 histogram <- get_effective_distances()
@@ -222,7 +223,6 @@ labels <- (promise.types %>% arrange(number) %>% mutate(type = ifelse(percent>1,
 par(mar=c(0,2,0,2))
 pie(slices, labels)
 ```
-
 </div>
 
 ## Functions

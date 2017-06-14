@@ -237,18 +237,29 @@ where_are_promises_evaluated <- function(path="trace.sqlite") {
 
     lifestyles <-
         left_join(promises, promise_evaluations, by=c("id" = "promise_id")) %>%
-        mutate(lifestyle = ifelse(lifestyle == 1, "local",
+        mutate(lifestyle = ifelse(is.na(lifestyle), "virgin",
+                           ifelse(lifestyle == 1, "local",
                            ifelse(lifestyle == 2, "branch-local",
                            ifelse(lifestyle == 3, "escaped",
                            ifelse(lifestyle == 4, "local (immediate)",
                            ifelse(lifestyle == 5, "branch-local (immediate)",
-                                                  "virgin")))))) %>%
-        select(id, from_call_id, in_call_id, lifestyle)
+                                                  "...?"))))))) %>%
+        select(id, from_call_id, in_call_id, lifestyle, effective_distance_from_origin)
 
     lifestyles %>% group_by(lifestyle) %>% count(lifestyle) %>%
-    mutate(percent=((n*100/total))) %>% rename(number = n) %>%
+    mutate(percent=((n*100/n.promise.forces))) %>% rename(number = n) %>%
     group_by(lifestyle) %>%
     do(mutate(., percent = paste(format(percent, digits=12), "%", sep="") ))
+}
+
+how_far_are_promises_evaluated_from_their_origin(path="trace.sqlite") {
+    db <- load_trace(path)
+    promise_evaluations <- db %>% tbl("promise_evaluations") %>% filter(event_type == 15) %>% filter(promise_id > 0)
+    promises <- db %>% tbl("promises")
+
+    total <- (promises %>% count %>% as.data.frame)$n
+
+    
 }
 
 what_types_of_promises_are_there <- function(path="trace.sqlite") {
@@ -268,6 +279,10 @@ what_types_of_promises_are_there <- function(path="trace.sqlite") {
       do(mutate(., type_code = type, type = humanize_promise_type(type, original_type), percent = paste(format(percent, digits=12), "%", sep="") )) %>%
       rename(number=n) %>%
       group_by(type) %>% select(type, number, percent)
+}
+
+count_function_calls <- function(path="trace.sqlite") {
+    
 }
 
 basic_results_for_one_function <- function(function.id, db) {
