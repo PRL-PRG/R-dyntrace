@@ -217,6 +217,9 @@ private:
         if (name != NULL)
             info.name = name;
 
+        SEXP promise_expression = get_promise(symbol, rho);
+        info.prom_id = get_promise_id(promise_expression);
+
         call_stack_elem_t stack_elem = STATE(fun_stack).back();
         info.in_call_id = stack_elem.first;
 
@@ -232,9 +235,6 @@ private:
             info.effective_distance_from_origin = get<1>(lifestyle_info);
             info.actual_distance_from_origin = get<2>(lifestyle_info);
         }
-
-        SEXP promise_expression = get_promise(symbol, rho);
-        info.prom_id = get_promise_id(promise_expression);
 
         info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(promise_expression)));
 
