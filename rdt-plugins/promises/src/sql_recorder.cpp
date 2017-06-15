@@ -35,7 +35,7 @@ sql_stmt_t insert_arguments_statement(const closure_info_t & info, bool align) {
     assert(info.arguments.size() > 0);
 
     vector<sql_val_cell_t> value_cells;
-    sql_val_t function_id = from_int(info.fn_id);
+    sql_val_t call_id = from_int(info.call_id);
 
     int i = 0;
     for (auto argument_ref : info.arguments.all()) {
@@ -44,7 +44,7 @@ sql_stmt_t insert_arguments_statement(const closure_info_t & info, bool align) {
         sql_val_t argument_id = from_int(get<1>(argument));
         sql_val_t index = from_int(i++);
 
-        sql_val_cell_t cell = join({argument_id, argument_name, index, function_id});
+        sql_val_cell_t cell = join({argument_id, argument_name, index, call_id});
         value_cells.push_back(cell);
     }
 
@@ -121,7 +121,7 @@ void sql_recorder_t::function_entry(const closure_info_t & info) {
                 tracer_conf.outputs);
     }
 
-    if (need_to_insert && info.arguments.size() > 0) {
+    if (info.arguments.size() > 0) {
         sql_stmt_t statement = insert_arguments_statement(info, align_statements);
         multiplexer::output(
                 multiplexer::payload_t(statement),
