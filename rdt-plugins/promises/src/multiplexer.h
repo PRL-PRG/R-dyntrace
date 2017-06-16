@@ -143,6 +143,19 @@ namespace multiplexer {
 #endif
     };
 
+    class ulong_string_to_ulong_map_result {
+    public:
+        std::map<std::pair<unsigned long int, std::string>, unsigned long int> result;
+#ifdef RDT_SQLITE_SUPPORT
+        bool load(sqlite3_stmt * statement) {
+            unsigned long int i1 = sqlite3_column_int64(statement, 0);
+            std::string s = reinterpret_cast<const char *>(sqlite3_column_text(statement, 1));
+            unsigned long int i2 = sqlite3_column_int64(statement, 2);
+            result[std::pair<unsigned long int, std::string>(i1, s)] = i2;
+        }
+#endif
+    };
+
     // Function for actually retrieving and outputting stuff.
     bool output(payload_t && payload, sink_arr_t outputs);
 

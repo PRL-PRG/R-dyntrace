@@ -56,7 +56,7 @@ public:
                 info.name = name;
         }
 
-        info.arguments = get_arguments(op, rho);
+        info.arguments = get_arguments(info.call_id, op, rho);
         info.fn_definition = get_expression(op);
 
         return info;
@@ -92,7 +92,7 @@ public:
                 info.name = name;
         }
 
-        info.arguments = get_arguments(op, rho);
+        info.arguments = get_arguments(info.call_id, op, rho);
         info.fn_definition = get_expression(op);
 
         STATE(fun_stack).pop_back();

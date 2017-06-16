@@ -64,7 +64,7 @@ namespace sql_generator {
     }
 
     sql_stmt_t make_select_all_argument_ids_names_and_function_allegiances_statement() {
-        return "select function_id, name, id from arguments;\n";
+        return "select call_id, name, id from arguments;\n";
     }
 
     sql_stmt_t make_select_all_function_ids_statement() {

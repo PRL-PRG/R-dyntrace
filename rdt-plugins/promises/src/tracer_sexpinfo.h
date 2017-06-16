@@ -28,9 +28,9 @@ typedef int fn_id_t;        // integer
 typedef rid_t fn_addr_t;    // hexadecimal
 typedef string fn_key_t;    // pun
 
-typedef int arg_id_t;       // integer
+typedef unsigned long int arg_id_t;       // integer
 
-typedef pair<fn_id_t, string> arg_key_t;
+typedef pair<call_id_t, string> arg_key_t;
 
 rid_t get_sexp_address(SEXP e);
 
@@ -206,7 +206,7 @@ bool negative_promise_already_inserted(prom_id_t id);
 
 // Wraper for findVar. Does not look up the value if it already is PROMSXP.
 SEXP get_promise(SEXP var, SEXP rho);
-arg_id_t get_argument_id(fn_addr_t function_id, const string & argument);
-arglist_t get_arguments(SEXP op, SEXP rho);
+arg_id_t get_argument_id(call_id_t call_id, const string & argument);
+arglist_t get_arguments(call_id_t call_id, SEXP op, SEXP rho);
 
 #endif //R_3_3_1_TRACER_SEXPINFO_H

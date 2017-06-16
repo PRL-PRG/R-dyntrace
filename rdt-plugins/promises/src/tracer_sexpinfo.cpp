@@ -131,8 +131,8 @@ SEXP get_promise(SEXP var, SEXP rho) {
     return prom;
 }
 
-arg_id_t get_argument_id(fn_id_t function_id, const string & argument) {
-    arg_key_t key = make_pair(function_id, argument);
+arg_id_t get_argument_id(call_id_t call_id, const string & argument) { // FIXME this is overcomplicated. A simple sequence should be enough, i think.
+    arg_key_t key = make_pair(call_id, argument);
     auto iterator = STATE(argument_ids).find(key);
 
     if (iterator != STATE(argument_ids).end()) {
@@ -146,7 +146,7 @@ arg_id_t get_argument_id(fn_id_t function_id, const string & argument) {
 
 
 
-arglist_t get_arguments(SEXP op, SEXP rho) {
+arglist_t get_arguments(call_id_t call_id, SEXP op, SEXP rho) {
     arglist_t arguments;
 
     for (SEXP formals = FORMALS(op); formals != R_NilValue; formals = CDR(formals)) {
@@ -161,7 +161,7 @@ arglist_t get_arguments(SEXP op, SEXP rho) {
                 SEXP ddd_promise_expression = CAR(dots);
                 if (ddd_argument_expression == R_NilValue) {
                     arguments.push_back(std::make_tuple(
-                            get_argument_id(get_function_id(op), to_string(i++)),
+                            get_argument_id(call_id, to_string(i++)),
                             get_promise_id(ddd_promise_expression)
                     )); // ... argument without a name
                 }
@@ -169,7 +169,7 @@ arglist_t get_arguments(SEXP op, SEXP rho) {
                     string ddd_arg_name = get_name(ddd_argument_expression);
                     arguments.push_back(std::make_tuple(
                             ddd_arg_name,
-                            get_argument_id(get_function_id(op), ddd_arg_name),
+                            get_argument_id(call_id, ddd_arg_name),
                             get_promise_id(ddd_promise_expression)
                     ), true); // this flag says we're inserting a ... argument
                 }
@@ -183,7 +183,7 @@ arglist_t get_arguments(SEXP op, SEXP rho) {
             if (prom_id != RID_INVALID)
                 arguments.push_back(std::make_tuple(
                         arg_name,
-                        get_argument_id(get_function_id(op), arg_name),
+                        get_argument_id(call_id, arg_name),
                         prom_id
                 ));
         }

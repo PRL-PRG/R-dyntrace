@@ -226,7 +226,7 @@ void sql_recorder_t::start_trace() { // bool output_configuration
         multiplexer::int_result min_promise_id;
         multiplexer::int_result max_argument_id;
         multiplexer::string_to_int_map_result functions;
-        multiplexer::int_string_to_int_map_result arguments;
+        multiplexer::ulong_string_to_ulong_map_result arguments;
 
         multiplexer::int_set_result already_inserted_functions;
         multiplexer::int_set_result already_inserted_negative_promises;
