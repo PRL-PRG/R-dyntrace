@@ -3,9 +3,8 @@ packages = commandArgs(trailingOnly = TRUE)
 cmd <- "~/workspace/R-dyntrace/bin/R CMD BATCH" #paste(shQuote(file.path(R.home("bin"), "R")))
 sys.env <- as.character(c("R_KEEP_PKG_SOURCE=yes", "R_ENABLE_JIT=0"))
 
-input.dir <- "."
-output.dir <- "."
-tmp.dir <- "."
+output.dir <- "/data/kondziu/"
+tmp.dir <- "/data/kondziu/"
 
 #execute.external.programs(programs)
 
