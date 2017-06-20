@@ -1,6 +1,7 @@
 #!/bin/bash
 
-CMD='bin/Rscript rdt-plugins/promises/R/benchmark.R'
+#CMD='bin/Rscript rdt-plugins/promises/R/benchmark.R'
+CMD='bin/Rscript compose_testable_vignettes.R'
 
 PACKAGES=
 
