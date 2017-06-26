@@ -42,8 +42,15 @@ namespace sql_generator {
 
     sql_stmt_t make_pragma_statement(sql_val_t option, sql_val_t value);
 
-    sql_stmt_t make_create_tables_and_views_statement();
-    std::vector<sql_stmt_t> split_into_individual_statements(sql_stmt_t statements);
+    //sql_stmt_t make_create_tables_and_views_statement();
+    //std::vector<sql_stmt_t> split_into_individual_statements(sql_stmt_t statements);
+
+    sql_stmt_t make_create_functions_statement();
+    sql_stmt_t make_create_calls_statement();
+    sql_stmt_t make_create_arguments_statement();
+    sql_stmt_t make_create_promises_statement();
+    sql_stmt_t make_create_promise_associations_statement();
+    sql_stmt_t make_create_promise_evaluations_statement();
 
         sql_val_cell_t join(std::initializer_list<sql_val_t>);
 

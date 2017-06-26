@@ -176,16 +176,90 @@ namespace sql_generator {
         return "pragma " + option + " = " + value + ";\n";
     }
 
-    sql_stmt_t make_create_tables_and_views_statement() {
-        ifstream schema_file(RDT_SQL_SCHEMA);
-        string schema_string;
-        schema_file.seekg(0, ios::end);
-        schema_string.reserve(schema_file.tellg());
-        schema_file.seekg(0, ios::beg);
-        schema_string.assign((istreambuf_iterator<char>(schema_file)), istreambuf_iterator<char>());
-        return schema_string.c_str();
+    sql_stmt_t make_create_functions_statement() {
+        return "create table if not exists functions (\n"
+                "    --[ identity ]-------------------------------------------------------------\n"
+                "    id integer primary key, -- equiv. to pointer of function definition SEXP\n"
+                "    --[ data ]-----------------------------------------------------------------\n"
+                "    location text,\n"
+                "    definition text,\n"
+                "    type integer not null, -- 0: closure, 1: built-in, 2: special\n"
+                "                                -- values defined by function_type\n"
+                "    compiled boolean not null\n"
+                ");\n";
     }
 
+    sql_stmt_t make_create_calls_statement() {
+        return  "create table if not exists calls (\n"
+                "    --[ identity ]-------------------------------------------------------------\n"
+                "    id integer primary key, -- if CALL_ID is off this is equal to SEXP pointer\n"
+                "    -- pointer integer not null, -- we're not using this at all\n"
+                "    --[ data ]-----------------------------------------------------------------\n"
+                "    function_name text,\n"
+                "    callsite text,\n"
+                "    --[ relations ]------------------------------------------------------------\n"
+                "    function_id integer not null,\n"
+                "    parent_id integer not null, -- ID of call that executed current call\n"
+                "    --[ keys ]-----------------------------------------------------------------\n"
+                "    foreign key (function_id) references functions,\n"
+                "    foreign key (parent_id) references calls\n"
+                ");\n";
+    }
+
+    sql_stmt_t make_create_arguments_statement() {
+        return  "create table if not exists arguments (\n"
+                "    --[ identity ]-------------------------------------------------------------\n"
+                "    id integer primary key, -- arbitrary\n"
+                "    --[ data ]-----------------------------------------------------------------\n"
+                "    name text not null,\n"
+                "    position integer not null,\n"
+                "    --[ relations ]------------------------------------------------------------\n"
+                "    call_id integer not null,\n"
+                "    --[ keys ]-----------------------------------------------------------------\n"
+                "    foreign key (call_id) references functions\n"
+                ");\n";
+    }
+
+    sql_stmt_t make_create_promises_statement() {
+        return "create table if not exists promises (\n"
+                "    --[ identity ]-------------------------------------------------------------\n"
+                "    id integer primary key, -- equal to promise pointer SEXP\n"
+                "    type integer null,\n"
+                "    original_type integer null -- if type is BCODE (21) then this is the type before compilation\n"
+                ");\n";
+    }
+
+   sql_stmt_t make_create_promise_associations_statement() {
+       return "create table if not exists promise_associations (\n"
+               "    --[ relations ]------------------------------------------------------------\n"
+               "    promise_id integer not null,\n"
+               "    call_id integer not null,\n"
+               "    argument_id integer not null,\n"
+               "    --[ keys ]-----------------------------------------------------------------\n"
+               "    foreign key (promise_id) references promises,\n"
+               "    foreign key (call_id) references calls,\n"
+               "    foreign key (argument_id) references arguments\n"
+               ");\n";
+   }
+
+    sql_stmt_t make_create_promise_evaluations_statement() {
+        return "create table if not exists promise_evaluations (\n"
+               "    --[ data ]-----------------------------------------------------------------\n"
+               "    clock integer primary key autoincrement, -- imposes an order on evaluations\n"
+               "    event_type integer not null, -- 0x0: lookup, 0xf: force\n"
+               "    --[ relations ]------------------------------------------------------------\n"
+               "    promise_id integer not null,\n"
+               "    from_call_id integer not null,\n"
+               "    in_call_id integer not null,\n"
+               "    lifestyle integer not null,\n"
+               "    effective_distance_from_origin integer not null,\n"
+               "     actual_distance_from_origin integer not null,\n"
+               "    --[ keys ]-----------------------------------------------------------------\n"
+               "    foreign key (promise_id) references promises,\n"
+               "    foreign key (from_call_id) references calls,\n"
+               "    foreign key (in_call_id) references calls\n"
+               ");\n";
+    }
 
     vector<sql_stmt_t> split_into_individual_statements(sql_stmt_t statement_blob) {
         vector<sql_stmt_t> statements;

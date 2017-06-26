@@ -132,15 +132,15 @@ SEXP get_promise(SEXP var, SEXP rho) {
 }
 
 arg_id_t get_argument_id(call_id_t call_id, const string & argument) { // FIXME this is overcomplicated. A simple sequence should be enough, i think.
-    arg_key_t key = make_pair(call_id, argument);
-    auto iterator = STATE(argument_ids).find(key);
+    //arg_key_t key = make_pair(call_id, argument);
+    //auto iterator = STATE(argument_ids).find(key);
 
-    if (iterator != STATE(argument_ids).end()) {
-        return iterator->second;
-    }
+    //if (iterator != STATE(argument_ids).end()) {
+    //    return iterator->second;
+    //}
 
     arg_id_t argument_id = ++STATE(argument_id_sequence);
-    STATE(argument_ids)[key] = argument_id;
+    //STATE(argument_ids)[key] = argument_id;
     return argument_id;
 }
 

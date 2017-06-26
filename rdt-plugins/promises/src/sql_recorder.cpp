@@ -199,11 +199,37 @@ void sql_recorder_t::start_trace() { // bool output_configuration
 
     if (tracer_conf.include_configuration)
         if (tracer_conf.overwrite) {
-            sql_stmt_t statement = make_pragma_statement("synchronous", "off")
-                                   + make_create_tables_and_views_statement();
+            sql_stmt_t pragma_statement = make_pragma_statement("synchronous", "off");
+
+            sql_stmt_t create_functions_statement = make_create_functions_statement();
+            sql_stmt_t create_calls_statement = make_create_calls_statement();
+            sql_stmt_t create_arguments_statement = make_create_arguments_statement();
+            sql_stmt_t create_promises_statement = make_create_promises_statement();
+            sql_stmt_t create_associations_statement = make_create_promise_associations_statement();
+            sql_stmt_t create_evaluations_statement = make_create_promise_evaluations_statement();
 
             multiplexer::output(
-                    multiplexer::payload_t(statement),
+                    multiplexer::payload_t(pragma_statement),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(create_calls_statement),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(create_arguments_statement),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(create_promises_statement),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(create_associations_statement),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(create_evaluations_statement),
                     tracer_conf.outputs);
         }
 

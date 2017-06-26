@@ -64,13 +64,35 @@ void free_prepared_sql_statements();
 void free_prepared_sql_statement_cache(pstmt_cache *cache);
 #endif
 
+static sqlite3_stmt * prepared_sql_create_functions;
+static sqlite3_stmt * prepared_sql_create_calls;
+static sqlite3_stmt * prepared_sql_create_arguments;
+static sqlite3_stmt * prepared_sql_create_promises;
+static sqlite3_stmt * prepared_sql_create_associations;
+static sqlite3_stmt * prepared_sql_create_evaluations;
+
 void compile_prepared_sql_schema_statements() {
     prepared_sql_pragma_asynchronous =
             compile_sql_statement(make_pragma_statement("synchronous", "off"));
 
-    // We must split the schema into separate statements;
-    for (sql_stmt_t statement : split_into_individual_statements(make_create_tables_and_views_statement()))
-        prepared_sql_create_tables_and_views.push_back(compile_sql_statement(statement));
+    prepared_sql_create_functions =
+            compile_sql_statement(
+                    make_create_functions_statement());
+    prepared_sql_create_calls =
+            compile_sql_statement(
+                    make_create_calls_statement());
+    prepared_sql_create_arguments =
+            compile_sql_statement(
+                    make_create_arguments_statement());
+    prepared_sql_create_promises =
+            compile_sql_statement(
+                    make_create_promises_statement());
+    prepared_sql_create_associations =
+            compile_sql_statement(
+                    make_create_promise_associations_statement());
+    prepared_sql_create_evaluations =
+            compile_sql_statement(
+                    make_create_promise_evaluations_statement());
 }
 
 void compile_prepared_sql_statements() {
@@ -359,18 +381,39 @@ void psql_recorder_t::start_trace() {
                     multiplexer::payload_t(prepared_sql_pragma_asynchronous),
                     tracer_conf.outputs);
 
-            for (auto statement : prepared_sql_create_tables_and_views) {
-//                Rprintf(sqlite3_sql(statement));
-                multiplexer::output(
-                        multiplexer::payload_t(statement),
-                        tracer_conf.outputs);
-            }
+            multiplexer::output(
+                    multiplexer::payload_t(prepared_sql_create_functions),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(prepared_sql_create_calls),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(prepared_sql_create_arguments),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(prepared_sql_create_promises),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(prepared_sql_create_associations),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(prepared_sql_create_evaluations),
+                    tracer_conf.outputs);
         }
     }
+
+
 
     compile_prepared_sql_statements();
 
     if (!tracer_conf.overwrite && tracer_conf.reload_state) {
+        cerr << "doing this~~~~~~~~~~\n";
+
         multiplexer::int_result max_function_id;
         multiplexer::int_result max_call_id;
         multiplexer::int_result max_clock;
@@ -482,7 +525,14 @@ void free_prepared_sql_statements() {
     sqlite3_finalize(already_inserted_functions_query);
     sqlite3_finalize(already_inserted_negative_promises_query);
 
-    free_prepared_sql_statement_vector(prepared_sql_create_tables_and_views);
+    sqlite3_finalize(prepared_sql_create_functions);
+    sqlite3_finalize(prepared_sql_create_calls);
+    sqlite3_finalize(prepared_sql_create_arguments);
+    sqlite3_finalize(prepared_sql_create_promises);
+    sqlite3_finalize(prepared_sql_create_associations);
+    sqlite3_finalize(prepared_sql_create_evaluations);
+
+//    free_prepared_sql_statement_vector(prepared_sql_create_tables_and_views);
 
     free_prepared_sql_statement_cache(prepared_sql_insert_promise_assocs);
     free_prepared_sql_statement_cache(prepared_sql_insert_arguments);
