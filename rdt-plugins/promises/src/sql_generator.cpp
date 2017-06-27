@@ -185,7 +185,7 @@ namespace sql_generator {
                 "    location text,\n"
                 "    definition text,\n"
                 "    type integer not null, -- 0: closure, 1: built-in, 2: special\n"
-                "                                -- values defined by function_type\n"
+                "                           -- values defined by function_type\n"
                 "    compiled boolean not null\n"
                 ");\n";
     }
@@ -228,7 +228,7 @@ namespace sql_generator {
                 "    type integer null,\n"
                 "    original_type integer null, -- if type is BCODE (21) then this is the type before compilation\n"
                 "    symbol_type integer null -- if type or original_type is SYM (1) then this is the type of the\n"
-                "                                expression it points to\n"
+                "                             -- expression it points to\n"
                 ");\n";
     }
 
