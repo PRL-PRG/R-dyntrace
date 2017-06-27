@@ -101,7 +101,7 @@ void compile_prepared_sql_statements() {
     prepared_sql_insert_call =
             compile_sql_statement(make_insert_function_call_statement("?","?","?","?","?"));
     prepared_sql_insert_promise =
-            compile_sql_statement(make_insert_promise_statement("?", "?", "?"));
+            compile_sql_statement(make_insert_promise_statement("?", "?", "?", "?"));
     prepared_sql_insert_promise_eval =
             compile_sql_statement(make_insert_promise_evaluation_statement("?","?","?","?","?","?","?","?"));
 
@@ -212,6 +212,11 @@ sqlite3_stmt * populate_promise_statement(const prom_basic_info_t info) {
         sqlite3_bind_int(prepared_sql_insert_promise, 3, tools::enum_cast(info.prom_original_type));
     else
         sqlite3_bind_null(prepared_sql_insert_promise, 3);
+
+    if (info.prom_type == sexp_type ::SYM || info.prom_type == sexp_type::BCODE && info.prom_original_type == sexp_type::SYM)
+        sqlite3_bind_int(prepared_sql_insert_promise, 4, tools::enum_cast(info.prom_original_type));
+    else
+        sqlite3_bind_null(prepared_sql_insert_promise, 4);
 
     return prepared_sql_insert_promise;
 }

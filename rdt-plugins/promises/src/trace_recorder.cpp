@@ -172,9 +172,16 @@ string promise_creation_info_line(TraceLinePrefix prefix, const prom_basic_info_
     bool compiled = info.prom_type == sexp_type::BCODE;
 
     stream << "create promise id=" << info.prom_id
-           << " type=" << (compiled ? "compiled::" : "")
-           << sexp_type_to_string(compiled ? info.prom_original_type : info.prom_type)
-           << "\n";
+           << " type=" << sexp_type_to_string(info.prom_type);
+
+    if (info.prom_type == sexp_type::BCODE)
+        stream << "->" << sexp_type_to_string(info.prom_original_type);
+
+    if (info.prom_original_type == sexp_type::SYM ||
+            info.prom_type == sexp_type::BCODE && info.prom_original_type == sexp_type::SYM)
+        stream << "->" << sexp_type_to_string(info.symbol_underlying_type);
+
+    stream << "\n";
 
     return stream.str();
 }
@@ -227,10 +234,16 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
     stream << " distance_from_origin=" << info.effective_distance_from_origin
            << "/" << info.actual_distance_from_origin;
 
-    bool compiled = (info.prom_type == sexp_type::BCODE);
-    stream << " type=" << (compiled ? "bcode::" : "")
-           << sexp_type_to_string(compiled ? info.prom_original_type : info.prom_original_type) //tools::enum_cast
-           << "\n";
+    stream << " type=" << sexp_type_to_string(info.prom_type);
+
+    if (info.prom_type == sexp_type::BCODE)
+        stream << "->" << sexp_type_to_string(info.prom_original_type);
+
+    if (info.prom_original_type == sexp_type::SYM ||
+        info.prom_type == sexp_type::BCODE && info.prom_original_type == sexp_type::SYM)
+        stream << "->" << sexp_type_to_string(info.symbol_underlying_type);
+
+    stream << "\n";
 
     return stream.str();
 }

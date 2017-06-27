@@ -26,7 +26,7 @@ namespace multiplexer {
 
             if (already_initialized.count(output)) {
                 cerr << "Warning: trying to initialize the same output type twice (" << output << ")."
-                     << "Hillarity may ensue.\n";
+                     << "Hilarity may ensue.\n";
                 continue;
             } else
                 already_initialized.insert(output);

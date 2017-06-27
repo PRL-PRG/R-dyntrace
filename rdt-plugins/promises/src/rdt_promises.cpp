@@ -128,20 +128,8 @@ struct trace_promises {
         print_exit_info(call, op, rho, function_type::SPECIAL);
     }
 
-    static void promise_created(const SEXP prom) {
-        prom_basic_info_t info;
-
-        info.prom_id = make_promise_id(prom);
-        STATE(fresh_promises).insert(info.prom_id);
-
-        info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(prom)));
-
-        if (info.prom_type == sexp_type::BCODE) {
-            SEXP original_expression = BODY_EXPR(PRCODE(prom));
-            info.prom_original_type = static_cast<sexp_type>(TYPEOF(PRCODE(original_expression)));
-        } else {
-            info.prom_original_type = info.prom_type;
-        }
+    static void promise_created(const SEXP prom, const SEXP rho) {
+        prom_basic_info_t info = rec.create_promise_get_info(prom, rho);
 
         rec.promise_created_process(info);
     }

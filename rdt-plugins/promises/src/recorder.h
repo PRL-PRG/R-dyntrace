@@ -36,6 +36,7 @@ public:
         info.call_id = make_funcall_id(op);
         //info.call_id = make_funcall_id(rho);
 
+
         call_stack_elem_t elem = STATE(fun_stack).back();
         info.parent_call_id = elem.first;
 
@@ -210,6 +211,33 @@ private:
         }
     }
 
+    prom_basic_info_t promise_get_basic_info(const SEXP prom, const SEXP rho) {
+        prom_basic_info_t info;
+
+        info.prom_id = make_promise_id(prom);
+        STATE(fresh_promises).insert(info.prom_id);
+
+        info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(prom)));
+
+        if (info.prom_type == sexp_type::BCODE) {
+            SEXP original_expression = BODY_EXPR(PRCODE(prom));
+            info.prom_original_type = static_cast<sexp_type>(TYPEOF(PRCODE(original_expression)));
+        } else {
+            info.prom_original_type = info.prom_type;
+        }
+
+        if (info.prom_type == sexp_type::SYM) {
+            SEXP underlying_expression = findVar(PRCODE(prom), rho);
+            info.symbol_underlying_type = static_cast<sexp_type>(TYPEOF(underlying_expression));
+        } else if (info.prom_type == sexp_type::BCODE && info.prom_original_type == sexp_type::SYM) {
+            SEXP original_expression = BODY_EXPR(PRCODE(prom));
+            SEXP underlying_expression = findVar(PRCODE(original_expression), rho);
+            info.symbol_underlying_type = static_cast<sexp_type>(TYPEOF(underlying_expression));
+        }
+
+        return info;
+    }
+
     prom_info_t promise_get_info(const SEXP symbol, const SEXP rho) {
         prom_info_t info;
 
@@ -245,10 +273,23 @@ private:
             info.prom_original_type = info.prom_type;
         }
 
+        if (info.prom_type == sexp_type::SYM) {
+            SEXP underlying_expression = findVar(PRCODE(promise_expression), rho);
+            info.symbol_underlying_type = static_cast<sexp_type>(TYPEOF(underlying_expression));
+        } else if (info.prom_type == sexp_type::BCODE && info.prom_original_type == sexp_type::SYM) {
+            SEXP original_expression = BODY_EXPR(PRCODE(promise_expression));
+            SEXP underlying_expression = findVar(PRCODE(original_expression), rho);
+            info.symbol_underlying_type = static_cast<sexp_type>(TYPEOF(underlying_expression));
+        }
+
         return info;
     }
 
 public:
+    prom_basic_info_t create_promise_get_info(const SEXP promise, const SEXP rho) {
+        return promise_get_basic_info(promise, rho);
+    }
+
     prom_info_t force_promise_entry_get_info(const SEXP symbol, const SEXP rho) {
         return promise_get_info(symbol, rho);
     }

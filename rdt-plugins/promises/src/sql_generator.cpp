@@ -89,13 +89,14 @@ namespace sql_generator {
         return statement.str();
     }
 
-    sql_stmt_t make_insert_promise_statement(sql_val_t id, sql_val_t type, sql_val_t original_type) {
+    sql_stmt_t make_insert_promise_statement(sql_val_t id, sql_val_t type, sql_val_t original_type, sql_val_t symbol_type) {
         stringstream statement;
 
         statement << "insert into promises values ("
                   << id << ","
                   << type << ","
-                  << original_type
+                  << original_type << ","
+                  << symbol_type
                   << ");\n";
 
         return statement.str();
@@ -225,7 +226,9 @@ namespace sql_generator {
                 "    --[ identity ]-------------------------------------------------------------\n"
                 "    id integer primary key, -- equal to promise pointer SEXP\n"
                 "    type integer null,\n"
-                "    original_type integer null -- if type is BCODE (21) then this is the type before compilation\n"
+                "    original_type integer null, -- if type is BCODE (21) then this is the type before compilation\n"
+                "    symbol_type integer null -- if type or original_type is SYM (1) then this is the type of the\n"
+                "                                expression it points to\n"
                 ");\n";
     }
 

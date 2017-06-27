@@ -68,7 +68,7 @@ typedef struct rdt_handler {
     void (*probe_specialsxp_exit)(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval);
     // Fires on promise allocation.
     // RDT_HOOK(probe_promise_created, s) in src/main/memory.c:mkPROMISE()
-    void (*probe_promise_created)(const SEXP prom);
+    void (*probe_promise_created)(const SEXP prom, const SEXP rho);
     // Fires when a promise is forced (accessed for the first time)
     // Look for RDT_HOOK(probe_force_promise_entry ... in src/main/eval.c
     void (*probe_force_promise_entry)(const SEXP symbol, const SEXP rho);
