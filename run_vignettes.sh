@@ -3,6 +3,7 @@
 #CMD='bin/Rscript rdt-plugins/promises/R/benchmark.R'
 #CMD='bin/Rscript compose_testable_vignettes.R'
 CMD='bin/R --slave --no-restore --debugger=gdb --file=compose_testable_vignettes.R --args'
+#CMD='bin/R --slave --no-restore --file=compose_testable_vignettes.R --args'
 
 
 PACKAGES=
