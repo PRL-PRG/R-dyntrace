@@ -226,13 +226,21 @@ private:
             info.prom_original_type = info.prom_type;
         }
 
-        if (info.prom_type == sexp_type::SYM) {
-            SEXP underlying_expression = findVar(PRCODE(prom), rho);
-            info.symbol_underlying_type = static_cast<sexp_type>(TYPEOF(underlying_expression));
-        } else if (info.prom_type == sexp_type::BCODE && info.prom_original_type == sexp_type::SYM) {
-            SEXP original_expression = BODY_EXPR(PRCODE(prom));
-            SEXP underlying_expression = findVar(PRCODE(original_expression), rho);
-            info.symbol_underlying_type = static_cast<sexp_type>(TYPEOF(underlying_expression));
+        if (rho != R_NilValue) {
+            if (info.prom_type == sexp_type::SYM) {
+                SEXP underlying_expression = findVar(PRCODE(prom), rho);
+                info.symbol_underlying_type = static_cast<sexp_type>(TYPEOF(underlying_expression));
+                info.symbol_underlying_type_is_set = true;
+            } else if (info.prom_type == sexp_type::BCODE && info.prom_original_type == sexp_type::SYM) {
+                SEXP original_expression = BODY_EXPR(PRCODE(prom));
+                SEXP underlying_expression = findVar(PRCODE(original_expression), rho);
+                info.symbol_underlying_type = static_cast<sexp_type>(TYPEOF(underlying_expression));
+                info.symbol_underlying_type_is_set = true;
+            } else {
+                info.symbol_underlying_type_is_set = false;
+            }
+        } else {
+            info.symbol_underlying_type_is_set = false;
         }
 
         return info;

@@ -177,8 +177,7 @@ string promise_creation_info_line(TraceLinePrefix prefix, const prom_basic_info_
     if (info.prom_type == sexp_type::BCODE)
         stream << "->" << sexp_type_to_string(info.prom_original_type);
 
-    if (info.prom_original_type == sexp_type::SYM ||
-            info.prom_type == sexp_type::BCODE && info.prom_original_type == sexp_type::SYM)
+    if (info.symbol_underlying_type_is_set)
         stream << "->" << sexp_type_to_string(info.symbol_underlying_type);
 
     stream << "\n";
@@ -239,8 +238,7 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
     if (info.prom_type == sexp_type::BCODE)
         stream << "->" << sexp_type_to_string(info.prom_original_type);
 
-    if (info.prom_original_type == sexp_type::SYM ||
-        info.prom_type == sexp_type::BCODE && info.prom_original_type == sexp_type::SYM)
+    if (info.symbol_underlying_type_is_set)
         stream << "->" << sexp_type_to_string(info.symbol_underlying_type);
 
     stream << "\n";

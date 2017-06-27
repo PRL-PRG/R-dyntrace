@@ -69,7 +69,7 @@ sql_stmt_t insert_promise_statement(const prom_basic_info_t & info) {
             (info.prom_type == sexp_type::BCODE)
                 ? from_int(tools::enum_cast(info.prom_original_type))
                 : "null",
-            (info.prom_type == sexp_type::SYM || info.prom_type == sexp_type::BCODE && info.prom_type == sexp_type::SYM)
+            (info.symbol_underlying_type_is_set)
                 ? from_int(tools::enum_cast(info.symbol_underlying_type))
                 : "null"
     );

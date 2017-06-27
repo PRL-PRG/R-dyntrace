@@ -213,8 +213,8 @@ sqlite3_stmt * populate_promise_statement(const prom_basic_info_t info) {
     else
         sqlite3_bind_null(prepared_sql_insert_promise, 3);
 
-    if (info.prom_type == sexp_type ::SYM || info.prom_type == sexp_type::BCODE && info.prom_original_type == sexp_type::SYM)
-        sqlite3_bind_int(prepared_sql_insert_promise, 4, tools::enum_cast(info.prom_original_type));
+    if (info.symbol_underlying_type_is_set)
+        sqlite3_bind_int(prepared_sql_insert_promise, 4, tools::enum_cast(info.symbol_underlying_type));
     else
         sqlite3_bind_null(prepared_sql_insert_promise, 4);
 

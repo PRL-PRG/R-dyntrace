@@ -183,7 +183,7 @@ struct prom_basic_info_t {
     sexp_type     prom_original_type; // if prom_type is BCODE, then this points what the BCODESXP was compiled from
     sexp_type     symbol_underlying_type; // if prom_type or prom_original_type are SYM then this is the type of the
                                           // expression the SYM points to.
-
+    bool          symbol_underlying_type_is_set;
 };
 
 struct prom_info_t : prom_basic_info_t {
