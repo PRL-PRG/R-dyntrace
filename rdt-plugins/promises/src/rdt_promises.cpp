@@ -43,9 +43,13 @@ struct trace_promises {
     // TODO ??? can we get metadata about the program we're analysing in here?
     // TODO: also pass environment
     static void begin(const SEXP prom) {
+        PROTECT(prom);
+
         tracer_state().start_pass(prom);
 
         rec.start_trace_process();
+
+        UNPROTECT(1);
     }
 
     static void end() {
@@ -56,6 +60,10 @@ struct trace_promises {
 
     // Triggered when entering function evaluation.
     static void function_entry(const SEXP call, const SEXP op, const SEXP rho) {
+        PROTECT(call);
+        PROTECT(op);
+        PROTECT(rho);
+
         closure_info_t info = rec.function_entry_get_info(call, op, rho);
 
         // Push function ID on function stack
@@ -76,82 +84,153 @@ struct trace_promises {
                 fresh_promises.erase(it);
             }
         }
+
+        UNPROTECT(3);
     }
 
     static void function_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
+        PROTECT(call);
+        PROTECT(op);
+        PROTECT(rho);
+        PROTECT(retval);
+
         closure_info_t info = rec.function_exit_get_info(call, op, rho);
         rec.function_exit_process(info);
 
         // Current function ID is popped in function_exit_get_info
         STATE(curr_env_stack).pop();
+
+        UNPROTECT(4);
     }
 
     static void print_entry_info(const SEXP call, const SEXP op, const SEXP rho, function_type fn_type) {
+        PROTECT(call);
+        PROTECT(op);
+        PROTECT(rho);
+
         builtin_info_t info = rec.builtin_entry_get_info(call, op, rho, fn_type);
         rec.builtin_entry_process(info);
 
         STATE(fun_stack).push_back(make_pair(info.call_id, info.fn_type));
         STATE(curr_env_stack).push(info.call_ptr | 1);
+
+        UNPROTECT(3);
     }
 
     static void builtin_entry(const SEXP call, const SEXP op, const SEXP rho) {
+        PROTECT(call);
+        PROTECT(op);
+        PROTECT(rho);
+
         function_type fn_type;
         if(TYPEOF(op)==BUILTINSXP)
             fn_type = (PRIMINTERNAL(op) == 0) ? function_type::TRUE_BUILTIN : function_type::BUILTIN;
         else  /*the weird case of NewBuiltin2 , where op is a language expression*/
             fn_type = function_type::TRUE_BUILTIN;
         print_entry_info(call, op, rho, fn_type);
+
+        UNPROTECT(3);
     }
 
     static void specialsxp_entry(const SEXP call, const SEXP op, const SEXP rho) {
+        PROTECT(call);
+        PROTECT(op);
+        PROTECT(rho);
+
         print_entry_info(call, op, rho, function_type::SPECIAL);
+
+        UNPROTECT(3);
     }
 
     static void print_exit_info(const SEXP call, const SEXP op, const SEXP rho, function_type fn_type) {
+        PROTECT(call);
+        PROTECT(op);
+        PROTECT(rho);
+
         builtin_info_t info = rec.builtin_exit_get_info(call, op, rho, fn_type);
         rec.builtin_exit_process(info);
 
         STATE(fun_stack).pop_back();
         STATE(curr_env_stack).pop();
+
+        UNPROTECT(3);
     }
 
     static void builtin_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
+        PROTECT(call);
+        PROTECT(op);
+        PROTECT(rho);
+        PROTECT(retval);
+
         function_type fn_type;
         if(TYPEOF(op)==BUILTINSXP)
             fn_type = (PRIMINTERNAL(op) == 0) ? function_type::TRUE_BUILTIN : function_type::BUILTIN;
         else
             fn_type = function_type::TRUE_BUILTIN;
         print_exit_info(call, op, rho, fn_type);
+
+        UNPROTECT(4);
     }
 
     static void specialsxp_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
+        PROTECT(call);
+        PROTECT(op);
+        PROTECT(rho);
+        PROTECT(retval);
+
         print_exit_info(call, op, rho, function_type::SPECIAL);
+
+        UNPROTECT(4);
+
     }
 
     static void promise_created(const SEXP prom, const SEXP rho) {
-        prom_basic_info_t info = rec.create_promise_get_info(prom, rho);
+        PROTECT(prom);
+        PROTECT(rho);
 
+        prom_basic_info_t info = rec.create_promise_get_info(prom, rho);
         rec.promise_created_process(info);
+
+        UNPROTECT(2);
     }
 
     // Promise is being used inside a function body for the first time.
     static void force_promise_entry(const SEXP symbol, const SEXP rho) {
+        PROTECT(symbol);
+        PROTECT(rho);
+
         prom_info_t info = rec.force_promise_entry_get_info(symbol, rho);
         rec.force_promise_entry_process(info);
+
+        UNPROTECT(2);
     }
 
     static void force_promise_exit(const SEXP symbol, const SEXP rho, const SEXP val) {
+        PROTECT(symbol);
+        PROTECT(rho);
+        PROTECT(val);
+
         prom_info_t info = rec.force_promise_exit_get_info(symbol, rho);
         rec.force_promise_exit_process(info);
+
+        UNPROTECT(3);
     }
 
     static void promise_lookup(const SEXP symbol, const SEXP rho, const SEXP val) {
+        PROTECT(symbol);
+        PROTECT(rho);
+        PROTECT(val);
+
         prom_info_t info = rec.promise_lookup_get_info(symbol, rho);
         if (info.prom_id >= 0)
             rec.promise_lookup_process(info);
+
+        UNPROTECT(3);
     }
 
     static void gc_promise_unmarked(const SEXP promise) {
+        PROTECT(promise);
+
         prom_addr_t addr = get_sexp_address(promise);
         prom_id_t id = get_promise_id(promise);
         auto & promise_origin = STATE(promise_origin);
@@ -169,12 +248,19 @@ struct trace_promises {
         prom_key_t key(addr, prom_type, orig_type);
 
         STATE(promise_ids).erase(key);
+
+        UNPROTECT(1);
     }
 
     static void jump_ctxt(const SEXP rho, const SEXP val) {
+        PROTECT(rho);
+        PROTECT(val);
+
         vector<call_id_t> unwound_calls;
         tracer_state().adjust_fun_stack(rho, unwound_calls);
         rec.unwind_process(unwound_calls);
+
+        UNPROTECT(2);
     }
 };
 
