@@ -6,6 +6,8 @@
 //#include "tracer_output.h"
 #include "tracer_state.h"
 #include <iostream>
+#include <sstream>
+
 
 #include <rdt.h>
 
@@ -221,4 +223,63 @@ string sexp_type_to_string(sexp_type s) {
         case sexp_type::S4: return "s4";
         default: return "<unknown>";
      }
+}
+
+string sexp_type_to_string_short(sexp_type s) {
+    switch (s) {
+        case sexp_type::NIL: return "NIL";
+        case sexp_type::SYM: return "SYM";
+        case sexp_type::LIST: return "LIST";
+        case sexp_type::CLOS: return "CLOS";
+        case sexp_type::ENV: return "ENV";
+        case sexp_type::PROM: return "PROM";
+        case sexp_type::LANG: return "LANG";
+        case sexp_type::SPECIAL: return "SPECIAL";
+        case sexp_type::BUILTIN: return "BUILTIN";
+        case sexp_type::CHAR: return "CHAR";
+        case sexp_type::LGL: return "LGL";
+        case sexp_type::INT: return "INT";
+        case sexp_type::REAL: return "REAL";
+        case sexp_type::CPLX: return "CPL";
+        case sexp_type::STR: return "STR";
+        case sexp_type::DOT: return "DOT";
+        case sexp_type::ANY: return "ANY";
+        case sexp_type::VEC: return "VEC";
+        case sexp_type::EXPR: return "EXPR";
+        case sexp_type::BCODE: return "BCODE";
+        case sexp_type::EXTPTR: return "EXTPTR";
+        case sexp_type::WEAKREF: return "WEAKREF";
+        case sexp_type::RAW: return "RAW";
+        case sexp_type::S4: return "S4";
+        default: return "NA";
+    }
+}
+
+string full_sexp_type_to_string(full_sexp_type type) {
+    stringstream result;
+    bool first = true;
+    for (auto iterator = type.begin(); iterator != type.end(); ++iterator) {
+        if (first) {
+            first = false;
+        } else {
+            result << "->";
+        }
+        //result << sexp_type_to_string_short(*iterator);
+        result << sexp_type_to_string(*iterator);
+    }
+    return result.str();
+}
+
+string full_sexp_type_to_number_string(full_sexp_type type) {
+    stringstream result;
+    bool first = true;
+    for (auto iterator = type.begin(); iterator != type.end(); ++iterator) {
+        if (first) {
+            first = false;
+        } else {
+            result << ",";
+        }
+        result << tools::enum_cast(*iterator);
+    }
+    return result.str();
 }

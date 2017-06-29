@@ -152,6 +152,8 @@ enum class sexp_type {
     S4 = 25
 };
 
+typedef vector<sexp_type> full_sexp_type;
+
 string sexp_type_to_string(sexp_type s);
 
 struct call_info_t {
@@ -178,21 +180,22 @@ struct builtin_info_t : call_info_t {
 
 // FIXME would it make sense to add type of action here?
 struct prom_basic_info_t {
-    prom_id_t     prom_id;
-    sexp_type     prom_type;
-    sexp_type     prom_original_type; // if prom_type is BCODE, then this points what the BCODESXP was compiled from
-    sexp_type     symbol_underlying_type; // if prom_type or prom_original_type are SYM then this is the type of the
-                                          // expression the SYM points to.
-    bool          symbol_underlying_type_is_set;
+    prom_id_t         prom_id;
+    sexp_type         prom_type;
+    sexp_type         prom_original_type; // if prom_type is BCODE, then this points what the BCODESXP was compiled from
+    sexp_type         symbol_underlying_type; // if prom_type or prom_original_type are SYM then this is the type of the
+                                              // expression the SYM points to.
+    bool              symbol_underlying_type_is_set;
+    full_sexp_type    full_type;
 };
 
 struct prom_info_t : prom_basic_info_t {
-    string          name;
-    call_id_t       in_call_id;
-    call_id_t       from_call_id;
-    lifestyle_type  lifestyle;
-    int             effective_distance_from_origin;
-    int             actual_distance_from_origin;
+    string            name;
+    call_id_t         in_call_id;
+    call_id_t         from_call_id;
+    lifestyle_type    lifestyle;
+    int               effective_distance_from_origin;
+    int               actual_distance_from_origin;
 };
 
 prom_id_t get_promise_id(SEXP promise);
@@ -211,5 +214,8 @@ bool negative_promise_already_inserted(prom_id_t id);
 SEXP get_promise(SEXP var, SEXP rho);
 arg_id_t get_argument_id(call_id_t call_id, const string & argument);
 arglist_t get_arguments(call_id_t call_id, SEXP op, SEXP rho);
+
+string full_sexp_type_to_string(full_sexp_type);
+string full_sexp_type_to_number_string(full_sexp_type);
 
 #endif //R_3_3_1_TRACER_SEXPINFO_H

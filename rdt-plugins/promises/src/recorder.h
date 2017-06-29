@@ -211,6 +211,31 @@ private:
         }
     }
 
+    void get_full_type(SEXP sexp, SEXP rho, full_sexp_type & result) {
+        sexp_type type = static_cast<sexp_type>(TYPEOF(sexp));
+        result.push_back(type);
+
+        if (type == sexp_type::PROM) {
+            SEXP sexp_inside_promise = PRCODE(sexp);
+            get_full_type(sexp_inside_promise, rho, result);
+            return;
+        }
+
+        if (type == sexp_type::BCODE) {
+            SEXP uncompiled_sexp = BODY_EXPR(sexp);
+            get_full_type(uncompiled_sexp, rho, result);
+            return;
+        }
+
+        if (type == sexp_type::SYM) {
+            bool try_to_attach_symbol_value = (rho != R_NilValue) ? isEnvironment(rho) : false;
+            if (try_to_attach_symbol_value) {
+                SEXP symbol_points_to = findVar(sexp, rho);
+            }
+            return;
+        }
+    }
+
     prom_basic_info_t promise_get_basic_info(const SEXP prom, const SEXP rho) {
         prom_basic_info_t info;
 
@@ -251,6 +276,8 @@ private:
         } else {
             info.symbol_underlying_type_is_set = false;
         }
+
+        get_full_type(prom, rho, info.full_type);
 
         return info;
     }
@@ -298,6 +325,8 @@ private:
             SEXP underlying_expression = findVar(PRCODE(original_expression), rho);
             info.symbol_underlying_type = static_cast<sexp_type>(TYPEOF(underlying_expression));
         }
+
+        get_full_type(symbol, rho, info.full_type);
 
         return info;
     }

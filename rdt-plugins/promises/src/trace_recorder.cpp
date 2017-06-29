@@ -180,6 +180,8 @@ string promise_creation_info_line(TraceLinePrefix prefix, const prom_basic_info_
     if (info.symbol_underlying_type_is_set)
         stream << "->" << sexp_type_to_string(info.symbol_underlying_type);
 
+    stream << " full_type=" << full_sexp_type_to_string(info.full_type);
+
     stream << "\n";
 
     return stream.str();
@@ -240,6 +242,8 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
 
     if (info.symbol_underlying_type_is_set)
         stream << "->" << sexp_type_to_string(info.symbol_underlying_type);
+
+    stream << " full_type=" << full_sexp_type_to_string(info.full_type);
 
     stream << "\n";
 

@@ -71,7 +71,8 @@ sql_stmt_t insert_promise_statement(const prom_basic_info_t & info) {
                 : "null",
             (info.symbol_underlying_type_is_set)
                 ? from_int(tools::enum_cast(info.symbol_underlying_type))
-                : "null"
+                : "null",
+            wrap_nullable_string(full_sexp_type_to_number_string(info.full_type))
     );
 }
 
