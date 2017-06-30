@@ -169,8 +169,6 @@ string unwind_info_line(TraceLinePrefix prefix, const call_id_t call_id, bool in
 string promise_creation_info_line(TraceLinePrefix prefix, const prom_basic_info_t & info, bool indent, bool as_sql_comment) {
     stringstream stream;
     prepend_prefix(stream, prefix, indent, as_sql_comment);
-    bool compiled = info.prom_type == sexp_type::BCODE;
-
     stream << "create promise id=" << info.prom_id
            << " type=" << sexp_type_to_string(info.prom_type);
 

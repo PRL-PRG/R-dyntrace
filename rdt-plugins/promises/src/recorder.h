@@ -11,6 +11,7 @@
 
 //#include <Defn.h> // We need this for R_Funtab
 #include <rdt.h>
+#include <set>
 #include "tracer_sexpinfo.h"
 #include "tracer_state.h"
 
@@ -211,27 +212,41 @@ private:
         }
     }
 
-    void get_full_type(SEXP sexp, SEXP rho, full_sexp_type & result) {
+    void get_full_type(SEXP sexp, SEXP rho, full_sexp_type & result, set<SEXP> & visited) {
         sexp_type type = static_cast<sexp_type>(TYPEOF(sexp));
         result.push_back(type);
 
+        if (visited.find(sexp) != visited.end()) {
+            result.push_back(sexp_type::OMEGA);
+            return;
+        } else {
+            visited.insert(sexp);
+        }
+
         if (type == sexp_type::PROM) {
             SEXP sexp_inside_promise = PRCODE(sexp);
-            get_full_type(sexp_inside_promise, rho, result);
+            get_full_type(sexp_inside_promise, rho, result, visited);
             return;
         }
 
         if (type == sexp_type::BCODE) {
             SEXP uncompiled_sexp = BODY_EXPR(sexp);
-            get_full_type(uncompiled_sexp, rho, result);
+            get_full_type(uncompiled_sexp, rho, result, visited);
             return;
         }
 
         if (type == sexp_type::SYM) {
             bool try_to_attach_symbol_value = (rho != R_NilValue) ? isEnvironment(rho) : false;
-            if (try_to_attach_symbol_value) {
-                SEXP symbol_points_to = findVar(sexp, rho);
-            }
+            if (!try_to_attach_symbol_value) return;
+
+            SEXP symbol_points_to = findVar(sexp, rho);
+
+            if (symbol_points_to == R_UnboundValue) return;
+            if (symbol_points_to == R_MissingArg) return;
+            if (TYPEOF(symbol_points_to) == SYMSXP) return;
+
+            get_full_type(symbol_points_to, rho, result, visited);
+
             return;
         }
     }
@@ -277,7 +292,8 @@ private:
             info.symbol_underlying_type_is_set = false;
         }
 
-        get_full_type(prom, rho, info.full_type);
+        set<SEXP> visited;
+        get_full_type(prom, rho, info.full_type, visited);
 
         return info;
     }
@@ -326,7 +342,8 @@ private:
             info.symbol_underlying_type = static_cast<sexp_type>(TYPEOF(underlying_expression));
         }
 
-        get_full_type(symbol, rho, info.full_type);
+        set<SEXP> visited;
+        get_full_type(symbol, rho, info.full_type, visited);
 
         return info;
     }

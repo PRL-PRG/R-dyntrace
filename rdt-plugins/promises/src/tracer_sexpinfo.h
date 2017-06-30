@@ -149,12 +149,16 @@ enum class sexp_type {
     EXTPTR = 22,
     WEAKREF = 23,
     RAW = 24,
-    S4 = 25
+    S4 = 25,
+
+    // I made these up:
+    OMEGA = 69
 };
 
 typedef vector<sexp_type> full_sexp_type;
 
-string sexp_type_to_string(sexp_type s);
+string sexp_type_to_string(sexp_type);
+SEXPTYPE sexp_type_to_SEXPTYPE(sexp_type);
 
 struct call_info_t {
     function_type fn_type;

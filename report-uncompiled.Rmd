@@ -1,7 +1,7 @@
 ---
 title: "rivr (uncompiled)"
 author: ""
-date: "June 20, 2017"
+date: "June 30, 2017"
 output: html_document
 ---
 
@@ -14,7 +14,7 @@ output: html_document
 </style>
 
 ```{r apriori, include=FALSE}
-path <- "rivr.uncompiled.sqlite"
+path <- "/home/kondziu/workspace/R-dyntrace/data/rivr.sqlite"
 ```
 
 ```{r setup, include=FALSE}
@@ -135,15 +135,16 @@ get_actual_distances <- function() {
   histogram
 }
 
-get_promise_types <- function(path="trace.sqlite") {
+get_promise_types <- function() {
   promises %>% 
   #mutate(archetype = type*100+if(is.na(original_type)) 99 else original_type) %>%
-  group_by(type, original_type) %>% count(type, original_type) %>% arrange(original_type, type) %>%
+  group_by(type, original_type, symbol_type) %>% count(type, original_type, symbol_type) %>% 
+  arrange(original_type, type, symbol_type) %>%
   mutate(percent=((n*100/n.promises))) %>%
-  group_by(type, original_type) %>% 
+  group_by(type, original_type, symbol_type) %>% 
   do(mutate(., 
             type_code = type, 
-            type = humanize_promise_type(type, original_type), 
+            type = humanize_promise_type(type, original_type, symbol_type), 
             #percent = paste(format(percent, digits=12),   "%", sep="")
             )) %>%
   rename(number=n) %>%
@@ -152,13 +153,37 @@ get_promise_types <- function(path="trace.sqlite") {
   arrange(desc(number))
 }
 
-humanize_promise_type = function(type, fallback_type=NULL)
-    if(is.na(type)) {
-        if(is.null(fallback_type)) "NA"
-        else paste("NA", Recall(fallback_type), sep=" ")
-    } else
+get_full_promise_types <- function() {
+  promises %>% 
+  #mutate(archetype = type*100+if(is.na(original_type)) 99 else original_type) %>%
+  group_by(full_type) %>% count(full_type) %>% 
+  arrange(full_type) %>%
+  mutate(percent=((n*100/n.promises))) %>%
+  group_by(full_type) %>% 
+  do(mutate(., 
+            type = humanize_full_promise_type(full_type), 
+            #percent = paste(format(percent, digits=12),   "%", sep="")
+            )) %>%
+  rename(number=n) %>%
+  group_by(type) %>% select(type, number, percent) %>%
+  data.frame %>%   
+  arrange(desc(number))
+}
+
+humanize_full_promise_type = function(full_type) {
+  strsplit(full_type, ',', fixed=TRUE) %>% 
+  sapply(., as.numeric) %>% 
+  sapply(., function(type) humanize_promise_type(type)) %>% 
+  paste(collapse = "→")
+}
+
+humanize_promise_type = function(type, fallback_type=NA, symbol_type=NA) {
+    if(is.na(type)) "NA" else
     if(type == 0) "NIL" else
-    if(type == 1) "SYM" else
+    if(type == 1) {
+      if (is.na(symbol_type)) "SYM"
+      else paste("SYM", Recall(type=symbol_type), sep="→")
+    } else
     if(type == 2) "LIST" else
     if(type == 3) "CLOS" else
     if(type == 4) "ENV" else
@@ -177,13 +202,15 @@ humanize_promise_type = function(type, fallback_type=NULL)
     if(type == 19) "VEC" else
     if(type == 20) "EXPR" else
     if(type == 21) {
-      if(is.null(fallback_type)) "BCODE"
-      else paste("BCODE", Recall(fallback_type), sep="->")
+      if(is.na(fallback_type)) "BCODE"
+      else paste("BCODE", Recall(fallback_type, symbol_type=symbol_type), sep="→")
     } else
     if(type == 22) "EXTPTR" else
     if(type == 23) "WEAKREF" else
     if(type == 24) "RAW" else
-    if(type == 25) "S4" else NULL
+    if(type == 25) "S4" else 
+    if(type == 69) "..." else NA
+}
 
 get_lookup_histogram <- function() {
  data <- promises %>% rename(promise_id = id) %>% left_join(promise.lookups, by="promise_id") %>% collect
@@ -238,7 +265,7 @@ promise.lifestyles
 **escaped** - evaluated in a call to which there is no path from its origin  
 **virgin** - promise was never evaluated
 
-``` {r lifestyles-pie, echo=FALSE, fig.width=6, fig.height=5}
+``` {r lifestyles-pie, echo=FALSE, fig.width=6, fig.height=5.5}
 slices <- (promise.lifestyles %>% arrange(number))$number
 labels <- (promise.lifestyles %>% arrange(number) %>% mutate(lifestyle = ifelse(percent>1, lifestyle, "")))$lifestyle
 par(mar=c(0,2,2,2))
@@ -273,14 +300,15 @@ barplot(values, names.arg=labels, space=0, main="Actual distances")
 
 <div class="col2">
 ``` {r promise-types-print, echo=FALSE, comment=""}
-promise.types <- get_promise_types()
+promise.types <- get_full_promise_types()
 promise.types
 ```
 
 Promise types follow the type designations in``Rinternals.h``.  
-**BCODE->α** indicates that it's a byte-compiled expression that was originally of type **α**.
+**BCODE→α** indicates that it's a byte-compiled expression that was originally of type **α**.
+**SYM→α** indicates that it's a symbol that points to an expression of type **α**.
 
-``` {r promise-types-pie, echo=FALSE, fig.width=5, fig.height=4}
+``` {r promise-types-pie, echo=FALSE, fig.width=5, fig.height=4.5}
 slices <- (promise.types %>% arrange(number))$number
 labels <- (promise.types %>% arrange(number) %>% mutate(type = ifelse(percent>1, type, "")))$type
 par(mar=c(0,2,2,2))

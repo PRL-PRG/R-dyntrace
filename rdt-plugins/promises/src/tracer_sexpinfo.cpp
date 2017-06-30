@@ -221,8 +221,39 @@ string sexp_type_to_string(sexp_type s) {
         case sexp_type::WEAKREF: return "weak_reference";
         case sexp_type::RAW: return "raw";
         case sexp_type::S4: return "s4";
+        case sexp_type::OMEGA: return "..."; // This one's made up.
         default: return "<unknown>";
      }
+}
+SEXPTYPE sexp_type_to_SEXPTYPE(sexp_type s) {
+    switch (s) {
+        case sexp_type::NIL: return NILSXP;
+        case sexp_type::SYM: return SYMSXP;
+        case sexp_type::LIST: return LISTSXP;
+        case sexp_type::CLOS: return CLOSXP;
+        case sexp_type::ENV: return ENVSXP;
+        case sexp_type::PROM: return PROMSXP;
+        case sexp_type::LANG: return LANGSXP;
+        case sexp_type::SPECIAL: return SPECIALSXP;
+        case sexp_type::BUILTIN: return BUILTINSXP;
+        case sexp_type::CHAR: return CHARSXP;
+        case sexp_type::LGL: return LGLSXP;
+        case sexp_type::INT: return INTSXP;
+        case sexp_type::REAL: return REALSXP;
+        case sexp_type::CPLX: return CPLXSXP;
+        case sexp_type::STR: return STRSXP;
+        case sexp_type::DOT: return DOTSXP;
+        case sexp_type::ANY: return ANYSXP;
+        case sexp_type::VEC: return VECSXP ;
+        case sexp_type::EXPR: return EXPRSXP;
+        case sexp_type::BCODE: return BCODESXP;
+        case sexp_type::EXTPTR: return EXTPTRSXP;
+        case sexp_type::WEAKREF: return WEAKREFSXP;
+        case sexp_type::RAW: return RAWSXP;
+        case sexp_type::S4: return S4SXP;
+        case sexp_type::OMEGA: return 69; // This one's made up.
+        default: return -1;
+    }
 }
 
 string sexp_type_to_string_short(sexp_type s) {
@@ -251,6 +282,7 @@ string sexp_type_to_string_short(sexp_type s) {
         case sexp_type::WEAKREF: return "WEAKREF";
         case sexp_type::RAW: return "RAW";
         case sexp_type::S4: return "S4";
+        case sexp_type::OMEGA: return "..."; // This one's made up.
         default: return "NA";
     }
 }
@@ -279,7 +311,7 @@ string full_sexp_type_to_number_string(full_sexp_type type) {
         } else {
             result << ",";
         }
-        result << tools::enum_cast(*iterator);
+        result << sexp_type_to_SEXPTYPE(*iterator);
     }
     return result.str();
 }

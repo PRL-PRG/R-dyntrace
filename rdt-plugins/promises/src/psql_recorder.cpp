@@ -142,12 +142,12 @@ sqlite3_stmt * populate_function_statement(const call_info_t & info) {
     if (info.loc.empty())
         sqlite3_bind_null(prepared_sql_insert_function, 2);
     else
-        sqlite3_bind_text(prepared_sql_insert_function, 2, info.loc.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(prepared_sql_insert_function, 2, info.loc.c_str(), -1, SQLITE_TRANSIENT);
 
     if (info.fn_definition.empty())
         sqlite3_bind_null(prepared_sql_insert_function, 3);
     else
-        sqlite3_bind_text(prepared_sql_insert_function, 3, info.fn_definition.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(prepared_sql_insert_function, 3, info.fn_definition.c_str(), -1, SQLITE_TRANSIENT);
 
     sqlite3_bind_int(prepared_sql_insert_function, 4, tools::enum_cast(info.fn_type));
 
@@ -170,7 +170,7 @@ sqlite3_stmt * populate_arguments_statement(const closure_info_t & info) {
         //cerr << get<1>(argument) << " " <<  get<0>(argument) << " " << index << " " << info.call_id << "\n";
 
         sqlite3_bind_int(prepared_statement, offset + 1, get<1>(argument));
-        sqlite3_bind_text(prepared_statement, offset + 2, get<0>(argument).c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(prepared_statement, offset + 2, get<0>(argument).c_str(), -1, SQLITE_TRANSIENT);
         sqlite3_bind_int(prepared_statement, offset + 3, index); // FIXME broken or unnecessary (pick one)
         sqlite3_bind_int(prepared_statement, offset + 4, info.call_id);
 
@@ -190,12 +190,12 @@ sqlite3_stmt * populate_call_statement(const call_info_t & info) {
     if (info.name.empty())
         sqlite3_bind_null(prepared_sql_insert_call, 2);
     else
-        sqlite3_bind_text(prepared_sql_insert_call, 2, info.name.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(prepared_sql_insert_call, 2, info.name.c_str(), -1, SQLITE_TRANSIENT);
 
     if (info.callsite.empty())
         sqlite3_bind_null(prepared_sql_insert_call, 3);
     else
-        sqlite3_bind_text(prepared_sql_insert_call, 3, info.callsite.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(prepared_sql_insert_call, 3, info.callsite.c_str(), -1, SQLITE_TRANSIENT);
 
     sqlite3_bind_int(prepared_sql_insert_call, 4, (int)info.fn_id);
 
@@ -218,11 +218,12 @@ sqlite3_stmt * populate_promise_statement(const prom_basic_info_t info) {
     else
         sqlite3_bind_null(prepared_sql_insert_promise, 4);
 
-    if (info.full_type.empty())
-        sqlite3_bind_null(prepared_sql_insert_call, 5);
-    else
-        sqlite3_bind_text(prepared_sql_insert_call, 5,
-                          full_sexp_type_to_number_string(info.full_type).c_str(), -1, SQLITE_STATIC);
+    if (info.full_type.empty()) {
+        sqlite3_bind_null(prepared_sql_insert_promise, 5);
+    } else {
+        string full_type = full_sexp_type_to_number_string(info.full_type);
+        sqlite3_bind_text(prepared_sql_insert_promise, 5, full_type.c_str(), -1, SQLITE_TRANSIENT);
+    }
 
     return prepared_sql_insert_promise;
 }
