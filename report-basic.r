@@ -52,7 +52,7 @@ get_lifestyles <- function() {
   all.lifestyles %>% arrange(desc(number))
 }
 
-get_effective_distances <- function() {
+get_effective_distances <- function(cutoff=NA) {
   effective.distances <-
     left_join(promises, promise.forces, by=c("id" = "promise_id"))  %>%
     select(id, from_call_id, in_call_id, lifestyle, effective_distance_from_origin) %>%
@@ -62,12 +62,36 @@ get_effective_distances <- function() {
   #group_by(lifestyle) #%>%
   #do(mutate(., percent = paste(format(percent, digits=12), "%", sep="") ))
   
+  
   na.distance <- NA
   min.distance <- -1
   max.distance <- 
     (effective.distances %>% filter(!is.na(effective_distance_from_origin)) %>% data.frame)$effective_distance_from_origin %>% 
     max
+  
   distance.range <- c(na.distance, min.distance:max.distance)
+    
+  if (!is.na(cutoff)) {
+    if (max.distance > cutoff) 
+      max.distance <- cutoff
+   
+    below <- 
+      effective.distances %>% filter(effective_distance_from_origin <= cutoff) %>%
+      collect %>% ungroup %>%
+      mutate(effective_distance_from_origin = effective_distance_from_origin)
+    
+    above <- 
+      effective.distances %>% filter(effective_distance_from_origin > cutoff) %>% 
+      collect %>% ungroup %>% 
+      summarise(
+        effective_distance_from_origin=Inf, 
+        number=sum(number), 
+        percent=sum(percent))
+    
+    distance.range <- c(na.distance, min.distance:max.distance, Inf)
+    
+    effective.distances <- below %>% union(above)
+  }
   
   histogram <- 
     data.frame(effective_distance_from_origin = distance.range) %>% 
@@ -75,9 +99,10 @@ get_effective_distances <- function() {
     rename(effective_distance = effective_distance_from_origin)
   
   histogram
+  
 }
 
-get_actual_distances <- function() {
+get_actual_distances <- function(cutoff=NA) {
   actual.distances <-
     left_join(promises, promise.forces, by=c("id" = "promise_id"))  %>%
     select(id, from_call_id, in_call_id, lifestyle, actual_distance_from_origin) %>%
@@ -94,6 +119,28 @@ get_actual_distances <- function() {
     max
   distance.range <- c(na.distance, min.distance:max.distance)
   
+  if (!is.na(cutoff)) {
+    if (max.distance > cutoff) 
+      max.distance <- cutoff
+    
+    below <- 
+      actual.distances %>% filter(actual_distance_from_origin <= cutoff) %>%
+      collect %>% ungroup %>%
+      mutate(actual_distance_from_origin = actual_distance_from_origin)
+    
+    above <- 
+      actual.distances %>% filter(actual_distance_from_origin > cutoff) %>% 
+      collect %>% ungroup %>% 
+      summarise(
+        actual_distance_from_origin=Inf, 
+        number=sum(number), 
+        percent=sum(percent))
+    
+    distance.range <- c(na.distance, min.distance:max.distance, Inf)
+    
+    actual.distances <- below %>% union(above)
+  }
+  
   histogram <- 
     data.frame(actual_distance_from_origin = distance.range) %>% 
     left_join(actual.distances, by="actual_distance_from_origin", copy=TRUE) %>% 
@@ -102,8 +149,9 @@ get_actual_distances <- function() {
   histogram
 }
 
-get_promise_types <- function() {
-  promises %>% 
+get_promise_types <- function(cutoff=NA) {
+  result <- 
+    promises %>% 
     #mutate(archetype = type*100+if(is.na(original_type)) 99 else original_type) %>%
     group_by(type, original_type, symbol_type) %>% count(type, original_type, symbol_type) %>% 
     arrange(original_type, type, symbol_type) %>%
@@ -118,10 +166,19 @@ get_promise_types <- function() {
     group_by(type) %>% select(type, number, percent) %>%
     data.frame %>%   
     arrange(desc(number))
+  
+  if (is.na(cutoff)) {
+    result
+  } else {
+    above <- result %>% filter(percent >= cutoff)
+    below <- result %>% filter(percent < cutoff) %>% summarise(type="other", number=sum(number), percent=sum(percent))  
+    above %>% union(below)
+  }
 }
 
-get_full_promise_types <- function() {
-  promises %>% 
+get_full_promise_types <- function(cutoff=NA) {
+  result <-
+    promises %>% 
     #mutate(archetype = type*100+if(is.na(original_type)) 99 else original_type) %>%
     group_by(full_type) %>% count(full_type) %>% 
     arrange(full_type) %>%
@@ -135,6 +192,14 @@ get_full_promise_types <- function() {
     group_by(type) %>% select(type, number, percent) %>%
     data.frame %>%   
     arrange(desc(number))
+  
+  if (is.na(cutoff)) {
+    result
+  } else {
+    above <- result %>% filter(percent >= cutoff)
+    below <- result %>% filter(percent < cutoff) %>% summarise(type="other", number=sum(number), percent=sum(percent))  
+    above %>% union(below)
+  }
 }
 
 humanize_full_promise_type = function(full_type) {
@@ -179,25 +244,51 @@ humanize_promise_type = function(type, fallback_type=NA, symbol_type=NA) {
                                                     if(type == 69) "..." else NA
 }
 
-get_lookup_histogram <- function() {
+get_lookup_histogram <- function(cutoff=NA) {
   data <- promises %>% rename(promise_id = id) %>% left_join(promise.lookups, by="promise_id") %>% collect
   unevaluated <- data.frame(no.of.lookups=0, number=(data %>% filter(is.na(event_type)) %>% count %>% data.frame)$n)
   evaluated <- data %>% filter(!is.na(event_type)) %>% group_by(promise_id) %>% count %>% group_by(n) %>% count %>% rename(no.of.lookups=n, number=nn)
   unevaluated %>% union(evaluated)
+  
+  if (is.na(cutoff)) {
+    new.data
+  } else {
+    above <- new.data %>% filter(no.of.lookups > cutoff) %>% ungroup %>% collect %>% summarise(no.of.lookups=Inf, number=sum(number))
+    below <- new.data %>% filter(no.of.lookups <= cutoff)
+    above %>% union(below)
+  }
 }
 
-get_force_histogram <- function() {
+get_force_histogram <- function(cutoff=NA) {
   data <- promises %>% rename(promise_id = id) %>% left_join(promise.forces, by="promise_id") %>% collect
   unevaluated <- data.frame(no.of.forces=0, number=(data %>% filter(is.na(event_type)) %>% count %>% data.frame)$n)
   evaluated <- data %>% filter(!is.na(event_type)) %>% group_by(promise_id) %>% count %>% group_by(n) %>% count %>% rename(no.of.forces=n, number=nn)
-  unevaluated %>% union(evaluated)
+  
+  new.data <- unevaluated %>% union(evaluated)
+  
+  if (is.na(cutoff)) {
+    new.data
+  } else {
+    above <- new.data %>% filter(no.of.forces > cutoff) %>% ungroup %>% collect %>% summarise(no.of.forces=Inf, number=sum(number))
+    below <- new.data %>% filter(no.of.forces <= cutoff)
+    above %>% union(below)
+  }
 }
 
-get_promise_evaluation_histogram <- function() {
+get_promise_evaluation_histogram <- function(cutoff=NA) {
   data <- promises %>% rename(promise_id = id) %>% left_join(promise_evaluations, by="promise_id") %>% collect
   unevaluated <- data.frame(no.of.evaluations=0, number=(data %>% filter(is.na(event_type)) %>% count %>% data.frame)$n)
   evaluated <- data %>% filter(!is.na(event_type)) %>% group_by(promise_id) %>% count %>% group_by(n) %>% count %>% rename(no.of.evaluations=n, number=nn)
-  unevaluated %>% union(evaluated)
+  
+  new.data <- unevaluated %>% union(evaluated) 
+  
+  if (is.na(cutoff)) {
+    new.data
+  } else {
+    above <- new.data %>% filter(no.of.evaluations > cutoff) %>% ungroup %>% collect %>% summarise(no.of.evaluations=Inf, number=sum(number))
+    below <- new.data %>% filter(no.of.evaluations <= cutoff)
+    above %>% union(below)
+  }
 }
 
 get_function_calls <- function(...) {
@@ -213,4 +304,3 @@ get_function_calls <- function(...) {
     collect(n=Inf)
     lapply(patterns, function(pattern) {filter(data, grepl(pattern, function_name))} ) %>% bind_rows
 }
-
