@@ -1,5 +1,5 @@
 ---
-title: "rivr (uncompiled)"
+title: "rivr (compiled)"
 author: ""
 date: "June 30, 2017"
 output: html_document
@@ -226,25 +226,39 @@ get_force_histogram <- function() {
  unevaluated %>% union(evaluated)
 }
 
+get_promise_evaluation_histogram <- function() {
+ data <- promises %>% rename(promise_id = id) %>% left_join(promise_evaluations, by="promise_id") %>% collect
+ unevaluated <- data.frame(no.of.evaluations=0, number=(data %>% filter(is.na(event_type)) %>% count %>% data.frame)$n)
+ evaluated <- data %>% filter(!is.na(event_type)) %>% group_by(promise_id) %>% count %>% group_by(n) %>% count %>% rename(no.of.evaluations=n, number=nn)
+ unevaluated %>% union(evaluated)
+}
+
 ```
 
 ### Promise evaluations
 <div class="col2">
 ``` {r evaluations-print, echo=FALSE, , comment=""}
 force.histogram <- get_force_histogram()
-lookup.histogram <- get_lookup_histogram()
+#lookup.histogram <- get_lookup_histogram()
+promise.evaluation.histogram <- get_promise_evaluation_histogram()
 #force.histogram
 #lookup.histogram
+#promise.evaluation.histogram
 
 slices <- force.histogram$number
 labels <- force.histogram$no.of.forces
 par(mar=c(0,2,2,2))
 pie(slices, labels, main="No. of forces")
 
-labels <- lookup.histogram$no.of.lookups
-values <- lookup.histogram$number
+#labels <- lookup.histogram$no.of.lookups
+#values <- lookup.histogram$number
+#par(mar=c(2,2,2,2))
+#barplot(values, names.arg=labels, space=0, main="No. of lookups")
+
+labels <- promise.evaluation.histogram$no.of.evluations
+values <- promise.evaluation.histogram$number
 par(mar=c(2,2,2,2))
-barplot(values, names.arg=labels, space=0, main="No. of lookups")
+barplot(values, names.arg=labels, space=0, main="No. of evaluations")
 ```
 </div>
 
@@ -296,23 +310,32 @@ par(mar=c(2,2,2,2))
 barplot(values, names.arg=labels, space=0, main="Actual distances")
 ```
 
-### Promise types
+### Promise code types
+
+Promise types follow the type designations in``Rinternals.h``.
+**α→β** indicates that type **α** variously evaluates to type **β**.
+Specifically **PROM→α** indicates that it's a promise containing the expression of type **α**. 
+**BCODE →α** indicates that it's a byte-compiled expression that was originally of type **α**.
+**SYM→α** indicates that it's a symbol that points to an expression of type **α**.
 
 <div class="col2">
 ``` {r promise-types-print, echo=FALSE, comment=""}
-promise.types <- get_full_promise_types()
+promise.types <- get_promise_types()
+promise.full.types <- get_full_promise_types()
 promise.types
+promise.full.types
 ```
-
-Promise types follow the type designations in``Rinternals.h``.  
-**BCODE→α** indicates that it's a byte-compiled expression that was originally of type **α**.
-**SYM→α** indicates that it's a symbol that points to an expression of type **α**.
 
 ``` {r promise-types-pie, echo=FALSE, fig.width=5, fig.height=4.5}
 slices <- (promise.types %>% arrange(number))$number
 labels <- (promise.types %>% arrange(number) %>% mutate(type = ifelse(percent>1, type, "")))$type
 par(mar=c(0,2,2,2))
-pie(slices, labels, main="Promise types")
+pie(slices, labels, main="Basic types")
+
+slices <- (promise.full.types %>% arrange(number))$number
+labels <- (promise.full.types %>% arrange(number) %>% mutate(type = ifelse(percent>1, type, "")))$type
+par(mar=c(0,2,2,2))
+pie(slices, labels, main="Full types")
 ```
 </div>
 
