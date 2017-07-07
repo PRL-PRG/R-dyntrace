@@ -18,7 +18,7 @@ void tracer_state_t::start_pass(const SEXP prom) {
     // We have to make sure the stack is not empty
     // when referring to the promise created by call to Rdt.
     // This is just a dummy call and environment.
-    fun_stack.push_back(make_pair((call_id_t) 0, function_type::CLOSURE));
+    fun_stack.push_back(make_tuple((call_id_t) 0, (fn_id_t) 0, function_type::CLOSURE));
     curr_env_stack.push(0);
 
     prom_addr_t prom_addr = get_sexp_address(prom);
@@ -43,7 +43,7 @@ void tracer_state_t::adjust_fun_stack(SEXP rho, vector<call_id_t> & unwound_call
 
     while (!fun_stack.empty() && (call_addr = curr_env_stack.top()) && get_sexp_address(rho) != call_addr) {
         call_stack_elem_t elem = fun_stack.back();
-        call_id = elem.first;
+        call_id = get<0>(elem);
         curr_env_stack.pop();
 
         fun_stack.pop_back();

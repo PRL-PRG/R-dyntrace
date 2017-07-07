@@ -116,6 +116,13 @@ enum class function_type {
     TRUE_BUILTIN = 3
 };
 
+enum class recursion_type {
+    UNKNOWN = 0,
+    RECURSIVE = 1,
+    NOT_RECURSIVE = 2,
+    MUTUALLY_RECURSIVE = 3
+};
+
 enum class lifestyle_type {
     VIRGIN = 0,
     LOCAL = 1,
@@ -173,6 +180,8 @@ struct call_info_t {
     call_id_t     call_id;
     env_addr_t    call_ptr;
     call_id_t     parent_call_id; // the id of the parent call that executed this call
+
+    recursion_type recursion;
 };
 
 struct closure_info_t : call_info_t {
@@ -221,5 +230,7 @@ arglist_t get_arguments(call_id_t call_id, SEXP op, SEXP rho);
 
 string full_sexp_type_to_string(full_sexp_type);
 string full_sexp_type_to_number_string(full_sexp_type);
+
+string recursive_type_to_string(recursion_type);
 
 #endif //R_3_3_1_TRACER_SEXPINFO_H

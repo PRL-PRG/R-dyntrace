@@ -101,6 +101,8 @@ string function_call_info_line(TraceLinePrefix prefix, const closure_info_t &inf
     }
     stream << "}\n";
 
+    stream << " recursive=" << recursive_type_to_string(info.recursion);
+
     return stream.str();
 }
 
@@ -148,6 +150,8 @@ string builtin_or_special_call_info_line(TraceLinePrefix prefix, const builtin_i
         stream << " callsite=" << info.callsite;
 
     stream << " compiled=" << (info.fn_compiled ? "true" : "false");
+
+    stream << " recursive=" << recursive_type_to_string(info.recursion);
 
     stream << "\n";
 

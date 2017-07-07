@@ -287,6 +287,15 @@ string sexp_type_to_string_short(sexp_type s) {
     }
 }
 
+string recursive_type_to_string(recursion_type type) {
+    switch(type) {
+        case recursion_type::MUTUALLY_RECURSIVE: return "mutually_recursive";
+        case recursion_type::RECURSIVE: return "recursive";
+        case recursion_type::NOT_RECURSIVE: return "not_recursive";
+        case recursion_type::UNKNOWN: return "unknown";
+    }
+}
+
 string full_sexp_type_to_string(full_sexp_type type) {
     stringstream result;
     bool first = true;

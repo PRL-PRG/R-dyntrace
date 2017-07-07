@@ -39,7 +39,7 @@ public:
 
 
         call_stack_elem_t elem = STATE(fun_stack).back();
-        info.parent_call_id = elem.first;
+        info.parent_call_id = get<0>(elem);
 
         char *location = get_location(op);
         if (location != NULL)
@@ -61,6 +61,8 @@ public:
         info.arguments = get_arguments(info.call_id, op, rho);
         info.fn_definition = get_expression(op);
 
+        info.recursion = is_recursive(info.fn_id);
+
         return info;
     }
 
@@ -74,7 +76,7 @@ public:
         info.fn_id = get_function_id(op);
         info.fn_addr = get_function_addr(op);
         call_stack_elem_t elem = STATE(fun_stack).back();
-        info.call_id = elem.first;
+        info.call_id = get<0>(elem);
         info.fn_type = function_type::CLOSURE;
 
         char *location = get_location(op);
@@ -99,7 +101,9 @@ public:
 
         STATE(fun_stack).pop_back();
         call_stack_elem_t elem_parent = STATE(fun_stack).back();
-        info.parent_call_id = elem_parent.first;
+        info.parent_call_id = get<0>(elem_parent);
+
+        info.recursion = is_recursive(info.fn_id);
 
         return info;
     }
@@ -120,7 +124,7 @@ public:
         //R_FunTab[PRIMOFFSET(op)].eval % 100 )/10 ==
 
         call_stack_elem_t elem = STATE(fun_stack).back();
-        info.parent_call_id = elem.first;
+        info.parent_call_id = get<0>(elem);
 
         char *location = get_location(op);
         if (location != NULL) {
@@ -142,6 +146,7 @@ public:
         // it will be unique because real pointers are aligned (no odd addresses)
         // info.call_id = make_funcall_id(rho) | 1;
 
+        info.recursion = is_recursive(info.fn_id);
 
         return info;
     }
@@ -155,7 +160,7 @@ public:
         info.fn_id = get_function_id(op);
         info.fn_addr = get_function_addr(op);
         call_stack_elem_t elem = STATE(fun_stack).back();
-        info.call_id = elem.first;
+        info.call_id = get<0>(elem);
         if (name != NULL)
             info.name = name;
         info.fn_type = fn_type;
@@ -163,7 +168,8 @@ public:
         info.fn_definition = get_expression(op);
 
         call_stack_elem_t parent_elem = STATE(fun_stack).back();
-        info.parent_call_id = parent_elem.first;
+        info.parent_call_id = get<0>(parent_elem);
+        info.recursion = is_recursive(info.fn_id);
 
         char *location = get_location(op);
         if (location != NULL)
@@ -179,12 +185,35 @@ public:
     }
 
 private:
+    recursion_type is_recursive(fn_id_t function) {
+        for (vector<call_stack_elem_t>::reverse_iterator i = STATE(fun_stack).rbegin(); i != STATE(fun_stack).rend(); ++i) {
+            call_id_t cursor_call = get<0>(*i);
+            fn_id_t cursor_function = get<1>(*i);
+            function_type cursor_type = get<2>(*i);
+
+            if (cursor_call == 0) {
+                // end of stack
+                return recursion_type::UNKNOWN;
+            }
+
+            if (cursor_function == function) {
+                return recursion_type::RECURSIVE;
+            }
+
+            if (cursor_type == function_type::BUILTIN || cursor_type == function_type::CLOSURE) {
+                return recursion_type::NOT_RECURSIVE;
+            }
+
+            // inside a different function, but one that doesn't matter, recursion still possible
+        }
+    }
+
     tuple<lifestyle_type, int, int> judge_promise_lifestyle(call_id_t from_call_id) {
         int effective_distance = 0;
         int actual_distance = 0;
         for (vector<call_stack_elem_t>::reverse_iterator i = STATE(fun_stack).rbegin(); i != STATE(fun_stack).rend(); ++i) {
-            call_id_t cursor = i->first;
-            function_type type = i->second;
+            call_id_t cursor = get<0>(*i);
+            function_type type = get<2>(*i);
 
             if (cursor == from_call_id)
                 if (effective_distance == 0) {
@@ -293,7 +322,7 @@ private:
         }
 
         set<SEXP> visited;
-        get_full_type(prom, rho, info.full_type, visited);
+        get_full_type(PRCODE(prom), rho, info.full_type, visited);
 
         return info;
     }
@@ -309,7 +338,7 @@ private:
         info.prom_id = get_promise_id(promise_expression);
 
         call_stack_elem_t stack_elem = STATE(fun_stack).back();
-        info.in_call_id = stack_elem.first;
+        info.in_call_id = get<0>(stack_elem);
 
         info.from_call_id = STATE(promise_origin)[info.prom_id];
 
@@ -343,7 +372,7 @@ private:
         }
 
         set<SEXP> visited;
-        get_full_type(symbol, rho, info.full_type, visited);
+        get_full_type(PRCODE(promise_expression), rho, info.full_type, visited);
 
         return info;
     }

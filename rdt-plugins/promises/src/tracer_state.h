@@ -19,7 +19,7 @@
 
 using namespace std;
 
-typedef pair<call_id_t, function_type> call_stack_elem_t;
+typedef tuple<call_id_t, fn_id_t, function_type> call_stack_elem_t;
 typedef tuple<prom_id_t, unsigned int, unsigned int> prom_key_t;
 
 struct prom_id_triple_hash {
