@@ -173,10 +173,10 @@ Specifically **PROM→α** indicates that it's a promise containing the expressi
 <div class="col2">
 <div class="together">
 ``` {r promise-types-pie, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
-promise.types <- get_promise_types(cutoff=1)
+promise.types <- get_promise_types(cutoff=NA)
 
-slices <- (promise.types %>% arrange(desc(number)))$number
-labels <- (promise.types %>% arrange(desc(number)) %>% mutate(type = ifelse(percent>1, type, "")))$type
+slices <- (promise.types %>% arrange(number))$number
+labels <- (promise.types %>% arrange(number) %>% mutate(type = ifelse(percent>1, type, "")))$type
 par(mar=c(0,2,2,2))
 
 pie(slices, labels, main="Basic types")
@@ -186,7 +186,7 @@ if(print_data) print(promise.types, row.names=FALSE)
 
 <div class="together">
 ``` {r promise-full-types-pie, echo=FALSE, fig.width=5, fig.height=4.5, comment=""}
-promise.full.types <- get_full_promise_types(cutoff=1)
+promise.full.types <- get_full_promise_types(cutoff=NA)
 
 slices <- (promise.full.types %>% arrange(number))$number
 labels <- (promise.full.types %>% arrange(number) %>% mutate(type = ifelse(percent>1, type, "")))$type

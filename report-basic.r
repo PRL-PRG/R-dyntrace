@@ -154,7 +154,7 @@ get_promise_types <- function(cutoff=NA) {
     promises %>% 
     #mutate(archetype = type*100+if(is.na(original_type)) 99 else original_type) %>%
     group_by(type) %>% count(type) %>% 
-    arrange(original_type, type, symbol_type) %>%
+    arrange(type) %>%
     mutate(percent=((n*100/n.promises))) %>%
     group_by(type) %>% 
     do(mutate(., 
