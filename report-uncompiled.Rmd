@@ -18,12 +18,9 @@ output: html_document
  }
 </style>
 
-```{r apriori, include=FALSE}
+```{r setup, include=FALSE}
 path <- "/home/kondziu/workspace/R-dyntrace/data/rivr.sqlite"
 print_data <- TRUE
-```
-
-```{r setup, include=FALSE}
 source("/home/kondziu/workspace/R-dyntrace/report-basic.r")
 ```
 
@@ -202,6 +199,10 @@ if(print_data) print(promise.full.types, row.names=FALSE)
 </div>
 
 ## Functions and Calls
+
+### Recursive Calls
+
+
 
 ### Strictness
 

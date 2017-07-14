@@ -153,13 +153,13 @@ get_promise_types <- function(cutoff=NA) {
   result <- 
     promises %>% 
     #mutate(archetype = type*100+if(is.na(original_type)) 99 else original_type) %>%
-    group_by(type, original_type, symbol_type) %>% count(type, original_type, symbol_type) %>% 
+    group_by(type) %>% count(type) %>% 
     arrange(original_type, type, symbol_type) %>%
     mutate(percent=((n*100/n.promises))) %>%
-    group_by(type, original_type, symbol_type) %>% 
+    group_by(type) %>% 
     do(mutate(., 
               type_code = type, 
-              type = humanize_promise_type(type, original_type, symbol_type)
+              type = humanize_promise_type(type)
               #percent = paste(format(percent, digits=12),   "%", sep="")
     )) %>%
     rename(number=n) %>%
@@ -209,13 +209,10 @@ humanize_full_promise_type = function(full_type) {
     paste(collapse = "→")
 }
 
-humanize_promise_type = function(type, fallback_type=NA, symbol_type=NA) {
+humanize_promise_type = function(type) 
   if(is.na(type)) "NA" else
     if(type == 0) "NIL" else
-      if(type == 1) {
-        if (is.na(symbol_type)) "SYM"
-        else paste("SYM", Recall(type=symbol_type), sep="→")
-      } else
+      if(type == 1) "SYM" else
         if(type == 2) "LIST" else
           if(type == 3) "CLOS" else
             if(type == 4) "ENV" else
@@ -233,16 +230,12 @@ humanize_promise_type = function(type, fallback_type=NA, symbol_type=NA) {
                                     if(type == 18) "ANY" else
                                       if(type == 19) "VEC" else
                                         if(type == 20) "EXPR" else
-                                          if(type == 21) {
-                                            if(is.na(fallback_type)) "BCODE"
-                                            else paste("BCODE", Recall(fallback_type, symbol_type=symbol_type), sep="→")
-                                          } else
+                                          if(type == 21) "BCODE" else
                                             if(type == 22) "EXTPTR" else
                                               if(type == 23) "WEAKREF" else
                                                 if(type == 24) "RAW" else
                                                   if(type == 25) "S4" else 
                                                     if(type == 69) "..." else NA
-}
 
 get_lookup_histogram <- function(cutoff=NA) {
   data <- promises %>% rename(promise_id = id) %>% left_join(promise.lookups, by="promise_id") %>% collect
@@ -303,4 +296,10 @@ get_function_calls <- function(...) {
     select(function_id, function_name, number, percent) %>%
     collect(n=Inf)
     lapply(patterns, function(pattern) {filter(data, grepl(pattern, function_name))} ) %>% bind_rows
+}
+
+get_recursiveness_of_calls <- function() {
+  parent.calls <- calls %>% mutate(parent_id = call_id, parent_function_id=function_id) %>% select(parent_id, parent_function_id)  
+  calls %>% left_join(parent.calls, by="parent_id")
+  
 }

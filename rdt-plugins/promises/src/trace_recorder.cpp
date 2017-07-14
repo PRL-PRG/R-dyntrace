@@ -172,11 +172,11 @@ string promise_creation_info_line(TraceLinePrefix prefix, const prom_basic_info_
     stream << "create promise id=" << info.prom_id
            << " type=" << sexp_type_to_string(info.prom_type);
 
-    if (info.prom_type == sexp_type::BCODE)
-        stream << "->" << sexp_type_to_string(info.prom_original_type);
-
-    if (info.symbol_underlying_type_is_set)
-        stream << "->" << sexp_type_to_string(info.symbol_underlying_type);
+//    if (info.prom_type == sexp_type::BCODE)
+//        stream << "->" << sexp_type_to_string(info.prom_original_type);
+//
+//    if (info.symbol_underlying_type_is_set)
+//        stream << "->" << sexp_type_to_string(info.symbol_underlying_type);
 
     stream << " full_type=" << full_sexp_type_to_string(info.full_type);
 
@@ -234,12 +234,6 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
            << "/" << info.actual_distance_from_origin;
 
     stream << " type=" << sexp_type_to_string(info.prom_type);
-
-    if (info.prom_type == sexp_type::BCODE)
-        stream << "->" << sexp_type_to_string(info.prom_original_type);
-
-    if (info.symbol_underlying_type_is_set)
-        stream << "->" << sexp_type_to_string(info.symbol_underlying_type);
 
     stream << " full_type=" << full_sexp_type_to_string(info.full_type);
 

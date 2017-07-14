@@ -104,12 +104,7 @@ R.xcodeproj/project.xcworkspace/contents.xcworkspacedata
 bin
 config.log
 config.status
-doc/NEWS.rds
-doc/R.1
-doc/html/index.html
-doc/html/packages.html
-doc/manual/stamp-images-html
-doc/manual/version.texi
+doc
 etc/Renviron
 etc/javaconf
 etc/ldpaths
