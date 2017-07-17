@@ -101,7 +101,7 @@ void compile_prepared_sql_statements() {
     prepared_sql_insert_call =
             compile_sql_statement(make_insert_function_call_statement("?","?","?","?","?"));
     prepared_sql_insert_promise =
-            compile_sql_statement(make_insert_promise_statement("?", "?", "?", "?", "?"));
+            compile_sql_statement(make_insert_promise_statement("?", "?", "?"));
     prepared_sql_insert_promise_eval =
             compile_sql_statement(make_insert_promise_evaluation_statement("?","?","?","?","?","?","?","?"));
 
@@ -208,21 +208,11 @@ sqlite3_stmt * populate_promise_statement(const prom_basic_info_t info) {
     sqlite3_bind_int(prepared_sql_insert_promise, 1, (int) info.prom_id);
     sqlite3_bind_int(prepared_sql_insert_promise, 2, tools::enum_cast(info.prom_type));
 
-    if (info.prom_type == sexp_type::BCODE)
-        sqlite3_bind_int(prepared_sql_insert_promise, 3, tools::enum_cast(info.prom_original_type));
-    else
-        sqlite3_bind_null(prepared_sql_insert_promise, 3);
-
-    if (info.symbol_underlying_type_is_set)
-        sqlite3_bind_int(prepared_sql_insert_promise, 4, tools::enum_cast(info.symbol_underlying_type));
-    else
-        sqlite3_bind_null(prepared_sql_insert_promise, 4);
-
     if (info.full_type.empty()) {
-        sqlite3_bind_null(prepared_sql_insert_promise, 5);
+        sqlite3_bind_null(prepared_sql_insert_promise, 3);
     } else {
         string full_type = full_sexp_type_to_number_string(info.full_type);
-        sqlite3_bind_text(prepared_sql_insert_promise, 5, full_type.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(prepared_sql_insert_promise, 3, full_type.c_str(), -1, SQLITE_TRANSIENT);
     }
 
     return prepared_sql_insert_promise;

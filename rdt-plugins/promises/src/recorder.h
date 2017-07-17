@@ -254,14 +254,32 @@ private:
 
         if (type == sexp_type::PROM) {
             SEXP sexp_inside_promise = PRCODE(sexp);
+
+            PROTECT(sexp_inside_promise);
             get_full_type(sexp_inside_promise, rho, result, visited);
+            UNPROTECT(1);
+
             return;
         }
 
+        // Question... are all BCODEs functions?
         if (type == sexp_type::BCODE) {
-            SEXP uncompiled_sexp = BODY_EXPR(sexp);
-            get_full_type(uncompiled_sexp, rho, result, visited);
+//            bool try_to_attach_symbol_value = (rho != R_NilValue) ? isEnvironment(rho) : false;
+//            if (!try_to_attach_symbol_value) return;
+//
+//            SEXP uncompiled_sexp = BODY_EXPR(sexp);
+//            SEXP underlying_expression = findVar(PRCODE(uncompiled_sexp), rho);
+//
+//            if (underlying_expression == R_UnboundValue) return;
+//            if (underlying_expression == R_MissingArg) return;
+//
+//            PROTECT(underlying_expression);
+//            //get_full_type(underlying_expression, rho, result, visited);
+//            UNPROTECT(1);
+
+            //Rprintf("hi from dbg\n`");
             return;
+
         }
 
         if (type == sexp_type::SYM) {
@@ -274,7 +292,9 @@ private:
             if (symbol_points_to == R_MissingArg) return;
             if (TYPEOF(symbol_points_to) == SYMSXP) return;
 
+            PROTECT(symbol_points_to);
             get_full_type(symbol_points_to, rho, result, visited);
+            UNPROTECT(1);
 
             return;
         }
@@ -287,39 +307,6 @@ private:
         STATE(fresh_promises).insert(info.prom_id);
 
         info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(prom)));
-
-        if (info.prom_type == sexp_type::BCODE) {
-            SEXP original_expression = BODY_EXPR(PRCODE(prom));
-            info.prom_original_type = static_cast<sexp_type>(TYPEOF(PRCODE(original_expression)));
-        } else {
-            info.prom_original_type = info.prom_type;
-        }
-
-        bool try_to_attach_symbol_value = (rho != R_NilValue) ? isEnvironment(rho) : false;
-        if (try_to_attach_symbol_value) {
-            if (info.prom_type == sexp_type::SYM) {
-                SEXP underlying_expression = findVar(PRCODE(prom), rho);
-                if (underlying_expression != R_UnboundValue) {
-                    info.symbol_underlying_type = static_cast<sexp_type>(TYPEOF(underlying_expression));
-                    info.symbol_underlying_type_is_set = true;
-                } else {
-                    info.symbol_underlying_type_is_set = false;
-                }
-            } else if (info.prom_type == sexp_type::BCODE && info.prom_original_type == sexp_type::SYM) {
-                SEXP original_expression = BODY_EXPR(PRCODE(prom));
-                SEXP underlying_expression = findVar(PRCODE(original_expression), rho);
-                if (underlying_expression != R_UnboundValue) {
-                    info.symbol_underlying_type = static_cast<sexp_type>(TYPEOF(underlying_expression));
-                    info.symbol_underlying_type_is_set = true;
-                } else {
-                    info.symbol_underlying_type_is_set = false;
-                }
-            } else {
-                info.symbol_underlying_type_is_set = false;
-            }
-        } else {
-            info.symbol_underlying_type_is_set = false;
-        }
 
         set<SEXP> visited;
         get_full_type(PRCODE(prom), rho, info.full_type, visited);
@@ -354,22 +341,6 @@ private:
         }
 
         info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(promise_expression)));
-
-        if (info.prom_type == sexp_type::BCODE) {
-            SEXP original_expression = BODY_EXPR(PRCODE(promise_expression));
-            info.prom_original_type = static_cast<sexp_type>(TYPEOF(PRCODE(original_expression)));
-        } else {
-            info.prom_original_type = info.prom_type;
-        }
-
-        if (info.prom_type == sexp_type::SYM) {
-            SEXP underlying_expression = findVar(PRCODE(promise_expression), rho);
-            info.symbol_underlying_type = static_cast<sexp_type>(TYPEOF(underlying_expression));
-        } else if (info.prom_type == sexp_type::BCODE && info.prom_original_type == sexp_type::SYM) {
-            SEXP original_expression = BODY_EXPR(PRCODE(promise_expression));
-            SEXP underlying_expression = findVar(PRCODE(original_expression), rho);
-            info.symbol_underlying_type = static_cast<sexp_type>(TYPEOF(underlying_expression));
-        }
 
         set<SEXP> visited;
         get_full_type(PRCODE(promise_expression), rho, info.full_type, visited);

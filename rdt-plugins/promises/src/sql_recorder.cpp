@@ -66,12 +66,6 @@ sql_stmt_t insert_promise_statement(const prom_basic_info_t & info) {
     return make_insert_promise_statement(
             from_int(info.prom_id),
             from_int(tools::enum_cast(info.prom_type)),
-            (info.prom_type == sexp_type::BCODE)
-                ? from_int(tools::enum_cast(info.prom_original_type))
-                : "null",
-            (info.symbol_underlying_type_is_set)
-                ? from_int(tools::enum_cast(info.symbol_underlying_type))
-                : "null",
             wrap_nullable_string(full_sexp_type_to_number_string(info.full_type))
     );
 }

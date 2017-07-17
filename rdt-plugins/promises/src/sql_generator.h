@@ -21,7 +21,7 @@ namespace sql_generator {
     sql_stmt_t make_insert_function_call_statement(sql_val_t id, sql_val_t name, sql_val_t callsite,  sql_val_t function_id, sql_val_t parent_call_id);
     sql_stmt_t make_insert_arguments_statement(std::vector<sql_val_cell_t> & arguments, bool align);
 
-    sql_stmt_t make_insert_promise_statement(sql_val_t id, sql_val_t type, sql_val_t original_type, sql_val_t symbol_type, sql_val_t full_type);
+    sql_stmt_t make_insert_promise_statement(sql_val_t id, sql_val_t type, sql_val_t full_type);
     sql_stmt_t make_insert_promise_evaluation_statement(sql_val_t clock, sql_val_t event_type, sql_val_t promise_id, sql_val_t from_call_id, sql_val_t in_call_id, sql_val_t lifestyle, sql_val_t effective_distance_from_origin, sql_val_t actual_distance_from_origin);
     sql_stmt_t make_insert_promise_associations_statement(std::vector<sql_val_cell_t> & associations, bool align);
 
