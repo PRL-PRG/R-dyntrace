@@ -314,7 +314,7 @@ private:
         return info;
     }
 
-    prom_info_t promise_get_info(const SEXP symbol, const SEXP rho) {
+    prom_info_t promise_get_info(const SEXP symbol, const SEXP rho, bool lookup) {
         prom_info_t info;
 
         const char *name = get_name(symbol);
@@ -342,8 +342,14 @@ private:
 
         info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(promise_expression)));
 
-        set<SEXP> visited;
-        get_full_type(PRCODE(promise_expression), rho, info.full_type, visited);
+        if (!lookup) {
+            info.full_type.push_back(sexp_type::OMEGA); // FIXME Meh
+        } else {
+            set<SEXP> visited;
+            get_full_type(PRCODE(promise_expression), rho, info.full_type, visited);
+        }
+
+
 
         return info;
     }
@@ -354,15 +360,15 @@ public:
     }
 
     prom_info_t force_promise_entry_get_info(const SEXP symbol, const SEXP rho) {
-        return promise_get_info(symbol, rho);
+        return promise_get_info(symbol, rho, false);
     }
 
     prom_info_t force_promise_exit_get_info(const SEXP symbol, const SEXP rho) {
-        return promise_get_info(symbol, rho);
+        return promise_get_info(symbol, rho, false);
     }
 
     prom_info_t promise_lookup_get_info(const SEXP symbol, const SEXP rho) {
-        return promise_get_info(symbol, rho);
+        return promise_get_info(symbol, rho, true);
     }
 
 #define DELEGATE2(func, info_struct) \

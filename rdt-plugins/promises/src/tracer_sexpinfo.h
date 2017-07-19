@@ -195,11 +195,6 @@ struct builtin_info_t : call_info_t {
 struct prom_basic_info_t {
     prom_id_t         prom_id;
     sexp_type         prom_type;
-    // I'm replacing these completely with full_sexp_type
-    //sexp_type         prom_original_type; // if prom_type is BCODE, then this points what the BCODESXP was compiled from
-    //sexp_type         symbol_underlying_type; // if prom_type or prom_original_type are SYM then this is the type of the
-                                              // expression the SYM points to.
-    //bool              symbol_underlying_type_is_set;
     full_sexp_type    full_type;
 };
 

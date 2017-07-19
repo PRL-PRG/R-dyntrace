@@ -239,8 +239,6 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
 
     stream << " type=" << sexp_type_to_string(info.prom_type);
 
-    stream << " full_type=" << full_sexp_type_to_string(info.full_type);
-
     stream << "\n";
 
     return stream.str();

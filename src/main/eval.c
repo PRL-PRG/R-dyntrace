@@ -655,7 +655,7 @@ SEXP eval(SEXP e, SEXP rho)
 
 		RDT_HOOK(probe_force_promise_entry, e, rho);
 		tmp = forcePromise(tmp);
-		RDT_HOOK(probe_force_promise_exit, e, rho, tmp);
+		RDT_HOOK(probe_force_promise_exit, e, rho, tmp); // SUSPICIOUS, should TMP be protected for the duration?
 
 		UNPROTECT(1);
 	    }
@@ -2270,7 +2270,7 @@ SEXP attribute_hidden do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
         SEXP op_saved = op;
         op = forcePromise(op);
         if (not_forced) {
-            RDT_HOOK(probe_force_promise_exit, op_saved, rho, op);
+            RDT_HOOK(probe_force_promise_exit, op_saved, rho, op); // SUSPICIOUS, op
         }
         else {
             RDT_HOOK(probe_promise_lookup, op_saved, rho, op);
@@ -4014,7 +4014,7 @@ static R_INLINE SEXP getPrimitive(SEXP symbol, SEXPTYPE type, SEXP rho)
         }
         value = forcePromise(value);
         if (not_forced) {
-            RDT_HOOK(probe_force_promise_exit, symbol, rho, value);
+            RDT_HOOK(probe_force_promise_exit, symbol, rho, value); // SUSPICIOUs value unprotected
         }
         else {
             RDT_HOOK(probe_promise_lookup, symbol, rho, value);
@@ -4082,7 +4082,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
         }
         op = forcePromise(op);
         if (not_forced) {
-            RDT_HOOK(probe_force_promise_exit, opsym, rho, op);
+            RDT_HOOK(probe_force_promise_exit, opsym, rho, op); // SUSPICIOUS op
         }
         else {
             RDT_HOOK(probe_promise_lookup, opsym, rho, op);
