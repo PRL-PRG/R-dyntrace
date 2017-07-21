@@ -7,7 +7,8 @@ suppressPackageStartupMessages(library("rmarkdown"))
 
 Sys.setenv(RSTUDIO_PANDOC="/usr/lib/rstudio/bin/pandoc")
 
-PATH_TO_TEMPLATE="/home/kondziu/workspace/R-dyntrace/reports/template.Rmd"
+PATH_TO_TEMPLATE="/home/kondziu/workspace/R-dyntrace-2/reports/template.Rmd"
+PATH_TO_ENGINE="/home/kondziu/workspace/R-dyntrace-2/reports/functions.R"
 
 option_list <- list( 
   make_option(c("-a", "--author"), action="store", type="character", default="",
@@ -57,7 +58,11 @@ for (argument in cfg$args){
   if (cfg$options$debug) 
     print(metadata)
   
-  markdown <- readLines(PATH_TO_TEMPLATE) %>% paste(collapse="\n") %>% str_replace_all("%%PATH%%", argument)
+  markdown <- 
+    readLines(PATH_TO_TEMPLATE) %>% paste(collapse="\n") %>% 
+    str_replace_all("%%PATH%%", argument) %>% 
+    str_replace_all("%%FUNCTIONS%%", PATH_TO_ENGINE)
+  
   content <- paste(metadata, markdown, sep="\n")
   
   if (cfg$options$debug)

@@ -1,7 +1,8 @@
 library(dplyr)
+library(igraph)
 
 if(!exists("path"))
-  path <- "/home/kondziu/workspace/R-dyntrace/data/rivr.sqlite"
+  path <- "/home/kondziu/workspace/R-dyntrace-2/data/rivr.sqlite"
 
 db <- src_sqlite(path)
 
@@ -90,7 +91,7 @@ get_effective_distances <- function(cutoff=NA) {
     
     distance.range <- c(na.distance, min.distance:max.distance, Inf)
     
-    effective.distances <- below %>% union(above)
+    effective.distances <- rbind(below, above)
   }
   
   histogram <- 
@@ -138,7 +139,7 @@ get_actual_distances <- function(cutoff=NA) {
     
     distance.range <- c(na.distance, min.distance:max.distance, Inf)
     
-    actual.distances <- below %>% union(above)
+    actual.distances <- rbind(below, above)
   }
   
   histogram <- 
@@ -172,7 +173,7 @@ get_promise_types <- function(cutoff=NA) {
   } else {
     above <- result %>% filter(percent >= cutoff)
     below <- result %>% filter(percent < cutoff) %>% summarise(type="other", number=sum(number), percent=sum(percent))  
-    above %>% union(below)
+    rbind(above, below)
   }
 }
 
@@ -198,7 +199,7 @@ get_full_promise_types <- function(cutoff=NA) {
   } else {
     above <- result %>% filter(percent >= cutoff)
     below <- result %>% filter(percent < cutoff) %>% summarise(type="other", number=sum(number), percent=sum(percent))  
-    above %>% union(below)
+    rbind(above, below)
   }
 }
 
@@ -241,46 +242,47 @@ get_lookup_histogram <- function(cutoff=NA) {
   data <- promises %>% rename(promise_id = id) %>% left_join(promise.lookups, by="promise_id") %>% collect
   unevaluated <- data.frame(no.of.lookups=0, number=(data %>% filter(is.na(event_type)) %>% count %>% data.frame)$n)
   evaluated <- data %>% filter(!is.na(event_type)) %>% group_by(promise_id) %>% count %>% group_by(n) %>% count %>% rename(no.of.lookups=n, number=nn)
-  unevaluated %>% union(evaluated)
+  new.data <- rbind(unevaluated, evaluated)
   
   if (is.na(cutoff)) {
     new.data
   } else {
     above <- new.data %>% filter(no.of.lookups > cutoff) %>% ungroup %>% collect %>% summarise(no.of.lookups=Inf, number=sum(number))
     below <- new.data %>% filter(no.of.lookups <= cutoff)
-    above %>% union(below)
+    rbind(above, below)
   }
 }
 
+# FIXME what if empty
 get_force_histogram <- function(cutoff=NA) {
   data <- promises %>% rename(promise_id = id) %>% left_join(promise.forces, by="promise_id") %>% collect
-  unevaluated <- data.frame(no.of.forces=0, number=(data %>% filter(is.na(event_type)) %>% count %>% data.frame)$n)
-  evaluated <- data %>% filter(!is.na(event_type)) %>% group_by(promise_id) %>% count %>% group_by(n) %>% count %>% rename(no.of.forces=n, number=nn)
+  unevaluated <- tibble(no.of.forces=0, number=(data %>% filter(is.na(event_type)) %>% count %>% data.frame)$n)
+  evaluated <- data %>% filter(!is.na(event_type)) %>% group_by(promise_id) %>% count %>% group_by(n) %>% count %>% ungroup %>% rename(no.of.forces=n, number=nn) 
   
-  new.data <- unevaluated %>% union(evaluated)
+  new.data <- rbind(unevaluated, evaluated)
   
   if (is.na(cutoff)) {
     new.data
   } else {
     above <- new.data %>% filter(no.of.forces > cutoff) %>% ungroup %>% collect %>% summarise(no.of.forces=Inf, number=sum(number))
     below <- new.data %>% filter(no.of.forces <= cutoff)
-    above %>% union(below)
+    rbind(above, below)
   }
 }
 
 get_promise_evaluation_histogram <- function(cutoff=NA) {
   data <- promises %>% rename(promise_id = id) %>% left_join(promise_evaluations, by="promise_id") %>% collect
-  unevaluated <- data.frame(no.of.evaluations=0, number=(data %>% filter(is.na(event_type)) %>% count %>% data.frame)$n)
-  evaluated <- data %>% filter(!is.na(event_type)) %>% group_by(promise_id) %>% count %>% group_by(n) %>% count %>% rename(no.of.evaluations=n, number=nn)
+  unevaluated <- tibble(no.of.evaluations=0, number=(data %>% filter(is.na(event_type)) %>% count %>% data.frame)$n)
+  evaluated <- data %>% filter(!is.na(event_type)) %>% group_by(promise_id) %>% count %>% group_by(n) %>% count %>% ungroup %>% rename(no.of.evaluations=n, number=nn)
   
-  new.data <- unevaluated %>% union(evaluated) 
+  new.data <- rbind(unevaluated, evaluated)
   
   if (is.na(cutoff)) {
     new.data
   } else {
     above <- new.data %>% filter(no.of.evaluations > cutoff) %>% ungroup %>% collect %>% summarise(no.of.evaluations=Inf, number=sum(number))
     below <- new.data %>% filter(no.of.evaluations <= cutoff)
-    above %>% union(below)
+    rbind(above, below)
   }
 }
 
@@ -296,6 +298,25 @@ get_function_calls <- function(...) {
     select(function_id, function_name, number, percent) %>%
     collect(n=Inf)
     lapply(patterns, function(pattern) {filter(data, grepl(pattern, function_name))} ) %>% bind_rows
+}
+
+get_call_tree <- function() {
+  data <- 
+    calls %>% 
+    arrange(call_id) %>% 
+    select(call_id, parent_id, function_id) %>%
+    as.data.frame
+  
+  edges <- c(rbind(data$parent_id, data$call_id))
+  nodes <- unique(edges)
+  function_ids <- (data.frame(call_id=nodes) %>% left_join(data, by="call_id"))$function_id
+  
+  G <- 
+    graph.empty(n = 0, directed = T) %>%
+    add.vertices(length(nodes), attr = list(name = as.character(nodes)), function_id = as.character(function_ids)) %>%
+    add.edges(as.character(edges))
+  
+  G
 }
 
 get_recursiveness_of_calls <- function() {
