@@ -213,6 +213,10 @@ void sql_recorder_t::start_trace() { // bool output_configuration
                     tracer_conf.outputs);
 
             multiplexer::output(
+                    multiplexer::payload_t(create_functions_statement),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
                     multiplexer::payload_t(create_calls_statement),
                     tracer_conf.outputs);
 
