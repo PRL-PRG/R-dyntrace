@@ -49,7 +49,7 @@ if(print_data) print(force.histogram, row.names=FALSE)
 ```
 </div>
 
-<div class="together">
+<!--div class="together"-->
 ``` {r evaluations-total, echo=FALSE, , comment="", fig.width=7, fig.height=5}
 cutoff <- 10
 promise.evaluation.histogram <- get_promise_evaluation_histogram(cutoff=cutoff)
@@ -72,7 +72,7 @@ par(mar=c(2,2,2,2))
 barplot(values, names.arg=labels, space=0, main="No. of evaluations (forces + lookups)")
 if(print_data) print(promise.evaluation.histogram_with_labels, row.names=FALSE)
 ```
-</div>
+<!--/div-->
 </div>
 
 ### Promise lifestyles
@@ -135,7 +135,7 @@ if(print_data) print(histogram_with_labels, row.names=FALSE)
 ```
 </div>
 
-<div class="together">
+<!--div class="together"-->
 ``` {r actual-distances, echo=FALSE, fig.width=7, fig.height=5, comment=""}
 cutoff <- 10
 histogram <- get_actual_distances(cutoff=cutoff)
@@ -152,7 +152,7 @@ par(mar=c(2,2,2,2))
 barplot(values, names.arg=labels, space=0, main="Actual distances")
 if(print_data) print(histogram_with_labels, row.names=FALSE)
 ```
-</div>
+<!--/div-->
 </div>
 
 ### Promise code types
@@ -177,7 +177,7 @@ if(print_data) print(promise.types, row.names=FALSE)
 ```
 </div>
 
-<div class="together">
+<!--div class="together"-->
 ``` {r promise-full-types-pie, echo=FALSE, fig.width=5, fig.height=4.5, comment=""}
 promise.full.types <- get_full_promise_types(cutoff=1)
 
@@ -188,7 +188,7 @@ par(mar=c(0,2,2,2))
 pie(slices, labels, main="Full types")
 if(print_data) print(promise.full.types, row.names=FALSE)
 ```
-</div>
+<!--/div-->
 </div>
 
 ## Functions and Calls
