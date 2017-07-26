@@ -2,7 +2,7 @@ library(dplyr)
 library(igraph)
 
 if(!exists("path"))
-  path <- "/home/kondziu/workspace/R-dyntrace-2/data/rivr.sqlite"
+  path <- "/home/kondziu/workspace/R-dyntrace/data/rivr.sqlite"
 
 db <- src_sqlite(path)
 
@@ -268,6 +268,10 @@ get_force_histogram <- function(cutoff=NA) {
     below <- new.data %>% filter(no.of.forces <= cutoff)
     rbind(above, below)
   }
+}
+
+get_function_compilation_histogram <- function() {
+  functions %>% group_by(compiled) %>% count %>% transform(compiled=as.logical(compiled)) %>% rename(number=n) %>% transform(percent=100*number/n.functions)
 }
 
 get_promise_evaluation_histogram <- function(cutoff=NA) {

@@ -193,6 +193,27 @@ if(print_data) print(promise.full.types, row.names=FALSE)
 
 ## Functions and Calls
 
+### Compilation
+
+<div class="col2">
+<div class="together">
+``` {r compiled-functions, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
+function.compilation.histogram <- get_function_compilation_histogram()
+
+slices <- (function.compilation.histogram)$number
+labels <- (function.compilation.histogram)$compiled
+par(mar=c(0,2,2,2))
+
+pie(slices, labels, main="Compiled functions")
+if(print_data) print(function.compilation.histogram, row.names=FALSE)
+```
+</div>
+
+<!--div class="together"-->
+
+<!--/div-->
+</div>
+
 ### Recursive Calls
 
 
