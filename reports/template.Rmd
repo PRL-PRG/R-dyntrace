@@ -193,24 +193,40 @@ if(print_data) print(promise.full.types, row.names=FALSE)
 
 ## Functions and Calls
 
-### Compilation
+### Byte-code Compilation
+
+When calling a function it's either byte-code **compiled** or **uncompiled**. When agregated across all calls to a function, a function can be:
+**compiled** - all calls to this function are compiled,
+**uncompiled** - none of the calls to this function are compiled,
+**after 1st** - a function can be compiled by the JIT, so it can be uncompiled initially and then compiled later on,
+**erratic** - a function is sometimes compiled and sometimes not; it can indicate that two separate functions are indistinguishable to the tracer (same definition, unknown location) and one of them is compiled while another is not.
+
 
 <div class="col2">
-<div class="together">
-``` {r compiled-functions, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
-function.compilation.histogram <- get_function_compilation_histogram()
+``` {r compiled-calls-closures, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
+closure.call.compilation.histogram <- get_call_compilation_histogram_by_type("closure") %>% rename(percent = percent_within_type)
 
-slices <- (function.compilation.histogram)$number
-labels <- (function.compilation.histogram)$compiled
+slices <- (closure.call.compilation.histogram)$number
+labels <- (closure.call.compilation.histogram)$compiled
 par(mar=c(0,2,2,2))
 
-pie(slices, labels, main="Compiled functions")
-if(print_data) print(function.compilation.histogram, row.names=FALSE)
+pie(slices, labels, main="Compiled closures (calls)")
+if(print_data) print(closure.call.compilation.histogram, row.names=FALSE)
 ```
+<div class="together">
+
 </div>
-
 <!--div class="together"-->
+``` {r compiled-functions-closures, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
+closure.function.compilation.histogram <- get_function_compilation_histogram_by_type_actual("closure") %>% rename(percent = percent_within_type)
 
+slices <- (closure.function.compilation.histogram)$number
+labels <- (closure.function.compilation.histogram %>% mutate(type = ifelse(percent>1, compiled, "")))$compiled
+par(mar=c(0,2,2,2))
+
+pie(slices, labels, main="Compiled closures (functions)")
+if(print_data) print(closure.function.compilation.histogram, row.names=FALSE)
+```
 <!--/div-->
 </div>
 

@@ -1,5 +1,6 @@
 library(dplyr)
 library(igraph)
+library(hashmap)
 
 if(!exists("path"))
   path <- "/home/kondziu/workspace/R-dyntrace/data/rivr.sqlite"
@@ -210,6 +211,20 @@ humanize_full_promise_type = function(full_type) {
     paste(collapse = "→")
 }
 
+humanize_function_type = function(type) 
+  ifelse(is.na(type), "NA",
+    ifelse(type == 0, "closure",
+      ifelse(type == 1, "built-in",
+        ifelse(type == 2, "special",
+          ifelse(type == 3, "primitive", NA)))))
+
+dehumanize_function_type = function(type) 
+  ifelse(is.na(type), "NA",
+    ifelse(type == "closure", 0,
+      ifelse(type == "built-in", 1,
+        ifelse(type == "special", 2,
+          ifelse(type == "primitive", 3, NA)))))
+
 humanize_promise_type = function(type) 
   if(is.na(type)) "NA" else
     if(type == 0) "NIL" else
@@ -270,8 +285,108 @@ get_force_histogram <- function(cutoff=NA) {
   }
 }
 
+get_functions_by_type <- function() {
+  functions %>% 
+    group_by(type) %>% count %>% rename(number=n) %>% 
+    transform(type=humanize_function_type(type), percent=100*number/n.functions)
+}
+
+get_calls_by_type <- function() {
+  left_join(calls, select(functions, function_id, type), by="function_id") %>% 
+    group_by(type) %>% count %>% rename(number=n) %>% 
+    transform(type=humanize_function_type(type), percent=100*number/n.calls)
+}
+
 get_function_compilation_histogram <- function() {
-  functions %>% group_by(compiled) %>% count %>% transform(compiled=as.logical(compiled)) %>% rename(number=n) %>% transform(percent=100*number/n.functions)
+  functions %>% 
+    group_by(compiled) %>% count %>% rename(number=n) %>% 
+    transform(compiled=as.logical(compiled), percent=100*number/n.functions)
+}
+
+get_call_compilation_histogram <- function() {
+  left_join(calls, select(functions, function_id, type), by="function_id") %>% 
+    group_by(compiled) %>% count %>% rename(number=n) %>% 
+    transform(compiled=as.logical(compiled), percent=100*number/n.calls)
+}
+
+get_function_compilation_histogram_by_type <- function(specific_type=NA) {
+  functions_by_type <- get_functions_by_type()
+  functions_by_type_hashmap <- hashmap(functions_by_type$type, functions_by_type$number)
+  
+  specific_functions <- 
+    if (is.na(specific_type)) {
+      select(functions, function_id, type, compiled) 
+    } else {
+      dehumanized_type <- dehumanize_function_type(specific_type)
+      select(functions, function_id, type, compiled) %>% 
+        filter(type == dehumanized_type)
+    }
+  
+  histogram <- specific_functions %>% 
+    group_by(type, compiled) %>% count %>% rename(number=n) %>% 
+    transform(type=humanize_function_type(type), compiled=as.logical(compiled)) %>% 
+    transform(percent_overall=100*number/n.functions) %>%
+    transform(percent_within_type=100*number/functions_by_type_hashmap[[type]])
+  
+  if (is.na(specific_type))
+    histogram
+  else
+    histogram %>% select(-type, -percent_overall)
+}
+
+get_call_compilation_histogram_by_type <- function(specific_type=NA) {
+  calls_by_type <- get_calls_by_type()
+  calls_by_type_hashmap <- hashmap(calls_by_type$type, calls_by_type$number)
+  
+  data <- 
+    if (is.na(specific_type)) {
+      left_join(calls, select(functions, function_id, type), by="function_id")
+    } else {
+      dehumanized_type <- dehumanize_function_type(specific_type)
+      left_join(calls, select(functions, function_id, type), by="function_id") %>% 
+        filter(type == dehumanized_type)
+    }
+  
+  histogram <- data %>%
+    group_by(type, compiled) %>% count %>% rename(number=n) %>% 
+    transform(type=humanize_function_type(type)) %>% 
+    transform(compiled=ifelse(as.logical(compiled), "compiled", "uncompiled")) %>% 
+    transform(percent_overall=100*number/n.calls) %>%
+    transform(percent_within_type=100*number/calls_by_type_hashmap[[type]])
+  
+  if (is.na(specific_type))
+    histogram
+  else
+    histogram %>% select(-type, -percent_overall)
+}
+
+# This one checks in the calls rather than in the function, so functions which get compiled on the fly will register as such.
+get_function_compilation_histogram_by_type_actual <- function(specific_type=NA) {
+  functions_by_type <- get_functions_by_type()
+  functions_by_type_hashmap <- hashmap(functions_by_type$type, functions_by_type$number)
+
+  specific_functions <- 
+    if (is.na(specific_type)) {
+      select(functions, function_id, type) 
+    } else {
+      dehumanized_type <- dehumanize_function_type(specific_type)
+      select(functions, function_id, type) %>% filter(type == dehumanized_type)
+    }
+  
+  histogram <- 
+    left_join(specific_functions, select(calls, call_id, function_id, compiled), by="function_id") %>% 
+    group_by(function_id) %>% summarise(runs=count(), compiled_runs=sum(compiled), type=type) %>% 
+    transform(compiled=ifelse(compiled_runs == 0, 0, as.character(ifelse(runs == compiled_runs, 1, ifelse(compiled_runs == runs - 1, 2, 3))))) %>% 
+    group_by(type, compiled) %>% count %>% rename(number=n) %>%
+    transform(compiled=ifelse(compiled == 1, "compiled", ifelse(compiled == 2, "after 1st", ifelse(compiled == 0, "uncompiled", "erratic")))) %>%
+    transform(type=humanize_function_type(type)) %>%
+    transform(percent_overall=100*number/n.functions) %>%
+    transform(percent_within_type=100*number/functions_by_type_hashmap[[type]])
+    
+  if (is.na(specific_type))
+    histogram
+  else
+    histogram %>% select(-type, -percent_overall)
 }
 
 get_promise_evaluation_histogram <- function(cutoff=NA) {
