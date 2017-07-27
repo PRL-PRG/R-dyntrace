@@ -14,6 +14,7 @@ promise_associations <- db %>% tbl("promise_associations")
 calls <- db %>% tbl("calls") %>% rename(call_id = id)
 functions <- db %>% tbl("functions") %>% rename(function_id = id)
 arguments <- db %>% tbl("arguments")
+metadata <- db %>% tbl("metadata")
 
 promise.forces <- promise_evaluations %>% filter(promise_id >= 0 && event_type == 15)
 promise.lookups <- promise_evaluations %>% filter(promise_id >= 0 && event_type == 0)
