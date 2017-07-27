@@ -75,13 +75,14 @@ namespace sql_generator {
     }
 
     sql_stmt_t make_insert_function_call_statement(sql_val_t id, sql_val_t name, sql_val_t callsite,
-                                        sql_val_t function_id, sql_val_t parent_id) {
+                                        sql_val_t compiled, sql_val_t function_id, sql_val_t parent_id) {
         stringstream statement;
 
         statement << "insert into calls values ("
                   << id << ","
                   << name << ","
                   << callsite << ","
+                  << compiled << ","
                   << function_id << ","
                   << parent_id
                   << ");\n";
@@ -197,6 +198,7 @@ namespace sql_generator {
                 "    --[ data ]-----------------------------------------------------------------\n"
                 "    function_name text,\n"
                 "    callsite text,\n"
+                "    compiled boolean not null,\n"
                 "    --[ relations ]------------------------------------------------------------\n"
                 "    function_id integer not null,\n"
                 "    parent_id integer not null, -- ID of call that executed current call\n"

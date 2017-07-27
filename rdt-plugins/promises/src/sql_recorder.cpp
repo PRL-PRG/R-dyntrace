@@ -58,8 +58,9 @@ sql_stmt_t insert_call_statement(const call_info_t & info) {
     sql_val_t function_id = from_int(info.fn_id);
     sql_val_t parent_call_id = from_int(info.parent_call_id);
     sql_val_t callsite = wrap_nullable_string(info.callsite);
+    sql_val_t compiled = from_int(info.fn_compiled ? 1 : 0);
 
-    return make_insert_function_call_statement(id, name, callsite, function_id, parent_call_id);
+    return make_insert_function_call_statement(id, name, callsite, compiled, function_id, parent_call_id);
 }
 
 sql_stmt_t insert_promise_statement(const prom_basic_info_t & info) {
