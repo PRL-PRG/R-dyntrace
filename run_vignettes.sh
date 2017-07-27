@@ -10,11 +10,11 @@ export R_DISABLE_BYTECODE=0
 export R_ENABLE_JIT=3
 export R_KEEP_PKG_SOURCE=yes
 
-COMPILE_VIGNETTE=true
+export RDT_COMPILE_VIGNETTE=true
 
 PACKAGES=
 
-if $COMPILE_VIGNETTE
+if $RDT_COMPILE_VIGNETTE
 then 
     CMD="$CMD --compile"        
 fi    

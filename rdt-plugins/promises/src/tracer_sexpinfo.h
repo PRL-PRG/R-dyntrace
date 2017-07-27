@@ -9,6 +9,7 @@
 #include <vector>
 #include <functional>
 #include <cassert>
+#include <map>
 
 #include <r.h>
 
@@ -166,6 +167,8 @@ typedef vector<sexp_type> full_sexp_type;
 
 string sexp_type_to_string(sexp_type);
 SEXPTYPE sexp_type_to_SEXPTYPE(sexp_type);
+
+typedef map<std::string, std::string> metadata_t;
 
 struct call_info_t {
     function_type fn_type;

@@ -195,13 +195,14 @@ void sql_recorder_t::promise_lookup(const prom_info_t & info) {
             tracer_conf.outputs);
 }
 
-void sql_recorder_t::start_trace() { // bool output_configuration
+void sql_recorder_t::start_trace(const metadata_t & info) { // bool output_configuration
     multiplexer::init(tracer_conf.outputs, tracer_conf.filename, tracer_conf.overwrite);
 
     if (tracer_conf.include_configuration)
         if (tracer_conf.overwrite) {
             sql_stmt_t pragma_statement = make_pragma_statement("synchronous", "off");
 
+            sql_stmt_t create_metadata_statement = make_create_metadata_statement();
             sql_stmt_t create_functions_statement = make_create_functions_statement();
             sql_stmt_t create_calls_statement = make_create_calls_statement();
             sql_stmt_t create_arguments_statement = make_create_arguments_statement();
@@ -211,6 +212,10 @@ void sql_recorder_t::start_trace() { // bool output_configuration
 
             multiplexer::output(
                     multiplexer::payload_t(pragma_statement),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(create_metadata_statement),
                     tracer_conf.outputs);
 
             multiplexer::output(
@@ -237,6 +242,13 @@ void sql_recorder_t::start_trace() { // bool output_configuration
                     multiplexer::payload_t(create_evaluations_statement),
                     tracer_conf.outputs);
         }
+
+    for(auto const & i : info) {
+        sql_stmt_t statement = make_insert_matadata_statement(wrap_nullable_string(i.first), wrap_nullable_string(i.second));
+        multiplexer::output(
+                multiplexer::payload_t(statement),
+                tracer_conf.outputs);
+    }
 
     if (!tracer_conf.overwrite && tracer_conf.reload_state) {
         sql_stmt_t max_function_id_query = make_select_max_function_id_statement();

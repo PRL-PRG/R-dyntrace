@@ -25,6 +25,8 @@ namespace sql_generator {
     sql_stmt_t make_insert_promise_evaluation_statement(sql_val_t clock, sql_val_t event_type, sql_val_t promise_id, sql_val_t from_call_id, sql_val_t in_call_id, sql_val_t lifestyle, sql_val_t effective_distance_from_origin, sql_val_t actual_distance_from_origin);
     sql_stmt_t make_insert_promise_associations_statement(std::vector<sql_val_cell_t> & associations, bool align);
 
+    sql_stmt_t make_insert_matadata_statement(sql_val_t key, sql_val_t value);
+
     sql_stmt_t make_select_max_argument_id_statement();
     sql_stmt_t make_select_max_promise_id_statement();
     sql_stmt_t make_select_min_promise_id_statement();
@@ -45,6 +47,7 @@ namespace sql_generator {
     //sql_stmt_t make_create_tables_and_views_statement();
     //std::vector<sql_stmt_t> split_into_individual_statements(sql_stmt_t statements);
 
+    sql_stmt_t make_create_metadata_statement();
     sql_stmt_t make_create_functions_statement();
     sql_stmt_t make_create_calls_statement();
     sql_stmt_t make_create_arguments_statement();
@@ -52,7 +55,7 @@ namespace sql_generator {
     sql_stmt_t make_create_promise_associations_statement();
     sql_stmt_t make_create_promise_evaluations_statement();
 
-        sql_val_cell_t join(std::initializer_list<sql_val_t>);
+    sql_val_cell_t join(std::initializer_list<sql_val_t>);
 
     sql_val_t from_int(int i);
     sql_val_t from_hex(int h);

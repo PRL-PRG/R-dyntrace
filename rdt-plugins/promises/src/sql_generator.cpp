@@ -177,6 +177,18 @@ namespace sql_generator {
         return "pragma " + option + " = " + value + ";\n";
     }
 
+    sql_stmt_t make_insert_matadata_statement(sql_val_t key, sql_val_t value) {
+        return "insert into metadata values (" + key + "," + value + ");\n";
+    }
+
+    sql_stmt_t make_create_metadata_statement() {
+        return "create table if not exists metadata (\n"
+                "    --[ data ]-----------------------------------------------------------------\n"
+                "    key text not null,\n"
+                "    value text\n"
+                ");\n";
+    }
+
     sql_stmt_t make_create_functions_statement() {
         return "create table if not exists functions (\n"
                 "    --[ identity ]-------------------------------------------------------------\n"
