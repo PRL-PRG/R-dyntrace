@@ -229,6 +229,34 @@ if(print_data) print(promise.full.types %>% as.data.frame %>% transform(number=p
 
 ## Functions and Calls
 
+### Functions and Calls by Type
+
+<div class="col2">
+<div class="together">
+```{r calls-by-type, echo=FALSE, fig.width=5, fig.height=4.5, comment=""}
+calls.types <- get_calls_by_type()
+
+slices <- (calls.types %>% arrange(number))$number
+labels <- (calls.types %>% arrange(number) %>% mutate(type = ifelse(percent>1, type, "")))$type
+par(mar=c(0,2,2,2))
+
+pie(slices, labels, main="Call types")
+if(print_data) print(calls.types %>% as.data.frame %>% transform(number=pp(number)), row.names=FALSE)
+```
+</div>
+
+```{r functions-by-type, echo=FALSE, fig.width=5, fig.height=4.5, comment=""}
+calls.functions <- get_functions_by_type()
+
+slices <- (calls.functions %>% arrange(number))$number
+labels <- (calls.functions %>% arrange(number) %>% mutate(type = ifelse(percent>1, type, "")))$type
+par(mar=c(0,2,2,2))
+
+pie(slices, labels, main="Function types")
+if(print_data) print(calls.functions %>% as.data.frame %>% transform(number=pp(number)), row.names=FALSE)
+```
+</div>
+
 ### Byte-code Compilation
 
 When calling a function it's either byte-code **compiled** or **uncompiled**. When agregated across all calls to a function, a function can be:
