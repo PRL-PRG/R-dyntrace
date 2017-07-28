@@ -6,7 +6,8 @@ if(!exists("path"))
   path <- "/home/kondziu/workspace/R-dyntrace/data/rivr.sqlite"
 
 # pretty print
-pp <- function(number) format(number, big.mark=",", scientific=FALSE, trim=FALSE)
+pp <- function(number) format(number, big.mark=",", scientific=FALSE, trim=FALSE, digits=2)
+ppp <- function(number) paste(format(number, big.mark=",", scientific=FALSE, trim=FALSE, digits=2), "%", sep="")
 
 db <- src_sqlite(path)
 
@@ -301,7 +302,7 @@ get_lookup_histogram <- function(cutoff=NA) {
   data <- promises %>% rename(promise_id = id) %>% left_join(promise.lookups, by="promise_id") %>% select(promise_id, event_type) %>% collect
   unevaluated <- data.frame(no.of.lookups=0, number=(data %>% filter(is.na(event_type)) %>% count %>% data.frame)$n)
   evaluated <- data %>% filter(!is.na(event_type)) %>% group_by(promise_id) %>% count %>% group_by(n) %>% count %>% rename(no.of.lookups=n, number=nn)
-  new.data <- rbind(unevaluated, evaluated)
+  new.data <- rbind(unevaluated, evaluated) 
   
   if (is.na(cutoff)) {
     new.data
@@ -321,11 +322,11 @@ get_force_histogram <- function(cutoff=NA) {
   new.data <- rbind(unevaluated, evaluated)
   
   if (is.na(cutoff)) {
-    new.data
+    new.data %>% mutate(percent=((number*100/n.promises)))
   } else {
     above <- new.data %>% filter(no.of.forces > cutoff) %>% ungroup %>% collect %>% summarise(no.of.forces=Inf, number=sum(number))
     below <- new.data %>% filter(no.of.forces <= cutoff)
-    rbind(above, below)
+    rbind(above, below) %>% mutate(percent=((number*100/n.promises)))
   }
 }
 
@@ -479,14 +480,14 @@ get_promise_evaluation_histogram <- function(cutoff=NA) {
   unevaluated <- tibble(no.of.evaluations=0, number=(data %>% filter(is.na(event_type)) %>% count %>% data.frame)$n)
   evaluated <- data %>% filter(!is.na(event_type)) %>% group_by(promise_id) %>% count %>% group_by(n) %>% count %>% ungroup %>% rename(no.of.evaluations=n, number=nn)
   
-  new.data <- rbind(unevaluated, evaluated)
+  new.data <- rbind(unevaluated, evaluated) 
   
   if (is.na(cutoff)) {
-    new.data
+    new.data %>% mutate(percent=(number*100/n.promises))
   } else {
     above <- new.data %>% filter(no.of.evaluations > cutoff) %>% ungroup %>% collect %>% summarise(no.of.evaluations=Inf, number=sum(number))
     below <- new.data %>% filter(no.of.evaluations <= cutoff)
-    rbind(above, below)
+    rbind(above, below) %>% mutate(percent=(number*100/n.promises))
   }
 }
 
