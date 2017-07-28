@@ -22,11 +22,11 @@ source("%%FUNCTIONS%%")
 <div class="together">
 ## Basic Information
 
-Functions: `r n.functions`  
-Calls: `r n.calls`  
-Promises: `r n.promises` (+ `r n.alien.promises` alien)  
-Promise forces: `r n.promise.forces` (+ `r n.alien.promise.forces` alien)  
-Promise lookups: `r n.promise.lookups` (+ `r n.alien.promise.lookups` alien)  
+Functions: `r pp(n.functions)`  
+Calls: `r pp(n.calls)`  
+Promises: `r pp(n.promises)` (+ `r pp(n.alien.promises)` alien)  
+Promise forces: `r pp(n.promise.forces)` (+ `r pp(n.alien.promise.forces)` alien)  
+Promise lookups: `r pp(n.promise.lookups)` (+ `r pp(n.alien.promise.lookups)` alien)  
 </div>
 
 ## Metadata
@@ -59,7 +59,7 @@ labels <- force.histogram$no.of.forces
 par(mar=c(0,2,2,2))
 
 pie(slices, labels, main="No. of forces")
-if(print_data) print(force.histogram %>% as.data.frame, row.names=FALSE)
+if(print_data) print(force.histogram %>% as.data.frame %>% transform(number=pp(number)), row.names=FALSE)
 ```
 </div>
 
@@ -84,7 +84,7 @@ values <- promise.evaluation.histogram$number
 par(mar=c(2,2,2,2))
 
 barplot(values, names.arg=labels, space=0, main="No. of evaluations (forces + lookups)")
-if(print_data) print(promise.evaluation.histogram_with_labels %>% as.data.frame, row.names=FALSE)
+if(print_data) print(promise.evaluation.histogram_with_labels %>% as.data.frame %>% transform(number=pp(number)), row.names=FALSE)
 ```
 <!--/div-->
 </div>
@@ -107,7 +107,7 @@ scale_fill_discrete(name="No. of forces",
 xlab("Number") +
 ylab("Type")
 
-if(print_data) print(force.histogram.by.type %>% as.data.frame, row.names=FALSE)
+if(print_data) print(force.histogram.by.type %>% as.data.frame %>% transform(number=pp(number)), row.names=FALSE)
 ```
 </center>
 
@@ -136,7 +136,7 @@ labels <- (promise.lifestyles %>% arrange(number) %>% mutate(lifestyle = ifelse(
 par(mar=c(0,5,2,5))
 
 pie(slices, labels, main="Promise lifestyles")
-if (print_data) print(promise.lifestyles %>% as.data.frame, row.names=FALSE)
+if (print_data) print(promise.lifestyles %>% as.data.frame %>% transform(number=pp(number)), row.names=FALSE)
 ```
 </center>
 <!--/div-->
@@ -165,7 +165,7 @@ values <- histogram$number
 par(mar=c(2,2,2,2))
 
 barplot(values, names.arg=labels, space=0, main="Effective distances")
-if(print_data) print(histogram_with_labels %>% as.data.frame, row.names=FALSE)
+if(print_data) print(histogram_with_labels %>% as.data.frame %>% transform(number=pp(number)), row.names=FALSE)
 
 # TODO How many promises change types between creation and evaluation????
 ```
@@ -186,7 +186,7 @@ values <- histogram$number
 par(mar=c(2,2,2,2))
 
 barplot(values, names.arg=labels, space=0, main="Actual distances")
-if(print_data) print(histogram_with_labels %>% as.data.frame, row.names=FALSE)
+if(print_data) print(histogram_with_labels %>% as.data.frame %>% transform(number=pp(number)), row.names=FALSE)
 ```
 <!--/div-->
 </div>
@@ -209,7 +209,7 @@ labels <- (promise.types %>% arrange(number) %>% mutate(type = ifelse(percent>1,
 par(mar=c(0,2,2,2))
 
 pie(slices, labels, main="Basic types")
-if(print_data) print(promise.types %>% as.data.frame, row.names=FALSE)
+if(print_data) print(promise.types %>% as.data.frame %>% transform(number=pp(number)), row.names=FALSE)
 ```
 </div>
 
@@ -222,7 +222,7 @@ labels <- (promise.full.types %>% arrange(number) %>% mutate(type = ifelse(perce
 par(mar=c(0,2,2,2))
 
 pie(slices, labels, main="Full types")
-if(print_data) print(promise.full.types %>% as.data.frame, row.names=FALSE)
+if(print_data) print(promise.full.types %>% as.data.frame %>% transform(number=pp(number)), row.names=FALSE)
 ```
 <!--/div-->
 </div>
@@ -247,7 +247,7 @@ labels <- (closure.call.compilation.histogram)$compiled
 par(mar=c(0,2,2,2))
 
 pie(slices, labels, main="Compiled closures (calls)")
-if(print_data) print(closure.call.compilation.histogram %>% as.data.frame, row.names=FALSE)
+if(print_data) print(closure.call.compilation.histogram %>% as.data.frame %>% transform(number=pp(number)), row.names=FALSE)
 ```
 <div class="together">
 
@@ -261,7 +261,7 @@ labels <- (closure.function.compilation.histogram %>% mutate(type = ifelse(perce
 par(mar=c(0,2,2,2))
 
 pie(slices, labels, main="Compiled closures (functions)")
-if(print_data) print(closure.function.compilation.histogram %>% as.data.frame, row.names=FALSE)
+if(print_data) print(closure.function.compilation.histogram %>% as.data.frame %>% transform(number=pp(number)), row.names=FALSE)
 ```
 <!--/div-->
 </div>
@@ -279,7 +279,7 @@ if(print_data) print(closure.function.compilation.histogram %>% as.data.frame, r
 ### Calls to specific functions
 
 ```{r function-calls-selected-counts, echo=FALSE, comment=""}
-get_function_calls("^<anonymous>$", "eval", "force", "delayAssign", "return") %>% data.frame %>% print(., row.names=FALSE)
+get_function_calls("^<anonymous>$", "eval", "force", "delayAssign", "return") %>% data.frame %>% transform(number=pp(number)) %>% print(., row.names=FALSE)
 ```
 
 

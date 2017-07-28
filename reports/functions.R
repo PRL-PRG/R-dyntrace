@@ -5,6 +5,9 @@ library(hashmap)
 if(!exists("path"))
   path <- "/home/kondziu/workspace/R-dyntrace/data/rivr.sqlite"
 
+# pretty print
+pp <- function(number) format(number, big.mark=",", scientific=FALSE, trim=FALSE)
+
 db <- src_sqlite(path)
 
 # tables
