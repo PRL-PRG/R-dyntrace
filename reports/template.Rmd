@@ -12,6 +12,7 @@
 </style>
 
 ```{r setup, include=FALSE}
+library(ggplot2)
 path <- "%%PATH%%"
 print_data <- TRUE
 source("%%FUNCTIONS%%")
@@ -87,6 +88,28 @@ if(print_data) print(promise.evaluation.histogram_with_labels %>% as.data.frame,
 ```
 <!--/div-->
 </div>
+
+### Promise forces by types
+
+<center>
+``` {r evaluations-forces-by-type, echo=FALSE, , comment="", fig.width=7, fig.height=10}
+force.histogram.by.type <- get_force_histogram_by_type()
+
+par(mar=c(1,1,1,1))
+
+ggplot(
+  force.histogram.by.type, 
+  aes(x=type, y=number, fill=factor(no.of.forces))) + 
+geom_bar(stat="identity", position="dodge") +
+scale_fill_discrete(name="No. of forces",
+                    breaks=(force.histogram.by.type$no.of.forces %>% unique),
+                    labels=(force.histogram.by.type$no.of.forces %>% unique)) +
+xlab("Number") +
+ylab("Type")
+
+if(print_data) print(force.histogram.by.type %>% as.data.frame, row.names=FALSE)
+```
+</center>
 
 ### Promise lifestyles
 

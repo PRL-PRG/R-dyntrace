@@ -226,7 +226,7 @@ dehumanize_function_type = function(type)
         ifelse(type == "special", 2,
           ifelse(type == "primitive", 3, NA)))))
 
-humanize_promise_type = function(type) 
+humanize_promise_type = function(type) # TODO: kill
   if(is.na(type)) "NA" else
     if(type == 0) "NIL" else
       if(type == 1) "SYM" else
@@ -254,8 +254,48 @@ humanize_promise_type = function(type)
                                                   if(type == 25) "S4" else 
                                                     if(type == 69) "..." else NA
 
+SEXP_TYPES <- hashmap(
+  keys=c(0:10,13:25,69), 
+  values=c(
+    "NIL", "SYM", "LIST", "CLOS", "ENV",  "PROM", # 0-5
+    "LANG", "SPECIAL", "BUILTIN", "CHAR",  "LGL", # 6-10
+    "INT", "REAL", "CPLX", "STR", "DOT", "ANY",   # 13-18
+    "VEC", "EXPR", "BCODE", "EXTPTR", "WEAKREF",  # 19-23
+    "RAW", "S4", "..."))                          # 24-25, 69
+
+humanize_promise_type_vec = function(type) 
+  ifelse(is.na(type), "NA", SEXP_TYPES[[type]])
+
+humanize_promise_type_vec2 = function(type) # TODO: kill
+  ifelse(is.na(type), "NA",
+    ifelse(type == 0, "NIL",
+      ifelse(type == 1, "SYM",
+        ifelse(type == 2, "LIST",
+          ifelse(type == 3, "CLOS",
+            ifelse(type == 4, "ENV",
+              ifelse(type == 5, "PROM",
+                ifelse(type == 6, "LANG",
+                  ifelse(type == 7, "SPECIAL",
+                    ifelse(type == 8, "BUILTIN",
+                      ifelse(type == 9, "CHAR",
+                        ifelse(type == 10, "LGL",
+                          ifelse(type == 13, "INT",
+                            ifelse(type == 14, "REAL",
+                              ifelse(type == 15, "CPLX",
+                                ifelse(type == 16, "STR",
+                                  ifelse(type == 17, "DOT",
+                                    ifelse(type == 18, "ANY",
+                                      ifelse(type == 19, "VEC",
+                                        ifelse(type == 20, "EXPR",
+                                          ifelse(type == 21, "BCODE",
+                                            ifelse(type == 22, "EXTPTR",
+                                              ifelse(type == 23, "WEAKREF", 
+                                                ifelse(type == 24,"RAW", 
+                                                  ifelse(type == 25, "S4", 
+                                                    ifelse(type == 69, "...", NA))))))))))))))))))))))))))
+
 get_lookup_histogram <- function(cutoff=NA) {
-  data <- promises %>% rename(promise_id = id) %>% left_join(promise.lookups, by="promise_id") %>% collect
+  data <- promises %>% rename(promise_id = id) %>% left_join(promise.lookups, by="promise_id") %>% select(promise_id, event_type) %>% collect
   unevaluated <- data.frame(no.of.lookups=0, number=(data %>% filter(is.na(event_type)) %>% count %>% data.frame)$n)
   evaluated <- data %>% filter(!is.na(event_type)) %>% group_by(promise_id) %>% count %>% group_by(n) %>% count %>% rename(no.of.lookups=n, number=nn)
   new.data <- rbind(unevaluated, evaluated)
@@ -271,7 +311,7 @@ get_lookup_histogram <- function(cutoff=NA) {
 
 # FIXME what if empty
 get_force_histogram <- function(cutoff=NA) {
-  data <- promises %>% rename(promise_id = id) %>% left_join(promise.forces, by="promise_id") %>% collect
+  data <- promises %>% rename(promise_id = id) %>% left_join(promise.forces, by="promise_id") %>% select(promise_id, event_type) %>% collect
   unevaluated <- tibble(no.of.forces=0, number=(data %>% filter(is.na(event_type)) %>% count %>% data.frame)$n)
   evaluated <- data %>% filter(!is.na(event_type)) %>% group_by(promise_id) %>% count %>% group_by(n) %>% count %>% ungroup %>% rename(no.of.forces=n, number=nn) 
   
@@ -284,6 +324,47 @@ get_force_histogram <- function(cutoff=NA) {
     below <- new.data %>% filter(no.of.forces <= cutoff)
     rbind(above, below)
   }
+}
+
+get_force_histogram_by_type <- function() {
+  promise_types <- get_promise_types()
+  promise_type_count <- hashmap(
+    keys=promise_types$type,
+    values=promise_types$number
+  )
+  
+  data <- promises %>% rename(promise_id = id) %>% 
+    left_join(promise.forces, by="promise_id") %>% 
+    select(promise_id, type, full_type, event_type) %>% 
+    collect
+  
+  unevaluated <- data %>% 
+    filter(is.na(event_type)) %>% 
+    group_by(type) %>% summarise(no.of.forces=as.integer(0), number=n()) %>% 
+    as.data.frame
+  
+  evaluated <- data %>% 
+    filter(!is.na(event_type)) %>% 
+    group_by(promise_id) %>% summarise(no.of.forces=n(), type=c(type)) %>% 
+    group_by(type, no.of.forces) %>% summarise(number=n()) %>% 
+    as.data.frame
+  
+  intermediate <- 
+    rbind(unevaluated, evaluated)
+  
+  histogram <- 
+    merge( # cartesian product
+      data.frame(type=intermediate$type %>% unique), 
+      data.frame(no.of.forces=intermediate$no.of.forces %>% unique), 
+      by=NULL) %>% 
+    left_join(intermediate, by=c("type", "no.of.forces")) %>%
+    transform(number=ifelse(is.na(number), 0, number)) %>%
+    arrange(type, no.of.forces) %>%
+    transform(type=humanize_promise_type_vec(type)) %>%
+    mutate(percent_within_type=((number*100/promise_type_count[[type]]))) %>%
+    mutate(percent_overall=((number*100/n.promise.forces)))
+  
+  histogram
 }
 
 get_functions_by_type <- function() {

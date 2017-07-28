@@ -1,5 +1,7 @@
 #!/usr/bin/Rscript
 
+compiler::setCompilerOptions(suppressAll = TRUE)
+
 suppressPackageStartupMessages(library("optparse"))
 suppressPackageStartupMessages(library("dplyr"))
 suppressPackageStartupMessages(library("stringr"))
