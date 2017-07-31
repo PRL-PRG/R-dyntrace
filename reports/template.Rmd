@@ -299,15 +299,38 @@ if(print_data) print(closure.function.compilation.histogram %>% as.data.frame %>
 <!--/div-->
 </div>
 
-### Recursive Calls
+### Recursion
 
+Determining whether a function is recursive or not from a trace is necessarily imprecise. A call ``c`` to some function ``f`` is recursive if there is at least one more call to ``f`` above ``c`` in the stack trace. Instead of talking about recursive functions, we just show what percentage of their calls is recursive under this definition.
 
+<div class="col2">
+``` {r recursion-data, echo=FALSE, include=FALSE}
+recursion.info <- traverse_call_tree()
+recursive.calls.histogram <- get_call_recursion_histogram(recursion.info)
+recursive.functions.histogram <- get_function_recursion_histogram(recursion.info)
+
+```
+
+``` {r recursive-calls, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
+par(mar=c(0,2,2,2))
+pie(recursive.calls.histogram$number, recursive.calls.histogram$recursive, main="Recursive calls")
+if(print_data) print(recursive.calls.histogram %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
+```
+<div class="together">
+
+</div>
+<!--div class="together"-->
+``` {r recursive-functions, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
+par(mar=c(2,2,2,2))
+barplot(recursive.functions.histogram$number, names.arg=recursive.functions.histogram$recursion_rate, space=0, main="Recursive call rates by function")
+if(print_data) print(recursive.functions.histogram %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
+```
+<!--/div-->
+</div>
 
 ### Strictness
 
 ### Most called functions
-
-
 
 ### Calls to specific functions
 

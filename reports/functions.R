@@ -524,8 +524,102 @@ get_call_tree <- function() {
   G
 }
 
-get_recursiveness_of_calls <- function() {
-  parent.calls <- calls %>% mutate(parent_id = call_id, parent_function_id=function_id) %>% select(parent_id, parent_function_id)  
-  calls %>% left_join(parent.calls, by="parent_id")
+traverse_call_tree <- function() {
+  calls_df <- calls %>% 
+    left_join(functions %>% select(function_id, type), by="function_id") %>% 
+    select(call_id, parent_id, function_id, type) %>% 
+    data.frame
+
+  original_node_vector <- calls_df$call_id
+  original_function_vector <- calls_df$function_id
+  original_function_type_vector <- calls_df$type
+    
+  function_dict <- hashmap(keys=original_node_vector, values=original_function_vector)
+  parent_dict <- hashmap(keys=original_node_vector, values=calls_df$parent_id)
+  
+  traverse <- function(cursor_node_vector, 
+                       cursor_function_vector, 
+                       repetitions = rep(0, length(cursor_node_vector)), 
+                       height = rep(0, length(cursor_node_vector))) {
+    
+    parent_node_vector <- parent_dict[[cursor_node_vector]]
+    parent_function_vector <- function_dict[[parent_node_vector]]
+
+    if(all(is.na(parent_node_vector)))
+      data.frame(
+        call_id=original_node_vector, 
+        function_id=original_function_vector, 
+        type=humanize_function_type(original_function_type_vector), 
+        recursive=repetitions>0,
+        repetitions, 
+        height)
+    else            
+      Recall(
+        parent_node_vector, 
+        parent_function_vector, 
+        repetitions + ifelse(is.na(parent_function_vector), 0, (parent_function_vector == original_function_vector)), 
+        height + as.integer(!is.na(parent_node_vector)))
+  }
+  
+  traverse(original_node_vector, original_function_vector)
+}
+
+get_recursion_info_by_function <- function(traverse_data) {
+  traverse_data %>% 
+    group_by(function_id) %>% 
+    summarize(
+      mean_repetitions=mean(repetitions), 
+      min_repetitions=min(repetitions), 
+      max_repetitions=max(repetitions), 
+      mean_height=mean(height), 
+      min_height=min(height), 
+      max_height=max(height), 
+      number=n(), 
+      number_repeating=sum(as.integer(recursive)),
+      percent_repeating=100*number_repeating/number) %>%
+    as.data.frame
+}
+
+get_call_recursion_histogram <- function(traverse_data) {
+  traverse_data %>% 
+    group_by(recursive) %>% 
+    summarize(
+      number=n(), 
+      percent=100*number/n.calls) %>%
+    as.data.frame
+}
+
+get_function_recursion_histogram <- function(traverse_data) {
+  classification_table <- c( "0",
+    "(0,10〉", "(10,20〉", "(20,30〉", 
+    "(30,40〉", "(40,50〉", "(50,60〉", 
+    "(60,70〉", "(70,80〉", "(80,90〉", 
+    "(90,100〉")
+  
+  classify <- function(percentage)
+    ifelse(percentage == 0, 
+           classification_table[1], 
+           classification_table[((percentage - 1) %/% 10 + 2)])
+
+  histogram <- 
+    traverse_data %>% 
+    group_by(function_id) %>% 
+    summarize(
+      number=n(), 
+      number_repeating=sum(as.integer(recursive)),
+      percent_repeating=100*number_repeating/number) %>%
+    transform(recursion_rate = classify(percent_repeating)) %>%
+    group_by(recursion_rate) %>% 
+    summarize(
+      number=n(), 
+      percent=100*n()/n.functions) %>%
+    as.data.frame
+  
+  data.frame(recursion_rate=classification_table) %>% 
+    left_join(histogram, by="recursion_rate") %>% 
+    transform(
+      number=ifelse(is.na(number), 0, number), 
+      percent=ifelse(is.na(percent), 0, percent))
   
 }
+
