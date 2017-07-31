@@ -10,7 +10,7 @@
 class psql_recorder_t : public recorder_t<psql_recorder_t> {
 public:
     void init_recorder();
-    void start_trace();
+    void start_trace(const metadata_t & info);
     void finish_trace();
     void function_entry(const closure_info_t &);
     void function_exit(const closure_info_t &) {}

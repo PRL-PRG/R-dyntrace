@@ -12,16 +12,30 @@
 </style>
 
 ```{r setup, include=FALSE}
+library(ggplot2)
 path <- "%%PATH%%"
 print_data <- TRUE
 source("%%FUNCTIONS%%")
 ```
 
-Functions: `r n.functions`  
-Calls: `r n.calls`  
-Promises: `r n.promises` (+ `r n.alien.promises` alien)  
-Promise forces: `r n.promise.forces` (+ `r n.alien.promise.forces` alien)  
-Promise lookups: `r n.promise.lookups` (+ `r n.alien.promise.lookups` alien)  
+<div class="col2">
+<div class="together">
+## Basic Information
+
+Functions: `r pp(n.functions)`  
+Calls: `r pp(n.calls)`  
+Promises: `r pp(n.promises)` (+ `r pp(n.alien.promises)` alien)  
+Promise forces: `r pp(n.promise.forces)` (+ `r pp(n.alien.promise.forces)` alien)  
+Promise lookups: `r pp(n.promise.lookups)` (+ `r pp(n.alien.promise.lookups)` alien)  
+</div>
+
+## Metadata
+
+```{r metadata, echo=FALSE, comment=""}
+print(metadata %>% as.data.frame %>% unique, row.names=FALSE, use.names=FALSE)
+```
+
+</div>
 
 ## Promises
 
@@ -35,17 +49,13 @@ When a promise is evaluated it is either **forced**, if it was not evaluated bef
 <div class="together">
 ``` {r evaluations-forces, echo=FALSE, , comment="", fig.width=7, fig.height=5}
 force.histogram <- get_force_histogram()
-#lookup.histogram <- get_lookup_histogram()
-#force.histogram
-#lookup.histogram
-#promise.evaluation.histogram
 
 slices <- force.histogram$number
 labels <- force.histogram$no.of.forces
 par(mar=c(0,2,2,2))
 
 pie(slices, labels, main="No. of forces")
-if(print_data) print(force.histogram, row.names=FALSE)
+if(print_data) print(force.histogram %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
 ```
 </div>
 
@@ -54,15 +64,10 @@ if(print_data) print(force.histogram, row.names=FALSE)
 cutoff <- 10
 promise.evaluation.histogram <- get_promise_evaluation_histogram(cutoff=cutoff)
 
-#labels <- lookup.histogram$no.of.lookups
-#values <- lookup.histogram$number
-#par(mar=c(2,2,2,2))
-#barplot(values, names.arg=labels, space=0, main="No. of lookups")
-
 promise.evaluation.histogram_with_labels <-
-  promise.evaluation.histogram %>% 
+  promise.evaluation.histogram %>%
   mutate(no.of.evaluations=
-           ifelse(no.of.evaluations==Inf, 
+           ifelse(no.of.evaluations==Inf,
                   paste(">",cutoff, sep=""),
                   as.character(no.of.evaluations)))
 labels <- promise.evaluation.histogram_with_labels$no.of.evaluations
@@ -70,12 +75,41 @@ values <- promise.evaluation.histogram$number
 par(mar=c(2,2,2,2))
 
 barplot(values, names.arg=labels, space=0, main="No. of evaluations (forces + lookups)")
-if(print_data) print(promise.evaluation.histogram_with_labels, row.names=FALSE)
+if(print_data) print(promise.evaluation.histogram_with_labels %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
 ```
 <!--/div-->
 </div>
 
-### Promise lifestyles
+### Promise Forces by Types
+
+<center>
+``` {r evaluations-forces-by-type, echo=FALSE, , comment="", fig.width=7, fig.height=10}
+force.histogram.by.type <- get_force_histogram_by_type()
+
+par(mar=c(1,1,1,1))
+
+ggplot(
+  force.histogram.by.type, 
+  aes(x=type, y=number, fill=factor(no.of.forces))) + 
+geom_bar(stat="identity", position="dodge") +
+scale_fill_discrete(name="No. of forces",
+                    breaks=(force.histogram.by.type$no.of.forces %>% unique),
+                    labels=(force.histogram.by.type$no.of.forces %>% unique)) +
+xlab("Number") +
+ylab("Type")
+
+if(print_data) 
+  print(force.histogram.by.type %>% 
+          as.data.frame %>% 
+          transform(
+            number=pp(number), 
+            percent_within_type=pp(percent_within_type), 
+            percent_overall=pp(percent_overall)), 
+        row.names=FALSE)
+```
+</center>
+
+### Promise Lifestyles
 
 
 ``` {r lifestyles-print, echo=FALSE, , comment="", warning=FALSE, fig.width=8, fig.height=5}
@@ -100,12 +134,19 @@ labels <- (promise.lifestyles %>% arrange(number) %>% mutate(lifestyle = ifelse(
 par(mar=c(0,5,2,5))
 
 pie(slices, labels, main="Promise lifestyles")
-if (print_data) print(promise.lifestyles, row.names=FALSE)
+if (print_data) 
+  print(
+    promise.lifestyles %>% 
+      as.data.frame %>% 
+      transform(
+        number=pp(number),
+        percent=pp(percent)), 
+    row.names=FALSE)
 ```
 </center>
 <!--/div-->
 
-### Promise evaluation distances
+### Promise Evaluation Distances
 
 Effective distance is the distance from the call where a promise originated to the call in which it was evaluated. It is measured along the call graph (along inbound edges).  Since the data is gathered from a trace, the call graph is a tree.
 
@@ -129,7 +170,7 @@ values <- histogram$number
 par(mar=c(2,2,2,2))
 
 barplot(values, names.arg=labels, space=0, main="Effective distances")
-if(print_data) print(histogram_with_labels, row.names=FALSE)
+if(print_data) print(histogram_with_labels %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
 
 # TODO How many promises change types between creation and evaluation????
 ```
@@ -150,7 +191,7 @@ values <- histogram$number
 par(mar=c(2,2,2,2))
 
 barplot(values, names.arg=labels, space=0, main="Actual distances")
-if(print_data) print(histogram_with_labels, row.names=FALSE)
+if(print_data) print(histogram_with_labels %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
 ```
 <!--/div-->
 </div>
@@ -173,7 +214,7 @@ labels <- (promise.types %>% arrange(number) %>% mutate(type = ifelse(percent>1,
 par(mar=c(0,2,2,2))
 
 pie(slices, labels, main="Basic types")
-if(print_data) print(promise.types, row.names=FALSE)
+if(print_data) print(promise.types %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
 ```
 </div>
 
@@ -186,12 +227,77 @@ labels <- (promise.full.types %>% arrange(number) %>% mutate(type = ifelse(perce
 par(mar=c(0,2,2,2))
 
 pie(slices, labels, main="Full types")
-if(print_data) print(promise.full.types, row.names=FALSE)
+if(print_data) print(promise.full.types %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
 ```
 <!--/div-->
 </div>
 
 ## Functions and Calls
+
+### Functions and Calls by Type
+
+<div class="col2">
+<div class="together">
+```{r calls-by-type, echo=FALSE, fig.width=5, fig.height=4.5, comment=""}
+calls.types <- get_calls_by_type()
+
+slices <- (calls.types %>% arrange(number))$number
+labels <- (calls.types %>% arrange(number) %>% mutate(type = ifelse(percent>1, type, "")))$type
+par(mar=c(0,2,2,2))
+
+pie(slices, labels, main="Call types")
+if(print_data) print(calls.types %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
+```
+</div>
+
+```{r functions-by-type, echo=FALSE, fig.width=5, fig.height=4.5, comment=""}
+calls.functions <- get_functions_by_type()
+
+slices <- (calls.functions %>% arrange(number))$number
+labels <- (calls.functions %>% arrange(number) %>% mutate(type = ifelse(percent>1, type, "")))$type
+par(mar=c(0,2,2,2))
+
+pie(slices, labels, main="Function types")
+if(print_data) print(calls.functions %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
+```
+</div>
+
+### Byte-code Compilation
+
+When calling a function it's either byte-code **compiled** or **uncompiled**. When agregated across all calls to a function, a function can be:
+**compiled** - all calls to this function are compiled,
+**uncompiled** - none of the calls to this function are compiled,
+**after 1st** - a function can be compiled by the JIT, so it can be uncompiled initially and then compiled later on,
+**erratic** - a function is sometimes compiled and sometimes not; it can indicate that two separate functions are indistinguishable to the tracer (same definition, unknown location) and one of them is compiled while another is not.
+
+
+<div class="col2">
+``` {r compiled-calls-closures, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
+closure.call.compilation.histogram <- get_call_compilation_histogram_by_type("closure") %>% rename(percent = percent_within_type)
+
+slices <- (closure.call.compilation.histogram)$number
+labels <- (closure.call.compilation.histogram)$compiled
+par(mar=c(0,2,2,2))
+
+pie(slices, labels, main="Compiled closures (calls)")
+if(print_data) print(closure.call.compilation.histogram %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
+```
+<div class="together">
+
+</div>
+<!--div class="together"-->
+``` {r compiled-functions-closures, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
+closure.function.compilation.histogram <- get_function_compilation_histogram_by_type_actual("closure") %>% rename(percent = percent_within_type)
+
+slices <- (closure.function.compilation.histogram)$number
+labels <- (closure.function.compilation.histogram %>% mutate(type = ifelse(percent>1, compiled, "")))$compiled
+par(mar=c(0,2,2,2))
+
+pie(slices, labels, main="Compiled closures (functions)")
+if(print_data) print(closure.function.compilation.histogram %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
+```
+<!--/div-->
+</div>
 
 ### Recursive Calls
 
@@ -206,7 +312,7 @@ if(print_data) print(promise.full.types, row.names=FALSE)
 ### Calls to specific functions
 
 ```{r function-calls-selected-counts, echo=FALSE, comment=""}
-get_function_calls("^<anonymous>$", "eval", "force", "delayAssign", "return") %>% data.frame %>% print(., row.names=FALSE)
+get_function_calls("^<anonymous>$", "eval", "force", "delayAssign", "return") %>% data.frame %>% transform(number=pp(number), percent=pp(percent)) %>% print(., row.names=FALSE)
 ```
 
 

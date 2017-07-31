@@ -22,7 +22,29 @@ protected:
         return *static_cast<Impl*>(this);
     }
 
+private:
+    void get_metadatum(metadata_t & metadata, string key) {
+        char * value = getenv(key.c_str());
+        if (value == NULL)
+            metadata[key] = "";
+        else
+            metadata[key] = string(value);
+    }
+
 public:
+    metadata_t get_metadata_from_environment() {
+        metadata_t metadata;
+
+        get_metadatum(metadata, "RDT_COMPILE_VIGNETTE");
+        get_metadatum(metadata, "R_COMPILE_PKGS");
+        get_metadatum(metadata, "R_DISABLE_BYTECODE");
+        get_metadatum(metadata, "R_ENABLE_JIT");
+        get_metadatum(metadata, "R_KEEP_PKG_SOURCE");
+        get_metadatum(metadata, "R_ENABLE_JIT");
+
+        return metadata;
+    }
+
     closure_info_t function_entry_get_info(const SEXP call, const SEXP op, const SEXP rho) {
         closure_info_t info;
 
@@ -395,7 +417,7 @@ public:
     DELEGATE(promise_lookup, prom_info_t)
 
     DELEGATE(init_recorder)
-    DELEGATE(start_trace)
+    DELEGATE(start_trace, metadata_t)
     DELEGATE(finish_trace)
     DELEGATE(unwind, vector<call_id_t>)
 
@@ -446,7 +468,7 @@ public:
     COMPOSE(promise_lookup, prom_info_t)
 
     COMPOSE(init_recorder)
-    COMPOSE(start_trace)
+    COMPOSE(start_trace, metadata_t)
     COMPOSE(finish_trace)
     COMPOSE(unwind, vector<call_id_t>)
 
