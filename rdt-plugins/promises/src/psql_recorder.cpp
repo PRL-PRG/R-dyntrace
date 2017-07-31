@@ -7,8 +7,8 @@
 #include "psql_recorder.h"
 #include "tracer_conf.h"
 
-#include "sql_generator.h"
 #include "multiplexer.h"
+#include "sql_generator.h"
 #include "tools.h"
 
 #ifdef RDT_SQLITE_SUPPORT
@@ -45,6 +45,8 @@ static sqlite3_stmt * prepared_sql_insert_function = nullptr;
 static sqlite3_stmt * prepared_sql_insert_call = nullptr;
 static sqlite3_stmt * prepared_sql_insert_promise = nullptr;
 static sqlite3_stmt * prepared_sql_insert_promise_eval = nullptr;
+static sqlite3_stmt * prepared_sql_insert_promise_lifecycle = nullptr;
+static sqlite3_stmt * prepared_sql_insert_gc_trigger = nullptr;
 static sqlite3_stmt * prepared_sql_transaction_begin = nullptr;
 static sqlite3_stmt * prepared_sql_transaction_commit = nullptr;
 static sqlite3_stmt * prepared_sql_transaction_abort = nullptr;
@@ -70,6 +72,8 @@ static sqlite3_stmt * prepared_sql_create_arguments;
 static sqlite3_stmt * prepared_sql_create_promises;
 static sqlite3_stmt * prepared_sql_create_associations;
 static sqlite3_stmt * prepared_sql_create_evaluations;
+static sqlite3_stmt * prepared_sql_create_lifecycle;
+static sqlite3_stmt * prepared_sql_create_trigger;
 
 void compile_prepared_sql_schema_statements() {
     prepared_sql_pragma_asynchronous =
@@ -93,6 +97,12 @@ void compile_prepared_sql_schema_statements() {
     prepared_sql_create_evaluations =
             compile_sql_statement(
                     make_create_promise_evaluations_statement());
+    prepared_sql_create_lifecycle =
+            compile_sql_statement(
+                    make_create_promise_lifecycle_statement());
+    prepared_sql_create_trigger =
+            compile_sql_statement(
+                    make_create_gc_trigger_statement());
 }
 
 void compile_prepared_sql_statements() {
@@ -104,6 +114,10 @@ void compile_prepared_sql_statements() {
             compile_sql_statement(make_insert_promise_statement("?", "?", "?"));
     prepared_sql_insert_promise_eval =
             compile_sql_statement(make_insert_promise_evaluation_statement("?","?","?","?","?","?","?","?"));
+    prepared_sql_insert_promise_lifecycle =
+            compile_sql_statement(make_insert_promise_lifecycle_statement("?", "?", "?"));
+    prepared_sql_insert_gc_trigger =
+            compile_sql_statement(make_insert_gc_trigger_statement("?", "?", "?"));
 
     prepared_sql_transaction_begin =
             compile_sql_statement(make_begin_transaction_statement());
@@ -257,6 +271,20 @@ sqlite3_stmt * populate_promise_evaluation_statement(prom_eval_t type, const pro
     return prepared_sql_insert_promise_eval;
 }
 
+sqlite3_stmt *populate_promise_lifecycle_statement(const prom_gc_info_t & info) {
+    sqlite3_bind_int(prepared_sql_insert_promise_lifecycle, 1, info.promise_id);
+    sqlite3_bind_int(prepared_sql_insert_promise_lifecycle, 2, info.event);
+    sqlite3_bind_int(prepared_sql_insert_promise_lifecycle, 3, info.gc_trigger_counter);
+    return prepared_sql_insert_promise_lifecycle;
+}
+
+sqlite3_stmt *populate_gc_trigger_statement(const gc_info_t & info) {
+    sqlite3_bind_int(prepared_sql_insert_gc_trigger, 1, info.counter);
+    sqlite3_bind_int(prepared_sql_insert_gc_trigger, 2, info.ncells);
+    sqlite3_bind_int(prepared_sql_insert_gc_trigger, 3, info.vcells);
+    return prepared_sql_insert_gc_trigger;
+}
+
 // Functions connecting to the outside world, create SQL and multiplex output.
 
 void psql_recorder_t::function_entry(const closure_info_t & info) {
@@ -360,6 +388,28 @@ void psql_recorder_t::promise_lookup(const prom_info_t & info) {
             tracer_conf.outputs);
 #else
     // FIXME
+#endif
+}
+
+void psql_recorder_t::promise_lifecycle(const prom_gc_info_t & info) {
+#ifdef RDT_SQLITE_SUPPORT
+    sqlite3_stmt *statement = populate_promise_lifecycle_statement(info);
+    multiplexer::output(
+            multiplexer::payload_t(statement),
+            tracer_conf.outputs);
+#else
+  // FIXME
+#endif
+}
+
+void psql_recorder_t::gc_exit(const gc_info_t & info) {
+#ifdef RDT_SQLITE_SUPPORT
+  sqlite3_stmt *statement = populate_gc_trigger_statement(info);
+  multiplexer::output(
+            multiplexer::payload_t(statement),
+            tracer_conf.outputs);
+#else
+  // FIXME
 #endif
 }
 
@@ -533,6 +583,8 @@ void free_prepared_sql_statements() {
     sqlite3_finalize(prepared_sql_create_promises);
     sqlite3_finalize(prepared_sql_create_associations);
     sqlite3_finalize(prepared_sql_create_evaluations);
+    sqlite3_finalize(prepared_sql_create_lifecycle);
+    sqlite3_finalize(prepared_sql_create_trigger);
 
 //    free_prepared_sql_statement_vector(prepared_sql_create_tables_and_views);
 

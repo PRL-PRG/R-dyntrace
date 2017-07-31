@@ -5,10 +5,10 @@
 #ifndef R_3_3_1_TRACER_SEXPINFO_H
 #define R_3_3_1_TRACER_SEXPINFO_H
 
+#include <cassert>
+#include <functional>
 #include <string>
 #include <vector>
-#include <functional>
-#include <cassert>
 
 #include <r.h>
 
@@ -29,6 +29,8 @@ typedef rid_t fn_addr_t;    // hexadecimal
 typedef string fn_key_t;    // pun
 
 typedef unsigned long int arg_id_t;       // integer
+
+typedef int event_t;
 
 typedef pair<call_id_t, string> arg_key_t;
 
@@ -205,6 +207,18 @@ struct prom_info_t : prom_basic_info_t {
     lifestyle_type    lifestyle;
     int               effective_distance_from_origin;
     int               actual_distance_from_origin;
+};
+
+struct gc_info_t {
+    int counter;
+    double ncells;
+    double vcells;
+};
+
+struct prom_gc_info_t {
+    prom_id_t promise_id;
+    event_t event;
+    int gc_trigger_counter;
 };
 
 prom_id_t get_promise_id(SEXP promise);

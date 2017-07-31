@@ -5,15 +5,15 @@
 #ifndef R_3_3_1_RECORDER_H
 #define R_3_3_1_RECORDER_H
 
-#include <tuple>
-#include <inspect.h>
 #include "tuple_for_each.h"
+#include <inspect.h>
+#include <tuple>
 
 //#include <Defn.h> // We need this for R_Funtab
-#include <rdt.h>
-#include <set>
 #include "tracer_sexpinfo.h"
 #include "tracer_state.h"
+#include <rdt.h>
+#include <set>
 
 template<typename Impl>
 class recorder_t {
@@ -184,6 +184,14 @@ public:
         return info;
     }
 
+    gc_info_t gc_exit_get_info(int gc_count, double ncells, double vcells) {
+        gc_info_t info;
+        info.ncells = ncells;
+        info.vcells = vcells;
+        info.counter = gc_count;
+        return info;
+    }
+
 private:
     recursion_type is_recursive(fn_id_t function) {
         for (vector<call_stack_elem_t>::reverse_iterator i = STATE(fun_stack).rbegin(); i != STATE(fun_stack).rend(); ++i) {
@@ -349,8 +357,6 @@ private:
             get_full_type(PRCODE(promise_expression), rho, info.full_type, visited);
         }
 
-
-
         return info;
     }
 
@@ -392,8 +398,9 @@ public:
     DELEGATE(force_promise_entry, prom_info_t)
     DELEGATE(force_promise_exit, prom_info_t)
     DELEGATE(promise_created, prom_basic_info_t)
-    DELEGATE(promise_lookup, prom_info_t)
-
+    DELEGATE(promise_lookup, prom_info_t)    
+    DELEGATE(promise_lifecycle, prom_gc_info_t)
+    DELEGATE(gc_exit, gc_info_t)
     DELEGATE(init_recorder)
     DELEGATE(start_trace)
     DELEGATE(finish_trace)
@@ -444,7 +451,8 @@ public:
     COMPOSE(force_promise_exit, prom_info_t)
     COMPOSE(promise_created, prom_basic_info_t)
     COMPOSE(promise_lookup, prom_info_t)
-
+    COMPOSE(promise_lifecycle, prom_gc_info_t)
+    COMPOSE(gc_exit, gc_info_t)
     COMPOSE(init_recorder)
     COMPOSE(start_trace)
     COMPOSE(finish_trace)

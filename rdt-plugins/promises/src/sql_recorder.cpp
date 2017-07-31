@@ -2,14 +2,14 @@
 // Created by nohajc on 29.3.17.
 //
 
-#include <cstring>
 #include <cstdio>
+#include <cstring>
 
 #include "sql_recorder.h"
 #include "tracer_conf.h"
 
-#include "sql_generator.h"
 #include "multiplexer.h"
+#include "sql_generator.h"
 #include "tools.h"
 
 #include <string>
@@ -108,6 +108,15 @@ sql_stmt_t insert_promise_evaluation_statement(prom_eval_t type, const prom_info
     return make_insert_promise_evaluation_statement(clock, event_type, promise_id, from_call_id, in_call_id, lifestyle, effective_distance_from_origin, actual_distance_from_origin);
 }
 
+sql_stmt_t insert_promise_lifecycle_statement(const prom_gc_info_t & info) {
+    //sql_val_t clock = from_int(STATE(clock_id)++);
+    sql_val_t promise_id = from_int(info.promise_id);
+    sql_val_t event = from_int(info.event);
+    sql_val_t gc_trigger_counter = from_int(info.gc_trigger_counter);
+
+    return make_insert_promise_lifecycle_statement(promise_id, event, gc_trigger_counter);
+}
+
 /* Functions connecting to the outside world, create SQL and multiplex output. */
 
 void sql_recorder_t::function_entry(const closure_info_t & info) {
@@ -194,6 +203,13 @@ void sql_recorder_t::promise_lookup(const prom_info_t & info) {
             tracer_conf.outputs);
 }
 
+void sql_recorder_t::promise_lifecycle(const prom_gc_info_t & info) {
+    sql_stmt_t statement = insert_promise_lifecycle_statement(info);
+    multiplexer::output(
+            multiplexer::payload_t(statement),
+            tracer_conf.outputs);
+}
+
 void sql_recorder_t::start_trace() { // bool output_configuration
     multiplexer::init(tracer_conf.outputs, tracer_conf.filename, tracer_conf.overwrite);
 
@@ -207,6 +223,8 @@ void sql_recorder_t::start_trace() { // bool output_configuration
             sql_stmt_t create_promises_statement = make_create_promises_statement();
             sql_stmt_t create_associations_statement = make_create_promise_associations_statement();
             sql_stmt_t create_evaluations_statement = make_create_promise_evaluations_statement();
+            sql_stmt_t create_lifecycle_statement = make_create_promise_lifecycle_statement();
+            sql_stmt_t create_trigger_statement = make_create_gc_trigger_statement();
 
             multiplexer::output(
                     multiplexer::payload_t(pragma_statement),
@@ -234,6 +252,14 @@ void sql_recorder_t::start_trace() { // bool output_configuration
 
             multiplexer::output(
                     multiplexer::payload_t(create_evaluations_statement),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(create_lifecycle_statement),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(create_trigger_statement),
                     tracer_conf.outputs);
         }
 
