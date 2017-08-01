@@ -456,6 +456,14 @@ void psql_recorder_t::start_trace() {
             multiplexer::output(
                     multiplexer::payload_t(prepared_sql_create_evaluations),
                     tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(prepared_sql_create_lifecycle),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(prepared_sql_create_trigger),
+                    tracer_conf.outputs);
         }
     }
 

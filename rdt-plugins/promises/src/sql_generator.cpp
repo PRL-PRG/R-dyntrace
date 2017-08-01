@@ -307,7 +307,6 @@ namespace sql_generator {
     }
 
     sql_stmt_t make_create_gc_trigger_statement() {
-      std::cout << "\nHere\n";
        return "create table if not exists gc_trigger (\n"
               "--[ identity ]-------------------------------------------------------------\n"
               "counter integer primary key,\n"

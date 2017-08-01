@@ -192,7 +192,12 @@ struct trace_promises {
 
         prom_basic_info_t info = rec.create_promise_get_info(prom, rho);
         rec.promise_created_process(info);
-
+        prom_gc_info_t info2 = {
+            info.prom_id,
+            0,  // promise created
+            STATE(gc_trigger_counter)
+        };
+        rec.promise_lifecycle_process(info2);
         UNPROTECT(2);
     }
 
@@ -253,13 +258,13 @@ struct trace_promises {
         prom_gc_info_t info;
         auto iter2 = STATE(promise_lookup_gc_trigger_counter).find(id);
         if(iter2 != STATE(promise_lookup_gc_trigger_counter).end()) {
-          info = {
-            id,
-            1, // last promise lookup
-            iter2 -> second
-          };
-          rec.promise_lifecycle_process(info);
-          STATE(promise_lookup_gc_trigger_counter).erase(iter2);
+            info = {
+                id,
+                1, // last promise lookup
+                iter2 -> second
+            };
+            rec.promise_lifecycle_process(info);
+            STATE(promise_lookup_gc_trigger_counter).erase(iter2);
         }
         info = {
             id,
@@ -267,7 +272,6 @@ struct trace_promises {
             STATE(gc_trigger_counter)
         };
         rec.promise_lifecycle_process(info);
-
         STATE(promise_ids).erase(key);
         UNPROTECT(1);
     }
