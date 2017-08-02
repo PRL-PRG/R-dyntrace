@@ -120,6 +120,9 @@ extern const rdt_handler *rdt_curr_handler;
 
 #define CHKSTR(s) ((s) == NULL ? "<unknown>" : (s))
 
+int gc_toggle_off();
+void gc_toggle_restore(int previous_value);
+
 const char *get_ns_name(SEXP op);
 const char *get_name(SEXP call);
 char *get_location(SEXP op);

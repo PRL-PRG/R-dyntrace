@@ -18,6 +18,15 @@ const rdt_handler *rdt_curr_handler = &rdt_null_handler;
 // helpers
 //-----------------------------------------------------------------------------
 
+int gc_toggle_off() {
+    int gc_enabled = R_GCEnabled;
+    R_GCEnabled = 0;
+    return gc_enabled;
+}
+void gc_toggle_restore(int previous_value) {
+    R_GCEnabled = previous_value;
+}
+
 const char *get_ns_name(SEXP op) {
     SEXP env = CLOENV(op);
     SEXP spec = R_NamespaceEnvSpec(env);
