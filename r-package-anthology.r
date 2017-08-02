@@ -109,7 +109,8 @@ bioc.packages = (packages[packages$source == "bioc", ])$package
     'TxDb.Athaliana.BioMart.plantsmart22',
     "GO.db",
     "MASS",
-    "Biostrings"
+    "Biostrings",
+    "optparse"
 )
 
 source("https://bioconductor.org/biocLite.R")
