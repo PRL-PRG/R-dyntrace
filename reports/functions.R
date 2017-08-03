@@ -626,6 +626,7 @@ get_function_recursion_histogram <- function(traverse_data) {
 get_call_strictness <- function() {
   calls %>% 
     left_join(promise_associations, by="call_id") %>% 
+    filter(!is.na(promise_id)) %>%
     left_join(promise.forces, by="promise_id") %>% 
     group_by(call_id) %>% summarise(
       unevaluated=sum(as.integer(is.na(event_type))), 
@@ -640,6 +641,7 @@ get_call_strictness <- function() {
 get_call_strictness_ratios <- function() {
   calls %>% 
     left_join(promise_associations, by="call_id") %>% 
+    filter(!is.na(promise_id)) %>%
     left_join(promise.forces, by="promise_id") %>% 
     group_by(call_id) %>% summarise(
       unevaluated=sum(as.integer(is.na(event_type))), 
@@ -668,6 +670,7 @@ get_call_strictness_rate <- function() {
   histogram <- 
     calls %>% 
     left_join(promise_associations, by="call_id") %>% 
+    filter(!is.na(promise_id)) %>%
     left_join(promise.forces, by="promise_id") %>% 
     group_by(call_id) %>% 
     summarise(
@@ -704,6 +707,7 @@ get_function_strictness <- function() {
   histogram <- 
     calls %>% 
     left_join(promise_associations, by="call_id") %>% 
+    filter(!is.na(promise_id)) %>%
     left_join(promise.forces, by="promise_id") %>% 
     group_by(call_id, function_id) %>% 
     summarise(

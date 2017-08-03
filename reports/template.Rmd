@@ -329,6 +329,8 @@ if(print_data) print(recursive.functions.histogram %>% as.data.frame %>% transfo
 <!--/div-->
 </div>
 
+### Promises per Call and per Function
+
 ### Strictness
 
 ``` {r strictness-data, echo=FALSE, include=FALSE}
