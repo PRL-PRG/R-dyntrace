@@ -46,9 +46,19 @@ rdt.cmd.head <- function(first, path)
     "include.configuration=TRUE,\n",
     "reload.state=", !first, ",\n",
     "block={\n\n",
+    "loadNamespace <- function(package, lib.loc = NULL,\n",
+    "                          keep.source = getOption('keep.source.pkgs'),\n",
+    "                          partial = FALSE, declarativeOnly = FALSE) {\n",
+    "    tryCatch(base::loadNamespace(package, lib.loc, keep.source, partial, declarativeOnly),\n",
+    "        error = function(e) {\n",
+    "            install.packages(package, repos='https://cloud.r-project.org/')\n",
+    "            base::loadNamespace(package, lib.loc, keep.source, partial, declarativeOnly)\n",
+    "        })\n",
+    "}\n\n",
+    "gcinfo(verbose = TRUE)\n\n",
     sep="")
 
-rdt.cmd.tail <- "\n})"
+rdt.cmd.tail <- "\n gcinfo(verbose = FALSE); \n\n})"
 
 instrument.vignettes <- function(packages) {
   i.packages <- 0
