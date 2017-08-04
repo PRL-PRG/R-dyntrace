@@ -47,7 +47,9 @@ struct trace_promises {
 
         tracer_state().start_pass(prom);
 
-        rec.start_trace_process();
+        metadata_t metadata = rec.get_metadata_from_environment();
+
+        rec.start_trace_process(metadata);
 
         UNPROTECT(1);
     }

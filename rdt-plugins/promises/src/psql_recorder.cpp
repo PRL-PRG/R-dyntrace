@@ -41,6 +41,7 @@ static sqlite3_stmt * already_inserted_functions_query = nullptr;
 static sqlite3_stmt * already_inserted_negative_promises_query = nullptr;
 
 // Prepared statement objects for updates.
+static sqlite3_stmt * prepared_sql_insert_metadata = nullptr;
 static sqlite3_stmt * prepared_sql_insert_function = nullptr;
 static sqlite3_stmt * prepared_sql_insert_call = nullptr;
 static sqlite3_stmt * prepared_sql_insert_promise = nullptr;
@@ -67,6 +68,7 @@ void free_prepared_sql_statements();
 void free_prepared_sql_statement_cache(pstmt_cache *cache);
 #endif
 
+static sqlite3_stmt * prepared_sql_create_metadata;
 static sqlite3_stmt * prepared_sql_create_functions;
 static sqlite3_stmt * prepared_sql_create_calls;
 static sqlite3_stmt * prepared_sql_create_arguments;
@@ -79,8 +81,12 @@ static sqlite3_stmt * prepared_sql_create_distribution;
 
 void compile_prepared_sql_schema_statements() {
     prepared_sql_pragma_asynchronous =
-            compile_sql_statement(make_pragma_statement("synchronous", "off"));
+            compile_sql_statement(
+                    make_pragma_statement("synchronous", "off"));
 
+    prepared_sql_create_metadata =
+            compile_sql_statement(
+                    make_create_metadata_statement());
     prepared_sql_create_functions =
             compile_sql_statement(
                     make_create_functions_statement());
@@ -111,10 +117,13 @@ void compile_prepared_sql_schema_statements() {
 }
 
 void compile_prepared_sql_statements() {
+    prepared_sql_insert_metadata =
+            compile_sql_statement(make_insert_matadata_statement("?","?"));
+
     prepared_sql_insert_function =
             compile_sql_statement(make_insert_function_statement("?","?","?","?","?"));
     prepared_sql_insert_call =
-            compile_sql_statement(make_insert_function_call_statement("?","?","?","?","?"));
+            compile_sql_statement(make_insert_function_call_statement("?","?","?","?","?","?"));
     prepared_sql_insert_promise =
             compile_sql_statement(make_insert_promise_statement("?", "?", "?"));
     prepared_sql_insert_promise_eval =
@@ -156,6 +165,20 @@ void compile_prepared_sql_statements() {
 }
 
 // Functions for populating prepared statements.
+
+sqlite3_stmt * populate_metadata_statement(const string key, const string value) {
+    if (key.empty())
+        sqlite3_bind_null(prepared_sql_insert_metadata, 1);
+    else
+        sqlite3_bind_text(prepared_sql_insert_metadata, 1, key.c_str(), -1, SQLITE_TRANSIENT);
+
+    if (value.empty())
+        sqlite3_bind_null(prepared_sql_insert_metadata, 2);
+    else
+        sqlite3_bind_text(prepared_sql_insert_metadata, 2, value.c_str(), -1, SQLITE_TRANSIENT);
+
+    return prepared_sql_insert_metadata;
+}
 
 sqlite3_stmt * populate_function_statement(const call_info_t & info) {
     sqlite3_bind_int(prepared_sql_insert_function, 1, info.fn_id);
@@ -218,9 +241,11 @@ sqlite3_stmt * populate_call_statement(const call_info_t & info) {
     else
         sqlite3_bind_text(prepared_sql_insert_call, 3, info.callsite.c_str(), -1, SQLITE_TRANSIENT);
 
-    sqlite3_bind_int(prepared_sql_insert_call, 4, (int)info.fn_id);
+    sqlite3_bind_int(prepared_sql_insert_call, 4, info.fn_compiled ? 1 : 0);
 
-    sqlite3_bind_int(prepared_sql_insert_call, 5, (int)info.parent_call_id);
+    sqlite3_bind_int(prepared_sql_insert_call, 5, (int)info.fn_id);
+
+    sqlite3_bind_int(prepared_sql_insert_call, 6, (int)info.parent_call_id);
 
     return prepared_sql_insert_call;
 }
@@ -447,7 +472,7 @@ void psql_recorder_t::init_recorder() {
 #endif
 }
 
-void psql_recorder_t::start_trace() {
+void psql_recorder_t::start_trace(const metadata_t & info) {
 #ifdef RDT_SQLITE_SUPPORT
     multiplexer::init(tracer_conf.outputs, tracer_conf.filename, tracer_conf.overwrite);
 
@@ -457,6 +482,10 @@ void psql_recorder_t::start_trace() {
         if (tracer_conf.overwrite) {
             multiplexer::output(
                     multiplexer::payload_t(prepared_sql_pragma_asynchronous),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(prepared_sql_create_metadata),
                     tracer_conf.outputs);
 
             multiplexer::output(
@@ -497,9 +526,14 @@ void psql_recorder_t::start_trace() {
         }
     }
 
-
-
     compile_prepared_sql_statements();
+
+    for(auto const & i : info) {
+        sqlite3_stmt *statement = populate_metadata_statement(i.first, i.second);
+        multiplexer::output(
+                multiplexer::payload_t(statement),
+                tracer_conf.outputs);
+    }
 
     if (!tracer_conf.overwrite && tracer_conf.reload_state) {
         cerr << "doing this~~~~~~~~~~\n";

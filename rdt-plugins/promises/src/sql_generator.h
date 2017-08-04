@@ -18,7 +18,7 @@ namespace sql_generator {
     typedef std::string sql_val_cell_t;
 
     sql_stmt_t make_insert_function_statement(sql_val_t id, sql_val_t location, sql_val_t definition, sql_val_t type, sql_val_t compiled);
-    sql_stmt_t make_insert_function_call_statement(sql_val_t id, sql_val_t name, sql_val_t callsite,  sql_val_t function_id, sql_val_t parent_call_id);
+    sql_stmt_t make_insert_function_call_statement(sql_val_t id, sql_val_t name, sql_val_t callsite,  sql_val_t compiled, sql_val_t function_id, sql_val_t parent_call_id);
     sql_stmt_t make_insert_arguments_statement(std::vector<sql_val_cell_t> & arguments, bool align);
 
     sql_stmt_t make_insert_promise_statement(sql_val_t id, sql_val_t type, sql_val_t full_type);
@@ -27,6 +27,8 @@ namespace sql_generator {
     sql_stmt_t make_insert_promise_lifecycle_statement(sql_val_t promise_id, sql_val_t event ,sql_val_t gc_trigger_counter);
     sql_stmt_t make_insert_gc_trigger_statement(sql_val_t counter, sql_val_t ncells, sql_val_t vcells);
     sql_stmt_t make_insert_type_distribution_statement(sql_val_t gc_trigger_counter, sql_val_t type, sql_val_t length, sql_val_t bytes);
+
+    sql_stmt_t make_insert_matadata_statement(sql_val_t key, sql_val_t value);
 
     sql_stmt_t make_select_max_argument_id_statement();
     sql_stmt_t make_select_max_promise_id_statement();
@@ -48,6 +50,7 @@ namespace sql_generator {
     //sql_stmt_t make_create_tables_and_views_statement();
     //std::vector<sql_stmt_t> split_into_individual_statements(sql_stmt_t statements);
 
+    sql_stmt_t make_create_metadata_statement();
     sql_stmt_t make_create_functions_statement();
     sql_stmt_t make_create_calls_statement();
     sql_stmt_t make_create_arguments_statement();

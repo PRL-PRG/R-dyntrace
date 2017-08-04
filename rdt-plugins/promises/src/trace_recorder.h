@@ -16,7 +16,7 @@ public:
     }
 
     void init_recorder();
-    void start_trace();
+    void start_trace(const metadata_t & info);
     void finish_trace();
     void function_entry(const closure_info_t & info);
     void function_exit(const closure_info_t & info);
