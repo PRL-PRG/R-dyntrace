@@ -487,7 +487,7 @@ get_promise_evaluation_histogram <- function(cutoff=NA) {
   } else {
     above <- new.data %>% filter(no.of.evaluations > cutoff) %>% ungroup %>% collect %>% summarise(no.of.evaluations=Inf, number=sum(number))
     below <- new.data %>% filter(no.of.evaluations <= cutoff)
-    rbind(above, below) %>% mutate(percent=(number*100/n.promises))
+    rbind(below, above) %>% mutate(percent=(number*100/n.promises))
   }
 }
 
@@ -623,3 +623,333 @@ get_function_recursion_histogram <- function(traverse_data) {
   
 }
 
+get_call_strictness <- function() {
+  histogram <- 
+    calls %>% left_join(promise_associations, by="call_id") %>% 
+    filter(!is.na(promise_id)) %>%
+    left_join(promise.forces, by="promise_id") %>% 
+    group_by(call_id) %>% summarise(
+      unevaluated=sum(as.integer(is.na(event_type))), 
+      escaped=sum(as.integer(!is.na(event_type) && (lifestyle == 3))), 
+      evaluated=sum(as.integer(!is.na(event_type) && (lifestyle != 3))), 
+      count=n()) %>%
+    transform(strict=(evaluated==count)) %>%
+    group_by(strict) %>% 
+    summarise(number=n(), percent=100*n()/n.calls)
+  
+  nas <-
+    calls %>% left_join(promise_associations, by="call_id") %>% 
+    filter(is.na(promise_id)) %>% 
+    count() %>% rename(number=n) %>%
+    transform(strict=NA, percent=100*number/n.calls)
+  
+  rbind(histogram, nas)
+}
+
+get_call_strictness_ratios <- function() {
+  histogram <- 
+    calls %>% 
+      left_join(promise_associations, by="call_id") %>% 
+      filter(!is.na(promise_id)) %>%
+      left_join(promise.forces, by="promise_id") %>% 
+      group_by(call_id) %>% summarise(
+        unevaluated=sum(as.integer(is.na(event_type))), 
+        escaped=sum(as.integer(!is.na(event_type) && (lifestyle == 3))), 
+        evaluated=sum(as.integer(!is.na(event_type) && (lifestyle != 3))), 
+        count=n()) %>%
+      transform(strictness_ratio=paste(evaluated, count, sep="/")) %>%
+      group_by(strictness_ratio) %>% 
+      summarise(number=n(), percent=100*n()/n.calls)
+  
+  nas <-
+    calls %>% left_join(promise_associations, by="call_id") %>% 
+    filter(is.na(promise_id)) %>% 
+    count() %>% rename(number=n) %>%
+    transform(strictness_ratio="0/0", percent=100*number/n.calls)
+  
+  rbind(nas, histogram)
+}
+
+get_call_strictness_rate <- function() {
+  classification_table <- c( "0", 
+    "(0,10〉", "(10,20〉", "(20,30〉", 
+    "(30,40〉", "(40,50〉", "(50,60〉", 
+    "(60,70〉", "(70,80〉", "(80,90〉", 
+    "(90,100)", "100")
+  
+  classify <- function(percentage)
+    ifelse(percentage == 0, 
+           classification_table[1], 
+           ifelse(percentage == 100, 
+                  classification_table[12],        
+                  classification_table[((percentage - 1) %/% 10 + 2)]))
+  
+  histogram <- 
+    calls %>% 
+    left_join(promise_associations, by="call_id") %>% 
+    filter(!is.na(promise_id)) %>%
+    left_join(promise.forces, by="promise_id") %>% 
+    group_by(call_id) %>% 
+    summarise(
+      unevaluated=sum(as.integer(is.na(event_type))), 
+      escaped=sum(as.integer(!is.na(event_type) && (lifestyle == 3))), 
+      evaluated=sum(as.integer(!is.na(event_type) && (lifestyle != 3))), 
+      count=n()) %>%
+    transform(strictness_rate_percent=(100*evaluated/count)) %>%
+    transform(strictness_rate=classify(strictness_rate_percent)) %>%
+    group_by(strictness_rate) %>% 
+    summarise(number=n(), percent=100*n()/n.calls)
+  
+  complete_histogram <-
+    data.frame(strictness_rate=classification_table) %>% 
+    left_join(histogram, by="strictness_rate") %>% 
+      transform(
+        number=ifelse(is.na(number), 0, number), 
+        percent=ifelse(is.na(percent), 0, percent))
+  
+  nas <-
+    calls %>% left_join(promise_associations, by="call_id") %>% 
+    filter(is.na(promise_id)) %>% 
+    count() %>% rename(number=n) %>%
+    transform(strictness_rate=NA, percent=100*number/n.calls)
+  
+  rbind(complete_histogram, nas)
+}
+
+get_function_strictness <- function() {
+  histogram <- 
+    calls %>% 
+    left_join(functions, by="function_id") %>% 
+    left_join(promise_associations, by="call_id") %>% 
+    filter(!is.na(promise_id)) %>%
+    left_join(promise.forces, by="promise_id") %>% 
+    group_by(call_id, function_id) %>% 
+    summarise(
+      unevaluated=sum(as.integer(is.na(event_type))), 
+      escaped=sum(as.integer(!is.na(event_type) && (lifestyle == 3))), 
+      evaluated=sum(as.integer(!is.na(event_type) && (lifestyle != 3))), 
+      count=n()) %>%
+    transform(strict=(evaluated==count)) %>%
+    group_by(function_id, strict) %>% summarise() %>%
+    group_by(strict) %>%
+    summarise(
+      number=n(), 
+      percent=100*n()/n.functions)
+
+  nas <-
+    calls %>% 
+    left_join(promise_associations, by="call_id") %>% 
+    left_join(functions, by="function_id") %>% 
+    filter(is.na(promise_id)) %>% 
+    group_by(function_id) %>%
+    summarise() %>% 
+    count() %>% rename(number=n) %>%
+    transform(strict=NA, percent=100*number/n.functions)
+  
+  complete_histogram <- 
+       rbind(histogram %>% data.frame, nas %>% data.frame) 
+  
+  
+  complete_histogram
+}
+
+get_function_strictness_rate <- function() {
+    classification_table <- c( "0", 
+    "(0,10〉", "(10,20〉", "(20,30〉", 
+    "(30,40〉", "(40,50〉", "(50,60〉", 
+    "(60,70〉", "(70,80〉", "(80,90〉", 
+    "(90,100)", "100")
+  
+  classify <- function(percentage)
+    ifelse(percentage == 0, 
+           classification_table[1], 
+           ifelse(percentage == 100, 
+                classification_table[12],        
+                classification_table[((percentage - 1) %/% 10 + 2)]))
+  
+  histogram <- 
+    calls %>% 
+    left_join(promise_associations, by="call_id") %>% 
+    filter(!is.na(promise_id)) %>%
+    left_join(promise.forces, by="promise_id") %>% 
+    group_by(call_id, function_id) %>% 
+    summarise(
+      unevaluated=sum(as.integer(is.na(event_type))), 
+      escaped=sum(as.integer(!is.na(event_type) && (lifestyle == 3))), 
+      evaluated=sum(as.integer(!is.na(event_type) && (lifestyle != 3))), 
+      count=n()) %>%
+    transform(strict=(evaluated==count)) %>%
+    group_by(function_id) %>%
+    summarise(
+      strict_calls=sum(as.integer(strict)),
+      nonstrict_calls=sum(as.integer(!strict)),
+      count=length(strict)) %>%
+    transform(strict=strict_calls==count) %>%
+    transform(percentage=100*strict_calls/count) %>%
+    transform(strictness_rate=classify(percentage)) %>%
+    group_by(strictness_rate) %>%
+    summarise(
+      number=n(), 
+      percent=100*n()/n.functions)
+  
+  complete_histogram <-
+    data.frame(strictness_rate=classification_table) %>% 
+    left_join(histogram, by="strictness_rate") %>% 
+      transform(
+        number=ifelse(is.na(number), 0, number), 
+        percent=ifelse(is.na(percent), 0, percent))
+  
+  nas <-
+    calls %>% left_join(promise_associations, by="call_id") %>% 
+    filter(is.na(promise_id)) %>% 
+    group_by(function_id) %>%
+    summarise() %>% count() %>% rename(number=n) %>%
+    transform(strictness_rate=NA, percent=100*number/n.functions)
+  
+  rbind(complete_histogram, nas)
+}
+
+get_function_strictness_rate <- function() {
+    classification_table <- c( "0", 
+    "(0,10〉", "(10,20〉", "(20,30〉", 
+    "(30,40〉", "(40,50〉", "(50,60〉", 
+    "(60,70〉", "(70,80〉", "(80,90〉", 
+    "(90,100)", "100")
+  
+  classify <- function(percentage)
+    ifelse(percentage == 0, 
+           classification_table[1], 
+           ifelse(percentage == 100, 
+                classification_table[12],        
+                classification_table[((percentage - 1) %/% 10 + 2)]))
+  
+  histogram <- 
+    calls %>% 
+    left_join(promise_associations, by="call_id") %>% 
+    filter(!is.na(promise_id)) %>%
+    left_join(promise.forces, by="promise_id") %>% 
+    group_by(call_id, function_id) %>% 
+    summarise(
+      unevaluated=sum(as.integer(is.na(event_type))), 
+      escaped=sum(as.integer(!is.na(event_type) && (lifestyle == 3))), 
+      evaluated=sum(as.integer(!is.na(event_type) && (lifestyle != 3))), 
+      count=n()) %>%
+    transform(strict=(evaluated==count)) %>%
+    group_by(function_id) %>%
+    summarise(
+      strict_calls=sum(as.integer(strict)),
+      nonstrict_calls=sum(as.integer(!strict)),
+      count=length(strict)) %>%
+    transform(strict=strict_calls==count) %>%
+    transform(percentage=100*strict_calls/count) %>%
+    transform(strictness_rate=classify(percentage)) %>%
+    group_by(strictness_rate) %>%
+    summarise(
+      number=n(), 
+      percent=100*n()/n.functions)
+  
+  complete_histogram <-
+    data.frame(strictness_rate=classification_table) %>% 
+    left_join(histogram, by="strictness_rate") %>% 
+      transform(
+        number=ifelse(is.na(number), 0, number), 
+        percent=ifelse(is.na(percent), 0, percent))
+  
+  nas <-
+    calls %>% left_join(promise_associations, by="call_id") %>% 
+    filter(is.na(promise_id)) %>% 
+    group_by(function_id) %>%
+    summarise() %>% count() %>% rename(number=n) %>%
+    transform(strictness_rate=NA, percent=100*number/n.functions)
+  
+  rbind(complete_histogram, nas)
+}
+
+make_labels = function(x) ifelse(is.na(x), "NA", x)
+
+get_call_strictness_by_type <- function() {
+  histogram <- 
+    calls %>% left_join(functions, by="function_id") %>% 
+    left_join(promise_associations, by="call_id") %>% 
+    filter(!is.na(promise_id)) %>%
+    left_join(promise.forces, by="promise_id") %>% 
+    group_by(call_id,type) %>% summarise(
+      unevaluated=sum(as.integer(is.na(event_type))), 
+      escaped=sum(as.integer(!is.na(event_type) && (lifestyle == 3))), 
+      evaluated=sum(as.integer(!is.na(event_type) && (lifestyle != 3))), 
+      count=n()) %>%
+    transform(strict=(evaluated==count)) %>%
+    group_by(strict,type) %>% 
+    summarise(number=n(), percent=100*n()/n.calls)
+  
+  nas <-
+    calls %>% left_join(functions, by="function_id") %>% 
+    left_join(promise_associations, by="call_id") %>% 
+    filter(is.na(promise_id)) %>% 
+    group_by(type) %>% count() %>% rename(number=n) %>%
+    transform(strict=NA, percent=100*number/n.calls)
+  
+  intermediate <- 
+       rbind(histogram %>% data.frame, nas %>% data.frame)
+  
+  complete_histogram <-
+    merge( # cartesian product
+       data.frame(type=intermediate$type %>% unique), 
+       data.frame(strict=intermediate$strict %>% unique), 
+       by=NULL) %>%
+    left_join(intermediate, by=c("type", "strict")) %>%
+    transform(
+      number=ifelse(is.na(number), 0, number),
+      percent=ifelse(is.na(percent), 0, percent)) %>%
+    transform(type=humanize_function_type(type))
+  
+  complete_histogram
+}
+
+get_function_strictness_by_type <- function() {
+  histogram <- 
+    calls %>% 
+    left_join(functions, by="function_id") %>% 
+    left_join(promise_associations, by="call_id") %>% 
+    filter(!is.na(promise_id)) %>%
+    left_join(promise.forces, by="promise_id") %>% 
+    group_by(call_id, function_id, type) %>% 
+    summarise(
+      unevaluated=sum(as.integer(is.na(event_type))), 
+      escaped=sum(as.integer(!is.na(event_type) && (lifestyle == 3))), 
+      evaluated=sum(as.integer(!is.na(event_type) && (lifestyle != 3))), 
+      count=n()) %>%
+    transform(strict=(evaluated==count)) %>%
+    group_by(function_id, type,strict) %>% summarise() %>%
+    group_by(strict, type) %>%
+    summarise(
+      number=n(), 
+      percent=100*n()/n.functions)
+
+  nas <-
+    calls %>% 
+    left_join(promise_associations, by="call_id") %>% 
+    left_join(functions, by="function_id") %>% 
+    filter(is.na(promise_id)) %>% 
+    group_by(function_id,type) %>%
+    summarise() %>% 
+    group_by(type) %>%
+    count() %>% rename(number=n) %>%
+    transform(strict=NA, percent=100*number/n.functions)
+  
+  intermediate <- 
+       rbind(histogram %>% data.frame, nas %>% data.frame)
+  
+  complete_histogram <-
+    merge( # cartesian product
+       data.frame(type=intermediate$type %>% unique), 
+       data.frame(strict=intermediate$strict %>% unique), 
+       by=NULL) %>%
+    left_join(intermediate, by=c("type", "strict")) %>%
+    transform(
+      number=ifelse(is.na(number), 0, number),
+      percent=ifelse(is.na(percent), 0, percent)) %>%
+    transform(type=humanize_function_type(type))
+  
+  complete_histogram
+}

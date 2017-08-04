@@ -95,8 +95,10 @@ geom_bar(stat="identity", position="dodge") +
 scale_fill_discrete(name="No. of forces",
                     breaks=(force.histogram.by.type$no.of.forces %>% unique),
                     labels=(force.histogram.by.type$no.of.forces %>% unique)) +
-xlab("Number") +
-ylab("Type")
+xlab("") +
+ylab("") + 
+ggtitle("No. of forces by type") +
+theme(plot.title = element_text(face="bold", hjust = 0.5))
 
 if(print_data) 
   print(force.histogram.by.type %>% 
@@ -214,6 +216,7 @@ labels <- (promise.types %>% arrange(number) %>% mutate(type = ifelse(percent>1,
 par(mar=c(0,2,2,2))
 
 pie(slices, labels, main="Basic types")
+#barplot(slices, names.arg=labels, space=0, main="Basic types")
 if(print_data) print(promise.types %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
 ```
 </div>
@@ -227,6 +230,7 @@ labels <- (promise.full.types %>% arrange(number) %>% mutate(type = ifelse(perce
 par(mar=c(0,2,2,2))
 
 pie(slices, labels, main="Full types")
+#barplot(slices, names.arg=labels, space=0, main="Full types") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 if(print_data) print(promise.full.types %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
 ```
 <!--/div-->
@@ -328,7 +332,116 @@ if(print_data) print(recursive.functions.histogram %>% as.data.frame %>% transfo
 <!--/div-->
 </div>
 
+### Promises per Call and per Function
+
 ### Strictness
+
+``` {r strictness-data, echo=FALSE, include=FALSE}
+strict.calls.histogram <- get_call_strictness()
+strict.calls.ratio.histogram <- get_call_strictness_ratios()
+strict.calls.rate.histogram <- get_call_strictness_rate()
+strict.calls.by.type.histogram <- get_call_strictness_by_type()
+strict.functions.histogram <- get_function_strictness()
+strict.functions.rate.histogram <- get_function_strictness_rate()
+strict.functions.by.type.histogram <- get_function_strictness_by_type()
+```
+
+A call is **strict** if all of its arguments are **evaluated** and none of the arguments is **escaped**. (This means that a function may pass unevaluated promises to a child call and still be strict, but it cannot leak the promise).
+A function is **strict** if all of its calls are **strict**. Functions that don't take promises are neither **strict** nor **non-strict** -- these can be either arrity-0 closures or built-in (which accept values rather than promises).
+
+**Strictness ratio** of the form `n/m` means that a call evaluated `n` promises out of `m` promises that were created for it. `0/0` can mean either that a function had no arguments or that it was a built-in etc. (had arguments, but they were passed without promises).
+
+<div class="col2">
+<div class="together">
+
+``` {r strict-calls, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
+par(mar=c(0,2,2,2))
+pie(strict.calls.histogram$number, (strict.calls.histogram$strict %>% make_labels), main="Call strictness")
+if(print_data) print(strict.calls.histogram %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
+```
+
+</div>
+
+``` {r strict-by-types, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
+par(mar=c(1,1,1,1))
+
+ggplot(
+  strict.calls.by.type.histogram, 
+  aes(x=type, y=number, fill=factor(strict))) + 
+geom_bar(stat="identity", position="dodge") +
+scale_fill_discrete(name="Strictness",
+                    breaks=(strict.calls.by.type.histogram$strict %>% unique),
+                    labels=(strict.calls.by.type.histogram$strict %>% unique)) +
+xlab("") +
+ylab("") + 
+ggtitle("Call strictness by type") +
+theme(plot.title = element_text(face="bold", hjust = 0.5))
+
+if(print_data) 
+  print(strict.calls.by.type.histogram %>% 
+        as.data.frame %>% 
+        transform(
+          number=pp(number), 
+          percent=pp(percent)), 
+        row.names=FALSE)
+```
+
+``` {r strict-rate, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
+# par(mar=c(2,2,2,2))
+# barplot(strict.calls.rate.histogram$number, names.arg=(strict.calls.rate.histogram$strictness_rate %>% make_labels), space=0, main="Call strictness (rate of evaluated promises)")
+# if(print_data) print(strict.calls.rate.histogram %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
+```
+
+</div>
+
+<center>
+``` {r strict-calls-ratio, echo=FALSE, comment="", fig.width=12, fig.height=4.5}
+par(mar=c(2,2,2,2))
+barplot(strict.calls.ratio.histogram$number, names.arg=(strict.calls.ratio.histogram$strictness_ratio), space=0, main="Call strictness (ratio of evaluated promises)")
+if(print_data) print(strict.calls.ratio.histogram %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
+````
+</center>
+
+<div class="col2">
+<div class="together">
+``` {r strict-functions, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
+par(mar=c(0,2,2,2))
+pie(strict.functions.histogram$number, (strict.functions.histogram$strict %>% make_labels), main="Function strictness")
+if(print_data) print(strict.functions.histogram %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
+```
+</div>
+``` {r strict-functions-by-types, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
+par(mar=c(1,1,1,1))
+
+ggplot(
+  strict.functions.by.type.histogram, 
+  aes(x=type, y=number, fill=factor(strict))) + 
+geom_bar(stat="identity", position="dodge") +
+scale_fill_discrete(name="Strictness",
+                    breaks=(strict.functions.by.type.histogram$strict %>% unique),
+                    labels=(strict.functions.by.type.histogram$strict %>% unique)) +
+xlab("") +
+ylab("") + 
+ggtitle("Function strictness by type") +
+theme(plot.title = element_text(face="bold", hjust = 0.5))
+
+if(print_data) 
+  print(strict.functions.by.type.histogram %>% 
+        as.data.frame %>% 
+        transform(
+          number=pp(number), 
+          percent=pp(percent)), 
+        row.names=FALSE)
+```
+</div>
+
+<center>
+``` {r strict-functions-rate, echo=FALSE, comment="", fig.width=12, fig.height=4.5}
+par(mar=c(2,2,2,2))
+barplot(strict.functions.rate.histogram$number, names.arg=(strict.functions.rate.histogram$strictness_rate %>% make_labels), space=0, main="Function strictness (rate of strict calls)")
+if(print_data) print(strict.functions.rate.histogram %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
+````
+</center>
 
 ### Most called functions
 

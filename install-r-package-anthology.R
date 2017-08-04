@@ -29,8 +29,8 @@ install_my_packages <- function(packages, src, installer=install.packages) {
             next
         }
     
-        write(paste("Instaling:", package, "(CRAN)"), stderr())
-        installer(package)
+        write(paste("Instaling:", package, "(CRAN) as sources, with byte-compile"), stderr())
+        installer(package, type="sources", INSTALL_opts="--byte-compile", dependencies=TRUE)
     }
 }
 
