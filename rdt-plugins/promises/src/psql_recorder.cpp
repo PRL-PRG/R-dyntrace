@@ -47,6 +47,7 @@ static sqlite3_stmt * prepared_sql_insert_promise = nullptr;
 static sqlite3_stmt * prepared_sql_insert_promise_eval = nullptr;
 static sqlite3_stmt * prepared_sql_insert_promise_lifecycle = nullptr;
 static sqlite3_stmt * prepared_sql_insert_gc_trigger = nullptr;
+static sqlite3_stmt * prepared_sql_insert_type_distribution = nullptr;
 static sqlite3_stmt * prepared_sql_transaction_begin = nullptr;
 static sqlite3_stmt * prepared_sql_transaction_commit = nullptr;
 static sqlite3_stmt * prepared_sql_transaction_abort = nullptr;
@@ -74,6 +75,7 @@ static sqlite3_stmt * prepared_sql_create_associations;
 static sqlite3_stmt * prepared_sql_create_evaluations;
 static sqlite3_stmt * prepared_sql_create_lifecycle;
 static sqlite3_stmt * prepared_sql_create_trigger;
+static sqlite3_stmt * prepared_sql_create_distribution;
 
 void compile_prepared_sql_schema_statements() {
     prepared_sql_pragma_asynchronous =
@@ -103,6 +105,9 @@ void compile_prepared_sql_schema_statements() {
     prepared_sql_create_trigger =
             compile_sql_statement(
                     make_create_gc_trigger_statement());
+    prepared_sql_create_distribution =
+      compile_sql_statement(
+                    make_create_type_distribution_statement());
 }
 
 void compile_prepared_sql_statements() {
@@ -118,6 +123,8 @@ void compile_prepared_sql_statements() {
             compile_sql_statement(make_insert_promise_lifecycle_statement("?", "?", "?"));
     prepared_sql_insert_gc_trigger =
             compile_sql_statement(make_insert_gc_trigger_statement("?", "?", "?"));
+    prepared_sql_insert_type_distribution =
+            compile_sql_statement(make_insert_type_distribution_statement("?", "?", "?", "?"));
 
     prepared_sql_transaction_begin =
             compile_sql_statement(make_begin_transaction_statement());
@@ -280,9 +287,17 @@ sqlite3_stmt *populate_promise_lifecycle_statement(const prom_gc_info_t & info) 
 
 sqlite3_stmt *populate_gc_trigger_statement(const gc_info_t & info) {
     sqlite3_bind_int(prepared_sql_insert_gc_trigger, 1, info.counter);
-    sqlite3_bind_int(prepared_sql_insert_gc_trigger, 2, info.ncells);
-    sqlite3_bind_int(prepared_sql_insert_gc_trigger, 3, info.vcells);
+    sqlite3_bind_double(prepared_sql_insert_gc_trigger, 2, info.ncells);
+    sqlite3_bind_double(prepared_sql_insert_gc_trigger, 3, info.vcells);
     return prepared_sql_insert_gc_trigger;
+}
+
+sqlite3_stmt *populate_type_distribution_statement(const type_gc_info_t & info) {
+    sqlite3_bind_int(prepared_sql_insert_type_distribution, 1, info.gc_trigger_counter);
+    sqlite3_bind_int(prepared_sql_insert_type_distribution, 2, info.type);
+    sqlite3_bind_int64(prepared_sql_insert_type_distribution, 3, info.length);
+    sqlite3_bind_int64(prepared_sql_insert_type_distribution, 4, info.bytes);
+    return prepared_sql_insert_type_distribution;
 }
 
 // Functions connecting to the outside world, create SQL and multiplex output.
@@ -404,8 +419,19 @@ void psql_recorder_t::promise_lifecycle(const prom_gc_info_t & info) {
 
 void psql_recorder_t::gc_exit(const gc_info_t & info) {
 #ifdef RDT_SQLITE_SUPPORT
-  sqlite3_stmt *statement = populate_gc_trigger_statement(info);
-  multiplexer::output(
+    sqlite3_stmt *statement = populate_gc_trigger_statement(info);
+    multiplexer::output(
+            multiplexer::payload_t(statement),
+            tracer_conf.outputs);
+#else
+    // FIXME
+#endif
+}
+
+void psql_recorder_t::vector_alloc(const type_gc_info_t & info) {
+#ifdef RDT_SQLITE_SUPPORT
+    sqlite3_stmt *statement = populate_type_distribution_statement(info);
+    multiplexer::output(
             multiplexer::payload_t(statement),
             tracer_conf.outputs);
 #else
@@ -463,6 +489,10 @@ void psql_recorder_t::start_trace() {
 
             multiplexer::output(
                     multiplexer::payload_t(prepared_sql_create_trigger),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(prepared_sql_create_distribution),
                     tracer_conf.outputs);
         }
     }
@@ -593,6 +623,7 @@ void free_prepared_sql_statements() {
     sqlite3_finalize(prepared_sql_create_evaluations);
     sqlite3_finalize(prepared_sql_create_lifecycle);
     sqlite3_finalize(prepared_sql_create_trigger);
+    sqlite3_finalize(prepared_sql_create_distribution);
 
 //    free_prepared_sql_statement_vector(prepared_sql_create_tables_and_views);
 

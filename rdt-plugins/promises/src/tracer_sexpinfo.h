@@ -221,6 +221,13 @@ struct prom_gc_info_t {
     int gc_trigger_counter;
 };
 
+struct type_gc_info_t {
+    int gc_trigger_counter;
+    int type;
+    long length;
+    long bytes;
+};
+
 prom_id_t get_promise_id(SEXP promise);
 prom_id_t make_promise_id(SEXP promise, bool negative = false);
 call_id_t make_funcall_id(SEXP fn_env);

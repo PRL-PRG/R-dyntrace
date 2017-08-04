@@ -180,6 +180,17 @@ string gc_info_line(TraceLinePrefix prefix, const gc_info_t & info, bool indent,
     return stream.str();
 }
 
+string vector_info_line(TraceLinePrefix prefix, const type_gc_info_t & info, bool indent, bool as_sql_comment) {
+    stringstream stream;
+    prepend_prefix(stream, prefix, indent, as_sql_comment);
+    stream << "gc_trigger_counter=" << info.gc_trigger_counter;
+    stream << " type=" << info.type;
+    stream << " length=" << info.length;
+    stream << " bytes=" << info.bytes;
+    stream << "\n";
+    return stream.str();
+}
+
 string promise_lifecycle_info_line(TraceLinePrefix prefix, const prom_gc_info_t & info, bool indent, bool as_sql_comment) {
     stringstream stream;
     prepend_prefix(stream, prefix, indent, as_sql_comment);
@@ -410,6 +421,18 @@ void trace_recorder_t::promise_lifecycle(const prom_gc_info_t & info) {
 
 void trace_recorder_t::gc_exit(const gc_info_t & info) {
     string statement = gc_info_line(
+            TraceLinePrefix::ENTER_AND_EXIT,
+            info,
+            tracer_conf.pretty_print,
+            /*as_sql_comment=*/render_as_sql_comment);
+
+    multiplexer::output(
+            multiplexer::payload_t(statement),
+            tracer_conf.outputs);
+}
+
+void trace_recorder_t::vector_alloc(const type_gc_info_t & info) {
+    string statement = vector_info_line(
             TraceLinePrefix::ENTER_AND_EXIT,
             info,
             tracer_conf.pretty_print,

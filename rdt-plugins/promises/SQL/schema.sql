@@ -73,7 +73,6 @@ create table if not exists promise_evaluations (
     foreign key (in_call_id) references calls
 );
 
-
 create table if not exists promise_lifecycle (
     --[ relation ]-------------------------------------------------------------
     promise_id integer not null,
@@ -91,6 +90,17 @@ create table if not exists gc_trigger (
     --[ data ]-----------------------------------------------------------------
     ncells real not null,
     vcells real not null
+);
+
+create table if not exists type_distribution (
+    --[ relation ]-------------------------------------------------------------
+    gc_trigger_counter integer not null,
+    --[ data ]-----------------------------------------------------------------
+    type integer not null,
+    length integer not null,
+    bytes integer not null,
+    --[ keys ]-----------------------------------------------------------------
+    foreign key (gc_trigger_counter) references gc_trigger
 );
 
 -- Warning: The prepared statement generator assumes semicolons are used only to separate statements in this file,

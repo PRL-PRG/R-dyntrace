@@ -225,6 +225,7 @@ void sql_recorder_t::start_trace() { // bool output_configuration
             sql_stmt_t create_evaluations_statement = make_create_promise_evaluations_statement();
             sql_stmt_t create_lifecycle_statement = make_create_promise_lifecycle_statement();
             sql_stmt_t create_trigger_statement = make_create_gc_trigger_statement();
+            sql_stmt_t create_distribution_statement = make_create_type_distribution_statement();
 
             multiplexer::output(
                     multiplexer::payload_t(pragma_statement),
@@ -260,6 +261,10 @@ void sql_recorder_t::start_trace() { // bool output_configuration
 
             multiplexer::output(
                     multiplexer::payload_t(create_trigger_statement),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(create_distribution_statement),
                     tracer_conf.outputs);
         }
 

@@ -184,10 +184,10 @@ public:
         return info;
     }
 
-    gc_info_t gc_exit_get_info(int gc_count, double ncells, double vcells) {
+    gc_info_t gc_exit_get_info(int gc_count, double vcells, double ncells) {
         gc_info_t info;
-        info.ncells = ncells;
         info.vcells = vcells;
+        info.ncells = ncells;
         info.counter = gc_count;
         return info;
     }
@@ -400,7 +400,9 @@ public:
     DELEGATE(promise_created, prom_basic_info_t)
     DELEGATE(promise_lookup, prom_info_t)    
     DELEGATE(promise_lifecycle, prom_gc_info_t)
+    DELEGATE(vector_alloc, type_gc_info_t)
     DELEGATE(gc_exit, gc_info_t)
+    DELEGATE(gc_promise_unmarked)
     DELEGATE(init_recorder)
     DELEGATE(start_trace)
     DELEGATE(finish_trace)
@@ -452,7 +454,9 @@ public:
     COMPOSE(promise_created, prom_basic_info_t)
     COMPOSE(promise_lookup, prom_info_t)
     COMPOSE(promise_lifecycle, prom_gc_info_t)
+    COMPOSE(vector_alloc, type_gc_info_t)
     COMPOSE(gc_exit, gc_info_t)
+    COMPOSE(gc_promise_unmarked)
     COMPOSE(init_recorder)
     COMPOSE(start_trace)
     COMPOSE(finish_trace)

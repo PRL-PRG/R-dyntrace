@@ -7,10 +7,10 @@
 #include <cassert>
 #include <fstream>
 #include <initializer_list>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
-#include <iostream>
 using namespace std;
 
 namespace sql_generator {
@@ -145,6 +145,22 @@ namespace sql_generator {
                   << counter << ","
                   << ncells << ","
                   << vcells
+                  << ");\n";
+
+        return statement.str();
+    }
+
+    sql_stmt_t make_insert_type_distribution_statement(sql_val_t gc_trigger_counter,
+                                                       sql_val_t type,
+                                                       sql_val_t length,
+                                                       sql_val_t bytes) {
+        stringstream statement;
+
+        statement << "insert into type_distribution values ("
+                  << gc_trigger_counter << ","
+                  << type << ","
+                  << length << ","
+                  << bytes
                   << ");\n";
 
         return statement.str();
@@ -316,6 +332,18 @@ namespace sql_generator {
               ");\n";
     }
 
+    sql_stmt_t make_create_type_distribution_statement() {
+      return "create table if not exists type_distribution (\n"
+             "--[ relation ]-------------------------------------------------------------\n"
+             "gc_trigger_counter integer not null,\n"
+             "--[ data ]-----------------------------------------------------------------\n"
+             "type integer not null,\n"
+             "length integer not null,\n"
+             "bytes integer not null,\n"
+             "--[ keys ]-----------------------------------------------------------------\n"
+             "foreign key (gc_trigger_counter) references gc_trigger\n"
+             ");\n";
+    }
 
     vector<sql_stmt_t> split_into_individual_statements(sql_stmt_t statement_blob) {
         vector<sql_stmt_t> statements;
