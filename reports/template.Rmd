@@ -216,6 +216,7 @@ labels <- (promise.types %>% arrange(number) %>% mutate(type = ifelse(percent>1,
 par(mar=c(0,2,2,2))
 
 pie(slices, labels, main="Basic types")
+#barplot(slices, names.arg=labels, space=0, main="Basic types")
 if(print_data) print(promise.types %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
 ```
 </div>
@@ -229,6 +230,7 @@ labels <- (promise.full.types %>% arrange(number) %>% mutate(type = ifelse(perce
 par(mar=c(0,2,2,2))
 
 pie(slices, labels, main="Full types")
+#barplot(slices, names.arg=labels, space=0, main="Full types") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 if(print_data) print(promise.full.types %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
 ```
 <!--/div-->
