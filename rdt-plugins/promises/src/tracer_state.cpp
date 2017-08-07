@@ -60,6 +60,7 @@ tracer_state_t::tracer_state_t() {
     prom_id_counter = 0;
     prom_neg_id_counter = 0;
     argument_id_sequence = 0;
+    gc_trigger_counter = 0;
 }
 
 void tracer_state_t::reset() {
@@ -69,8 +70,10 @@ void tracer_state_t::reset() {
     prom_id_counter = 0;
     prom_neg_id_counter = 0;
     argument_id_sequence = 0;
+    gc_trigger_counter = 0;
     already_inserted_functions.clear();
     already_inserted_negative_promises.clear();
+    promise_lookup_gc_trigger_counter.clear();
     function_ids.clear();
     argument_ids.clear();
     promise_ids.clear();

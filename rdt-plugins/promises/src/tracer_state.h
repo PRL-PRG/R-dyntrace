@@ -48,6 +48,7 @@ struct tracer_state_t {
     unordered_set<prom_id_t> fresh_promises;
     // Map from promise address to promise ID;
     unordered_map<prom_key_t, prom_id_t, prom_id_triple_hash> promise_ids;
+    unordered_map<prom_id_t, int> promise_lookup_gc_trigger_counter;
 
     call_id_t call_id_counter; // IDs assigned should be globally unique but we can reset it after each pass if overwrite is true)
     prom_id_t fn_id_counter; // IDs assigned should be globally unique but we can reset it after each pass if overwrite is true)
@@ -59,7 +60,7 @@ struct tracer_state_t {
     unordered_set<fn_id_t> already_inserted_negative_promises; // Should be kept across Rdt calls (unless overwrite is true)
     arg_id_t argument_id_sequence; // Should be globally unique (can reset between tracer calls if overwrite is true)
     map<arg_key_t, arg_id_t> argument_ids; // Should be kept across Rdt calls (unless overwrite is true)
-
+    int gc_trigger_counter; // Incremented each time there is a gc_entry
 
     void start_pass(const SEXP prom);
     void finish_pass();

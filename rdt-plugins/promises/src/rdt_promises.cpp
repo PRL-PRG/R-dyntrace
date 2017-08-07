@@ -3,26 +3,26 @@
 //#endif
 //#include <Defn.h>
 
-#include <vector>
-#include <string>
-#include <stack>
-#include <sstream>
-#include <unordered_map>
-#include <unordered_set>
 #include <cstring>
 #include <fstream>
 #include <functional>
+#include <sstream>
+#include <stack>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #include "tracer_conf.h"
 //#include "rdt_promises/tracer_output.h"
 #include "tracer_state.h"
 
-#include <rdt.h>
+#include "psql_recorder.h"
 #include "rdt_promises.h"
 #include "recorder.h"
-#include "trace_recorder.h"
 #include "sql_recorder.h"
-#include "psql_recorder.h"
+#include "trace_recorder.h"
+#include <rdt.h>
 
 using namespace std;
 
@@ -233,7 +233,9 @@ struct trace_promises {
 
         prom_basic_info_t info = rec.create_promise_get_info(prom, rho);
         rec.promise_created_process(info);
-
+        if(info.prom_id >= 0) { // maybe we don't need this check
+            rec.promise_lifecycle_process({info.prom_id, 0, STATE(gc_trigger_counter)});
+        }
         UNPROTECT(2);
 
         gc_toggle_restore(gc_enabled);
@@ -248,6 +250,9 @@ struct trace_promises {
 
         prom_info_t info = rec.force_promise_entry_get_info(symbol, rho);
         rec.force_promise_entry_process(info);
+        if(info.prom_id >= 0) {
+          rec.promise_lifecycle_process({info.prom_id, 1, STATE(gc_trigger_counter)});
+        }
 
         UNPROTECT(2);
 
@@ -277,8 +282,10 @@ struct trace_promises {
         PROTECT(val);
 
         prom_info_t info = rec.promise_lookup_get_info(symbol, rho);
-        if (info.prom_id >= 0)
+        if (info.prom_id >= 0) {
             rec.promise_lookup_process(info);
+            rec.promise_lifecycle_process({info.prom_id, 1, STATE(gc_trigger_counter)});
+        }
 
         UNPROTECT(3);
 
@@ -289,10 +296,13 @@ struct trace_promises {
         int gc_enabled = gc_toggle_off();
 
         PROTECT(promise);
-
         prom_addr_t addr = get_sexp_address(promise);
         prom_id_t id = get_promise_id(promise);
         auto & promise_origin = STATE(promise_origin);
+
+        if (id >= 0) {
+          rec.promise_lifecycle_process({id, 2, STATE(gc_trigger_counter)});
+        }
 
         auto iter = promise_origin.find(id);
         if (iter != promise_origin.end()) {
@@ -305,12 +315,25 @@ struct trace_promises {
         unsigned int prom_type = TYPEOF(PRCODE(promise));
         unsigned int orig_type = (prom_type == 21) ? TYPEOF(BODY_EXPR(PRCODE(promise))) : 0;
         prom_key_t key(addr, prom_type, orig_type);
-
         STATE(promise_ids).erase(key);
-
         UNPROTECT(1);
 
         gc_toggle_restore(gc_enabled);
+    }
+
+    static void gc_entry(R_size_t size_needed) {
+        STATE(gc_trigger_counter) = 1 + STATE(gc_trigger_counter);
+    }
+
+    static void gc_exit(int gc_count, double vcells, double ncells) {
+        gc_info_t info = rec.gc_exit_get_info(gc_count, vcells, ncells);
+        info.counter = STATE(gc_trigger_counter);
+        rec.gc_exit_process(info);
+    }
+
+    static void vector_alloc(int sexptype, long length, long bytes, const char* srcref) {
+        type_gc_info_t info {STATE(gc_trigger_counter), sexptype, length, bytes};
+        rec.vector_alloc_process(info);
     }
 
     static void jump_ctxt(const SEXP rho, const SEXP val) {
@@ -352,12 +375,15 @@ void register_hooks_with(rdt_handler * h) {
         ADD_HOOK(builtin_exit);
         ADD_HOOK(specialsxp_entry);
         ADD_HOOK(specialsxp_exit);
+        ADD_HOOK(gc_promise_unmarked);
         ADD_HOOK(force_promise_entry);
         ADD_HOOK(force_promise_exit);
-        ADD_HOOK(promise_lookup);
-        ADD_HOOK(gc_promise_unmarked);
-        ADD_HOOK(jump_ctxt);
         ADD_HOOK(promise_created);
+        ADD_HOOK(promise_lookup);
+        ADD_HOOK(vector_alloc);
+        ADD_HOOK(gc_entry);
+        ADD_HOOK(gc_exit);
+        ADD_HOOK(jump_ctxt);
     REG_HOOKS_END;
 }
 
