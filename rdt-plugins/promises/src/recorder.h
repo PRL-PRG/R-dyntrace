@@ -23,6 +23,12 @@ protected:
     }
 
 private:
+    enum event_type_t {
+        FORCE_ENTRY,
+        FORCE_EXIT,
+        LOOKUP
+    };
+
     void get_metadatum(metadata_t & metadata, string key) {
         char * value = getenv(key.c_str());
         if (value == NULL)
@@ -344,7 +350,9 @@ private:
         return info;
     }
 
-    prom_info_t promise_get_info(const SEXP symbol, const SEXP rho, bool lookup) {
+
+
+    prom_info_t promise_get_info(const SEXP symbol, const SEXP rho, event_type_t event_type) {
         prom_info_t info;
 
         const char *name = get_name(symbol);
@@ -372,11 +380,26 @@ private:
 
         info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(promise_expression)));
 
-        if (!lookup) {
+        if (!event_type == LOOKUP) {
             info.full_type.push_back(sexp_type::OMEGA); // FIXME Meh
         } else {
             set<SEXP> visited;
             get_full_type(PRCODE(promise_expression), rho, info.full_type, visited);
+        }
+
+        if (event_type == FORCE_EXIT) {
+            STATE(prom_stack).pop_back();
+        }
+
+        if (!STATE(prom_stack).empty()) {
+            prom_stack_elem_t elem = STATE(prom_stack).back();
+            // TODO handle here
+        } else {
+            // TODO handle here
+        }
+
+        if (event_type == FORCE_ENTRY) {
+            STATE(prom_stack).push_back(info.prom_id);
         }
 
         return info;
@@ -388,15 +411,15 @@ public:
     }
 
     prom_info_t force_promise_entry_get_info(const SEXP symbol, const SEXP rho) {
-        return promise_get_info(symbol, rho, false);
+        return promise_get_info(symbol, rho, FORCE_ENTRY);
     }
 
     prom_info_t force_promise_exit_get_info(const SEXP symbol, const SEXP rho) {
-        return promise_get_info(symbol, rho, false);
+        return promise_get_info(symbol, rho, FORCE_EXIT);
     }
 
     prom_info_t promise_lookup_get_info(const SEXP symbol, const SEXP rho) {
-        return promise_get_info(symbol, rho, true);
+        return promise_get_info(symbol, rho, LOOKUP);
     }
 
 #define DELEGATE2(func, info_struct) \

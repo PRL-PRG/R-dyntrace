@@ -69,6 +69,10 @@ struct trace_promises {
             Rf_warning("Function stack is not balanced.");
         }
 
+        if (!STATE(prom_stack).empty()) {
+            Rf_warning("Promise stack is not balanced.");
+        }
+
         gc_toggle_restore(gc_enabled);
     }
 

@@ -20,6 +20,7 @@
 using namespace std;
 
 typedef tuple<call_id_t, fn_id_t, function_type> call_stack_elem_t;
+typedef prom_id_t prom_stack_elem_t;
 typedef tuple<prom_id_t, unsigned int, unsigned int> prom_key_t;
 
 struct prom_id_triple_hash {
@@ -41,6 +42,7 @@ struct tracer_state_t {
     // Whenever R makes a function call, we generate a function ID and store that ID on top of the stack
     // so that we know where we are (e.g. when printing function ID at function_exit hook)
     vector<call_stack_elem_t> fun_stack; // Should be reset on each tracer pass
+    vector<prom_stack_elem_t> prom_stack; // Should be reset on each tracer pass
     stack<env_addr_t , vector<env_addr_t>> curr_env_stack; // Should be reset on each tracer pass
 
     // Map from promise IDs to call IDs
