@@ -65,6 +65,10 @@ struct trace_promises {
 
         rec.finish_trace_process();
 
+        if (!STATE(fun_stack).empty()) {
+            Rf_warning("Function stack is not balanced.");
+        }
+
         gc_toggle_restore(gc_enabled);
     }
 
