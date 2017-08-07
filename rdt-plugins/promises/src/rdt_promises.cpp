@@ -66,11 +66,11 @@ struct trace_promises {
         rec.finish_trace_process();
 
         if (!STATE(fun_stack).empty()) {
-            Rf_warning("Function stack is not balanced.");
+            Rprintf("Function stack is not balanced.");
         }
 
         if (!STATE(prom_stack).empty()) {
-            Rf_warning("Promise stack is not balanced.");
+            Rprintf("Promise stack is not balanced.");
         }
 
         gc_toggle_restore(gc_enabled);
