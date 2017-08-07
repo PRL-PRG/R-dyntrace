@@ -36,6 +36,16 @@ dir.create(log.dir, showWarnings = TRUE)
 
 rdt.cmd.head <- function(first, path)
   paste(
+    "loadNamespace <- function(package, lib.loc = NULL,\n",
+    "                          keep.source = getOption('keep.source.pkgs'),\n",
+    "                          partial = FALSE, declarativeOnly = FALSE) {\n",
+    "    tryCatch(base::loadNamespace(package, lib.loc, keep.source, partial, declarativeOnly),\n",
+    "        error = function(e) {\n",
+    "            install.packages(package, repos='https://cloud.r-project.org/')\n",
+    "            base::loadNamespace(package, lib.loc, keep.source, partial, declarativeOnly)\n",
+    "        })\n",
+    "}\n\n",
+    "gcinfo(verbose = TRUE)\n",
     "Rdt(tracer='promises',\n",
     "output='d',\n", 
     "path='", path, "',\n", 
@@ -48,7 +58,9 @@ rdt.cmd.head <- function(first, path)
     "block={\n\n",
     sep="")
 
-rdt.cmd.tail <- "\n})"
+rdt.cmd.tail <- paste("\n\n})\n",
+                      "gcinfo(verbose = FALSE)\n",
+                      sep = "")
 
 instrument.vignettes <- function(packages) {
   i.packages <- 0

@@ -18,6 +18,9 @@ public:
     void builtin_exit(const builtin_info_t & info) {};
     void force_promise_entry(const prom_info_t & info);
     void force_promise_exit(const prom_info_t & info) {}
+    void vector_alloc(const type_gc_info_t & info);
+    void gc_exit(const gc_info_t & info);
+    void promise_lifecycle(const prom_gc_info_t & info);
     void promise_created(const prom_basic_info_t & info);
     void promise_lookup(const prom_info_t & info);
     void unwind(const vector<call_id_t> &) {};

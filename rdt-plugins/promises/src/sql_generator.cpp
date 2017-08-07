@@ -4,13 +4,13 @@
 
 #include "sql_generator.h"
 
-#include <initializer_list>
-#include <string>
-#include <fstream>
-#include <sstream>
 #include <cassert>
+#include <fstream>
+#include <initializer_list>
+#include <iostream>
+#include <sstream>
+#include <string>
 #include <vector>
-
 using namespace std;
 
 namespace sql_generator {
@@ -116,6 +116,52 @@ namespace sql_generator {
                   << lifestyle << ","
                   << effective_distance << ","
                   << actual_distance
+                  << ");\n";
+
+        return statement.str();
+    }
+
+    sql_stmt_t make_insert_promise_lifecycle_statement(sql_val_t promise_id,
+                                                       sql_val_t event,
+                                                       sql_val_t gc_trigger_counter) {
+
+        stringstream statement;
+
+        statement << "insert into promise_lifecycle values ("
+                  << promise_id << ","
+                  << event << ","
+                  << gc_trigger_counter
+                  << ");\n";
+
+        return statement.str();
+    }
+
+    sql_stmt_t make_insert_gc_trigger_statement(sql_val_t counter,
+                                                sql_val_t ncells,
+                                                sql_val_t vcells) {
+
+        stringstream statement;
+
+        statement << "insert into gc_trigger values ("
+                  << counter << ","
+                  << ncells << ","
+                  << vcells
+                  << ");\n";
+
+        return statement.str();
+    }
+
+    sql_stmt_t make_insert_type_distribution_statement(sql_val_t gc_trigger_counter,
+                                                       sql_val_t type,
+                                                       sql_val_t length,
+                                                       sql_val_t bytes) {
+        stringstream statement;
+
+        statement << "insert into type_distribution values ("
+                  << gc_trigger_counter << ","
+                  << type << ","
+                  << length << ","
+                  << bytes
                   << ");\n";
 
         return statement.str();
@@ -275,6 +321,42 @@ namespace sql_generator {
                "    foreign key (from_call_id) references calls,\n"
                "    foreign key (in_call_id) references calls\n"
                ");\n";
+    }
+
+    sql_stmt_t make_create_promise_lifecycle_statement() {
+        return "create table if not exists promise_lifecycle (\n"
+               "--[ relation ]--------------------------------------------------------------\n"
+                "promise_id integer not null,\n"
+                "--[ data ]-----------------------------------------------------------------\n"
+                "event_type integer not null,\n"
+                "gc_trigger_counter integer not null,\n"
+                "--[ keys ]-----------------------------------------------------------------\n"
+                "foreign key (promise_id) references promises,\n"
+                "foreign key (gc_trigger_counter) references gc_trigger\n"
+                ");\n";
+    }
+
+    sql_stmt_t make_create_gc_trigger_statement() {
+       return "create table if not exists gc_trigger (\n"
+              "--[ identity ]-------------------------------------------------------------\n"
+              "counter integer primary key,\n"
+              "--[ data ]-----------------------------------------------------------------\n"
+              "ncells real not null,\n"
+              "vcells real not null\n"
+              ");\n";
+    }
+
+    sql_stmt_t make_create_type_distribution_statement() {
+      return "create table if not exists type_distribution (\n"
+             "--[ relation ]-------------------------------------------------------------\n"
+             "gc_trigger_counter integer not null,\n"
+             "--[ data ]-----------------------------------------------------------------\n"
+             "type integer not null,\n"
+             "length integer not null,\n"
+             "bytes integer not null,\n"
+             "--[ keys ]-----------------------------------------------------------------\n"
+             "foreign key (gc_trigger_counter) references gc_trigger\n"
+             ");\n";
     }
 
     vector<sql_stmt_t> split_into_individual_statements(sql_stmt_t statement_blob) {
