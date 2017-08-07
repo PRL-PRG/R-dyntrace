@@ -393,9 +393,9 @@ private:
 
         if (!STATE(prom_stack).empty()) {
             prom_stack_elem_t elem = STATE(prom_stack).back();
-            // TODO handle here
+            info.prom_parent = elem;
         } else {
-            // TODO handle here
+            info.prom_parent = 0;
         }
 
         if (event_type == FORCE_ENTRY) {

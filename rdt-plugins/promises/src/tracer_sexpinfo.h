@@ -210,6 +210,7 @@ struct prom_info_t : prom_basic_info_t {
     call_id_t         in_call_id;
     call_id_t         from_call_id;
     lifestyle_type    lifestyle;
+    prom_id_t         prom_parent;
     int               effective_distance_from_origin;
     int               actual_distance_from_origin;
 };
