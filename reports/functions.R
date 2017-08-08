@@ -230,34 +230,6 @@ dehumanize_function_type = function(type)
         ifelse(type == "special", 2,
           ifelse(type == "primitive", 3, NA)))))
 
-humanize_promise_type = function(type) # TODO: kill
-  if(is.na(type)) "NA" else
-    if(type == 0) "NIL" else
-      if(type == 1) "SYM" else
-        if(type == 2) "LIST" else
-          if(type == 3) "CLOS" else
-            if(type == 4) "ENV" else
-              if(type == 5) "PROM" else
-                if(type == 6) "LANG" else
-                  if(type == 7) "SPECIAL" else
-                    if(type == 8) "BUILTIN" else
-                      if(type == 9) "CHAR" else
-                        if(type == 10) "LGL" else
-                          if(type == 13) "INT" else
-                            if(type == 14) "REAL" else
-                              if(type == 15) "CPLX" else
-                                if(type == 16) "STR" else
-                                  if(type == 17) "DOT" else
-                                    if(type == 18) "ANY" else
-                                      if(type == 19) "VEC" else
-                                        if(type == 20) "EXPR" else
-                                          if(type == 21) "BCODE" else
-                                            if(type == 22) "EXTPTR" else
-                                              if(type == 23) "WEAKREF" else
-                                                if(type == 24) "RAW" else
-                                                  if(type == 25) "S4" else 
-                                                    if(type == 69) "..." else NA
-
 SEXP_TYPES <- hashmap(
   keys=c(0:10,13:25,69), 
   values=c(
@@ -267,36 +239,8 @@ SEXP_TYPES <- hashmap(
     "VEC", "EXPR", "BCODE", "EXTPTR", "WEAKREF",  # 19-23
     "RAW", "S4", "..."))                          # 24-25, 69
 
-humanize_promise_type_vec = function(type) 
+humanize_promise_type = function(type) 
   ifelse(is.na(type), "NA", SEXP_TYPES[[type]])
-
-humanize_promise_type_vec2 = function(type) # TODO: kill
-  ifelse(is.na(type), "NA",
-    ifelse(type == 0, "NIL",
-      ifelse(type == 1, "SYM",
-        ifelse(type == 2, "LIST",
-          ifelse(type == 3, "CLOS",
-            ifelse(type == 4, "ENV",
-              ifelse(type == 5, "PROM",
-                ifelse(type == 6, "LANG",
-                  ifelse(type == 7, "SPECIAL",
-                    ifelse(type == 8, "BUILTIN",
-                      ifelse(type == 9, "CHAR",
-                        ifelse(type == 10, "LGL",
-                          ifelse(type == 13, "INT",
-                            ifelse(type == 14, "REAL",
-                              ifelse(type == 15, "CPLX",
-                                ifelse(type == 16, "STR",
-                                  ifelse(type == 17, "DOT",
-                                    ifelse(type == 18, "ANY",
-                                      ifelse(type == 19, "VEC",
-                                        ifelse(type == 20, "EXPR",
-                                          ifelse(type == 21, "BCODE",
-                                            ifelse(type == 22, "EXTPTR",
-                                              ifelse(type == 23, "WEAKREF", 
-                                                ifelse(type == 24,"RAW", 
-                                                  ifelse(type == 25, "S4", 
-                                                    ifelse(type == 69, "...", NA))))))))))))))))))))))))))
 
 get_lookup_histogram <- function(cutoff=NA) {
   data <- promises %>% rename(promise_id = id) %>% left_join(promise.lookups, by="promise_id") %>% select(promise_id, event_type) %>% collect
@@ -364,7 +308,7 @@ get_force_histogram_by_type <- function() {
     left_join(intermediate, by=c("type", "no.of.forces")) %>%
     transform(number=ifelse(is.na(number), 0, number)) %>%
     arrange(type, no.of.forces) %>%
-    transform(type=humanize_promise_type_vec(type)) %>%
+    transform(type=humanize_promise_type(type)) %>%
     mutate(percent_within_type=((number*100/promise_type_count[[type]]))) %>%
     mutate(percent_overall=((number*100/n.promise.forces)))
   
