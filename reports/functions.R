@@ -660,7 +660,7 @@ get_call_strictness_ratios <- function() {
   
   rbind(nas %>% as.data.frame, histogram %>% as.data.frame) %>% 
     arrange(promises, evaluated) %>% 
-    select(-promises, -evaluated)
+    select(strictness_ration, number, percent, -promises, -evaluated) 
 }
 
 get_call_strictness_rate <- function() {

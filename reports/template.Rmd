@@ -410,8 +410,8 @@ if(print_data)
 
 <center>
 ``` {r strict-calls-ratio, echo=FALSE, comment="", fig.width=12, fig.height=4.5}
-par(mar=c(2,2,2,2))
-barplot(strict.calls.ratio.histogram$number, names.arg=(strict.calls.ratio.histogram$strictness_ratio), space=0, main="Call strictness (ratio of evaluated promises)")
+par(mar=c(2,2,2,1))
+barplot(strict.calls.ratio.histogram$number, names.arg=(strict.calls.ratio.histogram$strictness_ratio), space=0, main="Call strictness (ratio of evaluated promises)", cex.names=0.5)
 if(print_data) print(strict.calls.ratio.histogram %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
 ````
 </center>
