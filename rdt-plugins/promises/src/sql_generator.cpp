@@ -256,7 +256,7 @@ namespace sql_generator {
                 "    --[ data ]-----------------------------------------------------------------\n"
                 "    function_name text,\n"
                 "    callsite text,\n"
-                "    compiled boolean not null,\n"
+                "    compiled boolean not null,\n" // TODO remove
                 "    --[ relations ]------------------------------------------------------------\n"
                 "    function_id integer not null,\n"
                 "    parent_id integer not null, -- ID of call that executed current call\n"
@@ -328,7 +328,7 @@ namespace sql_generator {
                "--[ relation ]--------------------------------------------------------------\n"
                 "promise_id integer not null,\n"
                 "--[ data ]-----------------------------------------------------------------\n"
-                "event_type integer not null,\n"
+                "event_type integer not null,\n" // TODO what are they
                 "gc_trigger_counter integer not null,\n"
                 "--[ keys ]-----------------------------------------------------------------\n"
                 "foreign key (promise_id) references promises,\n"

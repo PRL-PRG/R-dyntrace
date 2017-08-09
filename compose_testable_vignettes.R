@@ -65,6 +65,7 @@ rdt.cmd.tail <- paste("\n\n})\n",
 instrument.vignettes <- function(packages) {
   i.packages <- 0
   n.packages <- length(packages)
+  total.vignettes <- 0
   
   instrumented.vignette.paths <- list()
   
@@ -83,20 +84,21 @@ instrument.vignettes <- function(packages) {
     
     for (vignette.name in vignettes.in.package) {
       i.vignettes <- i.vignettes + 1
+      total.vignettes <- total.vignettes + 1
       
-      write(paste("[", i.packages, "/", n.packages, "::", i.vignettes, "/", n.vignettes, "] Instrumenting vignette: ", vignette.name, " from ", package, sep=""), stdout())
+      write(paste("[", i.packages, "/", n.packages, "::", i.vignettes, "/", n.vignettes, "/", total.vignettes, "] Instrumenting vignette: ", vignette.name, " from ", package, sep=""), stdout())
       
       one.vignette <- vignette(vignette.name, package = package)
       vignette.code.path <- paste(one.vignette$Dir, "doc", one.vignette$R, sep="/")
       instrumented.code.path <- paste(instrumented.code.dir, "/", i.packages, "-", i.vignettes, "_", package, "_", vignette.name, ".R", sep="")
       
-      write(paste("[", i.packages, "/", n.packages, "::", i.vignettes, "/", n.vignettes, "] Writing vignette to: ", instrumented.code.path, sep=""), stdout())
+      write(paste("[", i.packages, "/", n.packages, "::", i.vignettes, "/", n.vignettes, "/", total.vignettes, "] Writing vignette to: ", instrumented.code.path, sep=""), stdout())
 
       vignette.code <- readLines(vignette.code.path)
       instrumented.code <- c(rdt.cmd.head(i.vignettes == 1, tracer.output.path), vignette.code, rdt.cmd.tail)      
       write(instrumented.code, instrumented.code.path)
       
-      write(paste("[", i.packages, "/", n.packages, "::", i.vignettes, "/", n.vignettes, "] Done instrumenting vignette: ", vignette.name, " from ", package, sep=""), stdout())
+      write(paste("[", i.packages, "/", n.packages, "::", i.vignettes, "/", n.vignettes, "/", total.vignettes, "] Done instrumenting vignette: ", vignette.name, " from ", package, sep=""), stdout())
       
       if (cfg$options$compile) {
         instrumented.code.path.compiled <- paste(tools::file_path_sans_ext(instrumented.code.path), "Rc", sep=".")
@@ -105,9 +107,9 @@ instrument.vignettes <- function(packages) {
         instrumented.code.path.loader <- paste(tools::file_path_sans_ext(instrumented.code.path), "load", "R", sep=".")
         write(paste("loadcmp('", tools::file_path_as_absolute(instrumented.code.path.compiled), "')", sep=""), file=instrumented.code.path.loader)
         
-        instrumented.vignette.paths[[i.packages + i.vignettes -1 ]] <- c(package, vignette.name, instrumented.code.path.loader)
+        instrumented.vignette.paths[[ total.vignettes ]] <- c(package, vignette.name, instrumented.code.path.loader)
       } else {
-        instrumented.vignette.paths[[i.packages + i.vignettes -1 ]] <- c(package, vignette.name, instrumented.code.path)
+        instrumented.vignette.paths[[ total.vignettes ]] <- c(package, vignette.name, instrumented.code.path)
       }
     }
     

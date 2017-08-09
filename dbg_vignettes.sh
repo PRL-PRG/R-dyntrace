@@ -5,8 +5,20 @@
 CMD='bin/R --slave --no-restore --debugger=gdb --file=compose_testable_vignettes.R --args'
 #CMD='bin/R --slave --no-restore --file=compose_testable_vignettes.R --args'
 
+export R_COMPILE_PKGS=1
+export R_DISABLE_BYTECODE=0
+export R_ENABLE_JIT=3
+export R_KEEP_PKG_SOURCE=yes
+
+export RDT_COMPILE_VIGNETTE=true
 
 PACKAGES=
+
+if $RDT_COMPILE_VIGNETTE
+then 
+    CMD="$CMD --compile"        
+fi    
+
 
 if [ $# -ge 1 ]
 then

@@ -21,7 +21,7 @@ source("%%FUNCTIONS%%")
 <div class="col2">
 <div class="together">
 ## Basic Information
-
+Dataset: `r path`
 Functions: `r pp(n.functions)`  
 Calls: `r pp(n.calls)`  
 Promises: `r pp(n.promises)` (+ `r pp(n.alien.promises)` alien)  
@@ -59,8 +59,22 @@ if(print_data) print(force.histogram %>% as.data.frame %>% transform(number=pp(n
 ```
 </div>
 
+``` {r evaluations-forces-cat, echo=FALSE, , comment="", fig.width=7, fig.height=5}
+fuzzy.force.histogram <- get_fuzzy_force_histogram()
+
+slices <- rev(fuzzy.force.histogram$number)
+labels <- rev(fuzzy.force.histogram$classification)
+par(mar=c(0,2,2,2))
+
+pie(slices, labels, main="Handling of promises")
+if(print_data) print(fuzzy.force.histogram %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
+```
+
+</div>
+
+<center>
 <!--div class="together"-->
-``` {r evaluations-total, echo=FALSE, , comment="", fig.width=7, fig.height=5}
+``` {r evaluations-total, echo=FALSE, , comment="", fig.width=12, fig.height=5}
 cutoff <- 10
 promise.evaluation.histogram <- get_promise_evaluation_histogram(cutoff=cutoff)
 
@@ -78,7 +92,7 @@ barplot(values, names.arg=labels, space=0, main="No. of evaluations (forces + lo
 if(print_data) print(promise.evaluation.histogram_with_labels %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
 ```
 <!--/div-->
-</div>
+</center>
 
 ### Promise Forces by Types
 
