@@ -274,6 +274,31 @@ get_force_histogram <- function(cutoff=NA) {
   }
 }
 
+get_fuzzy_force_histogram <- function() {
+  renamer = hashmap(0:4, c("forced more than once", "forced once and read", "only forced once", "never forced but read", "never forced, not read"))
+  promises %>% rename(promise_id = id) %>% 
+  left_join(promise_evaluations, by ="promise_id") %>% 
+  group_by(promise_id) %>% 
+  summarise(
+    #evaluated = ifelse(is.na(event_type), 0, n()), 
+    forced = ifelse(is.na(event_type), 0, sum(as.integer(event_type == 15))), 
+    looked_up = ifelse(is.na(event_type), 0, sum(as.integer(event_type == 0)))) %>% 
+  mutate(classification =
+              ifelse((forced > 1),                    0,               # forced more than once
+              ifelse((forced == 1 && looked_up > 0),  1,               # forced once and read
+              ifelse((forced == 1 && looked_up ==0 ), 2,               # forced exactly once
+              ifelse((forced == 0 && looked_up > 0),  3,               # not forced but read
+              ifelse((forced == 0 && looked_up == 0), 4, NA)))))) %>%  # not forced, not read
+  group_by(classification) %>% 
+  summarise(number=n()) %>% as.data.frame %>%
+  mutate(percent=number/n.promises) %>% 
+  right_join(data.frame(classification=0:4), by="classification") %>%
+  mutate(
+    number=ifelse(is.na(number), 0, number),
+    percent=ifelse(is.na(percent), 0, percent),
+    classification = ifelse(is.na(classification), NA, renamer[[classification]]))
+}
+
 get_force_histogram_by_type <- function() {
   promise_types <- get_promise_types()
   promise_type_count <- hashmap(
