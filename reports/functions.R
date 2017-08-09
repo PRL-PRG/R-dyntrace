@@ -648,7 +648,7 @@ get_call_strictness_ratios <- function() {
       collect %>% ungroup %>%
       mutate(strictness_ratio=paste(evaluated, count, sep="/")) %>%
       rename(promises=count) %>%
-      group_by(strictness_ratio, promises) %>% 
+      group_by(strictness_ratio, promises, evaluated) %>% 
       summarise(number=n(), percent=100*n()/n.calls)
   
   nas <-
@@ -656,11 +656,11 @@ get_call_strictness_ratios <- function() {
     filter(is.na(promise_id)) %>% 
     count() %>% rename(number=n) %>%
     collect %>% ungroup() %>%
-    mutate(strictness_ratio="0/0", percent=100*number/n.calls, promises=0)
+    mutate(strictness_ratio="0/0", percent=100*number/n.calls, evaluated=0, promises=0)
   
   rbind(nas %>% as.data.frame, histogram %>% as.data.frame) %>% 
-    arrange(promises) %>% 
-    select(-promises)
+    arrange(promises, evaluated) %>% 
+    select(-promises, -evaluated)
 }
 
 get_call_strictness_rate <- function() {
@@ -684,8 +684,8 @@ get_call_strictness_rate <- function() {
     left_join(promise.forces, by="promise_id") %>% 
     group_by(call_id) %>% 
     summarise(
-      unevaluated=sum(as.integer(is.na(event_type))), 
-      escaped=sum(as.integer(!is.na(event_type) && (lifestyle == 3))), 
+      #unevaluated=sum(as.integer(is.na(event_type))), 
+      #escaped=sum(as.integer(!is.na(event_type) && (lifestyle == 3))), 
       evaluated=sum(as.integer(!is.na(event_type) && (lifestyle != 3))), 
       count=n()) %>%
     collect %>% ungroup() %>%
@@ -832,12 +832,12 @@ get_function_strictness_rate <- function() {
     left_join(promise.forces, by="promise_id") %>% 
     group_by(call_id, function_id) %>% 
     summarise(
-      unevaluated=sum(as.integer(is.na(event_type))), 
-      escaped=sum(as.integer(!is.na(event_type) && (lifestyle == 3))), 
+      #unevaluated=sum(as.integer(is.na(event_type))), 
+      #escaped=sum(as.integer(!is.na(event_type) && (lifestyle == 3))), 
       evaluated=sum(as.integer(!is.na(event_type) && (lifestyle != 3))), 
       count=n()) %>%
-    collect %>% # xxx
-    mutate(strict=(evaluated==count)) %>% # xxx
+    collect %>% 
+    mutate(strict=(evaluated==count)) %>%
     group_by(function_id) %>%
     summarise(
       strict_calls=sum(as.integer(strict)),
@@ -928,7 +928,7 @@ get_function_strictness_by_type <- function() {
       count=n()) %>%
     collect %>% ungroup %>%
     mutate(strict=(evaluated==count)) %>%
-    group_by(function_id, type,strict) %>% summarise() %>%
+    group_by(function_id, type, strict) %>% summarise() %>%
     group_by(strict, type) %>%
     summarise(
       number=n(), 
