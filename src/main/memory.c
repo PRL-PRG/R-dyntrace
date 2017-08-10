@@ -2939,8 +2939,6 @@ static void gc_end_timing(void)
 
 static void R_gc_internal(R_size_t size_needed)
 {
-    RDT_HOOK(probe_gc_entry, size_needed);
-
     if (!R_GCEnabled) {
       if (NO_FREE_NODES())
 	R_NSize = R_NodesInUse + 1;
@@ -2949,6 +2947,9 @@ static void R_gc_internal(R_size_t size_needed)
       gc_pending = TRUE;
       return;
     }
+
+    RDT_HOOK(probe_gc_entry, size_needed);
+
     gc_pending = FALSE;
 
     R_size_t onsize = R_NSize /* can change during collection */;
