@@ -974,23 +974,23 @@ get_call_promise_evaluation_order <- function() {
     collect %>%
     arrange(clock)
   
-  strictness_signatures <- data %>% 
-    filter(!is.na(argument_id)) %>%
-    mutate(
-      symbol=paste("⟦", name, "⟧",
-                   ifelse(is.na(event_type), "∅", 
-                   ifelse(event_type == 15, "!", 
-                   ifelse(event_type == 0, "=", "#"))), 
-                   sep=""),
-      code = paste(position,
-                   ifelse(is.na(event_type), "∅", 
-                   ifelse(event_type == 15, "!", 
-                   ifelse(event_type == 0, "=", "#"))), 
-                   sep="")) %>%
-    group_by(call_id) %>%
-    summarise(
-      strictness_signature = paste(symbol, collapse="→"),
-      evaluation_order = paste(code, collapse="→"))
+  # strictness_signatures <- data %>% 
+  #   filter(!is.na(argument_id)) %>%
+  #   mutate(
+  #     # symbol=paste("⟦", name, "⟧",
+  #     #              ifelse(is.na(event_type), "∅", 
+  #     #              ifelse(event_type == 15, "!", 
+  #     #              ifelse(event_type == 0, "=", "#"))), 
+  #     #              sep=""),
+  #     code = paste(position,
+  #                  ifelse(is.na(event_type), "∅", 
+  #                  ifelse(event_type == 15, "!", 
+  #                  ifelse(event_type == 0, "=", "#"))), 
+  #                  sep="")) %>%
+  #   group_by(call_id) %>%
+  #   summarise(
+  #     # strictness_signature = paste(symbol, collapse="→"),
+  #     evaluation_order = paste(code, collapse="→"))
   
   force_signatures <- data %>%
     filter(event_type == 15) %>% 
@@ -1000,7 +1000,7 @@ get_call_promise_evaluation_order <- function() {
       force_order = paste(position, collapse="→"))
   
   calls %>% select(call_id) %>% collect %>% 
-    left_join(strictness_signatures, by = "call_id") %>% 
+    # left_join(strictness_signatures, by = "call_id") %>% 
     left_join(force_signatures, by = "call_id") #%>%
     #mutate(
       #strictness_signature=ifelse(is.na(strictness_signature), "", strictness_signature),
@@ -1019,23 +1019,30 @@ get_function_promise_evaluation_order <- function(call_promise_evaluation_order)
                         collect, 
                         by="call_id"), 
               by="function_id") %>% 
-    filter(!is.na(evaluation_order)) %>%
+    filter(!is.na(force_order)) %>%
     group_by(function_id) %>% 
     summarise(
-      strictness_signature=length(unique(strictness_signature)), 
-      evaluation_order=length(unique(evaluation_order)), 
-      force_order=length(unique(force_order))) %>%
+      # strictness_signature=length(unique(strictness_signature)), 
+      # evaluation_order=length(unique(evaluation_order)), 
+      force_orders=length(unique(force_order)),
+      calls=n()) %>%
     right_join(function_list, by ="function_id")
   
   unique_signatures %>% collect
 }
 
+# FIXME returns NA for calls and percent.calls for no.of.force.orders==0
 get_function_promise_force_order_histogram <- function(function_promise_evaluation_order, cutoff=NA) {
   data <- 
     function_promise_evaluation_order %>% 
-    group_by(force_order) %>% count %>% 
-    rename(no.of.force.orders=force_order, number=n) %>% 
-    mutate(percent=(number*100/n.functions))
+    group_by(force_order) %>% 
+    summarise(
+      number=n(),
+      calls=sum(calls))%>% 
+    rename(no.of.force.orders=force_order) %>% 
+    mutate(
+      percent=(number*100/n.functions),
+      percent.calls=(calls*100/n.calls))
   
   nas <- data %>% filter(is.na(no.of.force.orders)) %>% ungroup %>% mutate(no.of.force.orders = 0)
   new <- data %>% filter(!is.na(no.of.force.orders)) %>% arrange(no.of.force.orders)
@@ -1043,7 +1050,7 @@ get_function_promise_force_order_histogram <- function(function_promise_evaluati
   if (is.na(cutoff) || max(data$no.of.force.orders, na.rm=TRUE) <= cutoff) {
     rbind(nas %>% as.data.frame, new %>% as.data.frame)
   } else {
-    above <- new %>% filter(no.of.force.orders > cutoff) %>% ungroup %>% collect %>% summarise(no.of.force.orders=Inf, number=sum(number), percent=(number*100/n.functions))
+    above <- new %>% filter(no.of.force.orders > cutoff) %>% ungroup %>% collect %>% summarise(no.of.force.orders=Inf, number=sum(number), calls=sum(calls), percent=(number*100/n.functions), percent.calls=(calls*100/n.calls))
     below <- new %>% filter(no.of.force.orders <= cutoff)
     rbind(nas %>% as.data.frame, below %>% as.data.frame, above %>% as.data.frame) 
   }
