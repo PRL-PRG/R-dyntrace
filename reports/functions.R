@@ -31,7 +31,7 @@ n.alien.promises <- (promise_evaluations %>% filter(promise_id < 0) %>% group_by
 n.promise.forces <- (promise.forces %>% count %>% data.frame)$n
 n.promise.lookups <- (promise.lookups %>% count %>% data.frame)$n 
 n.alien.promise.forces <- (alien.promise.forces %>% count %>% data.frame)$n
-n.alien.promise.lookups <- NA # I currently don't collect this information to save
+n.alien.promise.lookups <- NA # I currently don't collect this information to save space
 
 get_lifestyles <- function() {
   lifestyles <-
@@ -1065,7 +1065,6 @@ get_strict_function_promise_force_order_histogram <- function(function_promise_e
       strict_calls=sum(as.integer(strict)),
       nonstrict_calls=sum(as.integer(!strict)),
       count=length(strict))
-    
     select(call_id) 
   
   data <- 
