@@ -1048,3 +1048,93 @@ get_function_promise_force_order_histogram <- function(function_promise_evaluati
     rbind(nas %>% as.data.frame, below %>% as.data.frame, above %>% as.data.frame) 
   }
 }
+
+get_strict_function_promise_force_order_histogram <- function(function_promise_evaluation_order, cutoff=NA) {
+  strict_functions %>%
+    calls %>% 
+    left_join(promise_associations, by="call_id") %>% 
+    filter(!is.na(promise_id)) %>%
+    left_join(promise.forces, by="promise_id") %>% 
+    group_by(call_id, function_id) %>% 
+    summarise(
+      evaluated=sum(as.integer(!is.na(event_type) && (lifestyle != 3))), 
+      count=n()) %>%
+    mutate(strict=(evaluated==count)) %>%
+    group_by(function_id) %>% 
+    summarise(
+      strict_calls=sum(as.integer(strict)),
+      nonstrict_calls=sum(as.integer(!strict)),
+      count=length(strict))
+    
+    select(call_id) 
+  
+  data <- 
+    function_promise_evaluation_order %>% 
+    group_by(force_order) %>% count %>% 
+    rename(no.of.force.orders=force_order, number=n) %>% 
+    mutate(percent=(number*100/n.functions))
+  
+  nas <- data %>% filter(is.na(no.of.force.orders)) %>% ungroup %>% mutate(no.of.force.orders = 0)
+  new <- data %>% filter(!is.na(no.of.force.orders)) %>% arrange(no.of.force.orders)
+    
+  if (is.na(cutoff) || max(data$no.of.force.orders, na.rm=TRUE) <= cutoff) {
+    rbind(nas %>% as.data.frame, new %>% as.data.frame)
+  } else {
+    above <- new %>% filter(no.of.force.orders > cutoff) %>% ungroup %>% collect %>% summarise(no.of.force.orders=Inf, number=sum(number), percent=(number*100/n.functions))
+    below <- new %>% filter(no.of.force.orders <= cutoff)
+    rbind(nas %>% as.data.frame, below %>% as.data.frame, above %>% as.data.frame) 
+  }
+}
+
+## TODO make indexes?
+fold_databases <- function(result_path, ...) {
+  paths = c(...)
+  
+  if (length(paths) == 0) {
+    warning("Nothing to do.")
+    return
+  }
+  
+  # Copy first one outright, use it as Zero.
+  file.copy(paths[1], result_path, overwrite=TRUE)
+  zero <- src_sqlite(result_path, create=FALSE)
+  
+  # Tables in Zero:
+  zero.promises               <- zero %>% tbl("promises")             
+  zero.promise_evaluations    <- zero %>% tbl("promise_evaluations")  
+  zero.promise_associations   <- zero %>% tbl("promise_associations") 
+  zero.calls                  <- zero %>% tbl("calls")                
+  zero.functions              <- zero %>% tbl("functions")            
+  zero.arguments              <- zero %>% tbl("arguments")            
+  zero.metadata               <- zero %>% tbl("metadata")
+  
+  # Start the function id dictionary - for Zero it's an identity function.
+  zero.function_ids <- (zero.functions %>% select(id) %>% data.frame)$id
+  function_id_dictionary <- data.frame(original=zero.function_ids, new=zero.function_ids)
+  
+  # Fold all subsequent dbs into Zero.
+  paths <- paths[2:length(paths)]
+  for (path in paths) {
+    db <- src_sqlite(path, create=FALSE)
+    
+    db.promises               <- db %>% tbl("promises")
+    db.promise_evaluations    <- db %>% tbl("promise_evaluations")
+    db.promise_associations   <- db %>% tbl("promise_associations")
+    db.calls                  <- db %>% tbl("calls")
+    db.functions              <- db %>% tbl("functions")
+    db.arguments              <- db %>% tbl("arguments")
+    db.metadata               <- db %>% tbl("metadata")
+      
+    
+    
+  }
+}
+
+# TODO
+# order how many calls in those functions
+# look at strict and non-strict arguments, 
+# evaluation order but argument positions
+# promises created for default evaluated
+# promise evaluates to what?? (and by type)
+# log scale
+# heuristics for argument evaluation/strictness
