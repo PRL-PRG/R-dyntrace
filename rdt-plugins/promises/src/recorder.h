@@ -318,7 +318,7 @@ private:
 //
 //            PROTECT(underlying_expression);
 //            //get_full_type(underlying_expression, rho, result, visited);
-//            UNPROTECT(1);
+//           UNPROTECT(1);
 
             //Rprintf("hi from dbg\n`");
             return;
@@ -333,7 +333,7 @@ private:
 
             if (symbol_points_to == R_UnboundValue) return;
             if (symbol_points_to == R_MissingArg) return;
-            if (TYPEOF(symbol_points_to) == SYMSXP) return;
+            //if (TYPEOF(symbol_points_to) == SYMSXP) return;
 
             get_full_type_inner(symbol_points_to, rho, result, visited);
 
