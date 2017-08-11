@@ -238,6 +238,19 @@ private:
         }
     }
 
+    void set_distances_and_lifestyle(prom_info_t & info) {
+        if (info.in_call_id == info.from_call_id) {
+            info.lifestyle = lifestyle_type::LOCAL;
+            info.effective_distance_from_origin = 0;
+            info.actual_distance_from_origin = 0;
+        } else {
+            auto lifestyle_info = judge_promise_lifestyle(info.from_call_id);
+            info.lifestyle = get<0>(lifestyle_info);
+            info.effective_distance_from_origin = get<1>(lifestyle_info);
+            info.actual_distance_from_origin = get<2>(lifestyle_info);
+        }
+    }
+
     tuple<lifestyle_type, int, int> judge_promise_lifestyle(call_id_t from_call_id) {
         int effective_distance = 0;
         int actual_distance = 0;
@@ -271,7 +284,12 @@ private:
         }
     }
 
-    void get_full_type(SEXP sexp, SEXP rho, full_sexp_type & result, set<SEXP> & visited) {
+    inline void get_full_type(SEXP sexp, SEXP rho, full_sexp_type & result) {
+        set<SEXP> visited;
+        get_full_type_inner(sexp, rho, result, visited);
+    }
+
+    void get_full_type_inner(SEXP sexp, SEXP rho, full_sexp_type & result, set<SEXP> & visited) {
         sexp_type type = static_cast<sexp_type>(TYPEOF(sexp));
         result.push_back(type);
 
@@ -286,7 +304,7 @@ private:
             SEXP sexp_inside_promise = PRCODE(sexp);
 
             PROTECT(sexp_inside_promise);
-            get_full_type(sexp_inside_promise, rho, result, visited);
+            get_full_type_inner(sexp_inside_promise, rho, result, visited);
             UNPROTECT(1);
 
             return;
@@ -323,28 +341,27 @@ private:
             if (TYPEOF(symbol_points_to) == SYMSXP) return;
 
             PROTECT(symbol_points_to);
-            get_full_type(symbol_points_to, rho, result, visited);
+            get_full_type_inner(symbol_points_to, rho, result, visited);
             UNPROTECT(1);
 
             return;
         }
     }
 
-    prom_basic_info_t promise_get_basic_info(const SEXP prom, const SEXP rho) {
+public:
+    prom_basic_info_t create_promise_get_info(const SEXP promise, const SEXP rho) {
         prom_basic_info_t info;
 
-        info.prom_id = make_promise_id(prom);
+        info.prom_id = make_promise_id(promise);
         STATE(fresh_promises).insert(info.prom_id);
 
-        info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(prom)));
-
-        set<SEXP> visited;
-        get_full_type(PRCODE(prom), rho, info.full_type, visited);
+        info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(promise)));
+        get_full_type(PRCODE(promise), rho, info.full_type);
 
         return info;
     }
 
-    prom_info_t promise_get_info(const SEXP symbol, const SEXP rho, bool lookup) {
+    prom_info_t force_promise_entry_get_info(const SEXP symbol, const SEXP rho) {
         prom_info_t info;
 
         const char *name = get_name(symbol);
@@ -356,47 +373,62 @@ private:
 
         call_stack_elem_t stack_elem = STATE(fun_stack).back();
         info.in_call_id = get<0>(stack_elem);
-
         info.from_call_id = STATE(promise_origin)[info.prom_id];
 
-        if (info.in_call_id == info.from_call_id) {
-            info.lifestyle = lifestyle_type::LOCAL;
-            info.effective_distance_from_origin = 0;
-            info.actual_distance_from_origin = 0;
-        } else {
-            auto lifestyle_info = judge_promise_lifestyle(info.from_call_id);
-            info.lifestyle = get<0>(lifestyle_info);
-            info.effective_distance_from_origin = get<1>(lifestyle_info);
-            info.actual_distance_from_origin = get<2>(lifestyle_info);
-        }
+        set_distances_and_lifestyle(info);
 
         info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(promise_expression)));
+        get_full_type(PRCODE(promise_expression), rho, info.full_type);
+        info.return_type = sexp_type::OMEGA;
 
-        if (!lookup) {
-            info.full_type.push_back(sexp_type::OMEGA); // FIXME Meh
-        } else {
-            set<SEXP> visited;
-            get_full_type(PRCODE(promise_expression), rho, info.full_type, visited);
-        }
 
         return info;
     }
 
-public:
-    prom_basic_info_t create_promise_get_info(const SEXP promise, const SEXP rho) {
-        return promise_get_basic_info(promise, rho);
+    prom_info_t force_promise_exit_get_info(const SEXP symbol, const SEXP rho, const SEXP val) {
+        prom_info_t info;
+
+        const char *name = get_name(symbol);
+        if (name != NULL)
+            info.name = name;
+
+        SEXP promise_expression = get_promise(symbol, rho);
+        info.prom_id = get_promise_id(promise_expression);
+
+        call_stack_elem_t stack_elem = STATE(fun_stack).back();
+        info.in_call_id = get<0>(stack_elem);
+        info.from_call_id = STATE(promise_origin)[info.prom_id];
+
+        set_distances_and_lifestyle(info);
+
+        info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(promise_expression)));
+        get_full_type(PRCODE(promise_expression), rho, info.full_type);
+        info.return_type = static_cast<sexp_type>(TYPEOF(val));
+
+        return info;
     }
 
-    prom_info_t force_promise_entry_get_info(const SEXP symbol, const SEXP rho) {
-        return promise_get_info(symbol, rho, false);
-    }
+    prom_info_t promise_lookup_get_info(const SEXP symbol, const SEXP rho, const SEXP val) {
+        prom_info_t info;
 
-    prom_info_t force_promise_exit_get_info(const SEXP symbol, const SEXP rho) {
-        return promise_get_info(symbol, rho, false);
-    }
+        const char *name = get_name(symbol);
+        if (name != NULL)
+            info.name = name;
 
-    prom_info_t promise_lookup_get_info(const SEXP symbol, const SEXP rho) {
-        return promise_get_info(symbol, rho, true);
+        SEXP promise_expression = get_promise(symbol, rho);
+        info.prom_id = get_promise_id(promise_expression);
+
+        call_stack_elem_t stack_elem = STATE(fun_stack).back();
+        info.in_call_id = get<0>(stack_elem);
+        info.from_call_id = STATE(promise_origin)[info.prom_id];
+
+        set_distances_and_lifestyle(info);
+
+        info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(promise_expression)));
+        info.full_type.push_back(sexp_type::OMEGA);
+        info.return_type = static_cast<sexp_type>(TYPEOF(val));
+
+        return info;
     }
 
 #define DELEGATE2(func, info_struct) \

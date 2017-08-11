@@ -266,7 +266,7 @@ struct trace_promises {
         PROTECT(rho);
         PROTECT(val);
 
-        prom_info_t info = rec.force_promise_exit_get_info(symbol, rho);
+        prom_info_t info = rec.force_promise_exit_get_info(symbol, rho, val);
         rec.force_promise_exit_process(info);
 
         UNPROTECT(3);
@@ -281,7 +281,7 @@ struct trace_promises {
         PROTECT(rho);
         PROTECT(val);
 
-        prom_info_t info = rec.promise_lookup_get_info(symbol, rho);
+        prom_info_t info = rec.promise_lookup_get_info(symbol, rho, val);
         if (info.prom_id >= 0) {
             rec.promise_lookup_process(info);
             rec.promise_lifecycle_process({info.prom_id, 1, STATE(gc_trigger_counter)});
