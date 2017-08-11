@@ -1,5 +1,5 @@
 .RdtPlugins <- file.path(R.home(), "rdt-plugins")
 
-.First <- function() {
-	source("examples/ex.r")
-}
+#.First <- function() {
+#	source("examples/ex.r")
+#}
