@@ -284,9 +284,9 @@ private:
         }
     }
 
-    inline void get_full_type(SEXP sexp, SEXP rho, full_sexp_type & result) {
+    inline void get_full_type(SEXP promise, SEXP rho, full_sexp_type & result) { // FIXME remove rho
         set<SEXP> visited;
-        get_full_type_inner(sexp, rho, result, visited);
+        get_full_type_inner(PRCODE(promise), PRENV(promise), result, visited);
     }
 
     void get_full_type_inner(SEXP sexp, SEXP rho, full_sexp_type & result, set<SEXP> & visited) {
@@ -301,12 +301,7 @@ private:
         }
 
         if (type == sexp_type::PROM) {
-            SEXP sexp_inside_promise = PRCODE(sexp);
-
-            PROTECT(sexp_inside_promise);
-            get_full_type_inner(sexp_inside_promise, rho, result, visited);
-            UNPROTECT(1);
-
+            get_full_type_inner(PRCODE(sexp), PRENV(sexp), result, visited);
             return;
         }
 
@@ -340,9 +335,7 @@ private:
             if (symbol_points_to == R_MissingArg) return;
             if (TYPEOF(symbol_points_to) == SYMSXP) return;
 
-            PROTECT(symbol_points_to);
             get_full_type_inner(symbol_points_to, rho, result, visited);
-            UNPROTECT(1);
 
             return;
         }
@@ -356,7 +349,7 @@ public:
         STATE(fresh_promises).insert(info.prom_id);
 
         info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(promise)));
-        get_full_type(PRCODE(promise), rho, info.full_type);
+        get_full_type(promise, rho, info.full_type);
 
         return info;
     }
@@ -378,7 +371,7 @@ public:
         set_distances_and_lifestyle(info);
 
         info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(promise_expression)));
-        get_full_type(PRCODE(promise_expression), rho, info.full_type);
+        get_full_type(promise_expression, rho, info.full_type);
         info.return_type = sexp_type::OMEGA;
 
 
@@ -402,7 +395,7 @@ public:
         set_distances_and_lifestyle(info);
 
         info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(promise_expression)));
-        get_full_type(PRCODE(promise_expression), rho, info.full_type);
+        get_full_type(promise_expression, rho, info.full_type);
         info.return_type = static_cast<sexp_type>(TYPEOF(val));
 
         return info;
