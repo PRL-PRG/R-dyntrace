@@ -291,7 +291,7 @@ get_fuzzy_force_histogram <- function() {
               ifelse((forced == 0 && looked_up == 0), 4, NA)))))) %>%  # not forced, not read
   group_by(classification) %>% 
   summarise(number=n()) %>% as.data.frame %>%
-  mutate(percent=number/n.promises) %>% 
+  mutate(percent=(100*number/n.promises)) %>% 
   right_join(data.frame(classification=0:4), by="classification") %>%
   mutate(
     number=ifelse(is.na(number), 0, number),
