@@ -945,7 +945,7 @@ static void TryToReleasePages(void)
 
 	    maxrel = R_GenHeap[i].AllocCount;
 	    for (gen = 0; gen < NUM_OLD_GENERATIONS; gen++)
-		maxrel -= (1.0 + R_MaxKeepFrac) * R_GenHeap[i].OldCount[gen];
+		  maxrel -= (1.0 + R_MaxKeepFrac) * R_GenHeap[i].OldCount[gen];
 	    maxrel_pages = maxrel > 0 ? maxrel / page_count : 0;
 
 	    /* all nodes in New space should be both free and unmarked */
@@ -964,13 +964,6 @@ static void TryToReleasePages(void)
 			break;
 #endif
 		    }
-#ifdef ENABLE_RDT
-            else {
-                if (TYPEOF(s) == PROMSXP) {
-                    RDT_HOOK(probe_gc_promise_unmarked, s);
-                }
-            }
-#endif
 		}
 		if (! in_use) {
 		    ReleasePage(page, i);
@@ -1753,6 +1746,19 @@ static void RunGenCollect(R_size_t size_needed)
     }
     FORWARD_NODE(R_StringHash);
     PROCESS_NODES();
+
+#ifdef ENABLE_RDT
+    // TODO - generalize this for other objects
+    s = NEXT_NODE(R_GenHeap[0].New);
+    while (s != R_GenHeap[0].New) {
+        SEXP next = NEXT_NODE(s);
+        if (TYPEOF(s) != FREESXP && TYPEOF(s) == PROMSXP) {
+            RDT_HOOK(probe_gc_promise_unmarked, s);
+            TYPEOF(s) = FREESXP;
+        }
+        s = next;
+    }
+#endif
 
 #ifdef PROTECTCHECK
     for(i=0; i< NUM_SMALL_NODE_CLASSES;i++){
