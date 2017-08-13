@@ -100,8 +100,74 @@ trigger <- db %>% tbl("gc_trigger")
 type_distribution <- db %>% tbl("type_distribution")
 ```
 
+```{r gc_raw, echo = FALSE, eval = TRUE}
+gc_data <-
+    lifecycle %>%
+    group_by(gc_trigger_counter, event_type) %>%
+    summarize(`PROMISES` = count(promise_id)) %>%
+    collect() %>%
+    rowwise() %>%
+    mutate(gc_trigger_counter = gc_trigger_counter + (event_type < 2)) %>%
+    mutate(event_type = eventname(event_type)) %>%
+    rename(`PROMISE TYPE` = event_type, `GC TRIGGER` = gc_trigger_counter) %>%
+    spread(`PROMISE TYPE`, `PROMISES`) %>%
+    arrange(`GC TRIGGER`) %>%
+    mutate(`CUMULATIVE CREATED` = cumsum(`CREATED`),
+           `CUMULATIVE GARBAGE COLLECTED` = cumsum(`GARBAGE COLLECTED`)) %>%
+    rowwise() %>%
+    mutate(`ALIVE` = `CUMULATIVE CREATED` - `CUMULATIVE GARBAGE COLLECTED` + `GARBAGE COLLECTED`) %>%
+    select(-`CUMULATIVE CREATED`, -`CUMULATIVE GARBAGE COLLECTED`)
 
-```{r promise_garbage_collection, echo = FALSE, eval = TRUE}
+min_trigger <- min(gc_data$`GC TRIGGER`, na.rm = TRUE)
+max_trigger <- max(gc_data$`GC TRIGGER`, na.rm = TRUE)
+
+gc_data <-
+    tibble(`GC TRIGGER` = c(min_trigger : max_trigger)) %>%
+    full_join(gc_data)
+
+gc_data$`DISPENSABLE` <- 0
+
+data <-
+    lifecycle %>%    
+    arrange(promise_id) %>%
+    collect() %>%
+    spread(event_type, gc_trigger_counter) %>%
+    rowwise() %>%
+    mutate(begin = max(`0`, `1`, na.rm = TRUE),
+           end   = min(`2`, max_trigger, na.rm = TRUE))
+
+for(i in 1:length(data$begin)) {
+    a <- data$begin[i] + 1
+    b <- data$end[i] - 1
+    if(a <= b) gc_data$`DISPENSABLE`[a : b] <- gc_data$`DISPENSABLE`[a : b] + 1;
+}
+
+# TODO - Replace NA with 0 to ensure correctness
+
+# Remove last gc trigger data as this one never tells us how many are garbage collected.
+# So this row will usually have NA.
+gc_data <- head(gc_data, -1) 
+
+knitr::kable(gc_data)
+
+graph <-
+    gc_data %>%
+    gather(`PROMISE TYPE`, `PROMISES`, -`GC TRIGGER`) %>%
+    ggplot(aes(`GC TRIGGER`, `PROMISES`, group = `PROMISE TYPE`)) +
+    geom_bar(aes(fill = `PROMISE TYPE`), stat = "identity", position = "dodge") +
+    ggtitle("Promise Garbage Collection",
+            "Number of promises created before, looked up before and collected at each GC trigger") +
+    xlab("GC Trigger") +
+    ylab("Number of Promises") +
+    #scale_x_continuous(breaks = seq(min_trigger, max_trigger, 5),
+                       #minor_breaks = c((min_trigger - 1) : (max_trigger + 1)),
+                       #limits = c(min_trigger - 1, max_trigger + 1)) +
+    scale_fill_gdocs()
+
+graph
+```
+
+```{r gc_alive, echo = FALSE}
 data <-
     lifecycle %>%
     filter(event_type != 1) %>%
@@ -116,7 +182,6 @@ data <-
     mutate(ALIVE = c(0, head(ALIVE, -1))) %>%
     tail(-1) %>%
     head(-1)
-    
 
 knitr::kable(data)
 
