@@ -4,7 +4,12 @@ params:
     dbpath: "?"
 title: "`r params$title`"
 date: "`r Sys.Date()`"
-output: html_document
+output: 
+    html_document:
+        theme: flatly
+        highlight: pygments
+---
+
 ---
 <style>
     body .main-container {
@@ -13,12 +18,13 @@ output: html_document
 </style>
 
 ```{r libraries, include=FALSE}
+library(tidyr)
 library(dplyr)
 library(dbplyr)
 library(ggplot2)
 library(ggthemes)
 library(knitr)
-library(tidyr)
+library(DT)
 ```
 
 ```{r utility, include=FALSE}
@@ -146,9 +152,10 @@ for(i in 1:length(data$begin)) {
 
 # Remove last gc trigger data as this one never tells us how many are garbage collected.
 # So this row will usually have NA.
-gc_data <- head(gc_data, -1) 
-
-knitr::kable(gc_data)
+gc_data <-
+    gc_data %>%
+    head(-1) %>%
+    mutate(`INDISPENSABLE` = `ALIVE` - `GARBAGE COLLECTED` - `DISPENSABLE`)
 
 graph <-
     gc_data %>%
@@ -167,41 +174,38 @@ graph <-
 graph
 ```
 
-```{r gc_alive, echo = FALSE}
-data <-
-    lifecycle %>%
-    filter(event_type != 1) %>%
-    group_by(gc_trigger_counter, event_type) %>%
-    summarize(promises = count(promise_id)) %>%
-    collect() %>%
-    rowwise() %>%
-    mutate(event_type = eventname(event_type)) %>%
-    spread(event_type, promises) %>%
-    mutate(CREATED = ifelse(is.na(CREATED),0,CREATED), `GARBAGE COLLECTED` = ifelse(is.na(`GARBAGE COLLECTED`),0, `GARBAGE COLLECTED`)) %>%
-    mutate(ALIVE = cumsum(CREATED) - cumsum(`GARBAGE COLLECTED`)) %>%
-    mutate(ALIVE = c(0, head(ALIVE, -1))) %>%
-    tail(-1) %>%
-    head(-1)
-
-knitr::kable(data)
-
-min_trigger <- min(data$gc_trigger_counter, na.rm = TRUE)
-max_trigger <- max(data$gc_trigger_counter, na.rm = TRUE)
-
+```{r more_meaningful_graph, echo  = FALSE}
+# this is a dirty hack to get ggplot2 to make the graph.
+# Apparently, it is not possible to mix and match stacked and dodged bar charts in ggplot2.
+# Hence, I modify the data to get the bar lengths I want.
+partial_data <-
+    gc_data %>%
+    mutate(`DISPENSABLE` = `DISPENSABLE` + `GARBAGE COLLECTED`) %>%
+    select(`GC TRIGGER`, `DISPENSABLE`) %>%
+    gather(`PROMISE TYPE`, `PROMISES`, -`GC TRIGGER`)
+    
 graph <-
-    data %>%
-    select(gc_trigger_counter, ALIVE, `GARBAGE COLLECTED`) %>%
-    gather(`PROMISE TYPE`, promises, -gc_trigger_counter) %>%
-    ggplot(aes(gc_trigger_counter, promises, group = `PROMISE TYPE`)) +
-    geom_bar(aes(fill = `PROMISE TYPE`), stat = "identity", position = "dodge") +
-    ggtitle("Promise Garbage Collection",
-            "Number of promises collected at each GC trigger") +
-    xlab("GC Trigger") +
-    ylab("Number of Promises") +
+    gc_data %>%
+    select(`GC TRIGGER`, `ALIVE`, `GARBAGE COLLECTED`) %>%
+    gather(`PROMISE TYPE`, `PROMISES`, -`GC TRIGGER`) %>%
+    ggplot(aes(`GC TRIGGER`, `PROMISES`, group = `PROMISE TYPE`)) +
+    geom_bar(data = partial_data, mapping = aes(fill = `PROMISE TYPE`), stat = "identity", position = "dodge") +
+    geom_bar(aes(fill = `PROMISE TYPE`), stat = "identity", position = "dodge")
+    
+#    select(gc_trigger_counter, ALIVE, `GARBAGE COLLECTED`) %>%
+#    gather(`PROMISE TYPE`, promises, -gc_trigger_counter) %>%
+#    ggplot(aes(gc_trigger_counter, promises, group = `PROMISE TYPE`)) +
+#    geom_bar(aes(fill = `PROMISE TYPE`), stat = "identity", position = "dodge") +
+#    ggtitle("Promise Garbage Collection",
+#            "Number of promises collected at each GC trigger") +
+#    xlab("GC Trigger") +
+#    ylab("Number of Promises") +
     #scale_x_continuous(breaks = seq(min_trigger, max_trigger, 5),
                        #minor_breaks = c((min_trigger - 1) : (max_trigger + 1)),
                        #limits = c(min_trigger - 1, max_trigger + 1)) +
-    scale_fill_gdocs()
+#    scale_fill_gdocs()
 
 graph
+
+datatable(gc_data, rownames = FALSE)
 ```
