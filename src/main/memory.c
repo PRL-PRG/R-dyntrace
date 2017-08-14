@@ -2994,19 +2994,29 @@ static void R_gc_internal(R_size_t size_needed)
 	first_bad_sexp_type_line = bad_sexp_type_line;
     }
 
+#ifndef RDT_IS_ENABLED
     if (gc_reporting) {
+#endif
 	ncells = onsize - R_Collected;
 	nfrac = (100.0 * ncells) / R_NSize;
 	/* We try to make this consistent with the results returned by gc */
 	ncells = 0.1*ceil(10*ncells * sizeof(SEXPREC)/Mega);
+#ifdef RDT_IS_ENABLED
+    if (gc_reporting)
+#endif
 	REprintf("\n%.1f Mbytes of cons cells used (%d%%)\n",
 		 ncells, (int) (nfrac + 0.5));
 	vcells = R_VSize - VHEAP_FREE();
 	vfrac = (100.0 * vcells) / R_VSize;
 	vcells = 0.1*ceil(10*vcells * vsfac/Mega);
+#ifdef RDT_IS_ENABLED
+    if (gc_reporting)
+#endif
 	REprintf("%.1f Mbytes of vectors used (%d%%)\n",
 		 vcells, (int) (vfrac + 0.5));
+#ifndef RDT_IS_ENABLED
     }
+#endif
 
 #ifdef IMMEDIATE_FINALIZERS
     if (first) {

@@ -46,6 +46,7 @@ static sqlite3_stmt * prepared_sql_insert_function = nullptr;
 static sqlite3_stmt * prepared_sql_insert_call = nullptr;
 static sqlite3_stmt * prepared_sql_insert_promise = nullptr;
 static sqlite3_stmt * prepared_sql_insert_promise_eval = nullptr;
+static sqlite3_stmt * prepared_sql_insert_promise_return = nullptr;
 static sqlite3_stmt * prepared_sql_insert_promise_lifecycle = nullptr;
 static sqlite3_stmt * prepared_sql_insert_gc_trigger = nullptr;
 static sqlite3_stmt * prepared_sql_insert_type_distribution = nullptr;
@@ -75,6 +76,7 @@ static sqlite3_stmt * prepared_sql_create_arguments;
 static sqlite3_stmt * prepared_sql_create_promises;
 static sqlite3_stmt * prepared_sql_create_associations;
 static sqlite3_stmt * prepared_sql_create_evaluations;
+static sqlite3_stmt * prepared_sql_create_returns;
 static sqlite3_stmt * prepared_sql_create_lifecycle;
 static sqlite3_stmt * prepared_sql_create_trigger;
 static sqlite3_stmt * prepared_sql_create_distribution;
@@ -105,6 +107,9 @@ void compile_prepared_sql_schema_statements() {
     prepared_sql_create_evaluations =
             compile_sql_statement(
                     make_create_promise_evaluations_statement());
+    prepared_sql_create_returns =
+            compile_sql_statement(
+                    make_create_promise_returns_statement());
     prepared_sql_create_lifecycle =
             compile_sql_statement(
                     make_create_promise_lifecycle_statement());
@@ -128,6 +133,8 @@ void compile_prepared_sql_statements() {
             compile_sql_statement(make_insert_promise_statement("?", "?", "?"));
     prepared_sql_insert_promise_eval =
             compile_sql_statement(make_insert_promise_evaluation_statement("?","?","?","?","?","?","?","?"));
+    prepared_sql_insert_promise_return =
+            compile_sql_statement(make_insert_promise_return_statement("?","?","?"));
     prepared_sql_insert_promise_lifecycle =
             compile_sql_statement(make_insert_promise_lifecycle_statement("?", "?", "?"));
     prepared_sql_insert_gc_trigger =
@@ -303,6 +310,13 @@ sqlite3_stmt * populate_promise_evaluation_statement(prom_eval_t type, const pro
     return prepared_sql_insert_promise_eval;
 }
 
+sqlite3_stmt * populate_promise_return_statement(const prom_info_t & info) {
+    sqlite3_bind_int(prepared_sql_insert_promise_return, 1, tools::enum_cast(info.return_type));
+    sqlite3_bind_int(prepared_sql_insert_promise_return, 2, info.prom_id);
+    sqlite3_bind_int(prepared_sql_insert_promise_return, 3, STATE(clock_id));
+    return prepared_sql_insert_promise_return;
+}
+
 sqlite3_stmt *populate_promise_lifecycle_statement(const prom_gc_info_t & info) {
     sqlite3_bind_int(prepared_sql_insert_promise_lifecycle, 1, info.promise_id);
     sqlite3_bind_int(prepared_sql_insert_promise_lifecycle, 2, info.event);
@@ -400,6 +414,19 @@ void psql_recorder_t::force_promise_entry(const prom_info_t & info) {
 
     /* always */ {
         sqlite3_stmt *statement = populate_promise_evaluation_statement(RDT_SQL_FORCE_PROMISE, info);
+        multiplexer::output(
+                multiplexer::payload_t(statement),
+                tracer_conf.outputs);
+    }
+#else
+    // FIXME
+#endif
+}
+
+void psql_recorder_t::force_promise_exit(const prom_info_t & info) {
+#ifdef RDT_SQLITE_SUPPORT
+    /* always */ {
+        sqlite3_stmt *statement = populate_promise_return_statement(info);
         multiplexer::output(
                 multiplexer::payload_t(statement),
                 tracer_conf.outputs);
@@ -510,6 +537,10 @@ void psql_recorder_t::start_trace(const metadata_t & info) {
 
             multiplexer::output(
                     multiplexer::payload_t(prepared_sql_create_evaluations),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(prepared_sql_create_returns),
                     tracer_conf.outputs);
 
             multiplexer::output(
@@ -631,6 +662,7 @@ void free_prepared_sql_statements() {
     sqlite3_finalize(prepared_sql_insert_call);
     sqlite3_finalize(prepared_sql_insert_promise);
     sqlite3_finalize(prepared_sql_insert_promise_eval);
+    sqlite3_finalize(prepared_sql_insert_promise_return);
 
     sqlite3_finalize(prepared_sql_transaction_begin);
     sqlite3_finalize(prepared_sql_transaction_commit);

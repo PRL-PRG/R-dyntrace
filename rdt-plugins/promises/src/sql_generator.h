@@ -23,6 +23,7 @@ namespace sql_generator {
 
     sql_stmt_t make_insert_promise_statement(sql_val_t id, sql_val_t type, sql_val_t full_type);
     sql_stmt_t make_insert_promise_evaluation_statement(sql_val_t clock, sql_val_t event_type, sql_val_t promise_id, sql_val_t from_call_id, sql_val_t in_call_id, sql_val_t lifestyle, sql_val_t effective_distance_from_origin, sql_val_t actual_distance_from_origin);
+    sql_stmt_t make_insert_promise_return_statement(sql_val_t return_type, sql_val_t promise_id, sql_val_t clock);
     sql_stmt_t make_insert_promise_associations_statement(std::vector<sql_val_cell_t> & associations, bool align);
     sql_stmt_t make_insert_promise_lifecycle_statement(sql_val_t promise_id, sql_val_t event ,sql_val_t gc_trigger_counter);
     sql_stmt_t make_insert_gc_trigger_statement(sql_val_t counter, sql_val_t ncells, sql_val_t vcells);
@@ -57,6 +58,7 @@ namespace sql_generator {
     sql_stmt_t make_create_promises_statement();
     sql_stmt_t make_create_promise_associations_statement();
     sql_stmt_t make_create_promise_evaluations_statement();
+    sql_stmt_t make_create_promise_returns_statement();
     sql_stmt_t make_create_promise_lifecycle_statement();
     sql_stmt_t make_create_gc_trigger_statement();
     sql_stmt_t make_create_type_distribution_statement();
