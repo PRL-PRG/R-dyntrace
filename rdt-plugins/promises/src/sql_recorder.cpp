@@ -93,8 +93,7 @@ sql_stmt_t insert_promise_association_statement(const closure_info_t & info, boo
 }
 
 sql_stmt_t insert_promise_evaluation_statement(prom_eval_t type, const prom_info_t & info) {
-    //sql_val_t clock = from_int(STATE(clock_id)++);
-    sql_val_t clock = next_from_sequence();
+    sql_val_t clock = from_int(STATE(clock_id)++);
     sql_val_t event_type = from_int(type);
     sql_val_t promise_id = from_int(info.prom_id);
     sql_val_t from_call_id = from_int(info.from_call_id);
@@ -107,6 +106,14 @@ sql_stmt_t insert_promise_evaluation_statement(prom_eval_t type, const prom_info
     // from_call_id = TODO what is it
 
     return make_insert_promise_evaluation_statement(clock, event_type, promise_id, from_call_id, in_call_id, lifestyle, effective_distance_from_origin, actual_distance_from_origin);
+}
+
+sql_stmt_t insert_promise_return_statement(const prom_info_t & info) {
+    sql_val_t return_type = from_int(tools::enum_cast(info.return_type));
+    sql_val_t clock = from_int(STATE(clock_id)); // FIXME
+    sql_val_t promise_id = from_int(info.prom_id);
+
+    return make_insert_promise_return_statement(return_type, clock, promise_id);
 }
 
 sql_stmt_t insert_promise_lifecycle_statement(const prom_gc_info_t & info) {
@@ -190,6 +197,15 @@ void sql_recorder_t::force_promise_entry(const prom_info_t & info) {
     }
 }
 
+void sql_recorder_t::force_promise_exit(const prom_info_t & info) {
+    /* always */ {
+        sql_stmt_t statement = insert_promise_return_statement(info);
+        multiplexer::output(
+                multiplexer::payload_t(statement),
+                tracer_conf.outputs);
+    }
+}
+
 void sql_recorder_t::promise_created(const prom_basic_info_t & info) {
     sql_stmt_t statement = insert_promise_statement(info);
     multiplexer::output(
@@ -226,6 +242,7 @@ void sql_recorder_t::start_trace(const metadata_t & info) { // bool output_confi
             sql_stmt_t create_promises_statement = make_create_promises_statement();
             sql_stmt_t create_associations_statement = make_create_promise_associations_statement();
             sql_stmt_t create_evaluations_statement = make_create_promise_evaluations_statement();
+            sql_stmt_t create_returns_statement = make_create_promise_returns_statement();
             sql_stmt_t create_lifecycle_statement = make_create_promise_lifecycle_statement();
             sql_stmt_t create_trigger_statement = make_create_gc_trigger_statement();
             sql_stmt_t create_distribution_statement = make_create_type_distribution_statement();
@@ -260,6 +277,10 @@ void sql_recorder_t::start_trace(const metadata_t & info) { // bool output_confi
 
             multiplexer::output(
                     multiplexer::payload_t(create_evaluations_statement),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(create_returns_statement),
                     tracer_conf.outputs);
 
             multiplexer::output(

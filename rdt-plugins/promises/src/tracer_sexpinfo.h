@@ -212,6 +212,7 @@ struct prom_info_t : prom_basic_info_t {
     lifestyle_type    lifestyle;
     int               effective_distance_from_origin;
     int               actual_distance_from_origin;
+    sexp_type         return_type;
 };
 
 struct gc_info_t {
