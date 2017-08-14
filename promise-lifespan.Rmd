@@ -17,7 +17,7 @@ output:
     }
 </style>
 
-```{r libraries, include=FALSE}
+```{r libraries, echo = FALSE, include=FALSE}
 library(tidyr)
 library(dplyr)
 library(dbplyr)
@@ -27,7 +27,7 @@ library(knitr)
 library(DT)
 ```
 
-```{r utility, include=FALSE}
+```{r utilities, echo = FALSE, include=FALSE}
 typename <- function(type) {
     switch(toString(type),
            "0" = "NIL",
@@ -69,12 +69,12 @@ eventname <- function(event) {
 }
 ```
 
-```{r, include = FALSE}
+```{r render_settings, echo = FALSE, include = FALSE}
 opts_chunk$set(comment=NA, fig.width=22, fig.height=12)
 ```
 
 
-```{r ggplot_theme, include = FALSE}
+```{r ggplot_theme, include = FALSE, echo = FALSE}
 promise_theme <- 
     theme_minimal() +
     theme(plot.title =element_text(size = 30, face="bold", hjust = 0.5, lineheight = 4, margin = margin(t = 0, r = 0, b = 20, l = 0)),
@@ -88,7 +88,7 @@ promise_theme <-
 previous_theme <- theme_set(promise_theme)
 ```
 
-```{r tables, include=FALSE}
+```{r tables, include = FALSE, echo = FALSE}
 db <- src_sqlite(params$dbpath)
 functions <- db %>% tbl("functions")
 arguments <- db %>% tbl("arguments")
@@ -106,7 +106,7 @@ trigger <- db %>% tbl("gc_trigger")
 type_distribution <- db %>% tbl("type_distribution")
 ```
 
-```{r gc_raw, echo = FALSE, eval = TRUE}
+```{r gc_data, echo = FALSE}
 gc_data <-
     lifecycle %>%
     group_by(gc_trigger_counter, event_type) %>%
@@ -129,7 +129,7 @@ max_trigger <- max(gc_data$`GC TRIGGER`, na.rm = TRUE)
 
 gc_data <-
     tibble(`GC TRIGGER` = c(min_trigger : max_trigger)) %>%
-    full_join(gc_data)
+    full_join(gc_data, by = "GC TRIGGER")
 
 gc_data$`DISPENSABLE` <- 0
 
@@ -139,45 +139,47 @@ data <-
     collect() %>%
     spread(event_type, gc_trigger_counter) %>%
     rowwise() %>%
-    mutate(begin = max(`0`, `1`, na.rm = TRUE),
-           end   = min(`2`, max_trigger, na.rm = TRUE))
+    mutate(begin = max(`0`, `1`, na.rm = TRUE) + 1,
+           end   = min(`2`, max_trigger + 1, na.rm = TRUE) - 1)
 
+# This is quite slow. Looking for a better solution.
 for(i in 1:length(data$begin)) {
-    a <- data$begin[i] + 1
-    b <- data$end[i] - 1
-    if(a <= b) gc_data$`DISPENSABLE`[a : b] <- gc_data$`DISPENSABLE`[a : b] + 1;
+    a <- data$begin[i]
+    b <- data$end[i]
+    if(a <= b)
+        gc_data$`DISPENSABLE`[a : b] <- gc_data$`DISPENSABLE`[a : b] + 1;
 }
 
 # TODO - Replace NA with 0 to ensure correctness
 
-# Remove last gc trigger data as this one never tells us how many are garbage collected.
-# So this row will usually have NA.
+# Remove last gc trigger data as it will never tells us how many
+# promises are garbage collected. It will only have NA. 
 gc_data <-
     gc_data %>%
     head(-1) %>%
     mutate(`INDISPENSABLE` = `ALIVE` - `GARBAGE COLLECTED` - `DISPENSABLE`)
+
+scale_x_limits <- c(min_trigger - 1, max_trigger)
+scale_x_breaks <- seq(min_trigger, max_trigger - 1, as.integer((max_trigger - min_trigger) / 10))
 
 graph <-
     gc_data %>%
     gather(`PROMISE TYPE`, `PROMISES`, -`GC TRIGGER`) %>%
     ggplot(aes(`GC TRIGGER`, `PROMISES`, group = `PROMISE TYPE`)) +
     geom_bar(aes(fill = `PROMISE TYPE`), stat = "identity", position = "dodge") +
-    ggtitle("Promise Garbage Collection",
-            "Number of promises created before, looked up before and collected at each GC trigger") +
-    xlab("GC Trigger") +
-    ylab("Number of Promises") +
-    #scale_x_continuous(breaks = seq(min_trigger, max_trigger, 5),
-                       #minor_breaks = c((min_trigger - 1) : (max_trigger + 1)),
-                       #limits = c(min_trigger - 1, max_trigger + 1)) +
+    scale_x_continuous(breaks = scale_x_breaks, limits = scale_x_limits) +
     scale_fill_gdocs()
 
 graph
+
+datatable(gc_data, rownames = FALSE)
 ```
 
-```{r more_meaningful_graph, echo  = FALSE}
+```{r promise_collection_effectiveness, echo = FALSE}
 # this is a dirty hack to get ggplot2 to make the graph.
-# Apparently, it is not possible to mix and match stacked and dodged bar charts in ggplot2.
-# Hence, I modify the data to get the bar lengths I want.
+# Apparently, it is not possible to mix and match stacked 
+# and dodged bar charts in ggplot2. Hence, I am modifying the 
+# data to get the bar lengths I want.
 partial_data <-
     gc_data %>%
     mutate(`DISPENSABLE` = `DISPENSABLE` + `GARBAGE COLLECTED`) %>%
@@ -190,22 +192,32 @@ graph <-
     gather(`PROMISE TYPE`, `PROMISES`, -`GC TRIGGER`) %>%
     ggplot(aes(`GC TRIGGER`, `PROMISES`, group = `PROMISE TYPE`)) +
     geom_bar(data = partial_data, mapping = aes(fill = `PROMISE TYPE`), stat = "identity", position = "dodge") +
-    geom_bar(aes(fill = `PROMISE TYPE`), stat = "identity", position = "dodge")
-    
-#    select(gc_trigger_counter, ALIVE, `GARBAGE COLLECTED`) %>%
-#    gather(`PROMISE TYPE`, promises, -gc_trigger_counter) %>%
-#    ggplot(aes(gc_trigger_counter, promises, group = `PROMISE TYPE`)) +
-#    geom_bar(aes(fill = `PROMISE TYPE`), stat = "identity", position = "dodge") +
-#    ggtitle("Promise Garbage Collection",
-#            "Number of promises collected at each GC trigger") +
-#    xlab("GC Trigger") +
-#    ylab("Number of Promises") +
-    #scale_x_continuous(breaks = seq(min_trigger, max_trigger, 5),
-                       #minor_breaks = c((min_trigger - 1) : (max_trigger + 1)),
-                       #limits = c(min_trigger - 1, max_trigger + 1)) +
-#    scale_fill_gdocs()
+    geom_bar(aes(fill = `PROMISE TYPE`), stat = "identity", position = "dodge") +
+    scale_x_continuous(breaks = scale_x_breaks, limits = scale_x_limits) +
+    scale_fill_gdocs()
 
 graph
+```
 
-datatable(gc_data, rownames = FALSE)
+```{r promise_gc_data_summary_statistics, echo = FALSE}
+graph <-
+    gc_data %>%
+    gather(`PROMISE TYPE`, `PROMISES`, -`GC TRIGGER`) %>%
+    ggplot(aes(`PROMISE TYPE`, `PROMISES`)) +
+    geom_boxplot() +
+    geom_jitter(width = 0.2) +
+    scale_color_gdocs()
+    
+graph
+
+summary_gc_data <-
+    gc_data %>%
+    select(-`GC TRIGGER`) %>%
+    apply(2, function(col) as.vector(summary(col))) %>%
+    as.tibble() %>%
+    mutate(`STATISTICS` = c("MINIMUM", "1st QUARTILE", "MEDIAN", "MEAN", "3rd QUARTILE", "MAXIMUM")) %>%
+    gather(`PROMISE TYPE`, `VALUE`, -`STATISTICS`) %>%
+    spread(`STATISTICS`, `VALUE`)
+    
+datatable(summary_gc_data, rownames = FALSE)    
 ```
