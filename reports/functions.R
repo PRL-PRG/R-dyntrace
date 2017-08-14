@@ -1035,11 +1035,11 @@ get_function_promise_evaluation_order <- function(call_promise_evaluation_order)
 get_function_promise_force_order_histogram <- function(function_promise_evaluation_order, cutoff=NA) {
   data <- 
     function_promise_evaluation_order %>% 
-    group_by(force_order) %>% 
+    group_by(force_orders) %>% 
     summarise(
       number=n(),
       calls=sum(calls))%>% 
-    rename(no.of.force.orders=force_order) %>% 
+    rename(no.of.force.orders=force_orders) %>% 
     mutate(
       percent=(number*100/n.functions),
       percent.calls=(calls*100/n.calls))
