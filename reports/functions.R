@@ -1101,6 +1101,20 @@ fold_databases <- function(result_path, ...) {
     return
   }
   
+  # Helper functions
+  promise_id_mutator <- function(x)
+    mutate(x, promise_id = ifelse(promise_id >= 0, promises_id_positive_offset, promises_id_negative_offset) + promise_id)
+  
+  get_max_id <- function(x) {
+    value <- (select(x, id) %>% filter(id >= 0) %>% summarise(max=max(id)) %>% as.data.frame)$max
+    if (is.na(value)) 0L else value
+  }
+  
+  get_min_id <- function(x) {
+    value <- (select(x, id) %>% filter(id < 0) %>% summarise(min=min(id)) %>% as.data.frame)$min
+    if (is.na(value)) 0L else value
+  }
+  
   # Copy first one outright, use it as Zero.
   file.copy(paths[1], result_path, overwrite=TRUE)
   zero <- src_sqlite(result_path, create=FALSE)
@@ -1115,8 +1129,19 @@ fold_databases <- function(result_path, ...) {
   zero.metadata               <- zero %>% tbl("metadata")
   
   # Start the function id dictionary - for Zero it's an identity function.
-  zero.function_ids <- (zero.functions %>% select(id) %>% data.frame)$id
-  function_id_dictionary <- data.frame(original=zero.function_ids, new=zero.function_ids)
+  #zero.function_ids <- (zero.functions %>% select(id) %>% data.frame)$id
+  #function_id_dictionary <- data.frame(original=zero.function_ids, new=zero.function_ids)
+  all.functions <- zero.functions %>% select(location, definition, id) %>% collect
+  
+  all.promises <- zero.promises %>% select(id) # %>% collect
+  
+
+  
+  # function_id_mutator <- function(x)
+  #   mutate(x, function_id = function_id_offset + function_id)
+  
+
+  
   
   # Fold all subsequent dbs into Zero.
   paths <- paths[2:length(paths)]
@@ -1130,7 +1155,28 @@ fold_databases <- function(result_path, ...) {
     db.functions              <- db %>% tbl("functions")
     db.arguments              <- db %>% tbl("arguments")
     db.metadata               <- db %>% tbl("metadata")
-      
+    
+    promises_id_positive_offset <- all.promises %>% get_max_id
+    promises_id_negative_offset <- all.promises %>% get_min_id
+    new.promises <- db.promises %>% rename(promise_id = id) %>% promise_id_mutator %>% rename(id = promise_id)
+    # todo: all.promises <- all.promises + (select of new.promises)
+    # todo: push new.promises to end of zero.promises in db
+
+    functions.dict.all <- all.functions %>% rename(id.zero=id) %>% full_join(db.functions %>% select(location, definition, id) %>% rename(id.db=id), by=c("definition", "location"), copy=TRUE) %>% select(id.db, id.zero) %>% collect
+    function_id_offset <- all.functions %>% get_max_id
+    function.exists.in.both <- functions.dict.all %>% filter(!is.na(id.zero)) %>% filter(!is.na(id.db)) %>% rename(new.id=id.zero, id=id.db) # translate id.db to id.zero
+    function.exists.in.new <- functions.dict.all %>% filter(is.na(id.zero)) %>% rename(new.id=id.zero, id=id.db) %>% mutate(new.id=id + function_id_offset) # translate id.db to max_id(all.functions) + 1
+    # function_id_translation <- hashmap(keys = union_all(
+    #                                             pull(function.exists.in.both, id), 
+    #                                             pull(function.exists.in.new, id)), 
+    #                                    values = union_all(
+    #                                             pull(function.exists.in.both, new.id), 
+    #                                             pull(function.exists.in.new, new.id)))
+    function_id_translation_tbl <- union_all(function.exists.in.both, function.exists.in.new)
+    new.functions <- db.functions %>% left_join(function_id_translation_tbl, by="id", copy=TRUE) %>% select(-id) %>% rename(id=new.id)
+    # todo: all.functions <- all.functions + (select of new.functions)4
+    # todo: push new.functions to end of zero.functions in db
+    
     
     
   }
