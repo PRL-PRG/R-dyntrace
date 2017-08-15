@@ -116,15 +116,15 @@ promise_count <-
     summarize(`COUNT` = n()) %>%
     rename(`GC TRIGGER` = gc_trigger_counter) %>%
     rowwise() %>%
-    mutate(`OBJECT TYPE` = "PROMISE", `SIZE` = `COUNT` * 52 / (1024 * 1024))
+    mutate(`OBJECT TYPE` = "PROMISE", `SIZE (MB)` = `COUNT` * 52 / (1024 * 1024))
 
 datatable(promise_count, rownames = FALSE)
 
 object_type_distribution <- 
     type_distribution %>%
-    mutate(`SIZE` = type * length / (1024 * 1024)) %>%
+    mutate(`SIZE (MB)` = type * length / (1024 * 1024)) %>%
     group_by(gc_trigger_counter, type) %>%
-    summarize(`COUNT` = n(), `SIZE` = sum(`SIZE`)) %>%
+    summarize(`COUNT` = n(), `SIZE (MB)` = sum(`SIZE (MB)`)) %>%
     collect() %>%
     rename(`GC TRIGGER` = gc_trigger_counter, `OBJECT TYPE` = type) %>%
     rowwise() %>%
@@ -138,15 +138,22 @@ object_type_distribution <-
 ```{r object_count_distribution_by_type, echo = FALSE}
 object_count_distribution_by_type <-
     object_type_distribution %>%
-    select(-`SIZE`) %>%
+    select(-`SIZE (MB)`) %>%
     spread(`OBJECT TYPE`, `COUNT`, fill = 0) %>%
     head(-1)
-   
+
+min_trigger <- min(object_count_distribution_by_type$`GC TRIGGER`, na.rm = TRUE)
+max_trigger <- max(object_count_distribution_by_type$`GC TRIGGER`, na.rm = TRUE)
+
+scale_x_limits <- c(min_trigger - 1, max_trigger)
+scale_x_breaks <- seq(min_trigger, max_trigger - 1, as.integer((max_trigger - min_trigger) / 10))
+
 graph <-
     object_count_distribution_by_type %>%
     gather(`OBJECT TYPE`, `COUNT`, -`GC TRIGGER`) %>%
     ggplot(aes(`GC TRIGGER`, `COUNT`, group = `OBJECT TYPE`)) +
     geom_bar(aes(fill = `OBJECT TYPE`), stat = "identity", position = "dodge") +
+    scale_x_continuous(breaks = scale_x_breaks, limits = scale_x_limits) +
     scale_fill_gdocs()
 
 graph
@@ -183,14 +190,21 @@ datatable(object_count_distribution_by_type_summary, rownames = FALSE)
 object_size_distribution_by_type <-
     object_type_distribution %>%
     select(-`COUNT`) %>%
-    spread(`OBJECT TYPE`, `SIZE`, fill = 0) %>%
+    spread(`OBJECT TYPE`, `SIZE (MB)`, fill = 0) %>%
     head(-1)
-   
+
+min_trigger <- min(object_size_distribution_by_type$`GC TRIGGER`, na.rm = TRUE)
+max_trigger <- max(object_size_distribution_by_type$`GC TRIGGER`, na.rm = TRUE)
+
+scale_x_limits <- c(min_trigger - 1, max_trigger)
+scale_x_breaks <- seq(min_trigger, max_trigger - 1, as.integer((max_trigger - min_trigger) / 10))
+
 graph <-
     object_size_distribution_by_type %>%
-    gather(`OBJECT TYPE`, `SIZE`, -`GC TRIGGER`) %>%
-    ggplot(aes(`GC TRIGGER`, `SIZE`, group = `OBJECT TYPE`)) +
+    gather(`OBJECT TYPE`, `SIZE (MB)`, -`GC TRIGGER`) %>%
+    ggplot(aes(`GC TRIGGER`, `SIZE (MB)`, group = `OBJECT TYPE`)) +
     geom_bar(aes(fill = `OBJECT TYPE`), stat = "identity", position = "dodge") +
+    scale_x_continuous(breaks = scale_x_breaks, limits = scale_x_limits) +
     scale_fill_gdocs()
 
 graph
@@ -202,8 +216,8 @@ datatable(object_size_distribution_by_type, rownames = FALSE)
 ```{r summary_of_object_size_distribution_by_type, echo = FALSE}
 graph <-
     object_size_distribution_by_type %>%
-    gather(`OBJECT TYPE`, `SIZE`, -`GC TRIGGER`) %>%
-    ggplot(aes(`OBJECT TYPE`, `SIZE`)) +
+    gather(`OBJECT TYPE`, `SIZE (MB)`, -`GC TRIGGER`) %>%
+    ggplot(aes(`OBJECT TYPE`, `SIZE (MB)`)) +
     geom_boxplot() +
     geom_jitter(width = 0.2) +
     scale_color_gdocs()
