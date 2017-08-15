@@ -1120,65 +1120,165 @@ fold_databases <- function(result_path, ...) {
   zero <- src_sqlite(result_path, create=FALSE)
   
   # Tables in Zero:
+  zero.functions              <- zero %>% tbl("functions")            
+  zero.calls                  <- zero %>% tbl("calls")                
+  zero.arguments              <- zero %>% tbl("arguments")
   zero.promises               <- zero %>% tbl("promises")             
   zero.promise_evaluations    <- zero %>% tbl("promise_evaluations")  
   zero.promise_associations   <- zero %>% tbl("promise_associations") 
-  zero.calls                  <- zero %>% tbl("calls")                
-  zero.functions              <- zero %>% tbl("functions")            
-  zero.arguments              <- zero %>% tbl("arguments")            
+  zero.promise_returns        <- zero %>% tbl("promise_returns")
+  zero.gc_triggers            <- zero %>% tbl("gc_trigger")
+  zero.promise_lifecycles     <- zero %>% tbl("promise_lifecycle")
+  zero.type_distributions     <- zero %>% tbl("type_distribution")
   zero.metadata               <- zero %>% tbl("metadata")
   
   # Start the function id dictionary - for Zero it's an identity function.
-  #zero.function_ids <- (zero.functions %>% select(id) %>% data.frame)$id
-  #function_id_dictionary <- data.frame(original=zero.function_ids, new=zero.function_ids)
   all.functions <- zero.functions %>% select(location, definition, id) %>% collect
   
-  all.promises <- zero.promises %>% select(id) # %>% collect
-  
-
-  
-  # function_id_mutator <- function(x)
-  #   mutate(x, function_id = function_id_offset + function_id)
-  
-
-  
+  # ID offsets for all other tables:
+  call_id_offset <- (zero.calls %>% get_max_id) + 1
+  promises_id_positive_offset <- (zero.promises %>% get_max_id) + 1
+  promises_id_negative_offset <- (zero.promises %>% get_min_id) - 1
+  clock_offset <- (zero.promise_evaluations %>% summarise(max=max(clock)) %>% as.data.frame)$max + 1
+  counter_offset <- (zero.gc_triggers %>% summarise(max=max(counter)) %>% as.data.frame)$max + 1
+  argument_id_offset <- (zero.arguments %>% get_max_id) + 1
   
   # Fold all subsequent dbs into Zero.
   paths <- paths[2:length(paths)]
   for (path in paths) {
+    browser()
+    
     db <- src_sqlite(path, create=FALSE)
     
+    # Tables in concatenated DB
+    db.functions              <- db %>% tbl("functions")
+    db.calls                  <- db %>% tbl("calls")
+    db.arguments              <- db %>% tbl("arguments")
     db.promises               <- db %>% tbl("promises")
     db.promise_evaluations    <- db %>% tbl("promise_evaluations")
     db.promise_associations   <- db %>% tbl("promise_associations")
-    db.calls                  <- db %>% tbl("calls")
-    db.functions              <- db %>% tbl("functions")
-    db.arguments              <- db %>% tbl("arguments")
+    db.promise_returns        <- db %>% tbl("promise_returns")
+    db.gc_triggers            <- db %>% tbl("gc_trigger")
+    db.promise_lifecycles     <- db %>% tbl("promise_lifecycle")
+    db.type_distributions     <- db %>% tbl("type_distribution")
     db.metadata               <- db %>% tbl("metadata")
     
-    promises_id_positive_offset <- all.promises %>% get_max_id
-    promises_id_negative_offset <- all.promises %>% get_min_id
-    new.promises <- db.promises %>% rename(promise_id = id) %>% promise_id_mutator %>% rename(id = promise_id)
-    # todo: all.promises <- all.promises + (select of new.promises)
-    # todo: push new.promises to end of zero.promises in db
-
-    functions.dict.all <- all.functions %>% rename(id.zero=id) %>% full_join(db.functions %>% select(location, definition, id) %>% rename(id.db=id), by=c("definition", "location"), copy=TRUE) %>% select(id.db, id.zero) %>% collect
-    function_id_offset <- all.functions %>% get_max_id
-    function.exists.in.both <- functions.dict.all %>% filter(!is.na(id.zero)) %>% filter(!is.na(id.db)) %>% rename(new.id=id.zero, id=id.db) # translate id.db to id.zero
-    function.exists.in.new <- functions.dict.all %>% filter(is.na(id.zero)) %>% rename(new.id=id.zero, id=id.db) %>% mutate(new.id=id + function_id_offset) # translate id.db to max_id(all.functions) + 1
-    # function_id_translation <- hashmap(keys = union_all(
-    #                                             pull(function.exists.in.both, id), 
-    #                                             pull(function.exists.in.new, id)), 
-    #                                    values = union_all(
-    #                                             pull(function.exists.in.both, new.id), 
-    #                                             pull(function.exists.in.new, new.id)))
-    function_id_translation_tbl <- union_all(function.exists.in.both, function.exists.in.new)
-    new.functions <- db.functions %>% left_join(function_id_translation_tbl, by="id", copy=TRUE) %>% select(-id) %>% rename(id=new.id)
-    # todo: all.functions <- all.functions + (select of new.functions)4
+    # Functions
+    functions.dict.all <- 
+      all.functions %>% 
+      rename(id.zero=id) %>% 
+      full_join(
+        db.functions %>% 
+          select(location, definition, id) %>% 
+          rename(id.db=id), 
+        by=c("definition", "location"), 
+        copy=TRUE) %>% 
+      select(id.db, id.zero) %>% collect
+    function_id_offset <- (all.functions %>% get_max_id) + 1
+    function.exists.in.both <- 
+      functions.dict.all %>% 
+      filter(!is.na(id.zero)) %>% 
+      filter(!is.na(id.db)) %>% 
+      rename(new.id=id.zero, id=id.db) # translate id.db to id.zero
+    function.exists.in.new <- 
+      functions.dict.all %>% 
+      filter(is.na(id.zero)) %>% 
+      rename(new.id=id.zero, id=id.db) %>% 
+      mutate(new.id=id + function_id_offset)
+    function_id_translation_tbl <- 
+      union_all(function.exists.in.both, function.exists.in.new)
+    # new.functions <- 
+    #   db.functions %>% 
+    #   left_join(function_id_translation_tbl, by="id", copy=TRUE) %>% 
+    #   select(-id) %>% 
+    #   rename(id=new.id)
+    new.functions <- function.exists.in.new %>% left_join(db.functions, by="id", copy=TRUE) %>% select(-id) %>% rename(id=new.id)
+    all.functions <- union_all(all.functions, new.functions %>% select(location, definition, id)) 
     # todo: push new.functions to end of zero.functions in db
     
+    # Calls
+    new.calls <- 
+      db.calls %>% 
+      mutate(
+        id = ifelse(id == 0, 0, id + call_id_offset), 
+        parent_id = ifelse(parent_id == 0, 0, parent_id + call_id_offset)) %>% 
+      left_join(function_id_translation_tbl %>% rename(function_id=id), by="function_id", copy=TRUE) %>% 
+      select(-function_id) %>% 
+      rename(function_id=new.id)
+    # todo: push new.calls to end of zero.calls in db
     
+    # Arguments
+    new.arguments <- 
+      db.arguments %>%
+      mutate(
+        id = id + argument_id_offset, 
+        call_id = ifelse(call_id == 0, 0, call_id + call_id_offset))
+    # todo: push new.arguments to end of zero.arguments in db
     
+    # Promises
+    new.promises <- 
+      db.promises %>% 
+      rename(promise_id = id) %>% 
+      promise_id_mutator %>% 
+      rename(id = promise_id)
+    # todo: push new.promises to end of zero.promises in db
+    
+    # Promise associations
+    new.promise_associations <- 
+      db.promise_associations %>% 
+      mutate(
+        call_id = ifelse(call_id == 0, 0, call_id_offset + call_id), 
+        argument_id = argument_id_offset + argument_id) %>%
+      promise_id_mutator
+    # todo: push new.promise_assoc to end of zero.promise_assoc in db
+    
+    # Promise evaluations
+    new.promise_evaluations <-
+      db.promise_evaluations %>% 
+      mutate(
+        clock = clock_offset + clock, 
+        in_call_id = ifelse(in_call_id == 0, 0, call_id_offset + in_call_id), 
+        from_call_id = ifelse(from_call_id == 0, 0, call_id_offset + from_call_id)) %>% 
+      promise_id_mutator
+    # todo: push to db
+    
+    # Promise returns
+    new.promise_returns <- 
+      db.promise_returns %>% 
+      mutate(clock = clock_offset + clock) %>% 
+      promise_id_mutator
+    # todo: push to db
+    
+    # GC triggers
+    new.gc_triggers <- 
+      db.gc_triggers %>%
+      mutate(counter = counter_offset + counter)
+    # todo: push to db
+    
+    # Promise lifecycles
+    new.promise_lifecycles <-
+      db.promise_lifecycles %>% 
+      mutate(gc_trigger_counter = counter_offset + gc_trigger_counter) %>%
+      promise_id_mutator
+    # todo: push to db
+    
+    # Type distributions
+    new.type_distributions <-
+      db.type_distributions %>% 
+      mutate(gc_trigger_counter = counter_offset + gc_trigger_counter)
+    # todo: push to db
+    
+    # Metadata
+    new.metadata <- db.metadata
+    # todo: push to db
+    
+    # Update offsets
+    promises_id_positive_offset <- max((new.promises %>% get_max_id) + 1, promises_id_positive_offset)
+    promises_id_negative_offset <- min((new.promises %>% get_min_id) - 1, promises_id_negative_offset)
+    call_id_offset <- max((new.calls %>% get_max_id) + 1, call_id_offset)
+    clock_offset <- max((new.promise_evaluations %>% summarise(max=max(clock)) %>% as.data.frame)$max + 1, clock_offset)
+    counter_offset <- max((new.gc_triggers %>% summarise(max=max(counter)) %>% as.data.frame)$max + 1, counter_offset)
+    argument_id_offset <- max((new.arguments %>% get_max_id) + 1, argument_id_offset)
   }
 }
 
