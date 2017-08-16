@@ -424,6 +424,24 @@ public:
         return info;
     }
 
+    prom_info_t promise_expression_lookup_get_info(const SEXP prom, const SEXP rho) {
+        prom_info_t info;
+
+        info.prom_id = get_promise_id(prom);
+
+        call_stack_elem_t stack_elem = STATE(fun_stack).back();
+        info.in_call_id = get<0>(stack_elem);
+        info.from_call_id = STATE(promise_origin)[info.prom_id];
+
+        set_distances_and_lifestyle(info);
+
+        info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(prom)));
+        info.full_type.push_back(sexp_type::OMEGA);
+        info.return_type = static_cast<sexp_type>(TYPEOF(PRCODE(prom)));
+
+        return info;
+    }
+
 #define DELEGATE2(func, info_struct) \
     void func##_process(const info_struct & info) { \
         impl().func(info); \
@@ -445,6 +463,7 @@ public:
     DELEGATE(force_promise_entry, prom_info_t)
     DELEGATE(force_promise_exit, prom_info_t)
     DELEGATE(promise_created, prom_basic_info_t)
+    DELEGATE(promise_expression_lookup, prom_info_t)
     DELEGATE(promise_lookup, prom_info_t)    
     DELEGATE(promise_lifecycle, prom_gc_info_t)
     DELEGATE(vector_alloc, type_gc_info_t)
@@ -500,6 +519,7 @@ public:
     COMPOSE(force_promise_exit, prom_info_t)
     COMPOSE(promise_created, prom_basic_info_t)
     COMPOSE(promise_lookup, prom_info_t)
+    COMPOSE(promise_expression_lookup, prom_info_t)
     COMPOSE(promise_lifecycle, prom_gc_info_t)
     COMPOSE(vector_alloc, type_gc_info_t)
     COMPOSE(gc_exit, gc_info_t)

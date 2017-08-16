@@ -292,6 +292,23 @@ struct trace_promises {
         gc_toggle_restore(gc_enabled);
     }
 
+    static void promise_expression_lookup(const SEXP prom, const SEXP rho) {
+        int gc_enabled = gc_toggle_off();
+
+        PROTECT(prom);
+        PROTECT(rho);
+
+        prom_info_t info = rec.promise_expression_lookup_get_info(prom, rho);
+        if (info.prom_id >= 0) {
+            rec.promise_expression_lookup_process(info);
+            rec.promise_lifecycle_process({info.prom_id, 1, STATE(gc_trigger_counter)});
+        }
+
+        UNPROTECT(2);
+
+        gc_toggle_restore(gc_enabled);
+    }
+
     static void gc_promise_unmarked(const SEXP promise) {
         int gc_enabled = gc_toggle_off();
 
@@ -380,6 +397,7 @@ void register_hooks_with(rdt_handler * h) {
         ADD_HOOK(force_promise_exit);
         ADD_HOOK(promise_created);
         ADD_HOOK(promise_lookup);
+        ADD_HOOK(promise_expression_lookup);
         ADD_HOOK(vector_alloc);
         ADD_HOOK(gc_entry);
         ADD_HOOK(gc_exit);
@@ -418,6 +436,7 @@ rdt_handler *setup_promises_tracing(SEXP options) {
                 h->probe_builtin_exit = NULL;
             } else if (!strcmp("promise", probe)) {
                 h->probe_promise_lookup = NULL;
+                h->probe_promise_expression_lookup =  NULL;
                 h->probe_force_promise_entry = NULL;
                 h->probe_force_promise_exit = NULL;
             } else if (!strcmp("vector", probe)) {

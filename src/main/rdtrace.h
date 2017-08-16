@@ -78,6 +78,9 @@ typedef struct rdt_handler {
     // Fires when a promise is accessed but already forced
     // Look for RDT_HOOK(probe_promise_lookup ... in src/main/eval.c
     void (*probe_promise_lookup)(const SEXP symbol, const SEXP rho, const SEXP val);
+    // Fires when the expression inside a promise is accessed
+    // Look for RDT_HOOK(probe_promise_expression_lookup ... in src/main/coerce.c
+    void (*probe_promise_expression_lookup)(const SEXP prom, const SEXP rho);
     // RDT_FIRE_PROBE(probe_error, call, message) in src/main/errors.c:errorcall()
     void (*probe_error)(const SEXP call, const char* message);
     // RDT_HOOK(probe_vector_alloc ... in src/main/memory.c:allocVector3()
