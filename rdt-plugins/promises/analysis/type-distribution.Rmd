@@ -122,7 +122,7 @@ datatable(promise_count, rownames = FALSE)
 
 object_type_distribution <- 
     type_distribution %>%
-    mutate(`SIZE (MB)` = type * length / (1024 * 1024)) %>%
+    mutate(`SIZE (MB)` = bytes / (1024 * 1024)) %>%
     group_by(gc_trigger_counter, type) %>%
     summarize(`COUNT` = n(), `SIZE (MB)` = sum(`SIZE (MB)`)) %>%
     collect() %>%
