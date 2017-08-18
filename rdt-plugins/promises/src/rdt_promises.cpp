@@ -65,12 +65,12 @@ struct trace_promises {
         rec.finish_trace_process();
 
         if (!STATE(fun_stack).empty()) {
-            Rprintf("Function stack is not balanced: %d remaining.", STATE(fun_stack).size());
+            Rprintf("Function stack is not balanced: %d remaining.\n", STATE(fun_stack).size());
             STATE(fun_stack.clear());
         }
 
         if (!STATE(full_stack).empty()) {
-            Rprintf("Function/promise stack is not balanced: %d remaining.", STATE(full_stack).size());
+            Rprintf("Function/promise stack is not balanced: %d remaining.\n", STATE(full_stack).size());
             STATE(full_stack).clear();
         }
 
