@@ -128,11 +128,11 @@ void compile_prepared_sql_statements() {
     prepared_sql_insert_function =
             compile_sql_statement(make_insert_function_statement("?","?","?","?","?"));
     prepared_sql_insert_call =
-            compile_sql_statement(make_insert_function_call_statement("?","?","?","?","?","?"));
+            compile_sql_statement(make_insert_function_call_statement("?","?","?","?","?","?","?","?","?"));
     prepared_sql_insert_promise =
             compile_sql_statement(make_insert_promise_statement("?", "?", "?"));
     prepared_sql_insert_promise_eval =
-            compile_sql_statement(make_insert_promise_evaluation_statement("?","?","?","?","?","?","?","?"));
+            compile_sql_statement(make_insert_promise_evaluation_statement("?","?","?","?","?","?","?","?","?","?","?"));
     prepared_sql_insert_promise_return =
             compile_sql_statement(make_insert_promise_return_statement("?","?","?"));
     prepared_sql_insert_promise_lifecycle =
@@ -254,6 +254,22 @@ sqlite3_stmt * populate_call_statement(const call_info_t & info) {
 
     sqlite3_bind_int(prepared_sql_insert_call, 6, (int)info.parent_call_id);
 
+    sqlite3_bind_int(prepared_sql_insert_call, 7, (int)info.in_prom_id);
+
+    sqlite3_bind_int(prepared_sql_insert_call, 8, tools::enum_cast(info.parent_on_stack.type));
+
+    switch (info.parent_on_stack.type) {
+        case stack_type::NONE:
+            sqlite3_bind_null(prepared_sql_insert_call, 9);
+            break;
+        case stack_type::CALL:
+            sqlite3_bind_int(prepared_sql_insert_call, 9, (int) info.parent_on_stack.call_id);
+            break;
+        case stack_type::PROMISE:
+            sqlite3_bind_int(prepared_sql_insert_call, 9, (int) info.parent_on_stack.promise_id);
+            break;
+    }
+
     return prepared_sql_insert_call;
 }
 
@@ -300,9 +316,23 @@ sqlite3_stmt * populate_promise_evaluation_statement(prom_eval_t type, const pro
     sqlite3_bind_int(prepared_sql_insert_promise_eval, 3, info.prom_id);
     sqlite3_bind_int(prepared_sql_insert_promise_eval, 4, info.from_call_id);
     sqlite3_bind_int(prepared_sql_insert_promise_eval, 5, info.in_call_id);
-    sqlite3_bind_int(prepared_sql_insert_promise_eval, 6, tools::enum_cast(info.lifestyle));
-    sqlite3_bind_int(prepared_sql_insert_promise_eval, 7, info.effective_distance_from_origin);
-    sqlite3_bind_int(prepared_sql_insert_promise_eval, 8, info.actual_distance_from_origin);
+    sqlite3_bind_int(prepared_sql_insert_promise_eval, 6, info.in_prom_id);
+    sqlite3_bind_int(prepared_sql_insert_promise_eval, 7, tools::enum_cast(info.lifestyle));
+    sqlite3_bind_int(prepared_sql_insert_promise_eval, 8, info.effective_distance_from_origin);
+    sqlite3_bind_int(prepared_sql_insert_promise_eval, 9, info.actual_distance_from_origin);
+    sqlite3_bind_int(prepared_sql_insert_promise_eval, 10, tools::enum_cast(info.parent_on_stack.type));
+
+    switch (info.parent_on_stack.type) {
+        case stack_type::NONE:
+            sqlite3_bind_null(prepared_sql_insert_promise_eval, 11);
+            break;
+        case stack_type::CALL:
+            sqlite3_bind_int(prepared_sql_insert_promise_eval, 11, (int) info.parent_on_stack.call_id);
+            break;
+        case stack_type::PROMISE:
+            sqlite3_bind_int(prepared_sql_insert_promise_eval, 11, (int) info.parent_on_stack.promise_id);
+            break;
+    }
 
     // in_call_id = current call
     // from_call_id = parent call, for which the promise was created

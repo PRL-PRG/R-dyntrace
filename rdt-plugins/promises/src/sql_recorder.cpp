@@ -59,8 +59,13 @@ sql_stmt_t insert_call_statement(const call_info_t & info) {
     sql_val_t parent_call_id = from_int(info.parent_call_id);
     sql_val_t callsite = wrap_nullable_string(info.callsite);
     sql_val_t compiled = from_int(info.fn_compiled ? 1 : 0);
+    sql_val_t in_prom_id = from_int(info.in_prom_id);
+    sql_val_t stack_parent_type = from_int(tools::enum_cast(info.parent_on_stack.type));
+    sql_val_t stack_parent_id = from_stack_event(info.parent_on_stack); // XXX relies on the fact that they're both ints.
 
-    return make_insert_function_call_statement(id, name, callsite, compiled, function_id, parent_call_id);
+
+    return make_insert_function_call_statement(id, name, callsite, compiled, function_id, parent_call_id,
+                                               in_prom_id, stack_parent_type, stack_parent_id);
 }
 
 sql_stmt_t insert_promise_statement(const prom_basic_info_t & info) {
@@ -98,14 +103,19 @@ sql_stmt_t insert_promise_evaluation_statement(prom_eval_t type, const prom_info
     sql_val_t promise_id = from_int(info.prom_id);
     sql_val_t from_call_id = from_int(info.from_call_id);
     sql_val_t in_call_id = from_int(info.in_call_id);
+    sql_val_t in_prom_id = from_int(info.in_prom_id);
     sql_val_t lifestyle = from_int(tools::enum_cast(info.lifestyle));
     sql_val_t effective_distance_from_origin = from_int(info.effective_distance_from_origin);
     sql_val_t actual_distance_from_origin = from_int(info.actual_distance_from_origin);
+    sql_val_t stack_parent_type = from_int(tools::enum_cast(info.parent_on_stack.type));
+    sql_val_t stack_parent_id = from_stack_event(info.parent_on_stack); // XXX relies on the fact that they're both ints.
 
     // in_call_id = current call
     // from_call_id = TODO what is it
 
-    return make_insert_promise_evaluation_statement(clock, event_type, promise_id, from_call_id, in_call_id, lifestyle, effective_distance_from_origin, actual_distance_from_origin);
+    return make_insert_promise_evaluation_statement(clock, event_type, promise_id, from_call_id, in_call_id, in_prom_id,
+                                                    lifestyle, effective_distance_from_origin, actual_distance_from_origin,
+                                                    stack_parent_type, stack_parent_id);
 }
 
 sql_stmt_t insert_promise_return_statement(const prom_info_t & info) {

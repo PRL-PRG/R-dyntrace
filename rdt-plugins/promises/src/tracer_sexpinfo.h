@@ -167,7 +167,7 @@ enum class sexp_type {
     OMEGA = 69
 };
 
-enum class stack_type {PROMISE, CALL, NONE};
+enum class stack_type {PROMISE = 1, CALL = 2, NONE = 0};
 
 struct stack_event_t {
     stack_type type;
@@ -276,6 +276,7 @@ arglist_t get_arguments(call_id_t call_id, SEXP op, SEXP rho);
 
 string full_sexp_type_to_string(full_sexp_type);
 string full_sexp_type_to_number_string(full_sexp_type);
+//string stack_event_to_string(stack_event_t);
 
 string recursive_type_to_string(recursion_type);
 
