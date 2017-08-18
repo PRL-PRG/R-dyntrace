@@ -133,6 +133,15 @@ SEXP get_promise(SEXP var, SEXP rho) {
     return prom;
 }
 
+prom_id_t get_promise_parent() {
+    if (!STATE(prom_stack).empty()) {
+        prom_stack_elem_t elem = STATE(prom_stack).back();
+        return elem;
+    } else {
+        return 0;
+    }
+}
+
 arg_id_t get_argument_id(call_id_t call_id, const string & argument) { // FIXME this is overcomplicated. A simple sequence should be enough, i think.
     //arg_key_t key = make_pair(call_id, argument);
     //auto iterator = STATE(argument_ids).find(key);

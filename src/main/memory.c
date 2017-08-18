@@ -945,7 +945,7 @@ static void TryToReleasePages(void)
 
 	    maxrel = R_GenHeap[i].AllocCount;
 	    for (gen = 0; gen < NUM_OLD_GENERATIONS; gen++)
-		maxrel -= (1.0 + R_MaxKeepFrac) * R_GenHeap[i].OldCount[gen];
+		  maxrel -= (1.0 + R_MaxKeepFrac) * R_GenHeap[i].OldCount[gen];
 	    maxrel_pages = maxrel > 0 ? maxrel / page_count : 0;
 
 	    /* all nodes in New space should be both free and unmarked */
@@ -964,13 +964,6 @@ static void TryToReleasePages(void)
 			break;
 #endif
 		    }
-#ifdef ENABLE_RDT
-            else {
-                if (TYPEOF(s) == PROMSXP) {
-                    RDT_HOOK(probe_gc_promise_unmarked, s);
-                }
-            }
-#endif
 		}
 		if (! in_use) {
 		    ReleasePage(page, i);
@@ -1753,6 +1746,19 @@ static void RunGenCollect(R_size_t size_needed)
     }
     FORWARD_NODE(R_StringHash);
     PROCESS_NODES();
+
+#ifdef ENABLE_RDT
+    // TODO - generalize this for other objects
+    s = NEXT_NODE(R_GenHeap[0].New);
+    while (s != R_GenHeap[0].New) {
+        SEXP next = NEXT_NODE(s);
+        if (TYPEOF(s) != FREESXP && TYPEOF(s) == PROMSXP) {
+            RDT_HOOK(probe_gc_promise_unmarked, s);
+            TYPEOF(s) = FREESXP;
+        }
+        s = next;
+    }
+#endif
 
 #ifdef PROTECTCHECK
     for(i=0; i< NUM_SMALL_NODE_CLASSES;i++){
@@ -2939,8 +2945,6 @@ static void gc_end_timing(void)
 
 static void R_gc_internal(R_size_t size_needed)
 {
-    RDT_HOOK(probe_gc_entry, size_needed);
-
     if (!R_GCEnabled) {
       if (NO_FREE_NODES())
 	R_NSize = R_NodesInUse + 1;
@@ -2949,6 +2953,9 @@ static void R_gc_internal(R_size_t size_needed)
       gc_pending = TRUE;
       return;
     }
+
+    RDT_HOOK(probe_gc_entry, size_needed);
+
     gc_pending = FALSE;
 
     R_size_t onsize = R_NSize /* can change during collection */;
@@ -2987,19 +2994,29 @@ static void R_gc_internal(R_size_t size_needed)
 	first_bad_sexp_type_line = bad_sexp_type_line;
     }
 
+#ifndef RDT_IS_ENABLED
     if (gc_reporting) {
+#endif
 	ncells = onsize - R_Collected;
 	nfrac = (100.0 * ncells) / R_NSize;
 	/* We try to make this consistent with the results returned by gc */
 	ncells = 0.1*ceil(10*ncells * sizeof(SEXPREC)/Mega);
+#ifdef RDT_IS_ENABLED
+    if (gc_reporting)
+#endif
 	REprintf("\n%.1f Mbytes of cons cells used (%d%%)\n",
 		 ncells, (int) (nfrac + 0.5));
 	vcells = R_VSize - VHEAP_FREE();
 	vfrac = (100.0 * vcells) / R_VSize;
 	vcells = 0.1*ceil(10*vcells * vsfac/Mega);
+#ifdef RDT_IS_ENABLED
+    if (gc_reporting)
+#endif
 	REprintf("%.1f Mbytes of vectors used (%d%%)\n",
 		 vcells, (int) (vfrac + 0.5));
+#ifndef RDT_IS_ENABLED
     }
+#endif
 
 #ifdef IMMEDIATE_FINALIZERS
     if (first) {

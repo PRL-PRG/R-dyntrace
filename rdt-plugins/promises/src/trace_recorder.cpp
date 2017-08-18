@@ -270,6 +270,8 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
 
     stream << " type=" << sexp_type_to_string(info.prom_type);
 
+    stream << " return_type=" << sexp_type_to_string(info.return_type);
+
     stream << " prom_parent=" << info.prom_parent;
 
     stream << "\n";

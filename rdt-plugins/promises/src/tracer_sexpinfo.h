@@ -213,6 +213,7 @@ struct prom_info_t : prom_basic_info_t {
     prom_id_t         prom_parent;
     int               effective_distance_from_origin;
     int               actual_distance_from_origin;
+    sexp_type         return_type;
 };
 
 struct gc_info_t {
@@ -248,6 +249,7 @@ bool negative_promise_already_inserted(prom_id_t id);
 
 // Wraper for findVar. Does not look up the value if it already is PROMSXP.
 SEXP get_promise(SEXP var, SEXP rho);
+prom_id_t get_promise_parent();
 arg_id_t get_argument_id(call_id_t call_id, const string & argument);
 arglist_t get_arguments(call_id_t call_id, SEXP op, SEXP rho);
 

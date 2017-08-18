@@ -17,7 +17,7 @@ public:
     void builtin_entry(const builtin_info_t &);
     void builtin_exit(const builtin_info_t &) {};
     void force_promise_entry(const prom_info_t &);
-    void force_promise_exit(const prom_info_t &) {}
+    void force_promise_exit(const prom_info_t &);
     void promise_created(const prom_basic_info_t &);
     void promise_lookup(const prom_info_t &);
     void promise_lifecycle(const prom_gc_info_t &);
