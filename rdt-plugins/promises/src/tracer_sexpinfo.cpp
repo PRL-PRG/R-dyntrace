@@ -133,13 +133,61 @@ SEXP get_promise(SEXP var, SEXP rho) {
     return prom;
 }
 
-prom_id_t get_promise_parent() {
-    if (!STATE(prom_stack).empty()) {
-        prom_stack_elem_t elem = STATE(prom_stack).back();
-        return elem.first;
+void get_stack_parent(prom_info_t & info) {
+    //size_t size = STATE(full_stack).size();
+    //if (size > 0) {
+        //stack_event_t stack_elem = STATE(full_stack)[size - 1];
+
+    if (!STATE(full_stack).empty()) {
+        stack_event_t stack_elem = STATE(full_stack).back();
+        // parent type
+        info.parent_on_stack.type = stack_elem.type;
+        switch (info.parent_on_stack.type) {
+            case stack_type::PROMISE:
+                info.parent_on_stack.promise_id = stack_elem.call_id;
+                break;
+            case stack_type::CALL:
+                info.parent_on_stack.call_id = stack_elem.promise_id;
+                break;
+            case stack_type::NONE:
+                break;
+        }
     } else {
-        return 0;
+        info.parent_on_stack.type = stack_type::NONE;
     }
+
+}
+
+void get_stack_parent(call_info_t & info) {
+    //size_t size = STATE(full_stack).size();
+    //if (size > 0) {
+    //stack_event_t stack_elem = STATE(full_stack)[size - 1];
+
+    if (!STATE(full_stack).empty()) {
+        stack_event_t stack_elem = STATE(full_stack).back();
+        // parent type
+        info.parent_on_stack.type = stack_elem.type;
+        switch (info.parent_on_stack.type) {
+            case stack_type::PROMISE:
+                info.parent_on_stack.promise_id = stack_elem.call_id;
+                break;
+            case stack_type::CALL:
+                info.parent_on_stack.call_id = stack_elem.promise_id;
+                break;
+            case stack_type::NONE:
+                break;
+        }
+    } else {
+        info.parent_on_stack.type = stack_type::NONE;
+    }
+}
+
+prom_id_t get_parent_promise() {
+    for (auto event : STATE(full_stack)) {
+        if(event.type == stack_type::PROMISE)
+            return event.promise_id;
+    }
+    return 0; // FIXME PROMISE_ZERO IS NOTHING, NOT AN ACTUAL PROMISE, RIGHT?!
 }
 
 arg_id_t get_argument_id(call_id_t call_id, const string & argument) { // FIXME this is overcomplicated. A simple sequence should be enough, i think.

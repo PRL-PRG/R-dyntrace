@@ -103,6 +103,19 @@ string function_call_info_line(TraceLinePrefix prefix, const closure_info_t &inf
 
         ++i;
     }
+
+    switch (info.parent_on_stack.type) {
+        case stack_type::CALL:
+            stream << " parent_id=<call>:" << info.parent_on_stack.call_id;
+            break;
+        case stack_type::PROMISE:
+            stream << " parent_id=<promise>:" << info.parent_on_stack.promise_id;
+            break;
+        case stack_type::NONE:
+            stream << " parent_id=<none>";
+            break;
+    }
+
     stream << "}\n";
 
     return stream.str();
@@ -140,6 +153,7 @@ string builtin_or_special_call_info_line(TraceLinePrefix prefix, const builtin_i
            << " function_id=" << info.fn_id;
 
     stream << " from_call_id=" << info.parent_call_id;
+    stream << " in_prom=" << info.in_prom_id;
 
     if (info.loc.empty())
         stream << " location=<unknown>";
@@ -152,6 +166,18 @@ string builtin_or_special_call_info_line(TraceLinePrefix prefix, const builtin_i
         stream << " callsite=" << info.callsite;
 
     stream << " compiled=" << (info.fn_compiled ? "true" : "false");
+
+    switch (info.parent_on_stack.type) {
+        case stack_type::CALL:
+            stream << " parent_id=<call>:" << info.parent_on_stack.call_id;
+            break;
+        case stack_type::PROMISE:
+            stream << " parent_id=<promise>:" << info.parent_on_stack.promise_id;
+            break;
+        case stack_type::NONE:
+            stream << " parent_id=<none>";
+            break;
+    }
 
     stream << "\n";
 
@@ -250,15 +276,13 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
             break;
     }
 
-    auto num_fmt = call_id_is_pointer ? hex : dec;
-    string num_pref =  call_id_is_pointer ? "0x" : "";
-
     // FIXME (1) sometimes name is empty and it prints name anyway instead of unknown...
     // FIXME (2) when outputting to file name is always unknown, even though in many cases it should be known
     stream << " name=" << (info.name.empty() ? "<unknown>" : info.name)
            << " id=" << info.prom_id
-           << " in_call=" << num_pref << num_fmt << info.in_call_id
-           << " from_call=" << num_pref << num_fmt << info.from_call_id;
+           << " in_call=" << info.in_call_id
+           << " from_call=" << info.from_call_id
+           << " in_prom=" << info.in_prom_id;
 
     switch (info.lifestyle) {
         case lifestyle_type::LOCAL:
@@ -289,7 +313,17 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
 
     stream << " return_type=" << sexp_type_to_string(info.return_type);
 
-    stream << " prom_parent=" << info.prom_parent;
+    switch (info.parent_on_stack.type) {
+        case stack_type::CALL:
+            stream << " parent_id=<call>:" << info.parent_on_stack.call_id;
+            break;
+        case stack_type::PROMISE:
+            stream << " parent_id=<promise>:" << info.parent_on_stack.promise_id;
+            break;
+        case stack_type::NONE:
+            stream << " parent_id=<none>";
+            break;
+    }
 
     stream << "\n";
 

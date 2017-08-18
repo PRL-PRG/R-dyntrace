@@ -33,7 +33,6 @@ void tracer_state_t::finish_pass() {
     promise_origin.clear();
 }
 
-// TODO returning call ids through a vector. seems kludgy... is there a better way to do this?
 void tracer_state_t::adjust_stacks(SEXP rho, unwind_info_t & info) {
     call_id_t call_id;
     env_addr_t call_addr;
@@ -42,30 +41,21 @@ void tracer_state_t::adjust_stacks(SEXP rho, unwind_info_t & info) {
     //(call_id = fun_stack.top()) && get_sexp_address(rho) != call_id
 
     while (!fun_stack.empty() && (call_addr = curr_env_stack.top()) && get_sexp_address(rho) != call_addr) {
-        call_stack_elem_t elem = fun_stack.back();
+        auto elem = fun_stack.back();
         call_id = get<0>(elem);
         curr_env_stack.pop();
-
         fun_stack.pop_back();
 
         info.unwound_calls.push_back(call_id);
 
-        if(!prom_stack.empty()) {
-            prom_id_t prom_id;
-            call_id_t prom_parent_call_id;
-            do {
-                prom_stack_elem_t elem = prom_stack.back();
-                prom_id = elem.first;
-                prom_parent_call_id = elem.second;
-                if (call_id == prom_parent_call_id) {
-                    info.unwound_promises.push_back(prom_id);
-                    prom_stack.pop_back();
-                    continue;
-                }
-                goto outside_promise_loop;
-            } while (true);//(call_id == prom_parent_call_id);
-        }
+        while(!full_stack.empty()) {
+            auto event = full_stack.back();
+            full_stack.pop_back();
 
+            if (event.type == stack_type::CALL)
+                if (event.call_id == call_id)
+                    goto outside_promise_loop;
+        }
         outside_promise_loop:;
     }
 }

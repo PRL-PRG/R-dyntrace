@@ -69,9 +69,9 @@ struct trace_promises {
             STATE(fun_stack.clear());
         }
 
-        if (!STATE(prom_stack).empty()) {
-            Rprintf("Promise stack is not balanced: %d remaining.", STATE(prom_stack).size());
-            STATE(prom_stack).clear();
+        if (!STATE(full_stack).empty()) {
+            Rprintf("Function/promise stack is not balanced: %d remaining.", STATE(full_stack).size());
+            STATE(full_stack).clear();
         }
 
         gc_toggle_restore(gc_enabled);

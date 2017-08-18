@@ -167,6 +167,16 @@ enum class sexp_type {
     OMEGA = 69
 };
 
+enum class stack_type {PROMISE, CALL, NONE};
+
+struct stack_event_t {
+    stack_type type;
+    union {
+        prom_id_t promise_id;
+        call_id_t call_id;
+    };
+};
+
 typedef vector<sexp_type> full_sexp_type;
 
 string sexp_type_to_string(sexp_type);
@@ -175,20 +185,23 @@ SEXPTYPE sexp_type_to_SEXPTYPE(sexp_type);
 typedef map<std::string, std::string> metadata_t;
 
 struct call_info_t {
-    function_type fn_type;
-    fn_id_t       fn_id;
-    fn_addr_t     fn_addr;
-    string        fn_definition;
-    string        loc;
-    string        callsite;
-    bool          fn_compiled;
+    function_type  fn_type;
+    fn_id_t        fn_id;
+    fn_addr_t      fn_addr; // TODO unnecessary?
+    string         fn_definition;
+    string         loc;
+    string         callsite;
+    bool           fn_compiled;
 
-    string        name; // fully qualified function name, if available
-    call_id_t     call_id;
-    env_addr_t    call_ptr;
-    call_id_t     parent_call_id; // the id of the parent call that executed this call
+    string         name; // fully qualified function name, if available
+    call_id_t      call_id;
+    env_addr_t     call_ptr;
+    call_id_t      parent_call_id; // the id of the parent call that executed this call
+    prom_id_t      in_prom_id;
 
     recursion_type recursion;
+
+    stack_event_t  parent_on_stack;
 };
 
 struct closure_info_t : call_info_t {
@@ -207,13 +220,14 @@ struct prom_basic_info_t {
 
 struct prom_info_t : prom_basic_info_t {
     string            name;
+    prom_id_t         in_prom_id;
     call_id_t         in_call_id;
     call_id_t         from_call_id;
     lifestyle_type    lifestyle;
-    prom_id_t         prom_parent;
     int               effective_distance_from_origin;
     int               actual_distance_from_origin;
     sexp_type         return_type;
+    stack_event_t     parent_on_stack;
 };
 
 struct unwind_info_t {
@@ -254,7 +268,9 @@ bool negative_promise_already_inserted(prom_id_t id);
 
 // Wraper for findVar. Does not look up the value if it already is PROMSXP.
 SEXP get_promise(SEXP var, SEXP rho);
-prom_id_t get_promise_parent();
+void get_stack_parent(prom_info_t & info);
+void get_stack_parent(call_info_t & info);
+prom_id_t get_parent_promise();
 arg_id_t get_argument_id(call_id_t call_id, const string & argument);
 arglist_t get_arguments(call_id_t call_id, SEXP op, SEXP rho);
 

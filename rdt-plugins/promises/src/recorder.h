@@ -85,6 +85,14 @@ public:
 
         info.recursion = is_recursive(info.fn_id);
 
+        get_stack_parent(info);
+        info.in_prom_id = get_parent_promise();
+
+        stack_event_t stack_elem;
+        stack_elem.type = stack_type::CALL;
+        stack_elem.call_id = info.call_id;
+        STATE(full_stack).push_back(stack_elem);
+
         return info;
     }
 
@@ -126,6 +134,10 @@ public:
         info.parent_call_id = get<0>(elem_parent);
 
         info.recursion = is_recursive(info.fn_id);
+
+        STATE(full_stack).pop_back();
+        get_stack_parent(info);
+        info.in_prom_id = get_parent_promise();
 
         return info;
     }
@@ -170,6 +182,14 @@ public:
 
         info.recursion = is_recursive(info.fn_id);
 
+        get_stack_parent(info);
+        info.in_prom_id = get_parent_promise();
+
+        stack_event_t stack_elem;
+        stack_elem.type = stack_type::CALL;
+        stack_elem.call_id = info.call_id;
+        STATE(full_stack).push_back(stack_elem);
+
         return info;
     }
 
@@ -202,6 +222,10 @@ public:
         if (callsite != NULL)
             info.callsite = callsite;
         free(callsite);
+
+        STATE(full_stack).pop_back();
+        get_stack_parent(info);
+        info.in_prom_id = get_parent_promise();
 
         return info;
     }
@@ -364,8 +388,8 @@ public:
         SEXP promise_expression = get_promise(symbol, rho);
         info.prom_id = get_promise_id(promise_expression);
 
-        call_stack_elem_t stack_elem = STATE(fun_stack).back();
-        info.in_call_id = get<0>(stack_elem);
+        call_stack_elem_t call_stack_elem = STATE(fun_stack).back();
+        info.in_call_id = get<0>(call_stack_elem);
         info.from_call_id = STATE(promise_origin)[info.prom_id];
 
         set_distances_and_lifestyle(info);
@@ -374,8 +398,13 @@ public:
         get_full_type(promise_expression, rho, info.full_type);
         info.return_type = sexp_type::OMEGA;
 
-        info.prom_parent = get_promise_parent();
-        STATE(prom_stack).push_back(make_pair(info.prom_id, info.in_call_id));
+        get_stack_parent(info);
+        info.in_prom_id = get_parent_promise();
+
+        stack_event_t stack_elem;
+        stack_elem.type = stack_type::PROMISE;
+        stack_elem.promise_id = info.prom_id;
+        STATE(full_stack).push_back(stack_elem);
 
         return info;
     }
@@ -400,8 +429,8 @@ public:
         get_full_type(promise_expression, rho, info.full_type);
         info.return_type = static_cast<sexp_type>(TYPEOF(val));
 
-        STATE(prom_stack).pop_back();
-        info.prom_parent = get_promise_parent();
+        STATE(full_stack).pop_back();
+        get_stack_parent(info);
 
         return info;
     }
@@ -426,7 +455,7 @@ public:
         info.full_type.push_back(sexp_type::OMEGA);
         info.return_type = static_cast<sexp_type>(TYPEOF(val));
 
-        info.prom_parent = get_promise_parent();
+        get_stack_parent(info);
 
         return info;
     }
