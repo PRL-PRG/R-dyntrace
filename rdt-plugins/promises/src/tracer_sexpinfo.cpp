@@ -136,7 +136,7 @@ SEXP get_promise(SEXP var, SEXP rho) {
 prom_id_t get_promise_parent() {
     if (!STATE(prom_stack).empty()) {
         prom_stack_elem_t elem = STATE(prom_stack).back();
-        return elem;
+        return elem.first;
     } else {
         return 0;
     }

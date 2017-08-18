@@ -20,7 +20,7 @@
 using namespace std;
 
 typedef tuple<call_id_t, fn_id_t, function_type> call_stack_elem_t;
-typedef prom_id_t prom_stack_elem_t;
+typedef pair<prom_id_t, call_id_t> prom_stack_elem_t;
 typedef tuple<prom_id_t, unsigned int, unsigned int> prom_key_t;
 
 struct prom_id_triple_hash {
@@ -68,7 +68,8 @@ struct tracer_state_t {
     void finish_pass();
     // When doing longjump (exception thrown, etc.) this function gets the target environment
     // and unwinds function call stack until that environment is on top. It also fixes indentation.
-    void adjust_fun_stack(SEXP rho, vector<call_id_t> & unwound_calls);
+    void adjust_stacks(SEXP rho, unwind_info_t & info);
+//    void adjust_prom_stack(SEXP rho, vector<prom_id_t> & unwound_prom);
 
     static tracer_state_t& get_instance();
 

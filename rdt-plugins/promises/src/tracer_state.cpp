@@ -34,7 +34,7 @@ void tracer_state_t::finish_pass() {
 }
 
 // TODO returning call ids through a vector. seems kludgy... is there a better way to do this?
-void tracer_state_t::adjust_fun_stack(SEXP rho, vector<call_id_t> & unwound_calls) {
+void tracer_state_t::adjust_stacks(SEXP rho, unwind_info_t & info) {
     call_id_t call_id;
     env_addr_t call_addr;
 
@@ -48,9 +48,45 @@ void tracer_state_t::adjust_fun_stack(SEXP rho, vector<call_id_t> & unwound_call
 
         fun_stack.pop_back();
 
-        unwound_calls.push_back(call_id);
+        info.unwound_calls.push_back(call_id);
+
+        if(!prom_stack.empty()) {
+            prom_id_t prom_id;
+            call_id_t prom_parent_call_id;
+            do {
+                prom_stack_elem_t elem = prom_stack.back();
+                prom_id = elem.first;
+                prom_parent_call_id = elem.second;
+                if (call_id == prom_parent_call_id) {
+                    info.unwound_promises.push_back(prom_id);
+                    prom_stack.pop_back();
+                    continue;
+                }
+                goto outside_promise_loop;
+            } while (true);//(call_id == prom_parent_call_id);
+        }
+
+        outside_promise_loop:;
     }
 }
+
+//void tracer_state_t::adjust_prom_stack(SEXP rho, vector<prom_id_t> & unwound_promises) {
+//    prom_id_t prom_id;
+//    env_addr_t call_addr;
+//
+//    // XXX remnant of RDT_CALL_ID
+//    //(call_id = fun_stack.top()) && get_sexp_address(rho) != call_id
+//
+//    while (!fun_stack.empty() && (call_addr = curr_env_stack.top()) && get_sexp_address(rho) != call_addr) {
+//        prom_stack_elem_t elem = prom_stack.back();
+//        prom_id = elem.first;
+//        curr_env_stack.pop();
+//
+//        fun_stack.pop_back();
+//
+//        unwound_promises.push_back(prom_id);
+//    }
+//}
 
 tracer_state_t::tracer_state_t() {
     indent = 0;

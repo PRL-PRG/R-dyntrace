@@ -23,7 +23,7 @@ public:
     void promise_lifecycle(const prom_gc_info_t & info);
     void promise_created(const prom_basic_info_t & info);
     void promise_lookup(const prom_info_t & info);
-    void unwind(const vector<call_id_t> &) {};
+    void unwind(const unwind_info_t &) {};
 };
 
 #endif //R_3_3_1_SQL_RECORDER_H

@@ -29,7 +29,7 @@ public:
     void promise_lifecycle(const prom_gc_info_t & info);
     void vector_alloc(const type_gc_info_t & info);
     void gc_exit(const gc_info_t & info);
-    void unwind(const vector<call_id_t> &);
+    void unwind(const unwind_info_t & info);
 };
 
 // Specialize composite tracer for SQL comments

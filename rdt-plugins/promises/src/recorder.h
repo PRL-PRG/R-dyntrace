@@ -375,7 +375,7 @@ public:
         info.return_type = sexp_type::OMEGA;
 
         info.prom_parent = get_promise_parent();
-        STATE(prom_stack).push_back(info.prom_id);
+        STATE(prom_stack).push_back(make_pair(info.prom_id, info.in_call_id));
 
         return info;
     }
@@ -460,7 +460,7 @@ public:
     DELEGATE(init_recorder)
     DELEGATE(start_trace, metadata_t)
     DELEGATE(finish_trace)
-    DELEGATE(unwind, vector<call_id_t>)
+    DELEGATE(unwind, unwind_info_t)
 
 #undef DELEGATE
 #undef DELEGATE1
@@ -514,7 +514,7 @@ public:
     COMPOSE(init_recorder)
     COMPOSE(start_trace, metadata_t)
     COMPOSE(finish_trace)
-    COMPOSE(unwind, vector<call_id_t>)
+    COMPOSE(unwind, unwind_info_t)
 
 #undef COMPOSE
 #undef COMPOSE1

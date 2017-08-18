@@ -62,15 +62,16 @@ struct trace_promises {
         int gc_enabled = gc_toggle_off();
 
         tracer_state().finish_pass();
-
         rec.finish_trace_process();
 
         if (!STATE(fun_stack).empty()) {
-            Rprintf("Function stack is not balanced.");
+            Rprintf("Function stack is not balanced: %d remaining.", STATE(fun_stack).size());
+            STATE(fun_stack.clear());
         }
 
         if (!STATE(prom_stack).empty()) {
-            Rprintf("Promise stack is not balanced.");
+            Rprintf("Promise stack is not balanced: %d remaining.", STATE(prom_stack).size());
+            STATE(prom_stack).clear();
         }
 
         gc_toggle_restore(gc_enabled);
@@ -351,8 +352,12 @@ struct trace_promises {
         PROTECT(val);
 
         vector<call_id_t> unwound_calls;
-        tracer_state().adjust_fun_stack(rho, unwound_calls);
-        rec.unwind_process(unwound_calls);
+        vector<prom_id_t> unwound_promises;
+        unwind_info_t info;
+
+        tracer_state().adjust_stacks(rho, info);
+
+        rec.unwind_process(info);
 
         UNPROTECT(2);
 

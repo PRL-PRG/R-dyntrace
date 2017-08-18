@@ -158,14 +158,31 @@ string builtin_or_special_call_info_line(TraceLinePrefix prefix, const builtin_i
     return stream.str();
 }
 
-string unwind_info_line(TraceLinePrefix prefix, const call_id_t call_id, bool indent, bool as_sql_comment, bool call_id_is_pointer) {
+string unwind_call_info_line(TraceLinePrefix prefix, const call_id_t call_id, bool indent, bool as_sql_comment, bool call_id_is_pointer) {
     stringstream stream;
     prepend_prefix(stream, prefix, indent, as_sql_comment);
 
-    auto num_fmt = call_id_is_pointer ? hex : dec;
-    string num_pref =  call_id_is_pointer ? "0x" : "";
+    stream << "unwind call_id=" << call_id << "\n";
 
-    stream << "unwind call_id=" << num_pref << num_fmt << call_id << "\n";
+    return stream.str();
+}
+
+string unwind_promises_info_line(TraceLinePrefix prefix, const vector<prom_id_t> & unwound_promises, bool indent, bool as_sql_comment, bool call_id_is_pointer) {
+    stringstream stream;
+    prepend_prefix(stream, prefix, indent, as_sql_comment);
+
+    stream << "unwind promises=";
+
+    bool first = true;
+    for (prom_id_t prom_id : unwound_promises) {
+        if(!first)
+            stream << " ";
+        else
+            first = false;
+        stream << prom_id;
+    }
+
+    stream << "\n";
 
     return stream.str();
 }
@@ -481,19 +498,28 @@ void trace_recorder_t::finish_trace() {
     multiplexer::close(tracer_conf.outputs);
 }
 
-void trace_recorder_t::unwind(const vector<call_id_t> & unwound_calls) {
+void trace_recorder_t::unwind(const unwind_info_t & info) {
     stringstream statement;
 
-    for (call_id_t call_id : unwound_calls) {
+    for (call_id_t call_id : info.unwound_calls) {
         if (tracer_conf.pretty_print) {
             STATE(indent) = STATE(curr_fn_indent_level).top();
             STATE(curr_fn_indent_level).pop();
             STATE(indent) -= tracer_conf.indent_width;
         }
 
-        statement << unwind_info_line(
+        statement << unwind_call_info_line(
                 TraceLinePrefix::EXIT,
                 call_id,
+                tracer_conf.pretty_print,
+                /*as_sql_comment=*/render_as_sql_comment,
+                /*call_id_as_pointer=*/tracer_conf.call_id_use_ptr_fmt);
+    }
+
+    if (!info.unwound_promises.empty()) {
+        statement << unwind_promises_info_line(
+                TraceLinePrefix::EXIT,
+                info.unwound_promises,
                 tracer_conf.pretty_print,
                 /*as_sql_comment=*/render_as_sql_comment,
                 /*call_id_as_pointer=*/tracer_conf.call_id_use_ptr_fmt);

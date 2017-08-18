@@ -216,6 +216,11 @@ struct prom_info_t : prom_basic_info_t {
     sexp_type         return_type;
 };
 
+struct unwind_info_t {
+    vector<call_id_t> unwound_calls;
+    vector<prom_id_t> unwound_promises;
+};
+
 struct gc_info_t {
     int counter;
     double ncells;
