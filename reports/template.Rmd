@@ -360,14 +360,18 @@ promise.evaluation.cascade.histogram <- get_cascading_promises_evaluation_histog
 ```
 
 **Free** promises are promises that are not forced by another promise. **Non-free** promises are forced by some other promise.
+A force **cascade** is a situation where one promise forces another promise. This shows how many promise evaluations caused a cascade. I exclude the topmost promise.
+
+<div class="col2">
+<div class="together">
 
 ``` {r promise-force-freedom-histogram, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
 par(mar=c(0,2,2,2))
-pie(promise.evaluation.freedom.histogram$number, (promise.evaluation.freedom.histogram$no. %>% make_labels), main="Free promise (forces)")
+pie(promise.evaluation.freedom.histogram$number, (promise.evaluation.freedom.histogram$free %>% make_labels), main="Free promise (forces)")
 if(print_data) print(promise.evaluation.freedom.histogram %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
 ```
 
-A force **cascade** is a situation where one promise forces another promise. This shows how many promise evaluations caused a cascade. I exclude the topmost promise.
+</div>
 
 ``` {r promise-force-cascade-histogram, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
 histogram_with_labels <- 
@@ -383,6 +387,7 @@ par(mar=c(2,2,2,2))
 barplot(values, names.arg=labels, space=0, main="Cascading promise forces")
 if(print_data) print(histogram_with_labels %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
 ```
+</div>
 
 ### Promises per Call and per Function
 
@@ -519,19 +524,6 @@ par(mar=c(2,2,2,2))
 barplot(values, names.arg=labels, space=0, main="No. of force orders")
 if(print_data) print(promise.force.order.histogram_with_labels %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
 ```
-
-### Strictness
-
-``` {r strictness-data, echo=FALSE, include=FALSE}
-strict.calls.histogram <- get_call_strictness()
-strict.calls.ratio.histogram <- get_call_strictness_ratios()
-strict.calls.rate.histogram <- get_call_strictness_rate()
-strict.calls.by.type.histogram <- get_call_strictness_by_type()
-strict.functions.histogram <- get_function_strictness()
-strict.functions.rate.histogram <- get_function_strictness_rate()
-strict.functions.by.type.histogram <- get_function_strictness_by_type()
-```
-
 
 ### Most called functions
 
