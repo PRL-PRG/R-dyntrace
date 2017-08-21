@@ -8,6 +8,8 @@
 #include "tuple_for_each.h"
 #include <inspect.h>
 #include <tuple>
+#include <chrono>
+#include <ctime>
 
 //#include <Defn.h> // We need this for R_Funtab
 #include "tracer_sexpinfo.h"
@@ -32,17 +34,20 @@ private:
     }
 
 public:
-    metadata_t get_metadata_from_environment() {
-        metadata_t metadata;
-
+    void get_environment_metadata(metadata_t & metadata) {
         get_metadatum(metadata, "RDT_COMPILE_VIGNETTE");
         get_metadatum(metadata, "R_COMPILE_PKGS");
         get_metadatum(metadata, "R_DISABLE_BYTECODE");
         get_metadatum(metadata, "R_ENABLE_JIT");
         get_metadatum(metadata, "R_KEEP_PKG_SOURCE");
         get_metadatum(metadata, "R_ENABLE_JIT");
+    }
 
-        return metadata;
+    void get_current_time_metadata(metadata_t & metadata, string key) {
+        chrono::time_point<chrono::system_clock> time_point = chrono::system_clock::now();
+        time_t time = chrono::system_clock::to_time_t(time_point);
+        string kludge = ctime(&time);
+        metadata[key] = kludge.substr(0, kludge.length() - 1);
     }
 
     closure_info_t function_entry_get_info(const SEXP call, const SEXP op, const SEXP rho) {
@@ -498,7 +503,7 @@ public:
     DELEGATE(gc_promise_unmarked)
     DELEGATE(init_recorder)
     DELEGATE(start_trace, metadata_t)
-    DELEGATE(finish_trace)
+    DELEGATE(finish_trace, metadata_t)
     DELEGATE(unwind, unwind_info_t)
 
 #undef DELEGATE
@@ -552,7 +557,7 @@ public:
     COMPOSE(gc_promise_unmarked)
     COMPOSE(init_recorder)
     COMPOSE(start_trace, metadata_t)
-    COMPOSE(finish_trace)
+    COMPOSE(finish_trace, metadata_t)
     COMPOSE(unwind, unwind_info_t)
 
 #undef COMPOSE

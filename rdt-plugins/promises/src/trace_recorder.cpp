@@ -336,6 +336,7 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
 string start_info_line(TraceLinePrefix prefix, metadata_t metadata, bool indent, bool as_sql_comment) {
     stringstream stream;
 
+    stream << "\n";
     for(const auto & i : metadata) {
         prepend_prefix(stream, prefix, indent, as_sql_comment);
         stream << i.first << "=" << i.second << "\n";
@@ -531,7 +532,17 @@ void trace_recorder_t::start_trace(const metadata_t & info) {
             tracer_conf.outputs);
 }
 
-void trace_recorder_t::finish_trace() {
+void trace_recorder_t::finish_trace(const metadata_t & info) {
+    string statement = start_info_line(
+            TraceLinePrefix::METADATA ,
+            info,
+            /*as_sql_comment=*/render_as_sql_comment,
+            /*call_id_as_pointer=*/tracer_conf.call_id_use_ptr_fmt);
+
+    multiplexer::output(
+            multiplexer::payload_t(statement),
+            tracer_conf.outputs);
+
     multiplexer::close(tracer_conf.outputs);
 }
 

@@ -421,7 +421,14 @@ void sql_recorder_t::start_trace(const metadata_t & info) { // bool output_confi
     }
 }
 
-void sql_recorder_t::finish_trace() {
+void sql_recorder_t::finish_trace(const metadata_t & info) {
+    for(auto const & i : info) {
+        sql_stmt_t statement = make_insert_matadata_statement(wrap_nullable_string(i.first), wrap_nullable_string(i.second));
+        multiplexer::output(
+                multiplexer::payload_t(statement),
+                tracer_conf.outputs);
+    }
+
     sql_stmt_t statement = make_commit_transaction_statement();
     multiplexer::output(
             multiplexer::payload_t(statement),

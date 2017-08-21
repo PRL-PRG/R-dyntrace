@@ -11,7 +11,7 @@ class sql_recorder_t : public recorder_t<sql_recorder_t> {
 public:
     void init_recorder() {}
     void start_trace(const metadata_t & info);
-    void finish_trace();
+    void finish_trace(const metadata_t & info);
     void function_entry(const closure_info_t & info);
     void function_exit(const closure_info_t & info) {}
     void builtin_entry(const builtin_info_t & info);

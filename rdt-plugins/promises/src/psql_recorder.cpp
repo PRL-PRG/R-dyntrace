@@ -659,8 +659,15 @@ void psql_recorder_t::start_trace(const metadata_t & info) {
 #endif
 }
 
-void psql_recorder_t::finish_trace() {
+void psql_recorder_t::finish_trace(const metadata_t & info) {
 #ifdef RDT_SQLITE_SUPPORT
+    for(auto const & i : info) {
+        sqlite3_stmt *statement = populate_metadata_statement(i.first, i.second);
+        multiplexer::output(
+                multiplexer::payload_t(statement),
+                tracer_conf.outputs);
+    }
+
     multiplexer::output(
             multiplexer::payload_t(prepared_sql_transaction_commit),
             tracer_conf.outputs);

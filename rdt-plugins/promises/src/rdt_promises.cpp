@@ -13,6 +13,7 @@
 #include <unordered_set>
 #include <vector>
 
+
 #include "tracer_conf.h"
 //#include "rdt_promises/tracer_output.h"
 #include "tracer_state.h"
@@ -40,8 +41,6 @@ struct trace_promises {
     static Rec rec_impl;
     static recorder_t<Rec>& rec;
 
-    // TODO ??? can we get metadata about the program we're analysing in here?
-    // TODO: also pass environment
     static void begin(const SEXP prom) {
         PROTECT(prom);
 
@@ -49,7 +48,10 @@ struct trace_promises {
 
         tracer_state().start_pass(prom);
 
-        metadata_t metadata = rec.get_metadata_from_environment();
+        metadata_t metadata;
+        //= rec.get_metadata_from_environment();
+        rec.get_environment_metadata(metadata);
+        rec.get_current_time_metadata(metadata, "RDT_TRACE_START_TIME");
 
         rec.start_trace_process(metadata);
 
@@ -62,7 +64,11 @@ struct trace_promises {
         int gc_enabled = gc_toggle_off();
 
         tracer_state().finish_pass();
-        rec.finish_trace_process();
+
+        metadata_t metadata;
+        rec.get_current_time_metadata(metadata, "RDT_TRACE_END_TIME");
+        rec.finish_trace_process(metadata);
+
 
         if (!STATE(fun_stack).empty()) {
             Rprintf("Function stack is not balanced: %d remaining.\n", STATE(fun_stack).size());
