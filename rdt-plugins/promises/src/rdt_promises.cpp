@@ -51,7 +51,7 @@ struct trace_promises {
         metadata_t metadata;
         //= rec.get_metadata_from_environment();
         rec.get_environment_metadata(metadata);
-        rec.get_current_time_metadata(metadata, "RDT_TRACE_START_TIME");
+        rec.get_current_time_metadata(metadata, "START");
 
         rec.start_trace_process(metadata);
 
@@ -66,7 +66,7 @@ struct trace_promises {
         tracer_state().finish_pass();
 
         metadata_t metadata;
-        rec.get_current_time_metadata(metadata, "RDT_TRACE_END_TIME");
+        rec.get_current_time_metadata(metadata, "END");
         rec.finish_trace_process(metadata);
 
 

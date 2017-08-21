@@ -58,7 +58,9 @@ rdt.cmd.head <- function(first, path)
     "block={\n\n",
     sep="")
 
-rdt.cmd.tail <- paste("\n\n})\n",
+rdt.cmd.tail<- function(path)
+  paste("\n\n})\n",
+    "write('OK', '", path, "')\n",
     #############                  "gcinfo(verbose = FALSE)\n",
                       sep = "")
 
@@ -95,7 +97,7 @@ instrument.vignettes <- function(packages) {
       write(paste("[", i.packages, "/", n.packages, "::", i.vignettes, "/", n.vignettes, "/", total.vignettes, "] Writing vignette to: ", instrumented.code.path, sep=""), stdout())
 
       vignette.code <- readLines(vignette.code.path)
-      instrumented.code <- c(rdt.cmd.head(i.vignettes == 1, tracer.output.path), vignette.code, rdt.cmd.tail)      
+      instrumented.code <- c(rdt.cmd.head(i.vignettes == 1, tracer.output.path), vignette.code, rdt.cmd.tail(paste(tracer.output.path, "-", i.vignettes, "-", n.vignettes, ".ok", sep="")))      
       write(instrumented.code, instrumented.code.path)
       
       write(paste("[", i.packages, "/", n.packages, "::", i.vignettes, "/", n.vignettes, "/", total.vignettes, "] Done instrumenting vignette: ", vignette.name, " from ", package, sep=""), stdout())

@@ -43,11 +43,12 @@ public:
         get_metadatum(metadata, "R_ENABLE_JIT");
     }
 
-    void get_current_time_metadata(metadata_t & metadata, string key) {
+    void get_current_time_metadata(metadata_t & metadata, string prefix) {
         chrono::time_point<chrono::system_clock> time_point = chrono::system_clock::now();
         time_t time = chrono::system_clock::to_time_t(time_point);
         string kludge = ctime(&time);
-        metadata[key] = kludge.substr(0, kludge.length() - 1);
+        metadata["RDT_TRACE_" + prefix + "_DATE"] = kludge.substr(0, kludge.length() - 1);
+        metadata["RDT_TRACE_" + prefix + "_TIME"] = to_string(static_cast<long int>(time));
     }
 
     closure_info_t function_entry_get_info(const SEXP call, const SEXP op, const SEXP rho) {
