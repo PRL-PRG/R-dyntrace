@@ -29,10 +29,10 @@ cfg <- parse_args(OptionParser(option_list=option_list), positional_arguments=TR
 #execute.external.programs(programs)
 
 instrumented.code.dir <- paste(cfg$options$`tmp-dir`, "doc", sep="/")
-dir.create(instrumented.code.dir, showWarnings = TRUE)
+dir.create(instrumented.code.dir, recursive = TRUE, showWarnings = TRUE)
 
 log.dir <- paste(cfg$options$`tmp-dir`, "log", sep="/")
-dir.create(log.dir, showWarnings = TRUE)
+dir.create(log.dir, recursive = TRUE, showWarnings = TRUE)
 
 rdt.cmd.head <- function(first, path)
   paste(

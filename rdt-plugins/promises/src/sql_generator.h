@@ -39,7 +39,11 @@ namespace sql_generator {
 
     sql_stmt_t make_insert_promise_statement(sql_val_t id,
                                              sql_val_t type,
-                                             sql_val_t full_type);
+                                             sql_val_t full_type,
+                                             sql_val_t in_prom_id,
+                                             sql_val_t stack_parent_type,
+                                             sql_val_t stack_parent_id,
+                                             sql_val_t promise_stack_depth);
 
     sql_stmt_t make_insert_promise_evaluation_statement(sql_val_t clock,
                                                         sql_val_t event_type,
@@ -51,7 +55,8 @@ namespace sql_generator {
                                                         sql_val_t effective_distance,
                                                         sql_val_t actual_distance,
                                                         sql_val_t stack_parent_type,
-                                                        sql_val_t stack_parent_id);
+                                                        sql_val_t stack_parent_id,
+                                                        sql_val_t promise_stack_depth);
 
     sql_stmt_t make_insert_promise_return_statement(sql_val_t return_type,
                                                     sql_val_t promise_id,

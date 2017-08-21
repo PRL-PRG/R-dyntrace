@@ -28,7 +28,13 @@ sql_stmt_t insert_function_statement(const call_info_t & info) {
     sql_val_t type = from_int(tools::enum_cast(info.fn_type));
     sql_val_t compiled = from_int(info.fn_compiled ? 1 : 0);
 
-    return make_insert_function_statement(id, location, definition, type, compiled);
+    return make_insert_function_statement(
+            id,
+            location,
+            definition,
+            type,
+            compiled
+    );
 }
 
 sql_stmt_t insert_arguments_statement(const closure_info_t & info, bool align) {
@@ -48,7 +54,10 @@ sql_stmt_t insert_arguments_statement(const closure_info_t & info, bool align) {
         value_cells.push_back(cell);
     }
 
-    return make_insert_arguments_statement(value_cells, align);
+    return make_insert_arguments_statement(
+            value_cells,
+            align
+    );
 }
 
 sql_stmt_t insert_call_statement(const call_info_t & info) {
@@ -64,15 +73,36 @@ sql_stmt_t insert_call_statement(const call_info_t & info) {
     sql_val_t stack_parent_id = from_stack_event(info.parent_on_stack); // XXX relies on the fact that they're both ints.
 
 
-    return make_insert_function_call_statement(id, name, callsite, compiled, function_id, parent_call_id,
-                                               in_prom_id, stack_parent_type, stack_parent_id);
+    return make_insert_function_call_statement(
+            id,
+            name,
+            callsite,
+            compiled,
+            function_id,
+            parent_call_id,
+            in_prom_id,
+            stack_parent_type,
+            stack_parent_id
+    );
 }
 
 sql_stmt_t insert_promise_statement(const prom_basic_info_t & info) {
+    sql_val_t promise_id = from_int(info.prom_id);
+    sql_val_t promise_type = from_int(tools::enum_cast(info.prom_type));
+    sql_val_t promise_full_type = wrap_nullable_string(full_sexp_type_to_number_string(info.full_type));
+    sql_val_t in_prom_id = from_int(info.in_prom_id);
+    sql_val_t stack_parent_type = from_int(tools::enum_cast(info.parent_on_stack.type));
+    sql_val_t stack_parent_id = from_stack_event(info.parent_on_stack); // XXX relies on the fact that they're both ints.
+    sql_val_t depth = from_int(info.depth);
+
     return make_insert_promise_statement(
-            from_int(info.prom_id),
-            from_int(tools::enum_cast(info.prom_type)),
-            wrap_nullable_string(full_sexp_type_to_number_string(info.full_type))
+            promise_id,
+            promise_type,
+            promise_full_type,
+            in_prom_id,
+            stack_parent_type,
+            stack_parent_id,
+            depth
     );
 }
 
@@ -94,7 +124,10 @@ sql_stmt_t insert_promise_association_statement(const closure_info_t & info, boo
         value_cells.push_back(cell);
     }
 
-    return make_insert_promise_associations_statement(value_cells, align);
+    return make_insert_promise_associations_statement(
+            value_cells,
+            align
+    );
 }
 
 sql_stmt_t insert_promise_evaluation_statement(prom_eval_t type, const prom_info_t & info) {
@@ -109,13 +142,25 @@ sql_stmt_t insert_promise_evaluation_statement(prom_eval_t type, const prom_info
     sql_val_t actual_distance_from_origin = from_int(info.actual_distance_from_origin);
     sql_val_t stack_parent_type = from_int(tools::enum_cast(info.parent_on_stack.type));
     sql_val_t stack_parent_id = from_stack_event(info.parent_on_stack); // XXX relies on the fact that they're both ints.
+    sql_val_t depth = from_int(info.depth);
 
     // in_call_id = current call
     // from_call_id = TODO what is it
 
-    return make_insert_promise_evaluation_statement(clock, event_type, promise_id, from_call_id, in_call_id, in_prom_id,
-                                                    lifestyle, effective_distance_from_origin, actual_distance_from_origin,
-                                                    stack_parent_type, stack_parent_id);
+    return make_insert_promise_evaluation_statement(
+            clock,
+            event_type,
+            promise_id,
+            from_call_id,
+            in_call_id,
+            in_prom_id,
+            lifestyle,
+            effective_distance_from_origin,
+            actual_distance_from_origin,
+            stack_parent_type,
+            stack_parent_id,
+            depth
+    );
 }
 
 sql_stmt_t insert_promise_return_statement(const prom_info_t & info) {
@@ -123,7 +168,11 @@ sql_stmt_t insert_promise_return_statement(const prom_info_t & info) {
     sql_val_t clock = from_int(STATE(clock_id)); // FIXME
     sql_val_t promise_id = from_int(info.prom_id);
 
-    return make_insert_promise_return_statement(return_type, clock, promise_id);
+    return make_insert_promise_return_statement(
+            return_type,
+            clock,
+            promise_id
+    );
 }
 
 sql_stmt_t insert_promise_lifecycle_statement(const prom_gc_info_t & info) {
@@ -132,7 +181,11 @@ sql_stmt_t insert_promise_lifecycle_statement(const prom_gc_info_t & info) {
     sql_val_t event = from_int(info.event);
     sql_val_t gc_trigger_counter = from_int(info.gc_trigger_counter);
 
-    return make_insert_promise_lifecycle_statement(promise_id, event, gc_trigger_counter);
+    return make_insert_promise_lifecycle_statement(
+            promise_id,
+            event,
+            gc_trigger_counter
+    );
 }
 
 /* Functions connecting to the outside world, create SQL and multiplex output. */

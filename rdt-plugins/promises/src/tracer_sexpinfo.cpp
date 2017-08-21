@@ -21,11 +21,6 @@ prom_id_t get_promise_id(SEXP promise) {
     if (TYPEOF(promise) != PROMSXP)
         return RID_INVALID;
 
-    // TODO
-    // if (toplevel) {
-    //     return 0;
-    // }
-
     // A new promise is always created for each argument.
     // Even if the argument is already a promise passed from the caller, it gets re-wrapped.
     prom_addr_t prom_addr = get_sexp_address(promise);
@@ -139,11 +134,14 @@ SEXP get_promise(SEXP var, SEXP rho) {
 }
 
 prom_id_t get_parent_promise() {
-    for (auto event : STATE(full_stack)) {
+    for (std::vector<stack_event_t>::reverse_iterator iterator = STATE(full_stack).rbegin();
+         iterator != STATE(full_stack).rend();
+         ++ iterator) {
+        auto event = *iterator;
         if(event.type == stack_type::PROMISE)
             return event.promise_id;
     }
-    return 0; // FIXME PROMISE_ZERO IS NOTHING, NOT AN ACTUAL PROMISE, RIGHT?!
+    return 0; // FIXME should return a special value or something
 }
 
 size_t get_no_of_ancestor_promises_on_stack() {
