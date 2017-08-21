@@ -323,6 +323,7 @@ if(print_data) print(closure.function.compilation.histogram %>% as.data.frame %>
 <!--/div-->
 </div>
 
+<!--
 ### Recursion
 
 Determining whether a function is recursive or not from a trace is necessarily imprecise. A call ``c`` to some function ``f`` is recursive if there is at least one more call to ``f`` above ``c`` in the stack trace. Instead of talking about recursive functions, we just show what percentage of their calls is recursive under this definition.
@@ -349,6 +350,44 @@ Determining whether a function is recursive or not from a trace is necessarily i
 # if(print_data) print(recursive.functions.histogram %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
 ```
 </div>
+-->
+
+### Interaction Among Promises
+
+```{r promise-freedom, echo=FALSE, include=FALSE}
+promise.evaluation.freedom.histogram <- get_free_promise_evaluation_histogram()
+promise.evaluation.cascade.histogram <- get_cascading_promises_evaluation_histogram(include.toplevel=FALSE)
+```
+
+**Free** promises are promises that are not forced by another promise. **Non-free** promises are forced by some other promise.
+A force **cascade** is a situation where one promise forces another promise. This shows how many promise evaluations caused a cascade. I exclude the topmost promise.
+
+<div class="col2">
+<div class="together">
+
+``` {r promise-force-freedom-histogram, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
+par(mar=c(0,2,2,2))
+pie(promise.evaluation.freedom.histogram$number, (promise.evaluation.freedom.histogram$free %>% make_labels), main="Free promise (forces)")
+if(print_data) print(promise.evaluation.freedom.histogram %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
+```
+
+</div>
+
+``` {r promise-force-cascade-histogram, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
+histogram_with_labels <- 
+  promise.evaluation.cascade.histogram %>% 
+  mutate(no.of.forced.promises.inside=
+           ifelse(no.of.forced.promises.inside==Inf, 
+                  paste(">", cutoff, sep=""), 
+                  as.character(no.of.forced.promises.inside)))
+labels <- histogram_with_labels$no.of.forced.promises.inside
+values <- histogram_with_labels$number
+par(mar=c(2,2,2,2))
+
+barplot(values, names.arg=labels, space=0, main="Cascading promise forces")
+if(print_data) print(histogram_with_labels %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
+```
+</div>
 
 ### Promises per Call and per Function
 
@@ -362,6 +401,7 @@ strict.calls.by.type.histogram <- get_call_strictness_by_type()
 strict.functions.histogram <- get_function_strictness()
 strict.functions.rate.histogram <- get_function_strictness_rate()
 strict.functions.by.type.histogram <- get_function_strictness_by_type()
+#strict.arguments.histogram <- 
 ```
 
 A call is **strict** if all of its arguments are **evaluated** and none of the arguments is **escaped**. (This means that a function may pass unevaluated promises to a child call and still be strict, but it cannot leak the promise).
@@ -490,7 +530,7 @@ if(print_data) print(promise.force.order.histogram_with_labels %>% as.data.frame
 ### Calls to specific functions
 
 ```{r function-calls-selected-counts, echo=FALSE, comment=""}
-get_function_calls("^<anonymous>$", "eval", "force", "delayAssign", "return") %>% data.frame %>% transform(number=pp(number), percent=pp(percent)) %>% print(., row.names=FALSE)
+get_function_calls("^<anonymous>$", "eval", "force", "delayAssign", "return", "<-", "<<-", "print") %>% data.frame %>% transform(number=pp(number), percent=pp(percent)) %>% print(., row.names=FALSE)
 ```
 
 

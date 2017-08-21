@@ -35,7 +35,7 @@ const char *get_ns_name(SEXP op) {
         if (TYPEOF(spec) == STRSXP && LENGTH(spec) > 0) {
             return CHAR(STRING_ELT(spec, 0));  
         } else if (TYPEOF(spec) == CHARSXP) {
-            return CHAR(spec);\
+            return CHAR(spec);
         } 
     }
 

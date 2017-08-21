@@ -13,6 +13,7 @@
 #include <unordered_set>
 #include <vector>
 
+
 #include "tracer_conf.h"
 //#include "rdt_promises/tracer_output.h"
 #include "tracer_state.h"
@@ -40,8 +41,6 @@ struct trace_promises {
     static Rec rec_impl;
     static recorder_t<Rec>& rec;
 
-    // TODO ??? can we get metadata about the program we're analysing in here?
-    // TODO: also pass environment
     static void begin(const SEXP prom) {
         PROTECT(prom);
 
@@ -49,7 +48,10 @@ struct trace_promises {
 
         tracer_state().start_pass(prom);
 
-        metadata_t metadata = rec.get_metadata_from_environment();
+        metadata_t metadata;
+        //= rec.get_metadata_from_environment();
+        rec.get_environment_metadata(metadata);
+        rec.get_current_time_metadata(metadata, "START");
 
         rec.start_trace_process(metadata);
 
@@ -63,7 +65,20 @@ struct trace_promises {
 
         tracer_state().finish_pass();
 
-        rec.finish_trace_process();
+        metadata_t metadata;
+        rec.get_current_time_metadata(metadata, "END");
+        rec.finish_trace_process(metadata);
+
+
+        if (!STATE(fun_stack).empty()) {
+            Rprintf("Function stack is not balanced: %d remaining.\n", STATE(fun_stack).size());
+            STATE(fun_stack).clear();
+        }
+
+        if (!STATE(full_stack).empty()) {
+            Rprintf("Function/promise stack is not balanced: %d remaining.\n", STATE(full_stack).size());
+            STATE(full_stack).clear();
+        }
 
         gc_toggle_restore(gc_enabled);
     }
@@ -343,8 +358,12 @@ struct trace_promises {
         PROTECT(val);
 
         vector<call_id_t> unwound_calls;
-        tracer_state().adjust_fun_stack(rho, unwound_calls);
-        rec.unwind_process(unwound_calls);
+        vector<prom_id_t> unwound_promises;
+        unwind_info_t info;
+
+        tracer_state().adjust_stacks(rho, info);
+
+        rec.unwind_process(info);
 
         UNPROTECT(2);
 

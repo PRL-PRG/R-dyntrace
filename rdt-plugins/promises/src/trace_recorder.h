@@ -17,7 +17,7 @@ public:
 
     void init_recorder();
     void start_trace(const metadata_t & info);
-    void finish_trace();
+    void finish_trace(const metadata_t & info);
     void function_entry(const closure_info_t & info);
     void function_exit(const closure_info_t & info);
     void builtin_entry(const builtin_info_t & info);
@@ -29,7 +29,7 @@ public:
     void promise_lifecycle(const prom_gc_info_t & info);
     void vector_alloc(const type_gc_info_t & info);
     void gc_exit(const gc_info_t & info);
-    void unwind(const vector<call_id_t> &);
+    void unwind(const unwind_info_t & info);
 };
 
 // Specialize composite tracer for SQL comments

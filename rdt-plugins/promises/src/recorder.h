@@ -8,6 +8,8 @@
 #include "tuple_for_each.h"
 #include <inspect.h>
 #include <tuple>
+#include <chrono>
+#include <ctime>
 
 //#include <Defn.h> // We need this for R_Funtab
 #include "tracer_sexpinfo.h"
@@ -32,17 +34,21 @@ private:
     }
 
 public:
-    metadata_t get_metadata_from_environment() {
-        metadata_t metadata;
-
+    void get_environment_metadata(metadata_t & metadata) {
         get_metadatum(metadata, "RDT_COMPILE_VIGNETTE");
         get_metadatum(metadata, "R_COMPILE_PKGS");
         get_metadatum(metadata, "R_DISABLE_BYTECODE");
         get_metadatum(metadata, "R_ENABLE_JIT");
         get_metadatum(metadata, "R_KEEP_PKG_SOURCE");
         get_metadatum(metadata, "R_ENABLE_JIT");
+    }
 
-        return metadata;
+    void get_current_time_metadata(metadata_t & metadata, string prefix) {
+        chrono::time_point<chrono::system_clock> time_point = chrono::system_clock::now();
+        time_t time = chrono::system_clock::to_time_t(time_point);
+        string kludge = ctime(&time);
+        metadata["RDT_TRACE_" + prefix + "_DATE"] = kludge.substr(0, kludge.length() - 1);
+        metadata["RDT_TRACE_" + prefix + "_TIME"] = to_string(static_cast<long int>(time));
     }
 
     closure_info_t function_entry_get_info(const SEXP call, const SEXP op, const SEXP rho) {
@@ -85,6 +91,14 @@ public:
 
         info.recursion = is_recursive(info.fn_id);
 
+        get_stack_parent(info, STATE(full_stack));
+        info.in_prom_id = get_parent_promise();
+
+        stack_event_t stack_elem;
+        stack_elem.type = stack_type::CALL;
+        stack_elem.call_id = info.call_id;
+        STATE(full_stack).push_back(stack_elem);
+
         return info;
     }
 
@@ -126,6 +140,10 @@ public:
         info.parent_call_id = get<0>(elem_parent);
 
         info.recursion = is_recursive(info.fn_id);
+
+        STATE(full_stack).pop_back();
+        get_stack_parent(info, STATE(full_stack));
+        info.in_prom_id = get_parent_promise();
 
         return info;
     }
@@ -170,6 +188,14 @@ public:
 
         info.recursion = is_recursive(info.fn_id);
 
+        get_stack_parent(info, STATE(full_stack));
+        info.in_prom_id = get_parent_promise();
+
+        stack_event_t stack_elem;
+        stack_elem.type = stack_type::CALL;
+        stack_elem.call_id = info.call_id;
+        STATE(full_stack).push_back(stack_elem);
+
         return info;
     }
 
@@ -202,6 +228,10 @@ public:
         if (callsite != NULL)
             info.callsite = callsite;
         free(callsite);
+
+        STATE(full_stack).pop_back();
+        get_stack_parent(info, STATE(full_stack));
+        info.in_prom_id = get_parent_promise();
 
         return info;
     }
@@ -351,6 +381,10 @@ public:
         info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(promise)));
         get_full_type(promise, rho, info.full_type);
 
+        get_stack_parent(info, STATE(full_stack));
+        info.in_prom_id = get_parent_promise();
+        info.depth = get_no_of_ancestor_promises_on_stack();
+
         return info;
     }
 
@@ -364,8 +398,8 @@ public:
         SEXP promise_expression = get_promise(symbol, rho);
         info.prom_id = get_promise_id(promise_expression);
 
-        call_stack_elem_t stack_elem = STATE(fun_stack).back();
-        info.in_call_id = get<0>(stack_elem);
+        call_stack_elem_t call_stack_elem = STATE(fun_stack).back();
+        info.in_call_id = get<0>(call_stack_elem);
         info.from_call_id = STATE(promise_origin)[info.prom_id];
 
         set_distances_and_lifestyle(info);
@@ -374,6 +408,14 @@ public:
         get_full_type(promise_expression, rho, info.full_type);
         info.return_type = sexp_type::OMEGA;
 
+        get_stack_parent(info, STATE(full_stack));
+        info.in_prom_id = get_parent_promise();
+        info.depth = get_no_of_ancestor_promises_on_stack();
+
+        stack_event_t stack_elem;
+        stack_elem.type = stack_type::PROMISE;
+        stack_elem.promise_id = info.prom_id;
+        STATE(full_stack).push_back(stack_elem);
 
         return info;
     }
@@ -398,6 +440,12 @@ public:
         get_full_type(promise_expression, rho, info.full_type);
         info.return_type = static_cast<sexp_type>(TYPEOF(val));
 
+        STATE(full_stack).pop_back();
+
+        get_stack_parent(info, STATE(full_stack));
+        info.in_prom_id = get_parent_promise();
+        info.depth = get_no_of_ancestor_promises_on_stack();
+
         return info;
     }
 
@@ -420,6 +468,10 @@ public:
         info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(promise_expression)));
         info.full_type.push_back(sexp_type::OMEGA);
         info.return_type = static_cast<sexp_type>(TYPEOF(val));
+
+        get_stack_parent(info, STATE(full_stack));
+        info.in_prom_id = get_parent_promise();
+        info.depth = get_no_of_ancestor_promises_on_stack();
 
         return info;
     }
@@ -452,8 +504,8 @@ public:
     DELEGATE(gc_promise_unmarked)
     DELEGATE(init_recorder)
     DELEGATE(start_trace, metadata_t)
-    DELEGATE(finish_trace)
-    DELEGATE(unwind, vector<call_id_t>)
+    DELEGATE(finish_trace, metadata_t)
+    DELEGATE(unwind, unwind_info_t)
 
 #undef DELEGATE
 #undef DELEGATE1
@@ -506,8 +558,8 @@ public:
     COMPOSE(gc_promise_unmarked)
     COMPOSE(init_recorder)
     COMPOSE(start_trace, metadata_t)
-    COMPOSE(finish_trace)
-    COMPOSE(unwind, vector<call_id_t>)
+    COMPOSE(finish_trace, metadata_t)
+    COMPOSE(unwind, unwind_info_t)
 
 #undef COMPOSE
 #undef COMPOSE1

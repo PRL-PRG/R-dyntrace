@@ -29,23 +29,23 @@ cfg <- parse_args(OptionParser(option_list=option_list), positional_arguments=TR
 #execute.external.programs(programs)
 
 instrumented.code.dir <- paste(cfg$options$`tmp-dir`, "doc", sep="/")
-dir.create(instrumented.code.dir, showWarnings = TRUE)
+dir.create(instrumented.code.dir, recursive = TRUE, showWarnings = TRUE)
 
 log.dir <- paste(cfg$options$`tmp-dir`, "log", sep="/")
-dir.create(log.dir, showWarnings = TRUE)
+dir.create(log.dir, recursive = TRUE, showWarnings = TRUE)
 
 rdt.cmd.head <- function(first, path)
   paste(
-    "loadNamespace <- function(package, lib.loc = NULL,\n",
-    "                          keep.source = getOption('keep.source.pkgs'),\n",
-    "                          partial = FALSE, declarativeOnly = FALSE) {\n",
-    "    tryCatch(base::loadNamespace(package, lib.loc, keep.source, partial, declarativeOnly),\n",
-    "        error = function(e) {\n",
-    "            install.packages(package, repos='https://cloud.r-project.org/')\n",
-    "            base::loadNamespace(package, lib.loc, keep.source, partial, declarativeOnly)\n",
-    "        })\n",
-    "}\n\n",
-    "gcinfo(verbose = TRUE)\n",
+   # "loadNamespace <- function(package, lib.loc = NULL,\n",
+  #  "                          keep.source = getOption('keep.source.pkgs'),\n",
+  #  "                          partial = FALSE, declarativeOnly = FALSE) {\n",
+  #  "    tryCatch(base::loadNamespace(package, lib.loc, keep.source, partial, declarativeOnly),\n",
+  #  "        error = function(e) {\n",
+  #  "            install.packages(package, repos='https://cloud.r-project.org/')\n",
+  #  "            base::loadNamespace(package, lib.loc, keep.source, partial, declarativeOnly)\n",
+  #  "        })\n",
+  #  "}\n\n",
+    ###############"gcinfo(verbose = TRUE)\n",
     "Rdt(tracer='promises',\n",
     "output='d',\n", 
     "path='", path, "',\n", 
@@ -58,8 +58,10 @@ rdt.cmd.head <- function(first, path)
     "block={\n\n",
     sep="")
 
-rdt.cmd.tail <- paste("\n\n})\n",
-                      "gcinfo(verbose = FALSE)\n",
+rdt.cmd.tail<- function(path)
+  paste("\n\n})\n",
+    "write('OK', '", path, "')\n",
+    #############                  "gcinfo(verbose = FALSE)\n",
                       sep = "")
 
 instrument.vignettes <- function(packages) {
@@ -95,7 +97,7 @@ instrument.vignettes <- function(packages) {
       write(paste("[", i.packages, "/", n.packages, "::", i.vignettes, "/", n.vignettes, "/", total.vignettes, "] Writing vignette to: ", instrumented.code.path, sep=""), stdout())
 
       vignette.code <- readLines(vignette.code.path)
-      instrumented.code <- c(rdt.cmd.head(i.vignettes == 1, tracer.output.path), vignette.code, rdt.cmd.tail)      
+      instrumented.code <- c(rdt.cmd.head(i.vignettes == 1, tracer.output.path), vignette.code, rdt.cmd.tail(paste(tracer.output.path, "-", i.vignettes, "-", n.vignettes, ".ok", sep="")))      
       write(instrumented.code, instrumented.code.path)
       
       write(paste("[", i.packages, "/", n.packages, "::", i.vignettes, "/", n.vignettes, "/", total.vignettes, "] Done instrumenting vignette: ", vignette.name, " from ", package, sep=""), stdout())

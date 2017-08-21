@@ -1092,6 +1092,73 @@ get_strict_function_promise_force_order_histogram <- function(function_promise_e
   }
 }
 
+## TODO : promise IDs are wrong! 
+##        the 2nd, 3rd etc. vignettes don't 
+get_free_promise_evaluation_histogram <- function() {
+  promise.forces %>% 
+    mutate(free=in_prom_id==0) %>% 
+    group_by(free) %>% count() %>% rename(number=n) %>% 
+    as.data.frame %>%
+    mutate(free=as.logical(free), percent=100*number/n.promise.forces)
+}
+
+get_cascading_promises_evaluation_histogram <- function(cutoff=NA, include.toplevel=TRUE) {
+  basic <- 
+    promise.forces %>% 
+    group_by(in_prom_id) %>% count() %>% rename(no.of.forced.promises.inside=n) %>% 
+    collect
+
+  grouped.real <- 
+    basic %>% 
+    mutate(toplevel=in_prom_id == 0) %>% 
+    group_by(toplevel, no.of.forced.promises.inside) %>% count() %>% rename(number=n) %>% 
+    as.data.frame
+  
+  grouped.zeros <- 
+    data.frame(toplevel=FALSE, 
+               no.of.forced.promises.inside=0, 
+               number=n.promise.forces-sum(grouped.real$number))
+  
+  full <- rbind(grouped.zeros, grouped.real)
+  
+  if (!include.toplevel) {
+    full <- full %>% filter(toplevel==FALSE) %>% select(-toplevel)
+    total <- sum(full$number)
+    full <- full %>% mutate(percent=100*number/total)
+  } else {
+    full <- full %>% mutate(percent=100*number/n.promise.forces)
+  }
+
+  if (is.na(cutoff)) {
+    full
+  } else {
+    above <- 
+      if(include.toplevel)
+        full %>% 
+        filter(no.of.forced.promises.inside > cutoff) %>% 
+        ungroup %>% collect %>% group_by(toplevel) %>%
+        summarise(no.of.forced.promises.inside=Inf, 
+                  number=sum(number), 
+                  percent=sum(percent))
+      else
+        full %>% 
+        filter(no.of.forced.promises.inside > cutoff) %>% 
+        ungroup %>% collect %>% 
+        summarise(no.of.forced.promises.inside=Inf, 
+                  number=sum(number), 
+                  percent=sum(percent))
+    
+    below <- 
+      full %>% 
+      filter(no.of.forced.promises.inside <= cutoff)
+    rbind(below, above)
+  }
+}
+
+get_cascading_promises_histogram <- function() {
+  ### TODO... but if it's literally zero, then what's the point?!
+}
+
 ## TODO make indexes?
 fold_databases <- function(result_path, ...) {
   paths = c(...)
