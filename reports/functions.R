@@ -1094,13 +1094,73 @@ get_strict_function_promise_force_order_histogram <- function(function_promise_e
 
 ## TODO : promise IDs are wrong! 
 ##        the 2nd, 3rd etc. vignettes don't 
+# get_free_promise_evaluation_histogram <- function() {
+#   promise.forces %>% 
+#     mutate(free=in_prom_id==0) %>% 
+#     group_by(free) %>% count() %>% rename(number=n) %>% 
+#     as.data.frame %>%
+#     mutate(free=as.logical(free), percent=100*number/n.promise.forces)
+# }
+
+# get_free_promise_evaluation_histogram <- function() {
+#   promise.forces %>% 
+#     mutate(free=in_prom_id==0) %>% 
+#     group_by(free) %>% count() %>% rename(number=n) %>% 
+#     as.data.frame %>%
+#     mutate(free=as.logical(free), percent=100*number/n.promise.forces)
+# }
+
 get_free_promise_evaluation_histogram <- function() {
   promise.forces %>% 
-    mutate(free=in_prom_id==0) %>% 
-    group_by(free) %>% count() %>% rename(number=n) %>% 
-    as.data.frame %>%
-    mutate(free=as.logical(free), percent=100*number/n.promise.forces)
+    mutate(free=promise_stack_depth < 2) %>% 
+    group_by(free) %>% count %>% rename(number=n) %>%
+    collect %>% ungroup %>%
+    mutate(free=as.logical(free)) %>%
+    as.data.frame
 }
+
+# assumes one promise ==> one or zero forces
+get_promises_forced_by_another_evaluation_histogram <- function() {
+  promises %>% 
+    rename(promise_id=id) %>% rename(created_in=in_prom_id) %>% select(promise_id, created_in) %>% 
+    left_join(promise.forces, by="promise_id") %>% 
+    rename(forced_in=in_prom_id) %>% select(promise_id, created_in, forced_in) %>% 
+    mutate(forced_by_another=created_in!=forced_in) %>% 
+    group_by(forced_by_another) %>% summarise(number=n()) %>% ungroup %>% 
+    collect %>% 
+    mutate(forced_by_another=as.logical(forced_by_another), percent=(100*number/n.promises))
+}
+
+get_cascading_promises_histogram <- function (cutoff=NA) {
+  basic <- promises %>% 
+    rename(promise_id=id) %>% rename(created_in=in_prom_id) %>% select(promise_id, created_in) %>% 
+    left_join(promise.forces, by="promise_id") %>% 
+    rename(forced_in=in_prom_id) %>% 
+    mutate(forced_by_another=created_in!=forced_in)
+    
+  forcing <-
+    basic %>%
+    filter(!is.na(forced_by_another)) %>%
+    filter(forced_by_another)%>%
+    group_by(forced_in) %>% summarise(number_of_forced_promises=n()) %>% 
+    group_by(number_of_forced_promises) %>% summarise(number=n()) %>%
+    data.frame
+    
+  zero <- 
+    data.frame(number_of_forced_promises = 0, 
+               number = (n.promises-forcing %>% pull(number_of_forced_promises) %>% sum))
+  
+  histogram <- rbind(zero, forcing) %>% mutate(percent=100*number/n.promises)
+  
+  if (is.na(cutoff)) {
+     histogram
+  } else {
+    above <- histogram %>% filter(number_of_forced_promises > cutoff) %>% ungroup %>% summarise(number_of_forced_promises=Inf, number=sum(number), percent=sum(percent))
+    below <- histogram %>%  filter(number_of_forced_promises <= cutoff)
+    rbind(below, above)
+  }
+}
+
 
 get_cascading_promises_evaluation_histogram <- function(cutoff=NA, include.toplevel=TRUE) {
   basic <- 
@@ -1113,7 +1173,7 @@ get_cascading_promises_evaluation_histogram <- function(cutoff=NA, include.tople
     mutate(toplevel=in_prom_id == 0) %>% 
     group_by(toplevel, no.of.forced.promises.inside) %>% count() %>% rename(number=n) %>% 
     as.data.frame
-  
+   
   grouped.zeros <- 
     data.frame(toplevel=FALSE, 
                no.of.forced.promises.inside=0, 
@@ -1153,10 +1213,6 @@ get_cascading_promises_evaluation_histogram <- function(cutoff=NA, include.tople
       filter(no.of.forced.promises.inside <= cutoff)
     rbind(below, above)
   }
-}
-
-get_cascading_promises_histogram <- function() {
-  ### TODO... but if it's literally zero, then what's the point?!
 }
 
 ## TODO make indexes?
