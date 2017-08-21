@@ -83,7 +83,7 @@ tracer_state_t::tracer_state_t() {
     clock_id = 0;
     call_id_counter = 0;
     fn_id_counter = 0;
-    prom_id_counter = 0;
+    prom_id_counter = 1; // ?
     prom_neg_id_counter = 0;
     argument_id_sequence = 0;
     gc_trigger_counter = 0;
@@ -93,7 +93,7 @@ void tracer_state_t::reset() {
     clock_id = 0;
     call_id_counter = 0;
     fn_id_counter = 0;
-    prom_id_counter = 0;
+    prom_id_counter = 1; // ?
     prom_neg_id_counter = 0;
     argument_id_sequence = 0;
     gc_trigger_counter = 0;

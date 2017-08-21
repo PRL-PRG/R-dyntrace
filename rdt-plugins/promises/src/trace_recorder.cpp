@@ -248,6 +248,7 @@ string promise_creation_info_line(TraceLinePrefix prefix, const prom_basic_info_
     stringstream stream;
     prepend_prefix(stream, prefix, indent, as_sql_comment);
     stream << "create promise id=" << info.prom_id
+           << " in_prom=" << info.in_prom_id
            << " type=" << sexp_type_to_string(info.prom_type);
 
 //    if (info.prom_type == sexp_type::BCODE)
@@ -257,6 +258,20 @@ string promise_creation_info_line(TraceLinePrefix prefix, const prom_basic_info_
 //        stream << "->" << sexp_type_to_string(info.symbol_underlying_type);
 
     stream << " full_type=" << full_sexp_type_to_string(info.full_type);
+
+    stream << " depth=" << info.depth;
+
+    switch (info.parent_on_stack.type) {
+        case stack_type::CALL:
+            stream << " parent_id=<call>:" << info.parent_on_stack.call_id;
+            break;
+        case stack_type::PROMISE:
+            stream << " parent_id=<promise>:" << info.parent_on_stack.promise_id;
+            break;
+        case stack_type::NONE:
+            stream << " parent_id=<none>";
+            break;
+    }
 
     stream << "\n";
 
@@ -312,6 +327,8 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
     stream << " type=" << sexp_type_to_string(info.prom_type);
 
     stream << " return_type=" << sexp_type_to_string(info.return_type);
+
+    stream << " depth=" << info.depth;
 
     switch (info.parent_on_stack.type) {
         case stack_type::CALL:

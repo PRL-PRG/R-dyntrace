@@ -21,6 +21,11 @@ prom_id_t get_promise_id(SEXP promise) {
     if (TYPEOF(promise) != PROMSXP)
         return RID_INVALID;
 
+    // TODO
+    // if (toplevel) {
+    //     return 0;
+    // }
+
     // A new promise is always created for each argument.
     // Even if the argument is already a promise passed from the caller, it gets re-wrapped.
     prom_addr_t prom_addr = get_sexp_address(promise);
@@ -132,55 +137,80 @@ SEXP get_promise(SEXP var, SEXP rho) {
 
     return prom;
 }
+//
+//void get_stack_parent(prom_basic_info_t & info) {
+//    //size_t size = STATE(full_stack).size();
+//    //if (size > 0) {
+//        //stack_event_t stack_elem = STATE(full_stack)[size - 1];
+//
+//    if (!STATE(full_stack).empty()) {
+//        stack_event_t stack_elem = STATE(full_stack).back();
+//        // parent type
+//        info.parent_on_stack.type = stack_elem.type;
+//        switch (info.parent_on_stack.type) {
+//            case stack_type::PROMISE:
+//                info.parent_on_stack.promise_id = stack_elem.call_id;
+//                break;
+//            case stack_type::CALL:
+//                info.parent_on_stack.call_id = stack_elem.promise_id;
+//                break;
+//            case stack_type::NONE:
+//                break;
+//        }
+//    } else {
+//        info.parent_on_stack.type = stack_type::NONE;
+//    }
+//
+//}
 
-void get_stack_parent(prom_info_t & info) {
-    //size_t size = STATE(full_stack).size();
-    //if (size > 0) {
-        //stack_event_t stack_elem = STATE(full_stack)[size - 1];
+//void get_stack_parent(prom_info_t & info) {
+//    //size_t size = STATE(full_stack).size();
+//    //if (size > 0) {
+//    //stack_event_t stack_elem = STATE(full_stack)[size - 1];
+//
+//    if (!STATE(full_stack).empty()) {
+//        stack_event_t stack_elem = STATE(full_stack).back();
+//        // parent type
+//        info.parent_on_stack.type = stack_elem.type;
+//        switch (info.parent_on_stack.type) {
+//            case stack_type::PROMISE:
+//                info.parent_on_stack.promise_id = stack_elem.call_id;
+//                break;
+//            case stack_type::CALL:
+//                info.parent_on_stack.call_id = stack_elem.promise_id;
+//                break;
+//            case stack_type::NONE:
+//                break;
+//        }
+//    } else {
+//        info.parent_on_stack.type = stack_type::NONE;
+//    }
+//
+//}
 
-    if (!STATE(full_stack).empty()) {
-        stack_event_t stack_elem = STATE(full_stack).back();
-        // parent type
-        info.parent_on_stack.type = stack_elem.type;
-        switch (info.parent_on_stack.type) {
-            case stack_type::PROMISE:
-                info.parent_on_stack.promise_id = stack_elem.call_id;
-                break;
-            case stack_type::CALL:
-                info.parent_on_stack.call_id = stack_elem.promise_id;
-                break;
-            case stack_type::NONE:
-                break;
-        }
-    } else {
-        info.parent_on_stack.type = stack_type::NONE;
-    }
-
-}
-
-void get_stack_parent(call_info_t & info) {
-    //size_t size = STATE(full_stack).size();
-    //if (size > 0) {
-    //stack_event_t stack_elem = STATE(full_stack)[size - 1];
-
-    if (!STATE(full_stack).empty()) {
-        stack_event_t stack_elem = STATE(full_stack).back();
-        // parent type
-        info.parent_on_stack.type = stack_elem.type;
-        switch (info.parent_on_stack.type) {
-            case stack_type::PROMISE:
-                info.parent_on_stack.promise_id = stack_elem.call_id;
-                break;
-            case stack_type::CALL:
-                info.parent_on_stack.call_id = stack_elem.promise_id;
-                break;
-            case stack_type::NONE:
-                break;
-        }
-    } else {
-        info.parent_on_stack.type = stack_type::NONE;
-    }
-}
+//void get_stack_parent(call_info_t & info) {
+//    //size_t size = STATE(full_stack).size();
+//    //if (size > 0) {
+//    //stack_event_t stack_elem = STATE(full_stack)[size - 1];
+//
+//    if (!STATE(full_stack).empty()) {
+//        stack_event_t stack_elem = STATE(full_stack).back();
+//        // parent type
+//        info.parent_on_stack.type = stack_elem.type;
+//        switch (info.parent_on_stack.type) {
+//            case stack_type::PROMISE:
+//                info.parent_on_stack.promise_id = stack_elem.call_id;
+//                break;
+//            case stack_type::CALL:
+//                info.parent_on_stack.call_id = stack_elem.promise_id;
+//                break;
+//            case stack_type::NONE:
+//                break;
+//        }
+//    } else {
+//        info.parent_on_stack.type = stack_type::NONE;
+//    }
+//}
 
 prom_id_t get_parent_promise() {
     for (auto event : STATE(full_stack)) {
@@ -188,6 +218,23 @@ prom_id_t get_parent_promise() {
             return event.promise_id;
     }
     return 0; // FIXME PROMISE_ZERO IS NOTHING, NOT AN ACTUAL PROMISE, RIGHT?!
+}
+
+size_t get_no_of_ancestor_promises_on_stack() {
+    size_t result = 0;
+    for (auto event : STATE(full_stack)) {
+        if(event.type == stack_type::PROMISE)
+            result++;
+    }
+    return result;
+}
+
+size_t get_no_of_ancestors_on_stack() {
+    return STATE(full_stack).size();
+}
+
+size_t get_no_of_ancestor_calls_on_stack() {
+    return STATE(fun_stack).size();
 }
 
 arg_id_t get_argument_id(call_id_t call_id, const string & argument) { // FIXME this is overcomplicated. A simple sequence should be enough, i think.

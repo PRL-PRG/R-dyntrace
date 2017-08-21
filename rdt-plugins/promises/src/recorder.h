@@ -85,7 +85,7 @@ public:
 
         info.recursion = is_recursive(info.fn_id);
 
-        get_stack_parent(info);
+        get_stack_parent(info, STATE(full_stack));
         info.in_prom_id = get_parent_promise();
 
         stack_event_t stack_elem;
@@ -136,7 +136,7 @@ public:
         info.recursion = is_recursive(info.fn_id);
 
         STATE(full_stack).pop_back();
-        get_stack_parent(info);
+        get_stack_parent(info, STATE(full_stack));
         info.in_prom_id = get_parent_promise();
 
         return info;
@@ -182,7 +182,7 @@ public:
 
         info.recursion = is_recursive(info.fn_id);
 
-        get_stack_parent(info);
+        get_stack_parent(info, STATE(full_stack));
         info.in_prom_id = get_parent_promise();
 
         stack_event_t stack_elem;
@@ -224,7 +224,7 @@ public:
         free(callsite);
 
         STATE(full_stack).pop_back();
-        get_stack_parent(info);
+        get_stack_parent(info, STATE(full_stack));
         info.in_prom_id = get_parent_promise();
 
         return info;
@@ -375,6 +375,10 @@ public:
         info.prom_type = static_cast<sexp_type>(TYPEOF(PRCODE(promise)));
         get_full_type(promise, rho, info.full_type);
 
+        get_stack_parent(info, STATE(full_stack));
+        info.in_prom_id = get_parent_promise();
+        info.depth = get_no_of_ancestor_promises_on_stack();
+
         return info;
     }
 
@@ -398,8 +402,9 @@ public:
         get_full_type(promise_expression, rho, info.full_type);
         info.return_type = sexp_type::OMEGA;
 
-        get_stack_parent(info);
+        get_stack_parent(info, STATE(full_stack));
         info.in_prom_id = get_parent_promise();
+        info.depth = get_no_of_ancestor_promises_on_stack();
 
         stack_event_t stack_elem;
         stack_elem.type = stack_type::PROMISE;
@@ -430,7 +435,10 @@ public:
         info.return_type = static_cast<sexp_type>(TYPEOF(val));
 
         STATE(full_stack).pop_back();
-        get_stack_parent(info);
+
+        get_stack_parent(info, STATE(full_stack));
+        info.in_prom_id = get_parent_promise();
+        info.depth = get_no_of_ancestor_promises_on_stack();
 
         return info;
     }
@@ -455,7 +463,9 @@ public:
         info.full_type.push_back(sexp_type::OMEGA);
         info.return_type = static_cast<sexp_type>(TYPEOF(val));
 
-        get_stack_parent(info);
+        get_stack_parent(info, STATE(full_stack));
+        info.in_prom_id = get_parent_promise();
+        info.depth = get_no_of_ancestor_promises_on_stack();
 
         return info;
     }

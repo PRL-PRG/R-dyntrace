@@ -15,6 +15,8 @@
 
 #include <r.h>
 
+//#include "tracer_state.h"
+
 #define RID_INVALID (rid_t)-1
 
 using namespace std;
@@ -214,20 +216,24 @@ struct builtin_info_t : call_info_t {
 // FIXME would it make sense to add type of action here?
 struct prom_basic_info_t {
     prom_id_t         prom_id;
+
     sexp_type         prom_type;
     full_sexp_type    full_type;
+
+    prom_id_t         in_prom_id;
+    stack_event_t     parent_on_stack;
+    int               depth;
 };
 
 struct prom_info_t : prom_basic_info_t {
     string            name;
-    prom_id_t         in_prom_id;
     call_id_t         in_call_id;
     call_id_t         from_call_id;
     lifestyle_type    lifestyle;
     int               effective_distance_from_origin;
     int               actual_distance_from_origin;
     sexp_type         return_type;
-    stack_event_t     parent_on_stack;
+
 };
 
 struct unwind_info_t {
@@ -268,8 +274,39 @@ bool negative_promise_already_inserted(prom_id_t id);
 
 // Wraper for findVar. Does not look up the value if it already is PROMSXP.
 SEXP get_promise(SEXP var, SEXP rho);
-void get_stack_parent(prom_info_t & info);
-void get_stack_parent(call_info_t & info);
+
+//void get_stack_parent(prom_basic_info_t & info);
+//void get_stack_parent(prom_info_t & info);
+//void get_stack_parent(call_info_t & info);
+
+template<typename T>
+void get_stack_parent(T & info, vector<stack_event_t> & stack) {
+    // put the body here
+    static_assert(std::is_base_of<prom_basic_info_t, T>::value
+                  || std::is_base_of<prom_info_t, T>::value
+                  || std::is_base_of<call_info_t, T>::value,
+                  "get_stack_parent is only applicable for arguments of types: "
+                          "prom_basic_info_t,  prom_info_t, or call_info_t.");
+
+    if (!stack.empty()) {
+        stack_event_t stack_elem = stack.back();
+        // parent type
+        info.parent_on_stack.type = stack_elem.type;
+        switch (info.parent_on_stack.type) {
+            case stack_type::PROMISE:
+                info.parent_on_stack.promise_id = stack_elem.call_id;
+                break;
+            case stack_type::CALL:
+                info.parent_on_stack.call_id = stack_elem.promise_id;
+                break;
+            case stack_type::NONE:
+                break;
+        }
+    } else {
+        info.parent_on_stack.type = stack_type::NONE;
+    }
+}
+
 prom_id_t get_parent_promise();
 arg_id_t get_argument_id(call_id_t call_id, const string & argument);
 arglist_t get_arguments(call_id_t call_id, SEXP op, SEXP rho);
@@ -277,6 +314,10 @@ arglist_t get_arguments(call_id_t call_id, SEXP op, SEXP rho);
 string full_sexp_type_to_string(full_sexp_type);
 string full_sexp_type_to_number_string(full_sexp_type);
 //string stack_event_to_string(stack_event_t);
+
+size_t get_no_of_ancestor_promises_on_stack();
+size_t get_no_of_ancestors_on_stack();
+size_t get_no_of_ancestor_calls_on_stack();
 
 string recursive_type_to_string(recursion_type);
 
