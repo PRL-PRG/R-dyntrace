@@ -249,17 +249,9 @@ string promise_creation_info_line(TraceLinePrefix prefix, const prom_basic_info_
     prepend_prefix(stream, prefix, indent, as_sql_comment);
     stream << "create promise id=" << info.prom_id
            << " in_prom=" << info.in_prom_id
-           << " type=" << sexp_type_to_string(info.prom_type);
-
-//    if (info.prom_type == sexp_type::BCODE)
-//        stream << "->" << sexp_type_to_string(info.prom_original_type);
-//
-//    if (info.symbol_underlying_type_is_set)
-//        stream << "->" << sexp_type_to_string(info.symbol_underlying_type);
-
-    stream << " full_type=" << full_sexp_type_to_string(info.full_type);
-
-    stream << " depth=" << info.depth;
+           << " type=" << sexp_type_to_string(info.prom_type)
+           << " full_type=" << full_sexp_type_to_string(info.full_type)
+           << " depth=" << info.depth;
 
     switch (info.parent_on_stack.type) {
         case stack_type::CALL:
@@ -291,8 +283,6 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
             break;
     }
 
-    // FIXME (1) sometimes name is empty and it prints name anyway instead of unknown...
-    // FIXME (2) when outputting to file name is always unknown, even though in many cases it should be known
     stream << " name=" << (info.name.empty() ? "<unknown>" : info.name)
            << " id=" << info.prom_id
            << " in_call=" << info.in_call_id
@@ -320,15 +310,11 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
             break;
     }
 
-
     stream << " distance_from_origin=" << info.effective_distance_from_origin
-           << "/" << info.actual_distance_from_origin;
-
-    stream << " type=" << sexp_type_to_string(info.prom_type);
-
-    stream << " return_type=" << sexp_type_to_string(info.return_type);
-
-    stream << " depth=" << info.depth;
+           << "/" << info.actual_distance_from_origin
+           << " type=" << sexp_type_to_string(info.prom_type)
+           << " return_type=" << sexp_type_to_string(info.return_type)
+           << " depth=" << info.depth;
 
     switch (info.parent_on_stack.type) {
         case stack_type::CALL:
