@@ -54,3 +54,14 @@ vignette_summary <- function() {
   
   tibble(package=packages) %>% left_join(result.vignettes, by="package")
 }
+
+# library(tibble)
+# summary.vignettes <- vignette_summary()
+# summary.packages <- package_vignette_summary(summary.vignettes)
+# saveRDS(summary.vignettes, "summary_vignettes.rds")
+# saveRDS(summary.packages, "summary_vignettes.rds")
+
+# library(tibble)
+# summary.vignettes <- readRDS("summary_vignettes.rds"))
+# summary.packages <- readRDS("summary_packages.rds"))
+# 
