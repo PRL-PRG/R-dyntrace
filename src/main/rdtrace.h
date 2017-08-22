@@ -129,7 +129,7 @@ char *get_location(SEXP op);
 char *get_callsite(int);
 const char *get_call(SEXP call);
 int is_byte_compiled(SEXP op);
-char *to_string(SEXP var);
+//char *to_string(SEXP var);
 const char *get_expression(SEXP e);
 SEXP get_named_list_element(const SEXP list, const char *name);
 

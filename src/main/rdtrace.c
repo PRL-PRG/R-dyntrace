@@ -157,21 +157,21 @@ char *get_location(SEXP op) {
 }
 
 const char *get_call(SEXP call) {
-    return CHAR(STRING_ELT(deparse1s(call), 0));
+    return CHAR(STRING_ELT(deparse1s(call), 0)); // we don't use this in the promise tracer.
 }
 
-char *to_string(SEXP var) {
-    SEXP src = deparse1s(var);
-    char *str = NULL;
-
-    if (IS_SCALAR(src, STRSXP)) {
-        str = strdup(CHAR(STRING_ELT(src, 0)));
-    } else {
-        str = strdup("<unsupported>");
-    }
-
-    return str;
-}
+//char *to_string(SEXP var) {
+//    SEXP src = deparse1s(var);
+//    char *str = NULL;
+//
+//    if (IS_SCALAR(src, STRSXP)) {
+//        str = strdup(CHAR(STRING_ELT(src, 0)));
+//    } else {
+//        str = strdup("<unsupported>");
+//    }
+//
+//    return str;
+//}
 
 int is_byte_compiled(SEXP op) {
     SEXP body = BODY(op);
