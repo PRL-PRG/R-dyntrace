@@ -387,11 +387,6 @@ Determining whether a function is recursive or not from a trace is necessarily i
 
 ### Interaction Among Promises
 
-```{r promise-freedom, echo=FALSE, include=FALSE}
-promise.evaluation.freedom.histogram <- get_free_promise_evaluation_histogram()
-promise.evaluation.cascade.histogram <- get_cascading_promises_evaluation_histogram(include.toplevel=FALSE)
-```
-
 <!-- **Free** promises are promises that are not forced by another promise. **Non-free** promises are forced by some other promise. -->
 <!-- A force **cascade** is a situation where one promise forces another promise. This shows how many promise evaluations caused a cascade. I exclude the topmost promise. -->
 
