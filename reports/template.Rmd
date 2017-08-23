@@ -535,8 +535,6 @@ if(print_data) print(strict.functions.rate.histogram %>% as.data.frame %>% trans
 ``` {r force-order, echo=FALSE, , comment="", fig.width=12, fig.height=5}
 cutoff <- 10
 
-
-
 promise.force.order.histogram_with_labels <-
   promise.force.order.histogram %>%
   mutate(no.of.force.orders=
