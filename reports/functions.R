@@ -15,6 +15,7 @@ db <- src_sqlite(path)
 promises <- db %>% tbl("promises")
 promise_evaluations <- db %>% tbl("promise_evaluations")
 promise_associations <- db %>% tbl("promise_associations")
+promise_returns <- db %>% tbl("promise_returns")
 calls <- db %>% tbl("calls") %>% rename(call_id = id)
 functions <- db %>% tbl("functions") %>% rename(function_id = id)
 arguments <- db %>% tbl("arguments")
@@ -183,6 +184,62 @@ get_promise_types <- function(cutoff=NA) {
   }
 }
 
+get_promise_return_types <- function(cutoff=NA) {
+  result <- 
+    promises %>% rename(promise_id=id) %>% select(promise_id) %>% left_join(promise_returns, by="promise_id") %>%
+    group_by(type) %>% count(type) %>% 
+    arrange(type) %>%
+    mutate(percent=((n*100/n.promises))) %>%
+    group_by(type) %>% 
+    do(mutate(., 
+              type_code = type, 
+              type = humanize_promise_type(type)
+              #percent = paste(format(percent, digits=12),   "%", sep="")
+    )) %>%
+    rename(number=n) %>%
+    group_by(type) %>% select(type, number, percent) %>%
+    data.frame %>%   
+    arrange(desc(number))
+  
+  if (is.na(cutoff)) {
+    result
+  } else {
+    above <- result %>% filter(percent >= cutoff)
+    below <- result %>% filter(percent < cutoff) %>% summarise(type="other", number=sum(number), percent=sum(percent))  
+    rbind(above, below)
+  }
+}
+
+get_promise_return_types_by_type <- function(promise_type, cutoff=NA) {
+  dehumanized_promise_type <- dehumanize_promise_type(promise_type)
+  subset_of_promises <- promises %>% rename(promise_id=id) %>% filter(type==dehumanized_promise_type)
+  number_of_promises_in_subset <- subset_of_promises %>% count %>% pull(n)
+  result <- 
+    subset_of_promises %>%
+    select(promise_id) %>% left_join(promise_returns, by="promise_id") %>%
+    group_by(type) %>% count(type) %>% 
+    arrange(type) %>%
+    mutate(percent=((n*100/n.promises))) %>%
+    group_by(type) %>% 
+    do(mutate(., 
+              type_code = type, 
+              type = humanize_promise_type(type)
+              #percent = paste(format(percent, digits=12),   "%", sep="")
+    )) %>%
+    rename(number=n) %>%
+    group_by(type) %>% select(type, number, percent) %>%
+    data.frame %>%   
+    arrange(desc(number))
+  
+  if (is.na(cutoff)) {
+    result
+  } else {
+    above <- result %>% filter(percent >= cutoff)
+    below <- result %>% filter(percent < cutoff) %>% summarise(type="other", number=sum(number), percent=sum(percent))  
+    rbind(above, below)
+  }
+}
+
 get_full_promise_types <- function(cutoff=NA) {
   result <-
     promises %>% 
@@ -239,8 +296,20 @@ SEXP_TYPES <- hashmap(
     "VEC", "EXPR", "BCODE", "EXTPTR", "WEAKREF",  # 19-23
     "RAW", "S4", "..."))                          # 24-25, 69
 
+SEXP_TYPES_REV <- hashmap(
+  values=c(0:10,13:25,69), 
+  keys=c(
+    "NIL", "SYM", "LIST", "CLOS", "ENV",  "PROM", # 0-5
+    "LANG", "SPECIAL", "BUILTIN", "CHAR",  "LGL", # 6-10
+    "INT", "REAL", "CPLX", "STR", "DOT", "ANY",   # 13-18
+    "VEC", "EXPR", "BCODE", "EXTPTR", "WEAKREF",  # 19-23
+    "RAW", "S4", "..."))                          # 24-25, 69
+
 humanize_promise_type = function(type) 
   ifelse(is.na(type), "NA", SEXP_TYPES[[type]])
+
+dehumanize_promise_type = function(type) 
+  ifelse(is.na(type), "NA", SEXP_TYPES_REV[[type]])
 
 get_lookup_histogram <- function(cutoff=NA) {
   data <- promises %>% rename(promise_id = id) %>% left_join(promise.lookups, by="promise_id") %>% select(promise_id, event_type) %>% collect
@@ -1110,14 +1179,14 @@ get_strict_function_promise_force_order_histogram <- function(function_promise_e
 #     mutate(free=as.logical(free), percent=100*number/n.promise.forces)
 # }
 
-get_free_promise_evaluation_histogram <- function() {
-  promise.forces %>% 
-    mutate(free=promise_stack_depth < 2) %>% 
-    group_by(free) %>% count %>% rename(number=n) %>%
-    collect %>% ungroup %>%
-    mutate(free=as.logical(free)) %>%
-    as.data.frame
-}
+# get_free_promise_evaluation_histogram <- function() {
+#   promise.forces %>% 
+#     mutate(free=promise_stack_depth < 2) %>% 
+#     group_by(free) %>% count %>% rename(number=n) %>%
+#     collect %>% ungroup %>%
+#     mutate(free=as.logical(free), percent=100*number/n.promise.forces) %>%
+#     as.data.frame 
+# }
 
 # assumes one promise ==> one or zero forces
 get_promises_forced_by_another_evaluation_histogram <- function() {
@@ -1138,19 +1207,34 @@ get_cascading_promises_histogram <- function (cutoff=NA) {
     rename(forced_in=in_prom_id) %>% 
     mutate(forced_by_another=created_in!=forced_in)
     
+  nas <- 
+    basic %>%
+    filter(is.na(forced_by_another)) %>%
+    count %>%
+    rename (number=n) %>%
+    mutate(number_of_forced_promises=NA) %>%
+    select (number_of_forced_promises, number) %>%
+    data.frame
+  
+  zero <- 
+    basic %>% 
+    filter(!is.na(forced_by_another)) %>%
+    filter(!forced_by_another)%>%
+    count %>%
+    rename (number=n) %>%
+    mutate(number_of_forced_promises=0) %>%
+    select (number_of_forced_promises, number) %>%
+    data.frame
+  
   forcing <-
     basic %>%
     filter(!is.na(forced_by_another)) %>%
     filter(forced_by_another)%>%
-    group_by(forced_in) %>% summarise(number_of_forced_promises=n()) %>% 
-    group_by(number_of_forced_promises) %>% summarise(number=n()) %>%
+    group_by(forced_in) %>% count %>% rename(number_of_forced_promises=n) %>% 
+    group_by(number_of_forced_promises) %>% count %>% rename(number=n) %>%
     data.frame
-    
-  zero <- 
-    data.frame(number_of_forced_promises = 0, 
-               number = (n.promises-forcing %>% pull(number_of_forced_promises) %>% sum))
   
-  histogram <- rbind(zero, forcing) %>% mutate(percent=100*number/n.promises)
+  histogram <- rbind(nas, zero, forcing) %>% mutate(percent=100*number/sum(number))
   
   if (is.na(cutoff)) {
      histogram
@@ -1162,58 +1246,58 @@ get_cascading_promises_histogram <- function (cutoff=NA) {
 }
 
 
-get_cascading_promises_evaluation_histogram <- function(cutoff=NA, include.toplevel=TRUE) {
-  basic <- 
-    promise.forces %>% 
-    group_by(in_prom_id) %>% count() %>% rename(no.of.forced.promises.inside=n) %>% 
-    collect
-
-  grouped.real <- 
-    basic %>% 
-    mutate(toplevel=in_prom_id == 0) %>% 
-    group_by(toplevel, no.of.forced.promises.inside) %>% count() %>% rename(number=n) %>% 
-    as.data.frame
-   
-  grouped.zeros <- 
-    data.frame(toplevel=FALSE, 
-               no.of.forced.promises.inside=0, 
-               number=n.promise.forces-sum(grouped.real$number))
-  
-  full <- rbind(grouped.zeros, grouped.real)
-  
-  if (!include.toplevel) {
-    full <- full %>% filter(toplevel==FALSE) %>% select(-toplevel)
-    total <- sum(full$number)
-    full <- full %>% mutate(percent=100*number/total)
-  } else {
-    full <- full %>% mutate(percent=100*number/n.promise.forces)
-  }
-
-  if (is.na(cutoff)) {
-    full
-  } else {
-    above <- 
-      if(include.toplevel)
-        full %>% 
-        filter(no.of.forced.promises.inside > cutoff) %>% 
-        ungroup %>% collect %>% group_by(toplevel) %>%
-        summarise(no.of.forced.promises.inside=Inf, 
-                  number=sum(number), 
-                  percent=sum(percent))
-      else
-        full %>% 
-        filter(no.of.forced.promises.inside > cutoff) %>% 
-        ungroup %>% collect %>% 
-        summarise(no.of.forced.promises.inside=Inf, 
-                  number=sum(number), 
-                  percent=sum(percent))
-    
-    below <- 
-      full %>% 
-      filter(no.of.forced.promises.inside <= cutoff)
-    rbind(below, above)
-  }
-}
+# get_cascading_promises_evaluation_histogram <- function(cutoff=NA, include.toplevel=TRUE) {
+#   basic <- 
+#     promise.forces %>% 
+#     group_by(in_prom_id) %>% count() %>% rename(no.of.forced.promises.inside=n) %>% 
+#     collect
+# 
+#   grouped.real <- 
+#     basic %>% 
+#     mutate(toplevel=in_prom_id == 0) %>% 
+#     group_by(toplevel, no.of.forced.promises.inside) %>% count() %>% rename(number=n) %>% 
+#     as.data.frame
+#    
+#   grouped.zeros <- 
+#     data.frame(toplevel=FALSE, 
+#                no.of.forced.promises.inside=0, 
+#                number=n.promise.forces-sum(grouped.real$number))
+#   
+#   full <- rbind(grouped.zeros, grouped.real)
+#   
+#   if (!include.toplevel) {
+#     full <- full %>% filter(toplevel==FALSE) %>% select(-toplevel)
+#     total <- sum(full$number)
+#     full <- full %>% mutate(percent=100*number/total)
+#   } else {
+#     full <- full %>% mutate(percent=100*number/n.promise.forces)
+#   }
+# 
+#   if (is.na(cutoff)) {
+#     full
+#   } else {
+#     above <- 
+#       if(include.toplevel)
+#         full %>% 
+#         filter(no.of.forced.promises.inside > cutoff) %>% 
+#         ungroup %>% collect %>% group_by(toplevel) %>%
+#         summarise(no.of.forced.promises.inside=Inf, 
+#                   number=sum(number), 
+#                   percent=sum(percent))
+#       else
+#         full %>% 
+#         filter(no.of.forced.promises.inside > cutoff) %>% 
+#         ungroup %>% collect %>% 
+#         summarise(no.of.forced.promises.inside=Inf, 
+#                   number=sum(number), 
+#                   percent=sum(percent))
+#     
+#     below <- 
+#       full %>% 
+#       filter(no.of.forced.promises.inside <= cutoff)
+#     rbind(below, above)
+#   }
+# }
 
 ## TODO make indexes?
 fold_databases <- function(result_path, ...) {
@@ -1258,6 +1342,42 @@ fold_databases <- function(result_path, ...) {
   zero.type_distributions     <- zero %>% tbl("type_distribution")
   zero.metadata               <- zero %>% tbl("metadata")
   
+  # Sizes:
+  write("    * sizes: ", stderr())
+  
+  n.zero.functions            <- zero.functions %>% count %>% pull(n)
+  write(paste("        - functions:           ", pp(n.zero.functions)), stderr())
+  
+  n.zero.calls                <- zero.calls %>% count %>% pull(n)
+  write(paste("        - calls:               ", pp(n.zero.calls)), stderr())
+  
+  n.zero.arguments            <- zero.arguments %>% count %>% pull(n)
+  write(paste("        - arguments:           ", pp(n.zero.arguments)), stderr())
+  
+  n.zero.promises             <- zero.promises %>% count %>% pull(n)
+  write(paste("        - promises:            ", pp(n.zero.promises)), stderr())
+  
+  n.zero.promise_evaluations  <- zero.promise_evaluations %>% count %>% pull(n)
+  write(paste("        - promise_evaluations: ", pp(n.zero.promise_evaluations)), stderr())
+  
+  n.zero.promise_associations <- zero.promise_associations %>% count %>% pull(n)
+  write(paste("        - promise_associations:", pp(n.zero.promise_associations)), stderr())
+  
+  n.zero.promise_returns      <- zero.promise_returns %>% count %>% pull(n)
+  write(paste("        - promise_returns:     ", pp(n.zero.promise_returns)), stderr())
+  
+  n.zero.gc_triggers          <- zero.gc_triggers %>% count %>% pull(n)
+  write(paste("        - gc_triggers:         ", pp(n.zero.gc_triggers)), stderr())
+  
+  n.zero.promise_lifecycles   <- zero.promise_lifecycles %>% count %>% pull(n)
+  write(paste("        - promise_lifecycles:  ", pp(n.zero.promise_lifecycles)), stderr())
+  
+  n.zero.type_distributions   <- zero.type_distributions %>% count %>% pull(n)
+  write(paste("        - type_distributions:  ", pp(n.zero.type_distributions)), stderr())
+  
+  n.zero.metadata             <- zero.metadata %>% count %>% pull(n)
+  write(paste("        - type_metadata:       ", pp(n.zero.metadata)), stderr())
+  
   # Start the function id dictionary - for Zero it's an identity function.
   write("    * calculating offsets", stderr())
   all.functions <- zero.functions %>% select(location, definition, id) %>% collect
@@ -1289,6 +1409,48 @@ fold_databases <- function(result_path, ...) {
     db.promise_lifecycles     <- db %>% tbl("promise_lifecycle")
     db.type_distributions     <- db %>% tbl("type_distribution")
     db.metadata               <- db %>% tbl("metadata")
+    
+    # Sizes:
+    write("    * sizes: ", stderr())
+    
+    n.db.functions            <- db.functions %>% count %>% pull(n)
+    write(paste("        - functions:           ", pp(n.db.functions)),  stderr())
+    
+    n.db.calls                <- db.calls %>% count %>% pull(n)
+    write(paste("        - calls:               ", pp(n.db.calls)), stderr())
+    
+    n.db.arguments            <- db.arguments %>% count %>% pull(n)
+    write(paste("        - arguments:           ", pp(n.db.arguments)), stderr())
+    
+    n.db.promises             <- db.promises %>% count %>% pull(n)
+    write(paste("        - promises:            ", pp(n.db.promises)), stderr())
+    
+    n.db.promise_evaluations  <- db.promise_evaluations %>% count %>% pull(n)
+    write(paste("        - promise_evaluations: ", pp(n.db.promise_evaluations)),  stderr())
+    
+    n.db.promise_associations <- db.promise_associations %>% count %>% pull(n)
+    write(paste("        - promise_associations:", pp(n.db.promise_associations)), stderr())
+    
+    n.db.promise_returns      <- db.promise_returns %>% count %>% pull(n)
+    write(paste("        - promise_returns:     ", pp(n.db.promise_returns)), stderr())
+    
+    n.db.gc_triggers          <- db.gc_triggers %>% count %>% pull(n)
+    write(paste("        - gc_triggers:         ", pp(n.db.gc_triggers)), stderr())
+    
+    n.db.promise_lifecycles   <- db.promise_lifecycles %>% count %>% pull(n)
+    write(paste("        - promise_lifecycles:  ", pp(n.db.promise_lifecycles)), stderr())
+    
+    n.db.type_distributions   <- db.type_distributions %>% count %>% pull(n)
+    write(paste("        - type_distributions:  ", pp(n.db.type_distributions)), stderr())
+    
+    n.db.metadata             <- db.metadata %>% count %>% pull(n)
+    write(paste("        - type_metadata:       ", pp(n.db.metadata)), stderr())
+      
+    # Rule of thumb: no functions, nothing interesting inside, so skipping
+    if (n.db.functions == 0) {
+      write("    * no functions, skipping database", stderr())  
+      next
+    }
     
     # Functions
     write("    * merging functions", stderr())
