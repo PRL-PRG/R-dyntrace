@@ -1,0 +1,247 @@
+---
+title: "A Look at CRAN Vignettes"
+author: "Konrad Siek <siekkonr@fit.cvut.cz>"
+date: "22 August 2017"
+output: html_document
+---
+
+<style>
+  .col2 {
+    columns: 2 200px;         /* number of columns and width in pixels*/
+    -webkit-columns: 2 200px; /* chrome, safari */
+    -moz-columns: 2 200px;    /* firefox */
+  }
+  
+   div.together {
+    display: inline-block;
+    width: 100%;
+ }
+</style>
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(tibble)
+library(dplyr)
+
+pp <- function(number) format(number, big.mark=",", scientific=FALSE, trim=FALSE, digits=2)
+
+#summary.vignettes <- readRDS("summary_vignettes.rds")
+#summary.packages <- readRDS("summary_packages.rds")
+
+summary.vignettes <- readRDS("~/workspace/R-dyntrace/summary_vignettes.rds")
+summary.packages <- readRDS("~/workspace/R-dyntrace/summary_packages.rds")
+
+top.100.packages <- scan("~/workspace/R-dyntrace/top_100_CRAN_packages.txt", as.character())
+```
+
+## Basic information
+
+Number of packages: `r length(summary.packages$package)`  
+Number of vignettes: `r length((summary.vignettes %>% filter(!is.na(index)))$name)`  
+Lines of code in vignettes: `r pp(sum(summary.packages$n.lines)/1000)`KLOC
+
+## Statistics
+
+<div class="col2">
+<div class="together">
+```{r has-vignettes, echo=FALSE, comment="", fig.width=6, fig.height=6}
+histogram <- summary.packages %>% mutate(has.vignettes=n.vignettes>0) %>% group_by(has.vignettes) %>% summarise(n.packages=n()) %>% mutate(percent=100*n.packages/sum(n.packages)) %>% arrange(n.packages)
+
+labels <- histogram$has.vignettes
+values <- histogram$n.packages
+#par(mar=c(2,2,2,2))
+
+pie(values, labels, main="Package has vignettes")
+print(histogram %>% as.data.frame %>% transform(n.packages=pp(n.packages), percent=pp(percent)), row.names=FALSE)
+```
+</div>
+
+```{r has-runnable-code, echo=FALSE, comment="", fig.width=6, fig.height=6}
+histogram <- 
+  summary.packages %>% 
+  mutate(runnable.code=ifelse(n.vignettes == 0, "no vignettes",
+                              ifelse(n.lines == 0, "no code",
+                                     ifelse(n.lines <= 10, "≤ 10 lines",
+                                            ifelse(n.lines <= 100, "≤ 100 lines", "> 100 lines"))))) %>%
+  group_by(runnable.code) %>% summarise(n.packages=n()) %>% mutate(percent=100*n.packages/sum(n.packages)) %>% 
+  arrange(n.packages)
+
+labels <- histogram$runnable.code
+values <- histogram$n.packages
+#par(mar=c(2,2,2,2))
+
+pie(values, labels, main="Package has runnable code in vignettes")
+print(histogram %>% as.data.frame %>% transform(n.packages=pp(n.packages), percent=pp(percent)), row.names=FALSE)
+```
+
+</div>
+
+```{r n-vignettes, echo=FALSE, comment="", fig.width=12, fig.height=5}
+histogram <- summary.packages %>% group_by(n.vignettes) %>% summarise(n.packages=n()) %>% mutate(percent=100*n.packages/sum(n.packages))
+
+labels <- histogram$n.vignettes
+values <- histogram$n.packages
+#par(mar=c(2,2,2,2))
+
+barplot(values, names.arg=labels, space=0, main="Number of vignettes per package")
+print(histogram %>% as.data.frame %>% transform(n.packages=pp(n.packages), percent=pp(percent)), row.names=FALSE)
+```
+
+## Top 100 packages
+
+```{r top-100, echo=FALSE, comment="", fig.width=12, fig.height=5}
+summary.top.100.packages <- tibble(package=top.100.packages) %>% left_join(summary.packages, by="package")
+summary.top.100.vignettes <- tibble(package=top.100.packages) %>% left_join(summary.vignettes, by="package")
+```
+
+### Basic information
+
+Number of packages: `r length(summary.top.100.packages$package)`  
+Number of these actually installed: `r length((summary.top.100.packages %>% filter(!is.na(n.vignettes)))$package)`  
+Number of vignettes: `r length((summary.top.100.vignettes %>% filter(!is.na(index)))$name)`  
+Lines of code in vignettes: `r pp(sum((summary.top.100.packages %>% filter(!is.na(n.lines)))$n.lines)/1000)`KLOC
+
+### Statistics
+
+<div class="col2">
+<div class="together">
+```{r top-100-has-vignettes, echo=FALSE, comment="", fig.width=6, fig.height=6}
+histogram <- summary.top.100.packages %>% mutate(has.vignettes=n.vignettes>0) %>% group_by(has.vignettes) %>% summarise(n.packages=n()) %>% mutate(percent=100*n.packages/sum(n.packages)) %>% arrange(n.packages)
+
+labels <- as.logical(histogram$has.vignettes)
+values <- histogram$n.packages
+#par(mar=c(2,2,2,2))
+
+pie(values, labels, main="Package has vignettes")
+print(histogram %>% as.data.frame %>% transform(n.packages=pp(n.packages), percent=pp(percent)), row.names=FALSE)
+```
+</div>
+
+```{r top-100-has-runnable-code, echo=FALSE, comment="", fig.width=6, fig.height=6}
+histogram <- 
+  summary.top.100.packages %>% 
+  mutate(runnable.code=ifelse(n.vignettes == 0, "no vignettes",
+                              ifelse(n.lines == 0, "no code",
+                                     ifelse(n.lines <= 10, "≤ 10 lines",
+                                            ifelse(n.lines <= 100, "≤ 100 lines", "> 100 lines"))))) %>%
+  group_by(runnable.code) %>% summarise(n.packages=n()) %>% mutate(percent=100*n.packages/sum(n.packages)) %>% 
+  arrange(n.packages)
+
+labels <- histogram$runnable.code
+values <- histogram$n.packages
+#par(mar=c(2,2,2,2))
+
+pie(values, labels, main="Package has runnable code in vignettes")
+print(histogram %>% as.data.frame %>% transform(n.packages=pp(n.packages), percent=pp(percent)), row.names=FALSE)
+```
+
+</div>
+
+```{r top-100-n-vignettes, echo=FALSE, comment="", fig.width=12, fig.height=5}
+histogram <- summary.top.100.packages %>% group_by(n.vignettes) %>% summarise(n.packages=n()) %>% mutate(percent=100*n.packages/sum(n.packages))
+
+labels <- histogram$n.vignettes
+values <- histogram$n.packages
+#par(mar=c(2,2,2,2))
+
+barplot(values, names.arg=labels, space=0, main="Number of vignettes per package")
+print(histogram %>% as.data.frame %>% transform(n.packages=pp(n.packages), percent=pp(percent)), row.names=FALSE)
+```
+
+### Data (top 100)
+
+```{r top-100-data-packages, echo=FALSE, comment=""}
+print(
+   summary.top.100.packages %>% 
+    as.data.frame %>% 
+    transform(n.vignettes=pp(n.vignettes), n.lines=pp(n.lines)), 
+  row.names=FALSE)
+```
+
+```{r top-100-data-vignettes, echo=FALSE, comment=""}
+print(
+   summary.top.100.vignettes %>% 
+    as.data.frame %>% select(-source,  -index) %>% rename(vignette=name), #%>% 
+    #transform(n.vignettes=pp(n.vignettes), n.lines=pp(n.lines)), 
+  row.names=FALSE)
+```
+
+## Source code
+
+```{r code, eval=FALSE}
+library(dplyr)
+
+packages <- installed.packages()[, "Package"]
+
+filter_irrelecant_code <- function(source) {
+  content <- source 
+  
+  index.el <- content %>% grepl("^[ \t]*$", .) # Remove empty lines
+  content <- content[!index.el]
+  
+  index.cm <- content %>% grepl("^#", .) # Remove comments
+  content <- content[!index.cm]
+  
+  content
+}
+
+count_source_lines <- function(paths) {
+  result <- 0
+  for (path in paths)
+    result <- result + length(filter_irrelecant_code(path))
+}
+
+package_vignette_summary <- function(vignette_summary_data=NA) {
+  data <- if(suppressWarnings(is.na(vignette_summary_data))) vignette_summary() else vignette_summary_data 
+  data %>% 
+    group_by(package) %>% 
+    summarise(n.vignettes=sum(as.integer(!is.na(name))), n.lines=sum(ifelse(is.na(lines), 0, lines)))
+}
+
+vignette_summary <- function() {
+  result.vignettes <- tibble(index=list(), package=list(), name=list(), source=list(), lines=list())
+  first = TRUE
+  
+  for(package in packages) {
+    vignettes <- vignette(package = package)$results
+    
+    if (length(vignettes) == 0)
+      next
+    
+    vignettes.information <- 
+      tibble(
+          index=1:length(vignettes[, "Item"]), 
+          package = vignettes[, "Package"], 
+          name = vignettes[, "Item"]) %>%
+      rowwise %>% 
+      mutate(
+        source={
+          vignette.info <- vignette(name, package = package);  
+          file.path(vignette.info$Dir, "doc", vignette.info$R)}) %>%
+        mutate(lines = length(filter_irrelecant_code(readLines(source))))
+    
+    if (first) {
+      result.vignettes <- vignettes.information
+      first <- FALSE
+    } else 
+      result.vignettes <- rbind(result.vignettes, vignettes.information)
+  }
+  
+  tibble(package=packages) %>% left_join(result.vignettes, by="package")
+}
+
+# On server
+# library(tibble)
+# summary.vignettes <- vignette_summary()
+# summary.packages <- package_vignette_summary(summary.vignettes)
+# saveRDS(summary.vignettes, "summary_vignettes.rds")
+# saveRDS(summary.packages, "summary_vignettes.rds")
+
+# On lappy
+# library(tibble)
+# summary.vignettes <- readRDS("summary_vignettes.rds"))
+# summary.packages <- readRDS("summary_packages.rds"))
+```
+
+
+

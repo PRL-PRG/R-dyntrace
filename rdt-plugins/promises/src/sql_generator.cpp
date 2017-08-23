@@ -3,6 +3,7 @@
 //
 
 #include "sql_generator.h"
+#include "tracer_sexpinfo.h"
 
 #include <cassert>
 #include <fstream>
@@ -74,8 +75,16 @@ namespace sql_generator {
         return "select id from promises where id < 0;\n";
     }
 
-    sql_stmt_t make_insert_function_call_statement(sql_val_t id, sql_val_t name, sql_val_t callsite,
-                                        sql_val_t compiled, sql_val_t function_id, sql_val_t parent_id) {
+    sql_stmt_t make_insert_function_call_statement(sql_val_t id,
+                                                   sql_val_t name,
+                                                   sql_val_t callsite,
+                                                   sql_val_t compiled,
+                                                   sql_val_t function_id,
+                                                   sql_val_t parent_call_id,
+                                                   sql_val_t in_prom_id,
+                                                   sql_val_t stack_parent_type,
+                                                   sql_val_t stack_parent_id) {
+
         stringstream statement;
 
         statement << "insert into calls values ("
@@ -84,27 +93,51 @@ namespace sql_generator {
                   << callsite << ","
                   << compiled << ","
                   << function_id << ","
-                  << parent_id
+                  << parent_call_id << ","
+                  << in_prom_id << ","
+                  << stack_parent_type << ","
+                  << stack_parent_id
                   << ");\n";
 
         return statement.str();
     }
 
-    sql_stmt_t make_insert_promise_statement(sql_val_t id, sql_val_t type, sql_val_t full_type) {
+    sql_stmt_t make_insert_promise_statement(sql_val_t id,
+                                             sql_val_t type,
+                                             sql_val_t full_type,
+                                             sql_val_t in_prom_id,
+                                             sql_val_t stack_parent_type,
+                                             sql_val_t stack_parent_id,
+                                             sql_val_t promise_stack_depth) {
+
         stringstream statement;
 
         statement << "insert into promises values ("
                   << id << ","
                   << type << ","
-                  << full_type
+                  << full_type << ","
+                  << in_prom_id << ","
+                  << stack_parent_type << ","
+                  << stack_parent_id << ","
+                  << promise_stack_depth
                   << ");\n";
 
         return statement.str();
     }
 
-    sql_stmt_t make_insert_promise_evaluation_statement(sql_val_t clock, sql_val_t event_type, sql_val_t promise_id,
-                                                        sql_val_t from_call_id, sql_val_t in_call_id, sql_val_t lifestyle,
-                                                        sql_val_t effective_distance, sql_val_t actual_distance) {
+    sql_stmt_t make_insert_promise_evaluation_statement(sql_val_t clock,
+                                                        sql_val_t event_type,
+                                                        sql_val_t promise_id,
+                                                        sql_val_t from_call_id,
+                                                        sql_val_t in_call_id,
+                                                        sql_val_t in_prom_id,
+                                                        sql_val_t lifestyle,
+                                                        sql_val_t effective_distance,
+                                                        sql_val_t actual_distance,
+                                                        sql_val_t stack_parent_type,
+                                                        sql_val_t stack_parent_id,
+                                                        sql_val_t promise_stack_depth) {
+
         stringstream statement;
 
         statement << "insert into promise_evaluations values ("
@@ -113,9 +146,13 @@ namespace sql_generator {
                   << promise_id << ","
                   << from_call_id << ","
                   << in_call_id << ","
+                  << in_prom_id << ","
                   << lifestyle << ","
                   << effective_distance << ","
-                  << actual_distance
+                  << actual_distance << ","
+                  << stack_parent_type << ","
+                  << stack_parent_id << ","
+                  << promise_stack_depth
                   << ");\n";
 
         return statement.str();
@@ -272,6 +309,9 @@ namespace sql_generator {
                 "    --[ relations ]------------------------------------------------------------\n"
                 "    function_id integer not null,\n"
                 "    parent_id integer not null, -- ID of call that executed current call\n"
+                "    in_prom_id integer not null, -- ID of promise in which the call is executed\n"
+                "    parent_on_stack_type integer not null, -- promise = 1, call = 2, none = 0\n"
+                "    parent_on_stack_id integer null,\n"
                 "    --[ keys ]-----------------------------------------------------------------\n"
                 "    foreign key (function_id) references functions,\n"
                 "    foreign key (parent_id) references calls\n"
@@ -297,7 +337,11 @@ namespace sql_generator {
                 "    --[ identity ]-------------------------------------------------------------\n"
                 "    id integer primary key, -- equal to promise pointer SEXP\n"
                 "    type integer not null,\n"
-                "    full_type text not null\n"
+                "    full_type text not null,\n"
+                "    in_prom_id integer not null, -- ID of promise in which the promise is executed\n"
+                "    parent_on_stack_type integer not null, -- promise = 1, call = 2, none = 0\n"
+                "    parent_on_stack_id integer null,\n"
+                "    promise_stack_depth integer not null\n"
                 ");\n";
     }
 
@@ -323,11 +367,15 @@ namespace sql_generator {
                "    promise_id integer not null,\n"
                "    from_call_id integer not null,\n"
                "    in_call_id integer not null,\n"
+               "    in_prom_id integer not null, -- ID of promise in which the promise is executed\n"
                "    lifestyle integer not null, -- 0: virgin, 1: local, 2: branch-local/grandchild,\n"
                "                                -- 3: escaped/leaked, 4: immediate-local,\n"
                "                                -- 5: immediate-branch-local/child\n"
                "    effective_distance_from_origin integer not null,\n"
                "    actual_distance_from_origin integer not null,\n"
+               "    parent_on_stack_type integer not null, -- promise = 1, call = 2, none = 0\n"
+               "    parent_on_stack_id integer null,\n"
+               "    promise_stack_depth integer not null,\n"
                "    --[ keys ]-----------------------------------------------------------------\n"
                "    foreign key (promise_id) references promises,\n"
                "    foreign key (from_call_id) references calls,\n"
@@ -459,4 +507,14 @@ namespace sql_generator {
 //        return "$next_id";
 //    }
 
+    string from_stack_event(stack_event_t event) {
+        switch(event.type) {
+            case stack_type::CALL:
+                return from_int(event.call_id);
+            case stack_type::PROMISE:
+                return from_int(event.promise_id);
+            case stack_type::NONE:
+                return "null";
+        }
+    }
 }

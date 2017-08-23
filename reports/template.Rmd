@@ -18,14 +18,13 @@ print_data <- TRUE
 source("%%FUNCTIONS%%")
 ```
 
-```{r oooo, include=FALSE}
+```{r evaluation-order-heavy-lifting, include=FALSE}
 call.evaluation.order <- get_call_promise_evaluation_order()
 function.evaluation.order <- get_function_promise_evaluation_order(call.evaluation.order)
 promise.force.order.histogram <- get_function_promise_force_order_histogram(function.evaluation.order, cutoff=10)
 ```
 
 <div class="col2">
-<div class="together">
 ## Basic Information
 Dataset: `r path`  
 Functions: `r pp(n.functions)`  
@@ -33,13 +32,13 @@ Calls: `r pp(n.calls)`
 Promises: `r pp(n.promises)` (+ `r pp(n.alien.promises)` alien)  
 Promise forces: `r pp(n.promise.forces)` (+ `r pp(n.alien.promise.forces)` alien)  
 Promise lookups: `r pp(n.promise.lookups)` (+ `r pp(n.alien.promise.lookups)` alien)  
-</div>
 
+<div class="together">
 ## Metadata
-
 ```{r metadata, echo=FALSE, comment=""}
 print(metadata %>% as.data.frame %>% unique, row.names=FALSE, use.names=FALSE)
 ```
+</div>
 
 </div>
 
@@ -100,7 +99,78 @@ if(print_data) print(promise.evaluation.histogram_with_labels %>% as.data.frame 
 <!--/div-->
 </center>
 
-### Promise Forces by Types
+### Promise code types
+
+Promise types follow the type designations in``Rinternals.h``.
+**α→β** indicates that type **α** variously evaluates to type **β**.
+Specifically **PROM→α** indicates that it's a promise containing the expression of type **α**. 
+**BCODE →α** indicates that it's a byte-compiled expression that was originally of type **α**.
+**SYM→α** indicates that it's a symbol that points to an expression of type **α**.
+
+<div class="col2">
+<div class="together">
+``` {r promise-types-pie, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
+promise.types <- get_promise_types(cutoff=NA)
+
+slices <- (promise.types %>% arrange(number))$number
+labels <- (promise.types %>% arrange(number) %>% mutate(type = ifelse(percent>1, type, "")))$type
+par(mar=c(0,2,2,2))
+
+pie(slices, labels, main="Basic types")
+#barplot(slices, names.arg=labels, space=0, main="Basic types")
+if(print_data) print(promise.types %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
+```
+</div>
+
+<!--div class="together"-->
+``` {r promise-full-types-pie, echo=FALSE, fig.width=5, fig.height=4.5, comment=""}
+promise.full.types <- get_full_promise_types(cutoff=1)
+
+slices <- (promise.full.types %>% arrange(number))$number
+labels <- (promise.full.types %>% arrange(number) %>% mutate(type = ifelse(percent>1, type, "")))$type
+par(mar=c(0,2,2,2))
+
+pie(slices, labels, main="Full types")
+#barplot(slices, names.arg=labels, space=0, main="Full types") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+if(print_data) print(promise.full.types %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
+```
+<!--/div-->
+</div>
+
+
+### Promise return types
+
+<div class="col2">
+<div class="together">
+``` {r promise-return-types-pie, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
+return.types <- get_promise_return_types(cutoff=NA)
+
+slices <- (return.types %>% arrange(number))$number
+labels <- (return.types %>% arrange(number) %>% mutate(type = ifelse(percent>1, type, "")))$type
+par(mar=c(0,2,2,2))
+
+pie(slices, labels, main="Return types")
+#barplot(slices, names.arg=labels, space=0, main="Basic types")
+if(print_data) print(return.types %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
+```
+</div>
+
+``` {r promise-bcode-return-types-pie, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
+return.types <- get_promise_return_types_by_type(cutoff=NA, promise_type="BCODE")
+
+slices <- (return.types %>% arrange(number))$number
+labels <- (return.types %>% arrange(number) %>% mutate(type = ifelse(percent>1, type, "")))$type
+par(mar=c(0,2,2,2))
+
+pie(slices, labels, main="Return types for BCODE")
+#barplot(slices, names.arg=labels, space=0, main="Basic types")
+if(print_data) print(return.types %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
+```
+
+</div>
+
+
+### Promise forces by types
 
 <center>
 ``` {r evaluations-forces-by-type, echo=FALSE, , comment="", fig.width=7, fig.height=10}
@@ -218,44 +288,6 @@ if(print_data) print(histogram_with_labels %>% as.data.frame %>% transform(numbe
 <!--/div-->
 </div>
 
-### Promise code types
-
-Promise types follow the type designations in``Rinternals.h``.
-**α→β** indicates that type **α** variously evaluates to type **β**.
-Specifically **PROM→α** indicates that it's a promise containing the expression of type **α**. 
-**BCODE →α** indicates that it's a byte-compiled expression that was originally of type **α**.
-**SYM→α** indicates that it's a symbol that points to an expression of type **α**.
-
-<div class="col2">
-<div class="together">
-``` {r promise-types-pie, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
-promise.types <- get_promise_types(cutoff=NA)
-
-slices <- (promise.types %>% arrange(number))$number
-labels <- (promise.types %>% arrange(number) %>% mutate(type = ifelse(percent>1, type, "")))$type
-par(mar=c(0,2,2,2))
-
-pie(slices, labels, main="Basic types")
-#barplot(slices, names.arg=labels, space=0, main="Basic types")
-if(print_data) print(promise.types %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
-```
-</div>
-
-<!--div class="together"-->
-``` {r promise-full-types-pie, echo=FALSE, fig.width=5, fig.height=4.5, comment=""}
-promise.full.types <- get_full_promise_types(cutoff=1)
-
-slices <- (promise.full.types %>% arrange(number))$number
-labels <- (promise.full.types %>% arrange(number) %>% mutate(type = ifelse(percent>1, type, "")))$type
-par(mar=c(0,2,2,2))
-
-pie(slices, labels, main="Full types")
-#barplot(slices, names.arg=labels, space=0, main="Full types") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
-if(print_data) print(promise.full.types %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
-```
-<!--/div-->
-</div>
-
 ## Functions and Calls
 
 ### Functions and Calls by Type
@@ -323,6 +355,7 @@ if(print_data) print(closure.function.compilation.histogram %>% as.data.frame %>
 <!--/div-->
 </div>
 
+<!--
 ### Recursion
 
 Determining whether a function is recursive or not from a trace is necessarily imprecise. A call ``c`` to some function ``f`` is recursive if there is at least one more call to ``f`` above ``c`` in the stack trace. Instead of talking about recursive functions, we just show what percentage of their calls is recursive under this definition.
@@ -349,6 +382,41 @@ Determining whether a function is recursive or not from a trace is necessarily i
 # if(print_data) print(recursive.functions.histogram %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
 ```
 </div>
+-->
+
+### Interaction Among Promises
+
+<!-- **Free** promises are promises that are not forced by another promise. **Non-free** promises are forced by some other promise. -->
+<!-- A force **cascade** is a situation where one promise forces another promise. This shows how many promise evaluations caused a cascade. I exclude the topmost promise. -->
+
+Promises forced by other promises: 
+`TRUE` is when a promise was created within some promise x but was forced within a different promise y. 
+`FALSE` is when a promise was forced within the same promise as it was created. 
+`NA` means the promise was not forced.
+
+<div class="col2">
+<div class="together">
+
+``` {r promise-forced-by-another-evaluation, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
+histogram <- get_promises_forced_by_another_evaluation_histogram()
+par(mar=c(0,2,2,2))
+pie(histogram$number, (histogram$forced_by_another %>% make_labels), main="Promises forced by another promise")
+if(print_data) print(histogram %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
+```
+
+</div>
+
+``` {r promise-cascades, echo=FALSE, comment="", fig.width=5, fig.height=4.5}
+histogram <- get_cascading_promises_histogram()
+labels <- histogram$number_of_forced_promises
+values <- histogram$number
+par(mar=c(2,2,2,2))
+
+barplot(values, names.arg=labels, space=0, main="Promises forcing other promises")
+if(print_data) print(histogram %>% as.data.frame %>% transform(number=pp(number), percent=pp(percent)), row.names=FALSE)
+```
+
+</div>
 
 ### Promises per Call and per Function
 
@@ -362,6 +430,7 @@ strict.calls.by.type.histogram <- get_call_strictness_by_type()
 strict.functions.histogram <- get_function_strictness()
 strict.functions.rate.histogram <- get_function_strictness_rate()
 strict.functions.by.type.histogram <- get_function_strictness_by_type()
+#strict.arguments.histogram <- 
 ```
 
 A call is **strict** if all of its arguments are **evaluated** and none of the arguments is **escaped**. (This means that a function may pass unevaluated promises to a child call and still be strict, but it cannot leak the promise).
@@ -466,8 +535,6 @@ if(print_data) print(strict.functions.rate.histogram %>% as.data.frame %>% trans
 ``` {r force-order, echo=FALSE, , comment="", fig.width=12, fig.height=5}
 cutoff <- 10
 
-
-
 promise.force.order.histogram_with_labels <-
   promise.force.order.histogram %>%
   mutate(no.of.force.orders=
@@ -490,7 +557,7 @@ if(print_data) print(promise.force.order.histogram_with_labels %>% as.data.frame
 ### Calls to specific functions
 
 ```{r function-calls-selected-counts, echo=FALSE, comment=""}
-get_function_calls("^<anonymous>$", "eval", "force", "delayAssign", "return") %>% data.frame %>% transform(number=pp(number), percent=pp(percent)) %>% print(., row.names=FALSE)
+get_function_calls("^<anonymous>$", "eval", "force", "delayAssign", "return", "<-", "<<-", "print") %>% data.frame %>% transform(number=pp(number), percent=pp(percent)) %>% print(., row.names=FALSE)
 ```
 
 

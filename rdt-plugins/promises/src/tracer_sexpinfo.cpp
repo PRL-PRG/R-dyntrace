@@ -133,6 +133,34 @@ SEXP get_promise(SEXP var, SEXP rho) {
     return prom;
 }
 
+prom_id_t get_parent_promise() {
+    for (std::vector<stack_event_t>::reverse_iterator iterator = STATE(full_stack).rbegin();
+         iterator != STATE(full_stack).rend();
+         ++ iterator) {
+        auto event = *iterator;
+        if(event.type == stack_type::PROMISE)
+            return event.promise_id;
+    }
+    return 0; // FIXME should return a special value or something
+}
+
+size_t get_no_of_ancestor_promises_on_stack() {
+    size_t result = 0;
+    for (auto event : STATE(full_stack)) {
+        if(event.type == stack_type::PROMISE)
+            result++;
+    }
+    return result;
+}
+
+size_t get_no_of_ancestors_on_stack() {
+    return STATE(full_stack).size();
+}
+
+size_t get_no_of_ancestor_calls_on_stack() {
+    return STATE(fun_stack).size();
+}
+
 arg_id_t get_argument_id(call_id_t call_id, const string & argument) { // FIXME this is overcomplicated. A simple sequence should be enough, i think.
     //arg_key_t key = make_pair(call_id, argument);
     //auto iterator = STATE(argument_ids).find(key);

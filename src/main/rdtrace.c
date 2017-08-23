@@ -42,7 +42,7 @@ const char *get_ns_name(SEXP op) {
         if (TYPEOF(spec) == STRSXP && LENGTH(spec) > 0) {
             return CHAR(STRING_ELT(spec, 0));  
         } else if (TYPEOF(spec) == CHARSXP) {
-            return CHAR(spec);\
+            return CHAR(spec);
         } 
     }
 
@@ -165,19 +165,7 @@ char *get_location(SEXP op) {
 
 const char *get_call(SEXP call) {
     return serialize_sexp(call);
-}
-
-char *to_string(SEXP var) {
-    SEXP src = deparse1s(var);
-    char *str = NULL;
-
-    if (IS_SCALAR(src, STRSXP)) {
-        str = strdup(CHAR(STRING_ELT(src, 0)));
-    } else {
-        str = strdup("<unsupported>");
-    }
-
-    return str;
+    //return CHAR(STRING_ELT(deparse1s(call), 0)); // we don't use this in the promise tracer.
 }
 
 int is_byte_compiled(SEXP op) {
