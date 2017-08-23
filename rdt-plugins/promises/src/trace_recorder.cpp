@@ -16,7 +16,7 @@ enum class TraceLinePrefix {
 };
 
 enum class PromiseEvaluationEvent {
-    FORCE, LOOKUP
+    FORCE, LOOKUP, EXPRESSION_LOOKUP
 };
 
 inline void prepend_prefix(stringstream &stream, TraceLinePrefix prefix, bool indent, bool as_sql_comment) {
@@ -468,6 +468,20 @@ void trace_recorder_t::promise_lookup(const prom_info_t & info) {
     string statement = promise_evaluation_info_line(
             TraceLinePrefix::ENTER_AND_EXIT,
             PromiseEvaluationEvent::LOOKUP,
+            info,
+            tracer_conf.pretty_print,
+            /*as_sql_comment=*/render_as_sql_comment,
+            /*call_id_as_pointer=*/tracer_conf.call_id_use_ptr_fmt);
+
+    multiplexer::output(
+            multiplexer::payload_t(statement),
+            tracer_conf.outputs);
+}
+
+void trace_recorder_t::promise_expression_lookup(const prom_info_t & info) {
+    string statement = promise_evaluation_info_line(
+            TraceLinePrefix::ENTER_AND_EXIT,
+            PromiseEvaluationEvent::EXPRESSION_LOOKUP,
             info,
             tracer_conf.pretty_print,
             /*as_sql_comment=*/render_as_sql_comment,

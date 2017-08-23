@@ -283,6 +283,13 @@ void sql_recorder_t::promise_lookup(const prom_info_t & info) {
             tracer_conf.outputs);
 }
 
+void sql_recorder_t::promise_expression_lookup(const prom_info_t & info) {
+    sql_stmt_t statement = insert_promise_evaluation_statement(RDT_SQL_LOOKUP_PROMISE_EXPRESSION, info);
+    multiplexer::output(
+            multiplexer::payload_t(statement),
+            tracer_conf.outputs);
+}
+
 void sql_recorder_t::promise_lifecycle(const prom_gc_info_t & info) {
     sql_stmt_t statement = insert_promise_lifecycle_statement(info);
     multiplexer::output(

@@ -4,6 +4,7 @@
 #include <string.h>
 #include <rdtrace.h>
 #include <time.h>
+#include <deparse.h>
 
 #if !defined(HAVE_CLOCK_GETTIME) && defined(__MACH__)
 #include <mach/clock.h>
@@ -17,6 +18,12 @@ const rdt_handler *rdt_curr_handler = &rdt_null_handler;
 //-----------------------------------------------------------------------------
 // helpers
 //-----------------------------------------------------------------------------
+
+const char* ACTIVE_HOOK_NAME = NULL;
+
+int tracing_is_active() {
+    return (ACTIVE_HOOK_NAME != NULL);
+}
 
 int gc_toggle_off() {
     int gc_enabled = R_GCEnabled;
@@ -157,21 +164,9 @@ char *get_location(SEXP op) {
 }
 
 const char *get_call(SEXP call) {
-    return CHAR(STRING_ELT(deparse1s(call), 0)); // we don't use this in the promise tracer.
+    return serialize_sexp(call);
+    //return CHAR(STRING_ELT(deparse1s(call), 0)); // we don't use this in the promise tracer.
 }
-
-//char *to_string(SEXP var) {
-//    SEXP src = deparse1s(var);
-//    char *str = NULL;
-//
-//    if (IS_SCALAR(src, STRSXP)) {
-//        str = strdup(CHAR(STRING_ELT(src, 0)));
-//    } else {
-//        str = strdup("<unsupported>");
-//    }
-//
-//    return str;
-//}
 
 int is_byte_compiled(SEXP op) {
     SEXP body = BODY(op);
@@ -179,7 +174,7 @@ int is_byte_compiled(SEXP op) {
 }
 
 const char *get_expression(SEXP e) {
-    return CHAR(STRING_ELT(deparse1line(e, FALSE), 0));
+    return serialize_sexp(e);
 }
 
 // returns a monotonic timestamp in microseconds
@@ -246,4 +241,16 @@ void rdt_stop() {
 
 int rdt_is_running() {
     return rdt_curr_handler != &rdt_null_handler;
+}
+
+const char* serialize_sexp(SEXP s) {
+
+  LocalParseData parse_data = {0, 0, 0, 0, /*startline = */TRUE, 0,
+                               NULL, /*DeparseBuffer=*/{NULL, 0, BUFSIZE},
+                               INT_MAX, FALSE, 0, TRUE, FALSE,
+                               INT_MAX, TRUE, 0, FALSE};
+  parse_data.linenumber = 0;
+  parse_data.indent = 0;
+  deparse2buff(s, &parse_data);
+  return parse_data.buffer.data;
 }

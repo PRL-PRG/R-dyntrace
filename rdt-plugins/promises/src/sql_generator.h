@@ -2,6 +2,7 @@
 #define R_3_3_1_SQL_GENERATOR_H
 
 #define RDT_SQL_LOOKUP_PROMISE 0x0
+#define RDT_SQL_LOOKUP_PROMISE_EXPRESSION 0x1
 #define RDT_SQL_FORCE_PROMISE 0xF
 
 #include <string>

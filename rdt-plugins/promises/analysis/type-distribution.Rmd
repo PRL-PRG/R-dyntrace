@@ -146,7 +146,7 @@ min_trigger <- min(object_count_distribution_by_type$`GC TRIGGER`, na.rm = TRUE)
 max_trigger <- max(object_count_distribution_by_type$`GC TRIGGER`, na.rm = TRUE)
 
 scale_x_limits <- c(min_trigger - 1, max_trigger)
-scale_x_breaks <- seq(min_trigger, max_trigger - 1, as.integer((max_trigger - min_trigger) / 10))
+scale_x_breaks <- seq(min_trigger, max_trigger - 1, as.integer((max_trigger - min_trigger) / 5))
 
 graph <-
     object_count_distribution_by_type %>%
@@ -197,7 +197,7 @@ min_trigger <- min(object_size_distribution_by_type$`GC TRIGGER`, na.rm = TRUE)
 max_trigger <- max(object_size_distribution_by_type$`GC TRIGGER`, na.rm = TRUE)
 
 scale_x_limits <- c(min_trigger - 1, max_trigger)
-scale_x_breaks <- seq(min_trigger, max_trigger - 1, as.integer((max_trigger - min_trigger) / 10))
+scale_x_breaks <- seq(min_trigger, max_trigger - 1, as.integer((max_trigger - min_trigger) / 5))
 
 graph <-
     object_size_distribution_by_type %>%

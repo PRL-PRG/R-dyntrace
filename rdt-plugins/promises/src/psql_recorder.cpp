@@ -503,6 +503,17 @@ void psql_recorder_t::promise_lookup(const prom_info_t & info) {
 #endif
 }
 
+void psql_recorder_t::promise_expression_lookup(const prom_info_t & info) {
+#ifdef RDT_SQLITE_SUPPORT
+    sqlite3_stmt *statement = populate_promise_evaluation_statement(RDT_SQL_LOOKUP_PROMISE_EXPRESSION, info);
+    multiplexer::output(
+            multiplexer::payload_t(statement),
+            tracer_conf.outputs);
+#else
+  // FIXME
+#endif
+}
+
 void psql_recorder_t::promise_lifecycle(const prom_gc_info_t & info) {
 #ifdef RDT_SQLITE_SUPPORT
     sqlite3_stmt *statement = populate_promise_lifecycle_statement(info);
