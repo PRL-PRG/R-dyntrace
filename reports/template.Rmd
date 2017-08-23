@@ -179,7 +179,7 @@ if(print_data) print(promise.types, row.names=FALSE)
 
 <div class="together">
 ``` {r promise-full-types-pie, echo=FALSE, fig.width=5, fig.height=4.5, comment=""}
-promise.full.types <- get_full_promise_types(cutoff=1)
+promise.full.types <- get_full_promise_types(cutoff=.5)
 
 slices <- (promise.full.types %>% arrange(number))$number
 labels <- (promise.full.types %>% arrange(number) %>% mutate(type = ifelse(percent>1, type, "")))$type
