@@ -94,6 +94,11 @@ fold_databases <- function(result_path, ...) {
   for (path in paths) {
     write(paste("Concatenating", path), stderr())
     
+    if (!file.exists(path)) {
+      write("    * does not exist, skipping", stderr())
+      next
+    }
+    
     db <- src_sqlite(path, create=FALSE)
     
     # Tables in concatenated DB
@@ -177,8 +182,6 @@ fold_databases <- function(result_path, ...) {
       rename(new.id=id.zero, id=id.db) %>% 
       mutate(new.id=1:function.exists.in.new.length + function_id_offset) # this produces huge holes in the id sequence
     
-    browser()
-    
     function_id_translation_tbl <- 
       union_all(function.exists.in.both, function.exists.in.new)
     # new.functions <- 
@@ -205,7 +208,7 @@ fold_databases <- function(result_path, ...) {
       left_join(function_id_translation_tbl %>% rename(function_id=id), by="function_id", copy=TRUE) %>% 
       select(-function_id) %>% 
       rename(function_id=new.id) %>%
-      select(id, function_name, callsite, compiled, function_id, parent_id) # must order the columns to reflect their order in the DB
+      select(id, function_name, callsite, compiled, function_id, parent_id, in_prom_id, parent_on_stack_type, parent_on_stack_id) # must order the columns to reflect their order in the DB
     # todo: push new.calls to end of zero.calls in db
     db_insert_into(result$con, "calls", new.calls %>% collect)
     
@@ -227,7 +230,7 @@ fold_databases <- function(result_path, ...) {
       rename(promise_id = id) %>% 
       promise_id_mutator %>% 
       rename(id = promise_id) %>%
-      select(id,  type, full_type)
+      select(id,  type, full_type, in_prom_id, parent_on_stack_type, parent_on_stack_id, promise_stack_depth)
     # todo: push new.promises to end of zero.promises in db
     db_insert_into(result$con, "promises", new.promises %>% collect)
     
@@ -252,7 +255,7 @@ fold_databases <- function(result_path, ...) {
         in_call_id = ifelse(in_call_id == 0, 0, call_id_offset + in_call_id), 
         from_call_id = ifelse(from_call_id == 0, 0, call_id_offset + from_call_id)) %>% 
       promise_id_mutator %>% 
-      select(clock, event_type, promise_id, from_call_id, in_call_id, lifestyle, effective_distance_from_origin, actual_distance_from_origin)
+      select(clock, event_type, promise_id, from_call_id, in_call_id, in_prom_id, lifestyle, effective_distance_from_origin, actual_distance_from_origin, parent_on_stack_type, parent_on_stack_id, promise_stack_depth)
     # todo: push to db
     db_insert_into(result$con, "promise_evaluations", new.promise_evaluations %>% collect)
     
