@@ -12,7 +12,7 @@
 using namespace std;
 
 enum class TraceLinePrefix {
-    ENTER, EXIT, ENTER_AND_EXIT
+    ENTER, EXIT, ENTER_AND_EXIT, METADATA
 };
 
 enum class PromiseEvaluationEvent {
@@ -37,6 +37,10 @@ inline void prepend_prefix(stringstream &stream, TraceLinePrefix prefix, bool in
 
         case TraceLinePrefix::ENTER_AND_EXIT:
             stream << "<> ";
+            break;
+
+        case TraceLinePrefix::METADATA:
+            stream << "## ";
             break;
     }
 }
@@ -99,9 +103,20 @@ string function_call_info_line(TraceLinePrefix prefix, const closure_info_t &inf
 
         ++i;
     }
-    stream << "}\n";
 
-    stream << " recursive=" << recursive_type_to_string(info.recursion);
+    switch (info.parent_on_stack.type) {
+        case stack_type::CALL:
+            stream << " parent_id=<call>:" << info.parent_on_stack.call_id;
+            break;
+        case stack_type::PROMISE:
+            stream << " parent_id=<promise>:" << info.parent_on_stack.promise_id;
+            break;
+        case stack_type::NONE:
+            stream << " parent_id=<none>";
+            break;
+    }
+
+    stream << "}\n";
 
     return stream.str();
 }
@@ -138,6 +153,7 @@ string builtin_or_special_call_info_line(TraceLinePrefix prefix, const builtin_i
            << " function_id=" << info.fn_id;
 
     stream << " from_call_id=" << info.parent_call_id;
+    stream << " in_prom=" << info.in_prom_id;
 
     if (info.loc.empty())
         stream << " location=<unknown>";
@@ -151,22 +167,80 @@ string builtin_or_special_call_info_line(TraceLinePrefix prefix, const builtin_i
 
     stream << " compiled=" << (info.fn_compiled ? "true" : "false");
 
-    stream << " recursive=" << recursive_type_to_string(info.recursion);
+    switch (info.parent_on_stack.type) {
+        case stack_type::CALL:
+            stream << " parent_id=<call>:" << info.parent_on_stack.call_id;
+            break;
+        case stack_type::PROMISE:
+            stream << " parent_id=<promise>:" << info.parent_on_stack.promise_id;
+            break;
+        case stack_type::NONE:
+            stream << " parent_id=<none>";
+            break;
+    }
 
     stream << "\n";
 
     return stream.str();
 }
 
-string unwind_info_line(TraceLinePrefix prefix, const call_id_t call_id, bool indent, bool as_sql_comment, bool call_id_is_pointer) {
+string unwind_call_info_line(TraceLinePrefix prefix, const call_id_t call_id, bool indent, bool as_sql_comment, bool call_id_is_pointer) {
     stringstream stream;
     prepend_prefix(stream, prefix, indent, as_sql_comment);
 
-    auto num_fmt = call_id_is_pointer ? hex : dec;
-    string num_pref =  call_id_is_pointer ? "0x" : "";
+    stream << "unwind call_id=" << call_id << "\n";
 
-    stream << "unwind call_id=" << num_pref << num_fmt << call_id << "\n";
+    return stream.str();
+}
 
+string unwind_promises_info_line(TraceLinePrefix prefix, const vector<prom_id_t> & unwound_promises, bool indent, bool as_sql_comment, bool call_id_is_pointer) {
+    stringstream stream;
+    prepend_prefix(stream, prefix, indent, as_sql_comment);
+
+    stream << "unwind promises=";
+
+    bool first = true;
+    for (prom_id_t prom_id : unwound_promises) {
+        if(!first)
+            stream << " ";
+        else
+            first = false;
+        stream << prom_id;
+    }
+
+    stream << "\n";
+
+    return stream.str();
+}
+
+string gc_info_line(TraceLinePrefix prefix, const gc_info_t & info, bool indent, bool as_sql_comment) {
+    stringstream stream;
+    prepend_prefix(stream, prefix, indent, as_sql_comment);
+    stream << "counter=" << info.counter;
+    stream << " ncells=" << info.ncells;
+    stream << " vcells=" << info.vcells;
+    stream << "\n";
+    return stream.str();
+}
+
+string vector_info_line(TraceLinePrefix prefix, const type_gc_info_t & info, bool indent, bool as_sql_comment) {
+    stringstream stream;
+    prepend_prefix(stream, prefix, indent, as_sql_comment);
+    stream << "gc_trigger_counter=" << info.gc_trigger_counter;
+    stream << " type=" << info.type;
+    stream << " length=" << info.length;
+    stream << " bytes=" << info.bytes;
+    stream << "\n";
+    return stream.str();
+}
+
+string promise_lifecycle_info_line(TraceLinePrefix prefix, const prom_gc_info_t & info, bool indent, bool as_sql_comment) {
+    stringstream stream;
+    prepend_prefix(stream, prefix, indent, as_sql_comment);
+    stream << "promise_id=" << info.promise_id;
+    stream << " event=" << info.event;
+    stream << " gc_trigger_counter=" << info.gc_trigger_counter;
+    stream << "\n";
     return stream.str();
 }
 
@@ -174,15 +248,22 @@ string promise_creation_info_line(TraceLinePrefix prefix, const prom_basic_info_
     stringstream stream;
     prepend_prefix(stream, prefix, indent, as_sql_comment);
     stream << "create promise id=" << info.prom_id
-           << " type=" << sexp_type_to_string(info.prom_type);
+           << " in_prom=" << info.in_prom_id
+           << " type=" << sexp_type_to_string(info.prom_type)
+           << " full_type=" << full_sexp_type_to_string(info.full_type)
+           << " depth=" << info.depth;
 
-//    if (info.prom_type == sexp_type::BCODE)
-//        stream << "->" << sexp_type_to_string(info.prom_original_type);
-//
-//    if (info.symbol_underlying_type_is_set)
-//        stream << "->" << sexp_type_to_string(info.symbol_underlying_type);
-
-    stream << " full_type=" << full_sexp_type_to_string(info.full_type);
+    switch (info.parent_on_stack.type) {
+        case stack_type::CALL:
+            stream << " parent_id=<call>:" << info.parent_on_stack.call_id;
+            break;
+        case stack_type::PROMISE:
+            stream << " parent_id=<promise>:" << info.parent_on_stack.promise_id;
+            break;
+        case stack_type::NONE:
+            stream << " parent_id=<none>";
+            break;
+    }
 
     stream << "\n";
 
@@ -202,15 +283,11 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
             break;
     }
 
-    auto num_fmt = call_id_is_pointer ? hex : dec;
-    string num_pref =  call_id_is_pointer ? "0x" : "";
-
-    // FIXME (1) sometimes name is empty and it prints name anyway instead of unknown...
-    // FIXME (2) when outputting to file name is always unknown, even though in many cases it should be known
     stream << " name=" << (info.name.empty() ? "<unknown>" : info.name)
            << " id=" << info.prom_id
-           << " in_call=" << num_pref << num_fmt << info.in_call_id
-           << " from_call=" << num_pref << num_fmt << info.from_call_id;
+           << " in_call=" << info.in_call_id
+           << " from_call=" << info.from_call_id
+           << " in_prom=" << info.in_prom_id;
 
     switch (info.lifestyle) {
         case lifestyle_type::LOCAL:
@@ -233,12 +310,37 @@ string promise_evaluation_info_line(TraceLinePrefix prefix, PromiseEvaluationEve
             break;
     }
 
-
     stream << " distance_from_origin=" << info.effective_distance_from_origin
-           << "/" << info.actual_distance_from_origin;
+           << "/" << info.actual_distance_from_origin
+           << " type=" << sexp_type_to_string(info.prom_type)
+           << " return_type=" << sexp_type_to_string(info.return_type)
+           << " depth=" << info.depth;
 
-    stream << " type=" << sexp_type_to_string(info.prom_type);
+    switch (info.parent_on_stack.type) {
+        case stack_type::CALL:
+            stream << " parent_id=<call>:" << info.parent_on_stack.call_id;
+            break;
+        case stack_type::PROMISE:
+            stream << " parent_id=<promise>:" << info.parent_on_stack.promise_id;
+            break;
+        case stack_type::NONE:
+            stream << " parent_id=<none>";
+            break;
+    }
 
+    stream << "\n";
+
+    return stream.str();
+}
+
+string start_info_line(TraceLinePrefix prefix, metadata_t metadata, bool indent, bool as_sql_comment) {
+    stringstream stream;
+
+    stream << "\n";
+    for(const auto & i : metadata) {
+        prepend_prefix(stream, prefix, indent, as_sql_comment);
+        stream << i.first << "=" << i.second << "\n";
+    }
     stream << "\n";
 
     return stream.str();
@@ -376,31 +478,96 @@ void trace_recorder_t::promise_lookup(const prom_info_t & info) {
             tracer_conf.outputs);
 }
 
+void trace_recorder_t::promise_lifecycle(const prom_gc_info_t & info) {
+    string statement = promise_lifecycle_info_line(
+            TraceLinePrefix::ENTER_AND_EXIT,
+            info,
+            tracer_conf.pretty_print,
+            /*as_sql_comment=*/render_as_sql_comment);
+
+    multiplexer::output(
+            multiplexer::payload_t(statement),
+            tracer_conf.outputs);
+}
+
+void trace_recorder_t::gc_exit(const gc_info_t & info) {
+    string statement = gc_info_line(
+            TraceLinePrefix::ENTER_AND_EXIT,
+            info,
+            tracer_conf.pretty_print,
+            /*as_sql_comment=*/render_as_sql_comment);
+
+    multiplexer::output(
+            multiplexer::payload_t(statement),
+            tracer_conf.outputs);
+}
+
+void trace_recorder_t::vector_alloc(const type_gc_info_t & info) {
+    string statement = vector_info_line(
+            TraceLinePrefix::ENTER_AND_EXIT,
+            info,
+            tracer_conf.pretty_print,
+            /*as_sql_comment=*/render_as_sql_comment);
+
+    multiplexer::output(
+            multiplexer::payload_t(statement),
+            tracer_conf.outputs);
+}
+
 void trace_recorder_t::init_recorder() {
 
 }
 
-void trace_recorder_t::start_trace() {
+void trace_recorder_t::start_trace(const metadata_t & info) {
     multiplexer::init(tracer_conf.outputs, tracer_conf.filename, tracer_conf.overwrite);
+
+    string statement = start_info_line(
+            TraceLinePrefix::METADATA ,
+            info,
+            /*as_sql_comment=*/render_as_sql_comment,
+            /*call_id_as_pointer=*/tracer_conf.call_id_use_ptr_fmt);
+
+    multiplexer::output(
+            multiplexer::payload_t(statement),
+            tracer_conf.outputs);
 }
 
-void trace_recorder_t::finish_trace() {
+void trace_recorder_t::finish_trace(const metadata_t & info) {
+    string statement = start_info_line(
+            TraceLinePrefix::METADATA ,
+            info,
+            /*as_sql_comment=*/render_as_sql_comment,
+            /*call_id_as_pointer=*/tracer_conf.call_id_use_ptr_fmt);
+
+    multiplexer::output(
+            multiplexer::payload_t(statement),
+            tracer_conf.outputs);
+
     multiplexer::close(tracer_conf.outputs);
 }
 
-void trace_recorder_t::unwind(const vector<call_id_t> & unwound_calls) {
+void trace_recorder_t::unwind(const unwind_info_t & info) {
     stringstream statement;
 
-    for (call_id_t call_id : unwound_calls) {
+    for (call_id_t call_id : info.unwound_calls) {
         if (tracer_conf.pretty_print) {
             STATE(indent) = STATE(curr_fn_indent_level).top();
             STATE(curr_fn_indent_level).pop();
             STATE(indent) -= tracer_conf.indent_width;
         }
 
-        statement << unwind_info_line(
+        statement << unwind_call_info_line(
                 TraceLinePrefix::EXIT,
                 call_id,
+                tracer_conf.pretty_print,
+                /*as_sql_comment=*/render_as_sql_comment,
+                /*call_id_as_pointer=*/tracer_conf.call_id_use_ptr_fmt);
+    }
+
+    if (!info.unwound_promises.empty()) {
+        statement << unwind_promises_info_line(
+                TraceLinePrefix::EXIT,
+                info.unwound_promises,
                 tracer_conf.pretty_print,
                 /*as_sql_comment=*/render_as_sql_comment,
                 /*call_id_as_pointer=*/tracer_conf.call_id_use_ptr_fmt);

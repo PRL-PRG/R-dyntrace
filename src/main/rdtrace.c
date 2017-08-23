@@ -18,6 +18,15 @@ const rdt_handler *rdt_curr_handler = &rdt_null_handler;
 // helpers
 //-----------------------------------------------------------------------------
 
+int gc_toggle_off() {
+    int gc_enabled = R_GCEnabled;
+    R_GCEnabled = 0;
+    return gc_enabled;
+}
+void gc_toggle_restore(int previous_value) {
+    R_GCEnabled = previous_value;
+}
+
 const char *get_ns_name(SEXP op) {
     SEXP env = CLOENV(op);
     SEXP spec = R_NamespaceEnvSpec(env);
@@ -26,7 +35,7 @@ const char *get_ns_name(SEXP op) {
         if (TYPEOF(spec) == STRSXP && LENGTH(spec) > 0) {
             return CHAR(STRING_ELT(spec, 0));  
         } else if (TYPEOF(spec) == CHARSXP) {
-            return CHAR(spec);\
+            return CHAR(spec);
         } 
     }
 
@@ -148,21 +157,21 @@ char *get_location(SEXP op) {
 }
 
 const char *get_call(SEXP call) {
-    return CHAR(STRING_ELT(deparse1s(call), 0));
+    return CHAR(STRING_ELT(deparse1s(call), 0)); // we don't use this in the promise tracer.
 }
 
-char *to_string(SEXP var) {
-    SEXP src = deparse1s(var);
-    char *str = NULL;
-
-    if (IS_SCALAR(src, STRSXP)) {
-        str = strdup(CHAR(STRING_ELT(src, 0)));
-    } else {
-        str = strdup("<unsupported>");
-    }
-
-    return str;
-}
+//char *to_string(SEXP var) {
+//    SEXP src = deparse1s(var);
+//    char *str = NULL;
+//
+//    if (IS_SCALAR(src, STRSXP)) {
+//        str = strdup(CHAR(STRING_ELT(src, 0)));
+//    } else {
+//        str = strdup("<unsupported>");
+//    }
+//
+//    return str;
+//}
 
 int is_byte_compiled(SEXP op) {
     SEXP body = BODY(op);

@@ -1,0 +1,237 @@
+---
+params: 
+    dbpath: "?"
+title: "`r tools::file_path_sans_ext(basename(params$dbpath))`"
+date: "`r Sys.Date()`"
+output:
+    html_document:
+        theme: flatly
+        highlight: pygments
+---
+
+---
+<style>
+    body .main-container {
+        max-width: 2000px;
+    }
+</style>
+
+```{r libraries, echo = FALSE, include=FALSE}
+library(tidyr)
+library(dplyr)
+library(dbplyr)
+library(ggplot2)
+library(ggthemes)
+library(knitr)
+library(DT)
+library(tibble)
+```
+
+```{r utilities, echo = FALSE, include=FALSE}
+typename <- function(type) {
+    switch(toString(type),
+           "0" = "NIL",
+           "1" = "SYM",
+           "2" = "LIST",
+           "3" = "CLO",
+           "4" = "ENV",
+           "5" = "PROM",
+           "6" = "LANG",
+           "7" = "SPECIAL",
+           "8" = "BUILTIN",
+           "9" = "CHAR",
+           "10" = "LGL",
+           "13" = "INT",
+           "14" = "REAL",
+           "15" = "CPLX",
+           "16" = "STR",
+           "17" = "DOT",
+           "18" = "ANY",
+           "19" = "VEC",
+           "20" = "EXPR",
+           "21" = "BCODE",
+           "22" = "EXTPTR",
+           "23" = "WEAKREF",
+           "24" = "RAW",
+           "25" = "S4",
+           "30" = "NEW",
+           "31" = "FREE",
+           "99" = "FUN",
+           "?")
+}
+
+eventname <- function(event) {
+    switch(toString(event),
+           "0" = "CREATED",
+           "1" = "LOOKED UP",
+           "2" = "GARBAGE COLLECTED",
+           "?")
+}
+```
+
+```{r render_settings, echo = FALSE, include = FALSE}
+opts_chunk$set(comment=NA, fig.width=22, fig.height=12)
+```
+
+```{r ggplot_theme, include = FALSE, echo = FALSE}
+promise_theme <- 
+    theme_minimal() +
+    theme(plot.title =element_text(size = 30, face="bold", hjust = 0.5, lineheight = 4, margin = margin(t = 0, r = 0, b = 20, l = 0)),
+          axis.text = element_text(size=15),
+          axis.text.x = element_text(angle = 90, hjust = 0.5, vjust = 0.5), 
+          axis.title = element_text(size=20, face="bold", hjust = 0.5),
+          axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0)),
+          axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)))
+
+# Set promise_theme as the default theme. Store previous theme.
+previous_theme <- theme_set(promise_theme)
+```
+
+```{r tables, include = FALSE, echo = FALSE}
+db <- src_sqlite(params$dbpath)
+functions <- db %>% tbl("functions")
+arguments <- db %>% tbl("arguments")
+calls <- db %>% tbl("calls")
+promises <- db %>% tbl("promises")
+associations <- db %>% tbl("promise_associations")
+evaluations <- db %>% tbl("promise_evaluations")
+lifecycle <-
+    db %>%
+    tbl("promise_lifecycle") %>%
+    group_by(promise_id, event_type) %>%
+    summarize(gc_trigger_counter = max(gc_trigger_counter)) %>%
+    as.tibble()
+
+trigger <- db %>% tbl("gc_trigger")
+type_distribution <- 
+    db %>% 
+    tbl("type_distribution")
+```
+
+```{r object_type_distribution, include = FALSE, echo = FALSE}
+promise_count <-
+    lifecycle %>%
+    filter(event_type == 0) %>%
+    group_by(gc_trigger_counter) %>%
+    summarize(`COUNT` = n()) %>%
+    rename(`GC TRIGGER` = gc_trigger_counter) %>%
+    rowwise() %>%
+    mutate(`OBJECT TYPE` = "PROMISE", `SIZE (MB)` = `COUNT` * 52 / (1024 * 1024))
+
+datatable(promise_count, rownames = FALSE)
+
+object_type_distribution <- 
+    type_distribution %>%
+    mutate(`SIZE (MB)` = bytes / (1024 * 1024)) %>%
+    group_by(gc_trigger_counter, type) %>%
+    summarize(`COUNT` = n(), `SIZE (MB)` = sum(`SIZE (MB)`)) %>%
+    collect() %>%
+    rename(`GC TRIGGER` = gc_trigger_counter, `OBJECT TYPE` = type) %>%
+    rowwise() %>%
+    mutate(`OBJECT TYPE` = typename(`OBJECT TYPE`)) %>%
+    rbind(promise_count) %>%
+    mutate(`GC TRIGGER` = `GC TRIGGER` + 1) %>%
+    arrange(`GC TRIGGER`)
+```
+
+# Object count distribution by type
+```{r object_count_distribution_by_type, echo = FALSE}
+object_count_distribution_by_type <-
+    object_type_distribution %>%
+    select(-`SIZE (MB)`) %>%
+    spread(`OBJECT TYPE`, `COUNT`, fill = 0) %>%
+    head(-1)
+
+min_trigger <- min(object_count_distribution_by_type$`GC TRIGGER`, na.rm = TRUE)
+max_trigger <- max(object_count_distribution_by_type$`GC TRIGGER`, na.rm = TRUE)
+
+scale_x_limits <- c(min_trigger - 1, max_trigger)
+scale_x_breaks <- seq(min_trigger, max_trigger - 1, as.integer((max_trigger - min_trigger) / 10))
+
+graph <-
+    object_count_distribution_by_type %>%
+    gather(`OBJECT TYPE`, `COUNT`, -`GC TRIGGER`) %>%
+    ggplot(aes(`GC TRIGGER`, `COUNT`, group = `OBJECT TYPE`)) +
+    geom_bar(aes(fill = `OBJECT TYPE`), stat = "identity", position = "dodge") +
+    scale_x_continuous(breaks = scale_x_breaks, limits = scale_x_limits) +
+    scale_fill_gdocs()
+
+graph
+
+datatable(object_count_distribution_by_type, rownames = FALSE)
+```
+
+# Summary of Object count distribution by type
+```{r summary_of_object_count_distribution_by_type, echo = FALSE}
+graph <-
+    object_count_distribution_by_type %>%
+    gather(`OBJECT TYPE`, `COUNT`, -`GC TRIGGER`) %>%
+    ggplot(aes(`OBJECT TYPE`, `COUNT`)) +
+    geom_boxplot() +
+    geom_jitter(width = 0.2) +
+    scale_color_gdocs()
+    
+graph
+
+object_count_distribution_by_type_summary <-
+    object_count_distribution_by_type %>%
+    select(-`GC TRIGGER`) %>%
+    apply(2, function(col) as.vector(summary(col))) %>%
+    as.tibble() %>%
+    mutate(`STATISTICS` = c("MINIMUM", "1st QUARTILE", "MEDIAN", "MEAN", "3rd QUARTILE", "MAXIMUM")) %>%
+    gather(`OBJECT TYPE`, `VALUE`, -`STATISTICS`) %>%
+    spread(`STATISTICS`, `VALUE`)
+    
+datatable(object_count_distribution_by_type_summary, rownames = FALSE)
+```
+
+# Object size distribution by type 
+```{r object_size_distribution_by_type, echo = FALSE}
+object_size_distribution_by_type <-
+    object_type_distribution %>%
+    select(-`COUNT`) %>%
+    spread(`OBJECT TYPE`, `SIZE (MB)`, fill = 0) %>%
+    head(-1)
+
+min_trigger <- min(object_size_distribution_by_type$`GC TRIGGER`, na.rm = TRUE)
+max_trigger <- max(object_size_distribution_by_type$`GC TRIGGER`, na.rm = TRUE)
+
+scale_x_limits <- c(min_trigger - 1, max_trigger)
+scale_x_breaks <- seq(min_trigger, max_trigger - 1, as.integer((max_trigger - min_trigger) / 10))
+
+graph <-
+    object_size_distribution_by_type %>%
+    gather(`OBJECT TYPE`, `SIZE (MB)`, -`GC TRIGGER`) %>%
+    ggplot(aes(`GC TRIGGER`, `SIZE (MB)`, group = `OBJECT TYPE`)) +
+    geom_bar(aes(fill = `OBJECT TYPE`), stat = "identity", position = "dodge") +
+    scale_x_continuous(breaks = scale_x_breaks, limits = scale_x_limits) +
+    scale_fill_gdocs()
+
+graph
+
+datatable(object_size_distribution_by_type, rownames = FALSE)
+```
+
+# Summary of Object size distribution by type 
+```{r summary_of_object_size_distribution_by_type, echo = FALSE}
+graph <-
+    object_size_distribution_by_type %>%
+    gather(`OBJECT TYPE`, `SIZE (MB)`, -`GC TRIGGER`) %>%
+    ggplot(aes(`OBJECT TYPE`, `SIZE (MB)`)) +
+    geom_boxplot() +
+    geom_jitter(width = 0.2) +
+    scale_color_gdocs()
+    
+graph
+
+object_size_distribution_by_type_summary <-
+    object_size_distribution_by_type %>%
+    select(-`GC TRIGGER`) %>%
+    apply(2, function(col) as.vector(summary(col))) %>%
+    as.tibble() %>%
+    mutate(`STATISTICS` = c("MINIMUM", "1st QUARTILE", "MEDIAN", "MEAN", "3rd QUARTILE", "MAXIMUM")) %>%
+    gather(`OBJECT TYPE`, `VALUE`, -`STATISTICS`) %>%
+    spread(`STATISTICS`, `VALUE`)
+    
+datatable(object_size_distribution_by_type_summary, rownames = FALSE)
+```

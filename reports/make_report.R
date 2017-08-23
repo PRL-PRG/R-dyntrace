@@ -1,5 +1,7 @@
 #!/usr/bin/Rscript
 
+compiler::setCompilerOptions(suppressAll = TRUE)
+
 suppressPackageStartupMessages(library("optparse"))
 suppressPackageStartupMessages(library("dplyr"))
 suppressPackageStartupMessages(library("stringr"))
@@ -23,13 +25,23 @@ option_list <- list(
               help="print debug information [default]", metavar="debug"),
   make_option(c("-e", "--output-extension"), action="store", type="character", default="Rmd",
               help="Report document extension", metavar="extension"),
-  make_option(c("-o", "--output-path"), action="store", type="character", default=dirname(tools:::file_path_sans_ext(PATH_TO_TEMPLATE)),
-              help="Report document output directory", metavar="extension"),
+  make_option(c("-o", "--output-path"), action="store", type="character", default="",
+              help="Report document output directory (default is same as --template)", metavar="output_path"),
   make_option(c("--compile"), action="store_true", default=FALSE,
-              help="compile Rmd files [default]", metavar="compile")
+              help="compile Rmd files [default]", metavar="compile"),
+  make_option(c("--engine"), action="store", default=PATH_TO_ENGINE,
+              help="path to functions.R file [default]", metavar="engine"),
+  make_option(c("--template"), action="store", default=PATH_TO_TEMPLATE,
+              help="path to an Rmd template file [default]", metavar="template")
 )
 
 cfg <- parse_args(OptionParser(option_list=option_list), positional_arguments=TRUE)
+
+print(cfg)
+
+if (cfg$options$`output-path` == "") {
+  cfg$options$`output-path` <- dirname(cfg$options$template)
+}
 
 make_metadata_line <- function(key, value, comment=NULL, quote=FALSE) 
   paste(key, 
@@ -59,9 +71,9 @@ for (argument in cfg$args){
     print(metadata)
   
   markdown <- 
-    readLines(PATH_TO_TEMPLATE) %>% paste(collapse="\n") %>% 
+    readLines(cfg$options$template) %>% paste(collapse="\n") %>% 
     str_replace_all("%%PATH%%", argument) %>% 
-    str_replace_all("%%FUNCTIONS%%", PATH_TO_ENGINE)
+    str_replace_all("%%FUNCTIONS%%", cfg$options$engine)
   
   content <- paste(metadata, markdown, sep="\n")
   

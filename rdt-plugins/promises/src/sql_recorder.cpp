@@ -2,14 +2,14 @@
 // Created by nohajc on 29.3.17.
 //
 
-#include <cstring>
 #include <cstdio>
+#include <cstring>
 
 #include "sql_recorder.h"
 #include "tracer_conf.h"
 
-#include "sql_generator.h"
 #include "multiplexer.h"
+#include "sql_generator.h"
 #include "tools.h"
 
 #include <string>
@@ -28,7 +28,13 @@ sql_stmt_t insert_function_statement(const call_info_t & info) {
     sql_val_t type = from_int(tools::enum_cast(info.fn_type));
     sql_val_t compiled = from_int(info.fn_compiled ? 1 : 0);
 
-    return make_insert_function_statement(id, location, definition, type, compiled);
+    return make_insert_function_statement(
+            id,
+            location,
+            definition,
+            type,
+            compiled
+    );
 }
 
 sql_stmt_t insert_arguments_statement(const closure_info_t & info, bool align) {
@@ -48,7 +54,10 @@ sql_stmt_t insert_arguments_statement(const closure_info_t & info, bool align) {
         value_cells.push_back(cell);
     }
 
-    return make_insert_arguments_statement(value_cells, align);
+    return make_insert_arguments_statement(
+            value_cells,
+            align
+    );
 }
 
 sql_stmt_t insert_call_statement(const call_info_t & info) {
@@ -58,15 +67,42 @@ sql_stmt_t insert_call_statement(const call_info_t & info) {
     sql_val_t function_id = from_int(info.fn_id);
     sql_val_t parent_call_id = from_int(info.parent_call_id);
     sql_val_t callsite = wrap_nullable_string(info.callsite);
+    sql_val_t compiled = from_int(info.fn_compiled ? 1 : 0);
+    sql_val_t in_prom_id = from_int(info.in_prom_id);
+    sql_val_t stack_parent_type = from_int(tools::enum_cast(info.parent_on_stack.type));
+    sql_val_t stack_parent_id = from_stack_event(info.parent_on_stack); // XXX relies on the fact that they're both ints.
 
-    return make_insert_function_call_statement(id, name, callsite, function_id, parent_call_id);
+
+    return make_insert_function_call_statement(
+            id,
+            name,
+            callsite,
+            compiled,
+            function_id,
+            parent_call_id,
+            in_prom_id,
+            stack_parent_type,
+            stack_parent_id
+    );
 }
 
 sql_stmt_t insert_promise_statement(const prom_basic_info_t & info) {
+    sql_val_t promise_id = from_int(info.prom_id);
+    sql_val_t promise_type = from_int(tools::enum_cast(info.prom_type));
+    sql_val_t promise_full_type = wrap_nullable_string(full_sexp_type_to_number_string(info.full_type));
+    sql_val_t in_prom_id = from_int(info.in_prom_id);
+    sql_val_t stack_parent_type = from_int(tools::enum_cast(info.parent_on_stack.type));
+    sql_val_t stack_parent_id = from_stack_event(info.parent_on_stack); // XXX relies on the fact that they're both ints.
+    sql_val_t depth = from_int(info.depth);
+
     return make_insert_promise_statement(
-            from_int(info.prom_id),
-            from_int(tools::enum_cast(info.prom_type)),
-            wrap_nullable_string(full_sexp_type_to_number_string(info.full_type))
+            promise_id,
+            promise_type,
+            promise_full_type,
+            in_prom_id,
+            stack_parent_type,
+            stack_parent_id,
+            depth
     );
 }
 
@@ -88,24 +124,68 @@ sql_stmt_t insert_promise_association_statement(const closure_info_t & info, boo
         value_cells.push_back(cell);
     }
 
-    return make_insert_promise_associations_statement(value_cells, align);
+    return make_insert_promise_associations_statement(
+            value_cells,
+            align
+    );
 }
 
 sql_stmt_t insert_promise_evaluation_statement(prom_eval_t type, const prom_info_t & info) {
-    //sql_val_t clock = from_int(STATE(clock_id)++);
-    sql_val_t clock = next_from_sequence();
+    sql_val_t clock = from_int(STATE(clock_id)++);
     sql_val_t event_type = from_int(type);
     sql_val_t promise_id = from_int(info.prom_id);
     sql_val_t from_call_id = from_int(info.from_call_id);
     sql_val_t in_call_id = from_int(info.in_call_id);
+    sql_val_t in_prom_id = from_int(info.in_prom_id);
     sql_val_t lifestyle = from_int(tools::enum_cast(info.lifestyle));
     sql_val_t effective_distance_from_origin = from_int(info.effective_distance_from_origin);
     sql_val_t actual_distance_from_origin = from_int(info.actual_distance_from_origin);
+    sql_val_t stack_parent_type = from_int(tools::enum_cast(info.parent_on_stack.type));
+    sql_val_t stack_parent_id = from_stack_event(info.parent_on_stack); // XXX relies on the fact that they're both ints.
+    sql_val_t depth = from_int(info.depth);
 
     // in_call_id = current call
     // from_call_id = TODO what is it
 
-    return make_insert_promise_evaluation_statement(clock, event_type, promise_id, from_call_id, in_call_id, lifestyle, effective_distance_from_origin, actual_distance_from_origin);
+    return make_insert_promise_evaluation_statement(
+            clock,
+            event_type,
+            promise_id,
+            from_call_id,
+            in_call_id,
+            in_prom_id,
+            lifestyle,
+            effective_distance_from_origin,
+            actual_distance_from_origin,
+            stack_parent_type,
+            stack_parent_id,
+            depth
+    );
+}
+
+sql_stmt_t insert_promise_return_statement(const prom_info_t & info) {
+    sql_val_t return_type = from_int(tools::enum_cast(info.return_type));
+    sql_val_t clock = from_int(STATE(clock_id)); // FIXME
+    sql_val_t promise_id = from_int(info.prom_id);
+
+    return make_insert_promise_return_statement(
+            return_type,
+            clock,
+            promise_id
+    );
+}
+
+sql_stmt_t insert_promise_lifecycle_statement(const prom_gc_info_t & info) {
+    //sql_val_t clock = from_int(STATE(clock_id)++);
+    sql_val_t promise_id = from_int(info.promise_id);
+    sql_val_t event = from_int(info.event);
+    sql_val_t gc_trigger_counter = from_int(info.gc_trigger_counter);
+
+    return make_insert_promise_lifecycle_statement(
+            promise_id,
+            event,
+            gc_trigger_counter
+    );
 }
 
 /* Functions connecting to the outside world, create SQL and multiplex output. */
@@ -180,6 +260,15 @@ void sql_recorder_t::force_promise_entry(const prom_info_t & info) {
     }
 }
 
+void sql_recorder_t::force_promise_exit(const prom_info_t & info) {
+    /* always */ {
+        sql_stmt_t statement = insert_promise_return_statement(info);
+        multiplexer::output(
+                multiplexer::payload_t(statement),
+                tracer_conf.outputs);
+    }
+}
+
 void sql_recorder_t::promise_created(const prom_basic_info_t & info) {
     sql_stmt_t statement = insert_promise_statement(info);
     multiplexer::output(
@@ -194,22 +283,39 @@ void sql_recorder_t::promise_lookup(const prom_info_t & info) {
             tracer_conf.outputs);
 }
 
-void sql_recorder_t::start_trace() { // bool output_configuration
+void sql_recorder_t::promise_lifecycle(const prom_gc_info_t & info) {
+    sql_stmt_t statement = insert_promise_lifecycle_statement(info);
+    multiplexer::output(
+            multiplexer::payload_t(statement),
+            tracer_conf.outputs);
+}
+
+void sql_recorder_t::start_trace(const metadata_t & info) { // bool output_configuration
+
     multiplexer::init(tracer_conf.outputs, tracer_conf.filename, tracer_conf.overwrite);
 
     if (tracer_conf.include_configuration)
         if (tracer_conf.overwrite) {
             sql_stmt_t pragma_statement = make_pragma_statement("synchronous", "off");
 
+            sql_stmt_t create_metadata_statement = make_create_metadata_statement();
             sql_stmt_t create_functions_statement = make_create_functions_statement();
             sql_stmt_t create_calls_statement = make_create_calls_statement();
             sql_stmt_t create_arguments_statement = make_create_arguments_statement();
             sql_stmt_t create_promises_statement = make_create_promises_statement();
             sql_stmt_t create_associations_statement = make_create_promise_associations_statement();
             sql_stmt_t create_evaluations_statement = make_create_promise_evaluations_statement();
+            sql_stmt_t create_returns_statement = make_create_promise_returns_statement();
+            sql_stmt_t create_lifecycle_statement = make_create_promise_lifecycle_statement();
+            sql_stmt_t create_trigger_statement = make_create_gc_trigger_statement();
+            sql_stmt_t create_distribution_statement = make_create_type_distribution_statement();
 
             multiplexer::output(
                     multiplexer::payload_t(pragma_statement),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(create_metadata_statement),
                     tracer_conf.outputs);
 
             multiplexer::output(
@@ -235,7 +341,30 @@ void sql_recorder_t::start_trace() { // bool output_configuration
             multiplexer::output(
                     multiplexer::payload_t(create_evaluations_statement),
                     tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(create_returns_statement),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(create_lifecycle_statement),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(create_trigger_statement),
+                    tracer_conf.outputs);
+
+            multiplexer::output(
+                    multiplexer::payload_t(create_distribution_statement),
+                    tracer_conf.outputs);
         }
+
+    for(auto const & i : info) {
+        sql_stmt_t statement = make_insert_matadata_statement(wrap_nullable_string(i.first), wrap_nullable_string(i.second));
+        multiplexer::output(
+                multiplexer::payload_t(statement),
+                tracer_conf.outputs);
+    }
 
     if (!tracer_conf.overwrite && tracer_conf.reload_state) {
         sql_stmt_t max_function_id_query = make_select_max_function_id_statement();
@@ -292,7 +421,14 @@ void sql_recorder_t::start_trace() { // bool output_configuration
     }
 }
 
-void sql_recorder_t::finish_trace() {
+void sql_recorder_t::finish_trace(const metadata_t & info) {
+    for(auto const & i : info) {
+        sql_stmt_t statement = make_insert_matadata_statement(wrap_nullable_string(i.first), wrap_nullable_string(i.second));
+        multiplexer::output(
+                multiplexer::payload_t(statement),
+                tracer_conf.outputs);
+    }
+
     sql_stmt_t statement = make_commit_transaction_statement();
     multiplexer::output(
             multiplexer::payload_t(statement),

@@ -3,14 +3,15 @@
 //
 
 #include "sql_generator.h"
+#include "tracer_sexpinfo.h"
 
-#include <initializer_list>
-#include <string>
-#include <fstream>
-#include <sstream>
 #include <cassert>
+#include <fstream>
+#include <initializer_list>
+#include <iostream>
+#include <sstream>
+#include <string>
 #include <vector>
-
 using namespace std;
 
 namespace sql_generator {
@@ -74,36 +75,69 @@ namespace sql_generator {
         return "select id from promises where id < 0;\n";
     }
 
-    sql_stmt_t make_insert_function_call_statement(sql_val_t id, sql_val_t name, sql_val_t callsite,
-                                        sql_val_t function_id, sql_val_t parent_id) {
+    sql_stmt_t make_insert_function_call_statement(sql_val_t id,
+                                                   sql_val_t name,
+                                                   sql_val_t callsite,
+                                                   sql_val_t compiled,
+                                                   sql_val_t function_id,
+                                                   sql_val_t parent_call_id,
+                                                   sql_val_t in_prom_id,
+                                                   sql_val_t stack_parent_type,
+                                                   sql_val_t stack_parent_id) {
+
         stringstream statement;
 
         statement << "insert into calls values ("
                   << id << ","
                   << name << ","
                   << callsite << ","
+                  << compiled << ","
                   << function_id << ","
-                  << parent_id
+                  << parent_call_id << ","
+                  << in_prom_id << ","
+                  << stack_parent_type << ","
+                  << stack_parent_id
                   << ");\n";
 
         return statement.str();
     }
 
-    sql_stmt_t make_insert_promise_statement(sql_val_t id, sql_val_t type, sql_val_t full_type) {
+    sql_stmt_t make_insert_promise_statement(sql_val_t id,
+                                             sql_val_t type,
+                                             sql_val_t full_type,
+                                             sql_val_t in_prom_id,
+                                             sql_val_t stack_parent_type,
+                                             sql_val_t stack_parent_id,
+                                             sql_val_t promise_stack_depth) {
+
         stringstream statement;
 
         statement << "insert into promises values ("
                   << id << ","
                   << type << ","
-                  << full_type
+                  << full_type << ","
+                  << in_prom_id << ","
+                  << stack_parent_type << ","
+                  << stack_parent_id << ","
+                  << promise_stack_depth
                   << ");\n";
 
         return statement.str();
     }
 
-    sql_stmt_t make_insert_promise_evaluation_statement(sql_val_t clock, sql_val_t event_type, sql_val_t promise_id,
-                                                        sql_val_t from_call_id, sql_val_t in_call_id, sql_val_t lifestyle,
-                                                        sql_val_t effective_distance, sql_val_t actual_distance) {
+    sql_stmt_t make_insert_promise_evaluation_statement(sql_val_t clock,
+                                                        sql_val_t event_type,
+                                                        sql_val_t promise_id,
+                                                        sql_val_t from_call_id,
+                                                        sql_val_t in_call_id,
+                                                        sql_val_t in_prom_id,
+                                                        sql_val_t lifestyle,
+                                                        sql_val_t effective_distance,
+                                                        sql_val_t actual_distance,
+                                                        sql_val_t stack_parent_type,
+                                                        sql_val_t stack_parent_id,
+                                                        sql_val_t promise_stack_depth) {
+
         stringstream statement;
 
         statement << "insert into promise_evaluations values ("
@@ -112,9 +146,71 @@ namespace sql_generator {
                   << promise_id << ","
                   << from_call_id << ","
                   << in_call_id << ","
+                  << in_prom_id << ","
                   << lifestyle << ","
                   << effective_distance << ","
-                  << actual_distance
+                  << actual_distance << ","
+                  << stack_parent_type << ","
+                  << stack_parent_id << ","
+                  << promise_stack_depth
+                  << ");\n";
+
+        return statement.str();
+    }
+
+    sql_stmt_t make_insert_promise_return_statement(sql_val_t return_type, sql_val_t promise_id, sql_val_t clock) {
+        stringstream statement;
+
+        statement << "insert into promise_returns values ("
+                  << return_type << ","
+                  << promise_id << ","
+                  << clock
+                  << ");\n";
+
+        return statement.str();
+    }
+
+    sql_stmt_t make_insert_promise_lifecycle_statement(sql_val_t promise_id,
+                                                       sql_val_t event,
+                                                       sql_val_t gc_trigger_counter) {
+
+        stringstream statement;
+
+        statement << "insert into promise_lifecycle values ("
+                  << promise_id << ","
+                  << event << ","
+                  << gc_trigger_counter
+                  << ");\n";
+
+        return statement.str();
+    }
+
+    sql_stmt_t make_insert_gc_trigger_statement(sql_val_t counter,
+                                                sql_val_t ncells,
+                                                sql_val_t vcells) {
+
+        stringstream statement;
+
+        statement << "insert into gc_trigger values ("
+                  << counter << ","
+                  << ncells << ","
+                  << vcells
+                  << ");\n";
+
+        return statement.str();
+    }
+
+    sql_stmt_t make_insert_type_distribution_statement(sql_val_t gc_trigger_counter,
+                                                       sql_val_t type,
+                                                       sql_val_t length,
+                                                       sql_val_t bytes) {
+        stringstream statement;
+
+        statement << "insert into type_distribution values ("
+                  << gc_trigger_counter << ","
+                  << type << ","
+                  << length << ","
+                  << bytes
                   << ");\n";
 
         return statement.str();
@@ -176,6 +272,18 @@ namespace sql_generator {
         return "pragma " + option + " = " + value + ";\n";
     }
 
+    sql_stmt_t make_insert_matadata_statement(sql_val_t key, sql_val_t value) {
+        return "insert into metadata values (" + key + "," + value + ");\n";
+    }
+
+    sql_stmt_t make_create_metadata_statement() {
+        return "create table if not exists metadata (\n"
+                "    --[ data ]-----------------------------------------------------------------\n"
+                "    key text not null,\n"
+                "    value text\n"
+                ");\n";
+    }
+
     sql_stmt_t make_create_functions_statement() {
         return "create table if not exists functions (\n"
                 "    --[ identity ]-------------------------------------------------------------\n"
@@ -183,7 +291,7 @@ namespace sql_generator {
                 "    --[ data ]-----------------------------------------------------------------\n"
                 "    location text,\n"
                 "    definition text,\n"
-                "    type integer not null, -- 0: closure, 1: built-in, 2: special\n"
+                "    type integer not null, -- 0: closure, 1: built-in, 2: special, 3: primitive aka 'true builtin'\n"
                 "                           -- values defined by function_type\n"
                 "    compiled boolean not null\n"
                 ");\n";
@@ -197,9 +305,13 @@ namespace sql_generator {
                 "    --[ data ]-----------------------------------------------------------------\n"
                 "    function_name text,\n"
                 "    callsite text,\n"
+                "    compiled boolean not null,\n" // TODO remove
                 "    --[ relations ]------------------------------------------------------------\n"
                 "    function_id integer not null,\n"
                 "    parent_id integer not null, -- ID of call that executed current call\n"
+                "    in_prom_id integer not null, -- ID of promise in which the call is executed\n"
+                "    parent_on_stack_type integer not null, -- promise = 1, call = 2, none = 0\n"
+                "    parent_on_stack_id integer null,\n"
                 "    --[ keys ]-----------------------------------------------------------------\n"
                 "    foreign key (function_id) references functions,\n"
                 "    foreign key (parent_id) references calls\n"
@@ -225,7 +337,11 @@ namespace sql_generator {
                 "    --[ identity ]-------------------------------------------------------------\n"
                 "    id integer primary key, -- equal to promise pointer SEXP\n"
                 "    type integer not null,\n"
-                "    full_type text not null\n"
+                "    full_type text not null,\n"
+                "    in_prom_id integer not null, -- ID of promise in which the promise is executed\n"
+                "    parent_on_stack_type integer not null, -- promise = 1, call = 2, none = 0\n"
+                "    parent_on_stack_id integer null,\n"
+                "    promise_stack_depth integer not null\n"
                 ");\n";
     }
 
@@ -251,14 +367,72 @@ namespace sql_generator {
                "    promise_id integer not null,\n"
                "    from_call_id integer not null,\n"
                "    in_call_id integer not null,\n"
-               "    lifestyle integer not null,\n"
+               "    in_prom_id integer not null, -- ID of promise in which the promise is executed\n"
+               "    lifestyle integer not null, -- 0: virgin, 1: local, 2: branch-local/grandchild,\n"
+               "                                -- 3: escaped/leaked, 4: immediate-local,\n"
+               "                                -- 5: immediate-branch-local/child\n"
                "    effective_distance_from_origin integer not null,\n"
-               "     actual_distance_from_origin integer not null,\n"
+               "    actual_distance_from_origin integer not null,\n"
+               "    parent_on_stack_type integer not null, -- promise = 1, call = 2, none = 0\n"
+               "    parent_on_stack_id integer null,\n"
+               "    promise_stack_depth integer not null,\n"
                "    --[ keys ]-----------------------------------------------------------------\n"
                "    foreign key (promise_id) references promises,\n"
                "    foreign key (from_call_id) references calls,\n"
                "    foreign key (in_call_id) references calls\n"
                ");\n";
+    }
+
+
+    // Whenever we evaluate a promise, we add the information about it here. I add two foreign keys for
+    // convenience, at the expense of disk space.
+    sql_stmt_t make_create_promise_returns_statement() {
+        return "create table if not exists promise_returns (\n"
+                "--[ data ]-----------------------------------------------------------------\n"
+                "type integer not null, \n"
+                "--[ relations ]------------------------------------------------------------\n"
+                "promise_id integer not null,\n"
+                "clock integer not null,\n"
+                "--[ keys ]-----------------------------------------------------------------\n"
+                "foreign key (promise_id) references promises,\n"
+                "foreign key (clock) references promise_evaluations\n"
+                ");\n";
+    }
+
+    sql_stmt_t make_create_promise_lifecycle_statement() {
+        return "create table if not exists promise_lifecycle (\n" // TODO should be plural
+               "--[ relation ]--------------------------------------------------------------\n"
+                "promise_id integer not null,\n"
+                "--[ data ]-----------------------------------------------------------------\n"
+                "event_type integer not null,\n" // TODO what are they
+                "gc_trigger_counter integer not null,\n"
+                "--[ keys ]-----------------------------------------------------------------\n"
+                "foreign key (promise_id) references promises,\n"
+                "foreign key (gc_trigger_counter) references gc_trigger\n"
+                ");\n";
+    }
+
+    sql_stmt_t make_create_gc_trigger_statement() {
+       return "create table if not exists gc_trigger (\n" // TODO should be plural
+              "--[ identity ]-------------------------------------------------------------\n"
+              "counter integer primary key,\n"
+              "--[ data ]-----------------------------------------------------------------\n"
+              "ncells real not null,\n"
+              "vcells real not null\n"
+              ");\n";
+    }
+
+    sql_stmt_t make_create_type_distribution_statement() {
+      return "create table if not exists type_distribution (\n" // TODO should be plural
+             "--[ relation ]-------------------------------------------------------------\n"
+             "gc_trigger_counter integer not null,\n"
+             "--[ data ]-----------------------------------------------------------------\n"
+             "type integer not null,\n"
+             "length integer not null,\n"
+             "bytes integer not null,\n"
+             "--[ keys ]-----------------------------------------------------------------\n"
+             "foreign key (gc_trigger_counter) references gc_trigger\n"
+             ");\n";
     }
 
     vector<sql_stmt_t> split_into_individual_statements(sql_stmt_t statement_blob) {
@@ -329,8 +503,18 @@ namespace sql_generator {
         return s == NULL ? "null" : string(s);
     }
 
-    sql_val_t next_from_sequence() {
-        return "$next_id";
-    }
+//    sql_val_t next_from_sequence() {
+//        return "$next_id";
+//    }
 
+    string from_stack_event(stack_event_t event) {
+        switch(event.type) {
+            case stack_type::CALL:
+                return from_int(event.call_id);
+            case stack_type::PROMISE:
+                return from_int(event.promise_id);
+            case stack_type::NONE:
+                return "null";
+        }
+    }
 }
