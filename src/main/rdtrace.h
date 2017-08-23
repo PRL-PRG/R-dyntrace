@@ -19,7 +19,14 @@ extern "C" {
 #ifdef ENABLE_RDT
 #define RDT_HOOK(name, ...) \
     if(RDT_IS_ENABLED(name)) { \
+        if(tracing_is_active()) {                                         \
+            printf("Hook %s is being called from within hook %s.\n", #name, ACTIVE_HOOK_NAME); \
+            printf("Exiting program ...\n"); \
+            exit(1); \
+        } \
+        ACTIVE_HOOK_NAME = #name; \
         RDT_FIRE_PROBE(name, __VA_ARGS__); \
+        ACTIVE_HOOK_NAME = NULL; \
     }
 #else
 #define RDT_HOOK(name, ...)
@@ -36,6 +43,8 @@ extern "C" {
 
 #define REG_HOOKS_END } while(0)
 
+extern const char * ACTIVE_HOOK_NAME;
+int tracing_is_active();
 // ----------------------------------------------------------------------------
 // probes
 // ----------------------------------------------------------------------------
@@ -135,6 +144,7 @@ int is_byte_compiled(SEXP op);
 char *to_string(SEXP var);
 const char *get_expression(SEXP e);
 SEXP get_named_list_element(const SEXP list, const char *name);
+const char* serialize_sexp(SEXP s);
 
 // Returns a monotonic timestamp in nanoseconds.
 uint64_t timestamp();

@@ -108,6 +108,7 @@
 
 #include "RBufferUtils.h"
 
+#include "rdtrace.h"
 typedef R_StringBuffer DeparseBuffer;
 
 typedef struct {
@@ -135,7 +136,7 @@ typedef struct {
 static SEXP deparse1WithCutoff(SEXP call, Rboolean abbrev, int cutoff,
 			       Rboolean backtick, int opts, int nlines);
 static void args2buff(SEXP, int, int, LocalParseData *);
-static void deparse2buff(SEXP, LocalParseData *);
+void deparse2buff(SEXP, LocalParseData *);
 static void print2buff(const char *, LocalParseData *);
 static void printtab2buff(int, LocalParseData *);
 static void writeline(LocalParseData *);
@@ -500,6 +501,11 @@ SEXP attribute_hidden do_dump(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 static void linebreak(Rboolean *lbreak, LocalParseData *d)
 {
+#ifdef RDT_IS_ENABLED
+    if(tracing_is_active()) {
+        return;
+    }
+#endif
     if (d->len > d->cutoff) {
 	if (!*lbreak) {
 	    *lbreak = TRUE;
@@ -744,7 +750,7 @@ static Rboolean parenthesizeCaller(SEXP s)
 /* keep KEEPINTEGER | USESOURCE | KEEPNA | S_COMPAT, also
    WARNINCOMPLETE but that is not used below this point. */
 
-static void deparse2buff(SEXP s, LocalParseData *d)
+void deparse2buff(SEXP s, LocalParseData *d)
 {
     PPinfo fop;
     Rboolean lookahead = FALSE, lbreak = FALSE, parens, fnarg = d->fnarg,
@@ -1153,8 +1159,13 @@ static void deparse2buff(SEXP s, LocalParseData *d)
 		SEXP val = R_NilValue; /* -Wall */
 		if (isSymbol(CAR(s))) {
 		    val = SYMVALUE(CAR(s));
-		    if (TYPEOF(val) == PROMSXP)
-			val = eval(val, R_BaseEnv);
+		    if (TYPEOF(val) == PROMSXP) {
+            if(tracing_is_active()) {
+                val = PRCODE(val);
+            } else {
+              val = eval(val, R_BaseEnv);
+          }
+        }
 		}
 		if ( isSymbol(CAR(s))
 		  && TYPEOF(val) == CLOSXP
@@ -1274,6 +1285,11 @@ static void deparse2buff(SEXP s, LocalParseData *d)
 
 static void writeline(LocalParseData *d)
 {
+#ifdef RDT_IS_ENABLED
+    if(tracing_is_active()) {
+        return;
+    }
+#endif
     if (d->strvec != R_NilValue && d->linenumber < d->maxlines)
 	SET_STRING_ELT(d->strvec, d->linenumber, mkChar(d->buffer.data));
     d->linenumber++;

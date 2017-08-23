@@ -339,18 +339,24 @@ struct trace_promises {
     }
 
     static void gc_entry(R_size_t size_needed) {
+        int gc_enabled = gc_toggle_off();
         STATE(gc_trigger_counter) = 1 + STATE(gc_trigger_counter);
+        gc_toggle_restore(gc_enabled);
     }
 
     static void gc_exit(int gc_count, double vcells, double ncells) {
+        int gc_enabled = gc_toggle_off();
         gc_info_t info = rec.gc_exit_get_info(gc_count, vcells, ncells);
         info.counter = STATE(gc_trigger_counter);
         rec.gc_exit_process(info);
+        gc_toggle_restore(gc_enabled);
     }
 
     static void vector_alloc(int sexptype, long length, long bytes, const char* srcref) {
+        int gc_enabled = gc_toggle_off();
         type_gc_info_t info {STATE(gc_trigger_counter), sexptype, length, bytes};
         rec.vector_alloc_process(info);
+        gc_toggle_restore(gc_enabled);
     }
 
     static void jump_ctxt(const SEXP rho, const SEXP val) {

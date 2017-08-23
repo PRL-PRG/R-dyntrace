@@ -328,8 +328,37 @@ private:
         if (type == sexp_type::SYM) {
             bool try_to_attach_symbol_value = (rho != R_NilValue) ? isEnvironment(rho) : false;
             if (!try_to_attach_symbol_value) return;
+            /* FIXME - findVar can eval an expression. This can fire another hook, leading to spurious data.
+                       Reproduced below is a gdb backtrace obtained by running `dplyr`.
+                       At #7, get_full_type_inner invokes `findVar` which leads to `eval` on #2.
 
-            SEXP symbol_points_to = findVar(sexp, rho);
+               0x00000000004d4b3e in R_execClosure (call=0x94e1db0, newrho=0x94e1ec8, sysparent=0x1a05f80, 
+               rho=0x1a05f80, arglist=0x19d6b68, op=0x9534cb0) at eval.c:1612
+               1612	    RDT_HOOK(probe_function_entry, call, op, newrho);
+               (gdb) bt
+               #0  0x00000000004d4b3e in R_execClosure (call=0x94e1db0, newrho=0x94e1ec8, sysparent=0x1a05f80, 
+               rho=0x1a05f80, arglist=0x19d6b68, op=0x9534cb0) at eval.c:1612
+               #1  0x00000000004d49e9 in Rf_applyClosure (call=0x94e1db0, op=0x9534cb0, arglist=0x19d6b68, 
+               rho=0x1a05f80, suppliedvars=0x19d6b68) at eval.c:1583
+               #2  0x00000000004d2db7 in Rf_eval (e=0x94e1db0, rho=0x1a05f80) at eval.c:776
+               #3  0x00000000004bf6c9 in getActiveValue (fun=0x9534cb0) at envir.c:154
+               #4  0x00000000004bfa53 in R_HashGet (hashcode=0, symbol=0x54de8f8, table=0x1e3a4328) at envir.c:281
+               #5  0x00000000004c1781 in Rf_findVarInFrame3 (rho=0x953dd50, symbol=0x54de8f8, doGet=TRUE)
+               at envir.c:1042
+               #6  0x00000000004c1fb1 in Rf_findVar (symbol=0x54de8f8, rho=0x953dd50) at envir.c:1221
+               #7  0x00007f3bcb98893a in recorder_t<psql_recorder_t>::get_full_type_inner (
+               this=0x7f3bcbbde159 <trace_promises<psql_recorder_t>::rec_impl>, sexp=0x54de8f8, rho=0x9520500, 
+               result=std::vector of length 1, capacity 1 = {...}, visited=std::set with 1 elements = {...})
+               at /home/aviral/projects/aviral-r-dyntrace/rdt-plugins/promises/src/recorder.h:332
+               #8  0x00007f3bcb98542f in recorder_t<psql_recorder_t>::get_full_type (
+               this=0x7f3bcbbde159 <trace_promises<psql_recorder_t>::rec_impl>, promise=0x94e1d78, rho=0x9520500, 
+               result=std::vector of length 1, capacity 1 = {...})
+               at /home/aviral/projects/aviral-r-dyntrace/rdt-plugins/promises/src/recorder.h:289
+               #9  0x00007f3bcb980aeb in recorder_t<psql_recorder_t>::create_promise_get_info (
+               this=0x7f3bcbbde159 <trace_promises<psql_recorder_t>::rec_impl>, promise=0x94e1d78, rho=0x9520500)
+               at /home/aviral/projects/aviral-r-dyntrace/rdt-plugins/promises/src/recorder.h:352
+             */
+            SEXP symbol_points_to = R_UnboundValue; //findVar(sexp, rho);
 
             if (symbol_points_to == R_UnboundValue) return;
             if (symbol_points_to == R_MissingArg) return;
