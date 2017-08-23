@@ -25,7 +25,6 @@ promise.force.order.histogram <- get_function_promise_force_order_histogram(func
 ```
 
 <div class="col2">
-<div class="together">
 ## Basic Information
 Dataset: `r path`  
 Functions: `r pp(n.functions)`  
@@ -33,13 +32,13 @@ Calls: `r pp(n.calls)`
 Promises: `r pp(n.promises)` (+ `r pp(n.alien.promises)` alien)  
 Promise forces: `r pp(n.promise.forces)` (+ `r pp(n.alien.promise.forces)` alien)  
 Promise lookups: `r pp(n.promise.lookups)` (+ `r pp(n.alien.promise.lookups)` alien)  
-</div>
 
+<div class="together">
 ## Metadata
-
 ```{r metadata, echo=FALSE, comment=""}
 print(metadata %>% as.data.frame %>% unique, row.names=FALSE, use.names=FALSE)
 ```
+</div>
 
 </div>
 
