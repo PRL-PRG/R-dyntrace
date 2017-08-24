@@ -43,9 +43,6 @@ struct trace_promises {
 
     static void begin(const SEXP prom) {
         PROTECT(prom);
-
-        int gc_enabled = gc_toggle_off();
-
         tracer_state().start_pass(prom);
 
         metadata_t metadata;
@@ -54,15 +51,10 @@ struct trace_promises {
         rec.get_current_time_metadata(metadata, "START");
 
         rec.start_trace_process(metadata);
-
-        gc_toggle_restore(gc_enabled);
-
         UNPROTECT(1);
     }
 
     static void end() {
-        int gc_enabled = gc_toggle_off();
-
         tracer_state().finish_pass();
 
         metadata_t metadata;
@@ -79,14 +71,10 @@ struct trace_promises {
             Rprintf("Function/promise stack is not balanced: %d remaining.\n", STATE(full_stack).size());
             STATE(full_stack).clear();
         }
-
-        gc_toggle_restore(gc_enabled);
     }
 
     // Triggered when entering function evaluation.
     static void function_entry(const SEXP call, const SEXP op, const SEXP rho) {
-        int gc_enabled = gc_toggle_off();
-
         PROTECT(call);
         PROTECT(op);
         PROTECT(rho);
@@ -113,13 +101,9 @@ struct trace_promises {
         }
 
         UNPROTECT(3);
-
-        gc_toggle_restore(gc_enabled);
     }
 
     static void function_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
-        int gc_enabled = gc_toggle_off();
-
         PROTECT(call);
         PROTECT(op);
         PROTECT(rho);
@@ -132,13 +116,9 @@ struct trace_promises {
         STATE(curr_env_stack).pop();
 
         UNPROTECT(4);
-
-        gc_toggle_restore(gc_enabled);
     }
 
     static void print_entry_info(const SEXP call, const SEXP op, const SEXP rho, function_type fn_type) {
-        int gc_enabled = gc_toggle_off();
-
         PROTECT(call);
         PROTECT(op);
         PROTECT(rho);
@@ -150,13 +130,9 @@ struct trace_promises {
         STATE(curr_env_stack).push(info.call_ptr | 1);
 
         UNPROTECT(3);
-
-        gc_toggle_restore(gc_enabled);
     }
 
     static void builtin_entry(const SEXP call, const SEXP op, const SEXP rho) {
-        int gc_enabled = gc_toggle_off();
-
         PROTECT(call);
         PROTECT(op);
         PROTECT(rho);
@@ -169,13 +145,9 @@ struct trace_promises {
         print_entry_info(call, op, rho, fn_type);
 
         UNPROTECT(3);
-
-        gc_toggle_restore(gc_enabled);
     }
 
     static void specialsxp_entry(const SEXP call, const SEXP op, const SEXP rho) {
-        int gc_enabled = gc_toggle_off();
-
         PROTECT(call);
         PROTECT(op);
         PROTECT(rho);
@@ -183,13 +155,9 @@ struct trace_promises {
         print_entry_info(call, op, rho, function_type::SPECIAL);
 
         UNPROTECT(3);
-
-        gc_toggle_restore(gc_enabled);
     }
 
     static void print_exit_info(const SEXP call, const SEXP op, const SEXP rho, function_type fn_type) {
-        int gc_enabled = gc_toggle_off();
-
         PROTECT(call);
         PROTECT(op);
         PROTECT(rho);
@@ -201,13 +169,9 @@ struct trace_promises {
         STATE(curr_env_stack).pop();
 
         UNPROTECT(3);
-
-        gc_toggle_restore(gc_enabled);
     }
 
     static void builtin_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
-        int gc_enabled = gc_toggle_off();
-
         PROTECT(call);
         PROTECT(op);
         PROTECT(rho);
@@ -221,13 +185,9 @@ struct trace_promises {
         print_exit_info(call, op, rho, fn_type);
 
         UNPROTECT(4);
-
-        gc_toggle_restore(gc_enabled);
     }
 
     static void specialsxp_exit(const SEXP call, const SEXP op, const SEXP rho, const SEXP retval) {
-        int gc_enabled = gc_toggle_off();
-
         PROTECT(call);
         PROTECT(op);
         PROTECT(rho);
@@ -236,13 +196,9 @@ struct trace_promises {
         print_exit_info(call, op, rho, function_type::SPECIAL);
 
         UNPROTECT(4);
-
-        gc_toggle_restore(gc_enabled);
     }
 
     static void promise_created(const SEXP prom, const SEXP rho) {
-        int gc_enabled = gc_toggle_off();
-
         PROTECT(prom);
         PROTECT(rho);
 
@@ -252,14 +208,10 @@ struct trace_promises {
             rec.promise_lifecycle_process({info.prom_id, 0, STATE(gc_trigger_counter)});
         }
         UNPROTECT(2);
-
-        gc_toggle_restore(gc_enabled);
     }
 
     // Promise is being used inside a function body for the first time.
     static void force_promise_entry(const SEXP symbol, const SEXP rho) {
-        int gc_enabled = gc_toggle_off();
-
         PROTECT(symbol);
         PROTECT(rho);
 
@@ -270,13 +222,9 @@ struct trace_promises {
         }
 
         UNPROTECT(2);
-
-        gc_toggle_restore(gc_enabled);
     }
 
     static void force_promise_exit(const SEXP symbol, const SEXP rho, const SEXP val) {
-        int gc_enabled = gc_toggle_off();
-
         PROTECT(symbol);
         PROTECT(rho);
         PROTECT(val);
@@ -285,13 +233,9 @@ struct trace_promises {
         rec.force_promise_exit_process(info);
 
         UNPROTECT(3);
-
-        gc_toggle_restore(gc_enabled);
     }
 
     static void promise_lookup(const SEXP symbol, const SEXP rho, const SEXP val) {
-        int gc_enabled = gc_toggle_off();
-
         PROTECT(symbol);
         PROTECT(rho);
         PROTECT(val);
@@ -303,13 +247,9 @@ struct trace_promises {
         }
 
         UNPROTECT(3);
-
-        gc_toggle_restore(gc_enabled);
     }
 
     static void promise_expression_lookup(const SEXP prom, const SEXP rho) {
-        int gc_enabled = gc_toggle_off();
-
         PROTECT(prom);
         PROTECT(rho);
 
@@ -320,13 +260,9 @@ struct trace_promises {
         }
 
         UNPROTECT(2);
-
-        gc_toggle_restore(gc_enabled);
     }
 
     static void gc_promise_unmarked(const SEXP promise) {
-        int gc_enabled = gc_toggle_off();
-
         PROTECT(promise);
         prom_addr_t addr = get_sexp_address(promise);
         prom_id_t id = get_promise_id(promise);
@@ -349,34 +285,24 @@ struct trace_promises {
         prom_key_t key(addr, prom_type, orig_type);
         STATE(promise_ids).erase(key);
         UNPROTECT(1);
-
-        gc_toggle_restore(gc_enabled);
     }
 
     static void gc_entry(R_size_t size_needed) {
-        int gc_enabled = gc_toggle_off();
         STATE(gc_trigger_counter) = 1 + STATE(gc_trigger_counter);
-        gc_toggle_restore(gc_enabled);
     }
 
     static void gc_exit(int gc_count, double vcells, double ncells) {
-        int gc_enabled = gc_toggle_off();
         gc_info_t info = rec.gc_exit_get_info(gc_count, vcells, ncells);
         info.counter = STATE(gc_trigger_counter);
         rec.gc_exit_process(info);
-        gc_toggle_restore(gc_enabled);
     }
 
     static void vector_alloc(int sexptype, long length, long bytes, const char* srcref) {
-        int gc_enabled = gc_toggle_off();
         type_gc_info_t info {STATE(gc_trigger_counter), sexptype, length, bytes};
         rec.vector_alloc_process(info);
-        gc_toggle_restore(gc_enabled);
     }
 
     static void jump_ctxt(const SEXP rho, const SEXP val) {
-        int gc_enabled = gc_toggle_off();
-
         PROTECT(rho);
         PROTECT(val);
 
@@ -389,8 +315,6 @@ struct trace_promises {
         rec.unwind_process(info);
 
         UNPROTECT(2);
-
-        gc_toggle_restore(gc_enabled);
     }
 };
 

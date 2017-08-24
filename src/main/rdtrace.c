@@ -19,19 +19,20 @@ const rdt_handler *rdt_curr_handler = &rdt_null_handler;
 // helpers
 //-----------------------------------------------------------------------------
 
-const char* ACTIVE_HOOK_NAME = NULL;
+const char* RDT_ACTIVE_HOOK_NAME = NULL;
+int RDT_GARBAGE_COLLECTOR_STATE = 0;
 
 int tracing_is_active() {
-    return (ACTIVE_HOOK_NAME != NULL);
+    return (RDT_ACTIVE_HOOK_NAME != NULL);
 }
 
-int gc_toggle_off() {
-    int gc_enabled = R_GCEnabled;
+void disable_garbage_collector() {
+    RDT_GARBAGE_COLLECTOR_STATE = R_GCEnabled;
     R_GCEnabled = 0;
-    return gc_enabled;
 }
-void gc_toggle_restore(int previous_value) {
-    R_GCEnabled = previous_value;
+
+void reinstate_garbage_collector() {
+    R_GCEnabled = RDT_GARBAGE_COLLECTOR_STATE;
 }
 
 const char *get_ns_name(SEXP op) {
