@@ -34,6 +34,7 @@
 #include <Rmath.h>
 #include <Print.h>
 
+#include <rdtrace.h>
 
 /* This section of code handles type conversion for elements */
 /* of data vectors.  Type coercion throughout R should use these */
@@ -2527,6 +2528,9 @@ SEXP substitute(SEXP lang, SEXP rho)
     SEXP t;
     switch (TYPEOF(lang)) {
     case PROMSXP:
+#ifdef ENABLE_RDT
+	RDT_HOOK(probe_promise_expression_lookup, lang, rho);
+#endif
 	return substitute(PREXPR(lang), rho);
     case SYMSXP:
 	if (rho != R_NilValue) {

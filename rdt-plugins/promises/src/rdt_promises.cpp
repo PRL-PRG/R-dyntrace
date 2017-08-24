@@ -307,6 +307,23 @@ struct trace_promises {
         gc_toggle_restore(gc_enabled);
     }
 
+    static void promise_expression_lookup(const SEXP prom, const SEXP rho) {
+        int gc_enabled = gc_toggle_off();
+
+        PROTECT(prom);
+        PROTECT(rho);
+
+        prom_info_t info = rec.promise_expression_lookup_get_info(prom, rho);
+        if (info.prom_id >= 0) {
+            rec.promise_expression_lookup_process(info);
+            rec.promise_lifecycle_process({info.prom_id, 1, STATE(gc_trigger_counter)});
+        }
+
+        UNPROTECT(2);
+
+        gc_toggle_restore(gc_enabled);
+    }
+
     static void gc_promise_unmarked(const SEXP promise) {
         int gc_enabled = gc_toggle_off();
 
@@ -337,18 +354,24 @@ struct trace_promises {
     }
 
     static void gc_entry(R_size_t size_needed) {
+        int gc_enabled = gc_toggle_off();
         STATE(gc_trigger_counter) = 1 + STATE(gc_trigger_counter);
+        gc_toggle_restore(gc_enabled);
     }
 
     static void gc_exit(int gc_count, double vcells, double ncells) {
+        int gc_enabled = gc_toggle_off();
         gc_info_t info = rec.gc_exit_get_info(gc_count, vcells, ncells);
         info.counter = STATE(gc_trigger_counter);
         rec.gc_exit_process(info);
+        gc_toggle_restore(gc_enabled);
     }
 
     static void vector_alloc(int sexptype, long length, long bytes, const char* srcref) {
+        int gc_enabled = gc_toggle_off();
         type_gc_info_t info {STATE(gc_trigger_counter), sexptype, length, bytes};
         rec.vector_alloc_process(info);
+        gc_toggle_restore(gc_enabled);
     }
 
     static void jump_ctxt(const SEXP rho, const SEXP val) {
@@ -399,6 +422,7 @@ void register_hooks_with(rdt_handler * h) {
         ADD_HOOK(force_promise_exit);
         ADD_HOOK(promise_created);
         ADD_HOOK(promise_lookup);
+        ADD_HOOK(promise_expression_lookup);
         ADD_HOOK(vector_alloc);
         ADD_HOOK(gc_entry);
         ADD_HOOK(gc_exit);
@@ -437,6 +461,7 @@ rdt_handler *setup_promises_tracing(SEXP options) {
                 h->probe_builtin_exit = NULL;
             } else if (!strcmp("promise", probe)) {
                 h->probe_promise_lookup = NULL;
+                h->probe_promise_expression_lookup =  NULL;
                 h->probe_force_promise_entry = NULL;
                 h->probe_force_promise_exit = NULL;
             } else if (!strcmp("vector", probe)) {
