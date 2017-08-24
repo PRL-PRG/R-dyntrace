@@ -208,7 +208,7 @@ sqlite3_stmt * populate_function_statement(const call_info_t & info) {
 }
 
 sqlite3_stmt * populate_arguments_statement(const closure_info_t & info) {
-    assert(info.arguments.size() > 0);
+    assert(info.arguments.size() > 0 && info.arguments.size() <= 500);
 
     sqlite3_stmt *prepared_statement = get_prepared_sql_insert_argument(info.arguments.size());
 
@@ -234,6 +234,43 @@ sqlite3_stmt * populate_arguments_statement(const closure_info_t & info) {
     }
 
     return prepared_statement;
+}
+
+vector<sqlite3_stmt *> populate_arguments_statement(const closure_info_t & info, size_t block_size) {
+    assert(info.arguments.size() > 0 && block_size > 0);
+
+    vector<arg_t> all_arguments;
+    auto argument_vectors = tools::split_vector(all_arguments, block_size);
+
+    vector<sqlite3_stmt *> result;
+
+    for (auto arguments : argument_vectors) {
+        sqlite3_stmt *prepared_statement = get_prepared_sql_insert_argument(arguments.size());
+        int index = 0;
+
+        for (auto arg_ref : arguments) {
+            const arg_t &argument = arg_ref;
+            int offset = index * 4;
+
+            //cerr << get<1>(argument) << " " <<  get<0>(argument) << " " << index << " " << info.call_id << "\n";
+
+            sqlite3_bind_int(prepared_statement, offset + 1, get<1>(argument));
+            sqlite3_bind_text(prepared_statement, offset + 2, get<0>(argument).c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_int(prepared_statement, offset + 3, index); // FIXME broken or unnecessary (pick one)
+            sqlite3_bind_int(prepared_statement, offset + 4, info.call_id);
+
+            // Rprintf("binding %i %i: %i\n", index, offset + 1, get<1>(argument));
+            // Rprintf("binding %i %i: %s\n", index, offset + 2, get<0>(argument).c_str());
+            // Rprintf("binding %i %i: %i\n", index, offset + 3, index);
+            // Rprintf("binding %i %i: %i\n", index, offset + 4, function_id);
+
+            index++;
+        }
+
+        result.push_back(prepared_statement);
+    }
+
+    return result;
 }
 
 sqlite3_stmt * populate_call_statement(const call_info_t & info) {
@@ -758,8 +795,11 @@ sqlite3_stmt * get_prepared_sql_insert_argument(int values) {
         arguments.push_back(join({"?", "?", "?", "?"}));
 
     sql_stmt_t statement = make_insert_arguments_statement(arguments, false);
+
+
     sqlite3_stmt *prepared_statement = compile_sql_statement(statement);
     prepared_sql_insert_arguments[values] = prepared_statement;
+
 
     return prepared_statement;
 }

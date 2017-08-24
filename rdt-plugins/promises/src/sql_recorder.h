@@ -6,6 +6,7 @@
 #define R_3_3_1_PSQL_RECORDER_H
 
 #include "recorder.h"
+#include "tracer_sexpinfo.h"
 
 class sql_recorder_t : public recorder_t<sql_recorder_t> {
 public:
