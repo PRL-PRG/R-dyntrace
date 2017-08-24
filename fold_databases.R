@@ -1,3 +1,6 @@
+library(hashmap)
+library(dplyr)
+
 ## TODO make indexes?
 fold_databases <- function(result_path, ...) {
   paths = c(...)
@@ -10,6 +13,9 @@ fold_databases <- function(result_path, ...) {
   # Helper functions
   promise_id_mutator <- function(x)
     mutate(x, promise_id = ifelse(promise_id >= 0, promises_id_positive_offset, promises_id_negative_offset) + promise_id)
+  
+  in_prom_id_mutator <- function(x)
+    mutate(x, in_prom_id = ifelse(in_prom_id >= 0, promises_id_positive_offset, promises_id_negative_offset) + in_prom_id)
   
   get_max_id <- function(x) {
     value <- (select(x, id) %>% filter(id >= 0) %>% summarise(max=max(id)) %>% as.data.frame)$max
@@ -156,47 +162,69 @@ fold_databases <- function(result_path, ...) {
       next
     }
     
+    #browse()
+    
     # Functions
     write("    * merging functions", stderr())
     functions.dict.all <- 
       all.functions %>% 
       rename(id.zero=id) %>% 
-      full_join(
+      full_join( #################################### bug here: results in one function being inserted multiple times. too tired to figure out how to fix...
         db.functions %>% 
           select(location, definition, id) %>% 
           rename(id.db=id), 
         by=c("definition", "location"), 
         copy=TRUE) %>% 
-      select(id.db, id.zero) %>% collect
+      select(id.db, id.zero) %>% 
+      collect
     function_id_offset <- (all.functions %>% get_max_id) + 1
-    function.exists.in.both <- 
-      functions.dict.all %>% 
+    function.exists.in.both.length <-
+      functions.dict.all %>%
       filter(!is.na(id.zero)) %>% 
-      filter(!is.na(id.db)) %>% 
-      rename(new.id=id.zero, id=id.db) # translate id.db to id.zero
+      filter(!is.na(id.db)) %>%
+      count %>% rename(number=n) %>% 
+      pull(number)
+    if (function.exists.in.both.length > 0)
+      function.exists.in.both <- 
+        functions.dict.all %>% 
+        rename(new.id=id.zero, id=id.db) %>%
+        filter(!is.na(new.id)) %>% 
+        filter(!is.na(id))
+    
     function.exists.in.new.length <- 
       (functions.dict.all %>% filter(is.na(id.zero)) %>% count)$n
-    function.exists.in.new <- 
-      functions.dict.all %>% 
-      filter(is.na(id.zero)) %>% 
-      rename(new.id=id.zero, id=id.db) %>% 
-      mutate(new.id=1:function.exists.in.new.length + function_id_offset) # this produces huge holes in the id sequence
+    if (function.exists.in.new.length > 0)
+      function.exists.in.new <- 
+        functions.dict.all %>% 
+        rename(new.id=id.zero, id=id.db) %>% 
+        filter(is.na(new.id)) %>% 
+        mutate(new.id=1:function.exists.in.new.length + function_id_offset) # this produces huge holes in the id sequence
+    
+    
     
     function_id_translation_tbl <- 
-      union_all(function.exists.in.both, function.exists.in.new)
-    # new.functions <- 
-    #   db.functions %>% 
-    #   left_join(function_id_translation_tbl, by="id", copy=TRUE) %>% 
-    #   select(-id) %>% 
-    #   rename(id=new.id)
-    new.functions <- 
-      function.exists.in.new %>% 
-      left_join(db.functions, by="id", copy=TRUE) %>% 
-      select(-id) %>% 
-      rename(id=new.id) %>% 
-      select(id, location, definition, type, compiled)
-    # todo: push new.functions to end of zero.functions in db
-    db_insert_into(result$con, "functions", new.functions %>% collect)
+      if (function.exists.in.both.length > 0 && function.exists.in.new.length > 0)
+        union_all(function.exists.in.both, function.exists.in.new)
+      else if (function.exists.in.both.length > 0) 
+        function.exists.in.both
+      else if (function.exists.in.new.length > 0)
+        function.exists.in.new
+      else
+        function.exists.in.new # EXCEPTION?
+    
+    if (function.exists.in.new.length > 0) {
+      new.functions <- 
+        function.exists.in.new %>% 
+        left_join(db.functions, by="id", copy=TRUE) %>% 
+        select(-id) %>% 
+        rename(id=new.id) %>% 
+        select(id, location, definition, type, compiled)
+      db_insert_into(result$con, "functions", new.functions %>% collect)
+    }
+    
+    if (path == "~/workspace/R-dyntrace/data/ELE-2/stringr.sqlite") browser()
+    # paths <- paste("~/workspace/R-dyntrace/data/ELE-2/", c("R6", "Rcpp", "jsonlite", "curl", "tibble", "ggplot2", "dplyr", "rlang", "stringr"), ".sqlite", sep="")
+    # fold_databases("/tmp/1.sqlite", paths)
     
     # Calls
     write("    * merging calls", stderr())
@@ -205,11 +233,11 @@ fold_databases <- function(result_path, ...) {
       mutate(
         id = as.integer(ifelse(id == 0, 0, id + call_id_offset)), 
         parent_id = as.integer(ifelse(parent_id == 0, 0, parent_id + call_id_offset))) %>% 
+      in_prom_id_mutator %>%
       left_join(function_id_translation_tbl %>% rename(function_id=id), by="function_id", copy=TRUE) %>% 
       select(-function_id) %>% 
       rename(function_id=new.id) %>%
       select(id, function_name, callsite, compiled, function_id, parent_id, in_prom_id, parent_on_stack_type, parent_on_stack_id) # must order the columns to reflect their order in the DB
-    # todo: push new.calls to end of zero.calls in db
     db_insert_into(result$con, "calls", new.calls %>% collect)
     
     # Arguments
@@ -229,6 +257,7 @@ fold_databases <- function(result_path, ...) {
       db.promises %>% 
       rename(promise_id = id) %>% 
       promise_id_mutator %>% 
+      in_prom_id_mutator %>%
       rename(id = promise_id) %>%
       select(id,  type, full_type, in_prom_id, parent_on_stack_type, parent_on_stack_id, promise_stack_depth)
     # todo: push new.promises to end of zero.promises in db
@@ -255,6 +284,7 @@ fold_databases <- function(result_path, ...) {
         in_call_id = ifelse(in_call_id == 0, 0, call_id_offset + in_call_id), 
         from_call_id = ifelse(from_call_id == 0, 0, call_id_offset + from_call_id)) %>% 
       promise_id_mutator %>% 
+      in_prom_id_mutator %>%
       select(clock, event_type, promise_id, from_call_id, in_call_id, in_prom_id, lifestyle, effective_distance_from_origin, actual_distance_from_origin, parent_on_stack_type, parent_on_stack_id, promise_stack_depth)
     # todo: push to db
     db_insert_into(result$con, "promise_evaluations", new.promise_evaluations %>% collect)
