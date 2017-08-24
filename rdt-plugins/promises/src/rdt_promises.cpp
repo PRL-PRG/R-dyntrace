@@ -316,7 +316,7 @@ struct trace_promises {
         prom_info_t info = rec.promise_expression_lookup_get_info(prom, rho);
         if (info.prom_id >= 0) {
             rec.promise_expression_lookup_process(info);
-            rec.promise_lifecycle_process({info.prom_id, 1, STATE(gc_trigger_counter)});
+            rec.promise_lifecycle_process({info.prom_id, 3, STATE(gc_trigger_counter)});
         }
 
         UNPROTECT(2);
