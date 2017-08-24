@@ -473,6 +473,10 @@ namespace sql_generator {
         return to_string(i);
     }
 
+    sql_val_t from_long(long l) {
+        return to_string(l);
+    }
+
     sql_val_t from_hex(int h) {
         stringstream output;
         output << "0x" << hex << h;

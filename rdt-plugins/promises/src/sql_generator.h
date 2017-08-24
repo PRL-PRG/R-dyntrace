@@ -115,12 +115,13 @@ namespace sql_generator {
 
     sql_val_cell_t join(std::initializer_list<sql_val_t>);
 
-    sql_val_t from_int(int i);
-    sql_val_t from_hex(int h);
-    sql_val_t from_nullable_string(std::string s);
-    sql_val_t wrap_nullable_string(std::string s);
-    sql_val_t wrap_and_escape_nullable_string(std::string s);
-    sql_val_t from_nullable_cstring(const char * s);
+    sql_val_t from_int(int);
+    sql_val_t from_long(long);
+    sql_val_t from_hex(int);
+    sql_val_t from_nullable_string(std::string);
+    sql_val_t wrap_nullable_string(std::string);
+    sql_val_t wrap_and_escape_nullable_string(std::string);
+    sql_val_t from_nullable_cstring(const char *);
     sql_val_t from_stack_event(stack_event_t);
 
     sql_val_t next_from_sequence();

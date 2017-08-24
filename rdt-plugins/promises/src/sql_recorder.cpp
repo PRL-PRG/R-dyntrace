@@ -249,6 +249,31 @@ sql_stmt_t insert_promise_lifecycle_statement(const prom_gc_info_t & info) {
     );
 }
 
+sql_stmt_t insert_gc_trigger_statement(const gc_info_t & info) {
+    sql_val_t counter = from_int(info.counter);
+    sql_val_t ncells = from_int(info.ncells);
+    sql_val_t vcells = from_int(info.vcells);
+
+    return make_insert_gc_trigger_statement(
+            counter,
+            ncells,
+            vcells
+    );
+}
+
+sql_stmt_t insert_type_distribution_statement(const type_gc_info_t & info) {
+    sql_val_t gc_trigger_counter = from_int(info.gc_trigger_counter);
+    sql_val_t type = from_int(info.type);
+    sql_val_t length = from_long(info.length);
+    sql_val_t bytes = from_long(info.bytes);
+
+    return make_insert_type_distribution_statement(
+            gc_trigger_counter,
+            type,
+            length,
+            bytes);
+}
+
 /* Functions connecting to the outside world, create SQL and multiplex output. */
 
 void sql_recorder_t::function_entry(const closure_info_t & info) {
@@ -369,6 +394,28 @@ void sql_recorder_t::promise_lifecycle(const prom_gc_info_t & info) {
     multiplexer::output(
             multiplexer::payload_t(statement),
             tracer_conf.outputs);
+}
+
+void sql_recorder_t::gc_exit(const gc_info_t & info) {
+#ifdef RDT_SQLITE_SUPPORT
+    sql_stmt_t statement = insert_gc_trigger_statement(info);
+    multiplexer::output(
+            multiplexer::payload_t(statement),
+            tracer_conf.outputs);
+#else
+    // FIXME
+#endif
+}
+
+void sql_recorder_t::vector_alloc(const type_gc_info_t & info) {
+#ifdef RDT_SQLITE_SUPPORT
+    sql_stmt_t statement = insert_type_distribution_statement(info);
+    multiplexer::output(
+            multiplexer::payload_t(statement),
+            tracer_conf.outputs);
+#else
+    // FIXME
+#endif
 }
 
 void sql_recorder_t::start_trace(const metadata_t & info) { // bool output_configuration
