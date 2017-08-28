@@ -52,9 +52,12 @@ void tracer_state_t::adjust_stacks(SEXP rho, unwind_info_t & info) {
             auto event = full_stack.back();
             full_stack.pop_back();
 
-            if (event.type == stack_type::CALL)
+            if (event.type == stack_type::CALL) {
                 if (event.call_id == call_id)
                     goto outside_promise_loop;
+            } else {
+                info.unwound_promises.push_back(event.promise_id);
+            }
         }
         outside_promise_loop:;
     }
