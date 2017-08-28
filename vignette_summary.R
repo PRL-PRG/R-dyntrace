@@ -64,4 +64,3 @@ vignette_summary <- function() {
 # library(tibble)
 # summary.vignettes <- readRDS("summary_vignettes.rds"))
 # summary.packages <- readRDS("summary_packages.rds"))
-# 
