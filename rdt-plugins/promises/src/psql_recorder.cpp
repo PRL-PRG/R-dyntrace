@@ -236,10 +236,13 @@ sqlite3_stmt * populate_arguments_statement(const closure_info_t & info) {
     return prepared_statement;
 }
 
+// TODO remove:
+//      this cannot work because there will be multiple versions of the same-sized vector,
+//      so during execution only the last one will be executed (but n times)
 vector<sqlite3_stmt *> populate_arguments_statement(const closure_info_t & info, size_t block_size) {
-    assert(info.arguments.size() > 0 && block_size > 0);
+    assert(info.arguments.size() > block_size && block_size > 0);
 
-    vector<arg_t> all_arguments;
+    auto all_arguments = info.arguments.all();
     auto argument_vectors = tools::split_vector(all_arguments, block_size);
 
     vector<sqlite3_stmt *> result;
@@ -248,21 +251,14 @@ vector<sqlite3_stmt *> populate_arguments_statement(const closure_info_t & info,
         sqlite3_stmt *prepared_statement = get_prepared_sql_insert_argument(arguments.size());
         int index = 0;
 
-        for (auto arg_ref : arguments) {
-            const arg_t &argument = arg_ref;
+        for (auto argument_ref : arguments) {
+            const arg_t &argument = argument_ref;
             int offset = index * 4;
-
-            //cerr << get<1>(argument) << " " <<  get<0>(argument) << " " << index << " " << info.call_id << "\n";
 
             sqlite3_bind_int(prepared_statement, offset + 1, get<1>(argument));
             sqlite3_bind_text(prepared_statement, offset + 2, get<0>(argument).c_str(), -1, SQLITE_TRANSIENT);
             sqlite3_bind_int(prepared_statement, offset + 3, index); // FIXME broken or unnecessary (pick one)
             sqlite3_bind_int(prepared_statement, offset + 4, info.call_id);
-
-            // Rprintf("binding %i %i: %i\n", index, offset + 1, get<1>(argument));
-            // Rprintf("binding %i %i: %s\n", index, offset + 2, get<0>(argument).c_str());
-            // Rprintf("binding %i %i: %i\n", index, offset + 3, index);
-            // Rprintf("binding %i %i: %i\n", index, offset + 4, function_id);
 
             index++;
         }
@@ -271,6 +267,27 @@ vector<sqlite3_stmt *> populate_arguments_statement(const closure_info_t & info,
     }
 
     return result;
+}
+
+sqlite3_stmt * populate_arguments_statement(call_id_t call_id, vector<reference_wrapper<const arg_t>> & arguments) {
+
+        sqlite3_stmt *prepared_statement = get_prepared_sql_insert_argument(arguments.size());
+        int index = 0;
+
+        for (auto argument_ref : arguments) {
+            const arg_t &argument = argument_ref;
+            int offset = index * 4;
+
+            sqlite3_bind_int(prepared_statement, offset + 1, get<1>(argument));
+            sqlite3_bind_text(prepared_statement, offset + 2, get<0>(argument).c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_int(prepared_statement, offset + 3, index); // FIXME broken or unnecessary (pick one)
+            sqlite3_bind_int(prepared_statement, offset + 4, call_id);
+
+            index++;
+        }
+
+        return prepared_statement;
+
 }
 
 sqlite3_stmt * populate_call_statement(const call_info_t & info) {
@@ -360,6 +377,61 @@ sqlite3_stmt * populate_promise_association_statement(const closure_info_t & inf
     return prepared_statement;
 }
 
+sqlite3_stmt * populate_promise_association_statement(call_id_t call_id, vector<reference_wrapper<const arg_t>> & arguments) {
+
+        sqlite3_stmt *prepared_statement = get_prepared_sql_insert_promise_assoc(arguments.size());
+        int index = 0;
+
+        for (auto argument_ref : arguments) {
+            const arg_t &argument = argument_ref.get();
+            arg_id_t arg_id = get<1>(argument);
+            prom_id_t promise = get<2>(argument);
+            int offset = index * 3;
+
+            sqlite3_bind_int(prepared_statement, offset + 1, promise);
+            sqlite3_bind_int(prepared_statement, offset + 2, call_id);
+            sqlite3_bind_int(prepared_statement, offset + 3, arg_id);
+
+            index++;
+        }
+
+        return prepared_statement;
+}
+
+// TODO remove:
+//      this cannot work because there will be multiple versions of the same-sized vector,
+//      so during execution only the last one will be executed (but n times)
+vector<sqlite3_stmt *> populate_promise_association_statement(const closure_info_t & info, size_t block_size) {
+    assert(info.arguments.size() > block_size && block_size > 0);
+
+    auto all_arguments = info.arguments.all();
+    auto argument_vectors = tools::split_vector(all_arguments, block_size);
+
+    vector<sqlite3_stmt *> result;
+
+    for (auto arguments : argument_vectors) {
+        sqlite3_stmt *prepared_statement = get_prepared_sql_insert_promise_assoc(arguments.size());
+        int index = 0;
+
+        for (auto argument_ref : arguments) {
+            const arg_t &argument = argument_ref.get();
+            arg_id_t arg_id = get<1>(argument);
+            prom_id_t promise = get<2>(argument);
+            int offset = index * 3;
+
+            sqlite3_bind_int(prepared_statement, offset + 1, promise);
+            sqlite3_bind_int(prepared_statement, offset + 2, info.call_id);
+            sqlite3_bind_int(prepared_statement, offset + 3, arg_id);
+
+            index++;
+        }
+
+        result.push_back(prepared_statement);
+    }
+
+    return result;
+}
+
 sqlite3_stmt * populate_promise_evaluation_statement(prom_eval_t type, const prom_info_t & info) {
     sqlite3_bind_int(prepared_sql_insert_promise_eval, 1, STATE(clock_id++));
     sqlite3_bind_int(prepared_sql_insert_promise_eval, 2, type);
@@ -425,7 +497,6 @@ sqlite3_stmt *populate_type_distribution_statement(const type_gc_info_t & info) 
 
 void psql_recorder_t::function_entry(const closure_info_t & info) {
 #ifdef RDT_SQLITE_SUPPORT
-    bool align_statements = tracer_conf.pretty_print;
     bool need_to_insert = register_inserted_function(info.fn_id);
 
     if (need_to_insert) {
@@ -435,25 +506,50 @@ void psql_recorder_t::function_entry(const closure_info_t & info) {
                 tracer_conf.outputs);
     }
 
-    if (info.arguments.size() > 0) {
+    const int union_size = 500;
+    if (info.arguments.size() > 0 && info.arguments.size() < union_size) {
         sqlite3_stmt * statement = populate_arguments_statement(info);
         multiplexer::output(
                 multiplexer::payload_t(statement),
                 tracer_conf.outputs);
+
+    } else if (info.arguments.size() >= union_size) {
+        auto all_arguments = info.arguments.all();
+        auto argument_vectors = tools::split_vector(all_arguments, union_size);
+
+        for (auto arguments : argument_vectors) {
+            sqlite3_stmt * statement = populate_arguments_statement(info.call_id, arguments);
+
+            multiplexer::output(
+                    multiplexer::payload_t(statement),
+                    tracer_conf.outputs);
+        }
     }
 
-    {
+    /* always */ {
         sqlite3_stmt * statement = populate_call_statement(info);
         multiplexer::output(
                 multiplexer::payload_t(statement),
                 tracer_conf.outputs);
     }
 
-    if (info.arguments.size() > 0) {
+    if (info.arguments.size() > 0 && info.arguments.size() < union_size) {
         sqlite3_stmt * statement = populate_promise_association_statement(info);
         multiplexer::output(
                 multiplexer::payload_t(statement),
                 tracer_conf.outputs);
+
+    } else if (info.arguments.size() >= union_size) {
+        auto all_arguments = info.arguments.all();
+        auto argument_vectors = tools::split_vector(all_arguments, union_size);
+
+        for (auto arguments : argument_vectors) {
+            sqlite3_stmt * statement = populate_promise_association_statement(info.call_id, arguments);
+
+            multiplexer::output(
+                    multiplexer::payload_t(statement),
+                    tracer_conf.outputs);
+        }
     }
 #else
     // FIXME

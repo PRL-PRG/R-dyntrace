@@ -59,7 +59,7 @@ vector<sql_stmt_t> insert_arguments_statements(const closure_info_t & info, bool
 
     for (auto value_cell_vector : value_cell_vectors) {
         result.push_back(make_insert_arguments_statement(
-                value_cells,
+                value_cell_vector,
                 align
         ));
     }
@@ -183,7 +183,7 @@ vector<sql_stmt_t> insert_promise_association_statements(const closure_info_t & 
 
     for (auto value_cell_vector : value_cell_vectors) {
         result.push_back(make_insert_promise_associations_statement(
-                value_cells,
+                value_cell_vector,
                 align
         ));
     }

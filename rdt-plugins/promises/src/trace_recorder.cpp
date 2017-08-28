@@ -23,6 +23,8 @@ inline void prepend_prefix(stringstream &stream, TraceLinePrefix prefix, bool in
     if (as_sql_comment)
         stream << "-- ";
 
+    Rprintf("<%i>", STATE(indent));
+
     if (indent)
         stream << string(STATE(indent), ' ');
 
