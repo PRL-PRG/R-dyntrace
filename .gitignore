@@ -150,3 +150,5 @@ stamp-docs
 /src/**/all.R
 .Rproj.user
 src/library/rdt/..Rcheck
+cscope.out
+cscope.files
