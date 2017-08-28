@@ -20,13 +20,15 @@ extern "C" {
 #define RDT_HOOK(name, ...) \
     if(RDT_IS_ENABLED(name)) { \
         if(tracing_is_active()) {                                         \
-            printf("Hook %s is being called from within hook %s.\n", #name, ACTIVE_HOOK_NAME); \
+            printf("[ERROR] - [NESTED HOOK EXECUTION] - %s triggers %s\n", RDT_ACTIVE_HOOK_NAME, #name); \
             printf("Exiting program ...\n"); \
             exit(1); \
         } \
-        ACTIVE_HOOK_NAME = #name; \
+        RDT_ACTIVE_HOOK_NAME = #name; \
+        disable_garbage_collector(); \
         RDT_FIRE_PROBE(name, __VA_ARGS__); \
-        ACTIVE_HOOK_NAME = NULL; \
+        reinstate_garbage_collector(); \
+        RDT_ACTIVE_HOOK_NAME = NULL; \
     }
 #else
 #define RDT_HOOK(name, ...)
@@ -43,8 +45,6 @@ extern "C" {
 
 #define REG_HOOKS_END } while(0)
 
-extern const char * ACTIVE_HOOK_NAME;
-int tracing_is_active();
 // ----------------------------------------------------------------------------
 // probes
 // ----------------------------------------------------------------------------
@@ -123,8 +123,16 @@ void rdt_start(const rdt_handler *handler, const SEXP prom);
 void rdt_stop();
 int rdt_is_running();
 
+// ----------------------------------------------------------------------------
+// global variables
+// ----------------------------------------------------------------------------
+
 // the current handler
 extern const rdt_handler *rdt_curr_handler;
+// name of currently executing hook
+extern const char * RDT_ACTIVE_HOOK_NAME;
+// state of garbage collector before the hook is triggered
+extern int RDT_GARBAGE_COLLECTOR_STATE;
 
 // ----------------------------------------------------------------------------
 // helpers
@@ -132,9 +140,10 @@ extern const rdt_handler *rdt_curr_handler;
 
 #define CHKSTR(s) ((s) == NULL ? "<unknown>" : (s))
 
-int gc_toggle_off();
-void gc_toggle_restore(int previous_value);
 
+int tracing_is_active();
+void disable_garbage_collector();
+void reinstate_garbage_collector();
 const char *get_ns_name(SEXP op);
 const char *get_name(SEXP call);
 char *get_location(SEXP op);
