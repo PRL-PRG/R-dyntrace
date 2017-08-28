@@ -34,7 +34,7 @@ namespace tools {
 
                 result.push_back(sub_vector);
             }
-        } while (remaining_elements >= 0);
+        } while (remaining_elements > 0);
 
         return result;
     }
