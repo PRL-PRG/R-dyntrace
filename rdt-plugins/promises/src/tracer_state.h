@@ -82,6 +82,7 @@ static inline tracer_state_t& tracer_state() {
     return tracer_state_t::get_instance();
 }
 
+
 // Helper macro for accessing state properties
 #define STATE(property) tracer_state().property // FIXME GET RID OF THIS !!!!!
 

@@ -20,28 +20,22 @@ find_library(SQLITE3_LIBRARY NAMES sqlite3)
 
 
 set(SOURCE_FILES
-        src/rdt_promises.cpp
-        src/rdt_promises.h
-        src/tracer_conf.h
-        src/tracer_state.h
-        src/tracer_sexpinfo.h
-        src/tracer_state.cpp
-        src/tracer_sexpinfo.cpp
-        src/tracer_conf.cpp
-        src/recorder.h
-        src/tuple_for_each.h
-        src/trace_recorder.h
-        src/trace_recorder.cpp
-        src/psql_recorder.h
-        src/psql_recorder.cpp
-        src/sql_recorder.h
-        src/sql_recorder.cpp
-        src/sql_generator.cpp
-        src/sql_generator.h
-        src/multiplexer.cpp
-        src/multiplexer.h
-        src/tools.h
-        src/tools.cpp)
+    src/tracer.cpp
+    src/tracer.hpp
+    src/rdt_promises.cpp
+    src/rdt_promises.h
+    src/tracer_conf.h
+    src/tracer_state.h
+    src/tracer_sexpinfo.h
+    src/tracer_sexpinfo.cpp
+    src/tracer_state.cpp
+    src/tracer_conf.cpp
+    src/recorder.hpp
+    src/recorder.cpp
+    src/SqlSerializer.hpp
+    src/SqlSerializer.cpp
+    src/utilities.hpp
+    src/utilities.cpp)
 
 # R include paths (in our R-dyntrace repo)
 include_directories(../../src/library/rdt/src)

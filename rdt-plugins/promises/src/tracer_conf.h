@@ -12,8 +12,6 @@
 
 using namespace std;
 
-enum class OutputFormat {TRACE, SQL, PREPARED_SQL, TRACE_AND_SQL};
-
 template<typename T>
 class option {
     bool is_supplied;
@@ -68,7 +66,6 @@ public:
 struct tracer_conf_t {
     option<string> filename;
     //option<OutputDestination> output_type; TODO rem
-    option<OutputFormat> output_format;
     option<bool> pretty_print;
     option<bool> include_configuration;
     option<int> indent_width;

@@ -9,7 +9,6 @@
 tracer_conf_t::tracer_conf_t() :
 // Config defaults
         filename("tracer.db"),
-        output_format(OutputFormat::TRACE),
         pretty_print(true),
         include_configuration(true),
         overwrite(false),
@@ -27,7 +26,6 @@ void tracer_conf_t::update(const tracer_conf_t & conf) {
     bool conf_changed =
             OPT_CHANGED(filename) ||
             // OPT_CHANGED(output_type) || TODO rem
-            OPT_CHANGED(output_format) ||
             OPT_CHANGED(pretty_print) ||
             OPT_CHANGED(indent_width) ||
             OPT_CHANGED(call_id_use_ptr_fmt) ||
@@ -52,20 +50,6 @@ tracer_conf_t get_config_from_R_options(SEXP options) {
     if (filename_option != NULL)
         conf.filename = filename_option;
 
-    const char *output_format_option = get_string(get_named_list_element(options, "format"));
-    if (output_format_option != NULL) {
-        if (!strcmp(output_format_option, "trace"))
-            conf.output_format = OutputFormat::TRACE;
-        else if (!strcmp(output_format_option, "SQL") || !strcmp(output_format_option, "sql"))
-            conf.output_format = OutputFormat::SQL;
-        else if (!strcmp(output_format_option, "PSQL") || !strcmp(output_format_option, "psql"))
-            conf.output_format = OutputFormat::PREPARED_SQL;
-        else if (!strcmp(output_format_option, "trace+sql") || !strcmp(output_format_option, "trace+SQL"))
-            conf.output_format = OutputFormat::TRACE_AND_SQL;
-        //else if (!strcmp(output_format_option, "trace+psql") || !strcmp(output_format_option, "trace+PSQL")) // TODO
-        else
-            Rf_error("Unknown format type: \"%s\"\n", output_format_option);
-    }
 
     const char *output_type_options = get_string(get_named_list_element(options, "output"));
     if (output_type_options != NULL)

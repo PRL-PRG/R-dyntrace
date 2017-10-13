@@ -20,7 +20,12 @@
 #define RID_INVALID (rid_t)-1
 
 using namespace std;
-                            // Typical human-readable representation
+
+const int RDT_SQL_LOOKUP_PROMISE = 0x0;
+const int RDT_SQL_LOOKUP_PROMISE_EXPRESSION = 0x1;
+const int RDT_SQL_FORCE_PROMISE = 0xF;
+
+                             // Typical human-readable representation
 typedef uintptr_t rid_t;    // hexadecimal
 typedef intptr_t rsid_t;    // hexadecimal
 
