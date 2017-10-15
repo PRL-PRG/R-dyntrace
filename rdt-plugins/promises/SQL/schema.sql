@@ -1,4 +1,6 @@
--- SQLite3 schema 4Þ Rdt promise tracer
+-- SQLite3 schema for promise tracer
+-- Separate statements in this file with semicolons.
+-- Do not use semicolons for anything else.
 
 create table if not exists metadata (
     --[ data ]-----------------------------------------------------------------
@@ -136,9 +138,3 @@ create table if not exists type_distribution (
     --[ keys ]-----------------------------------------------------------------
     foreign key (gc_trigger_counter) references gc_trigger
 );
-
--- Warning: The prepared statement generator assumes semicolons are used only to separate statements in this file,
---          If you use a semicolon for anything else in this file,
---                                                    that prepared statement generator will go explosively crazy.
---
---                                                                                         -love, the Sign Painter

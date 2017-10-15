@@ -20,16 +20,6 @@ rdt_handler *setup_noop_tracing(SEXP options);
 rdt_handler *setup_debug_tracing(SEXP options);
 rdt_handler *setup_specialsxp_tracing(SEXP options);
 
-void cleanup_promises_tracing(/* rdt_handler *handler */ SEXP options);
-
-__attribute__((weak)) const char *get_string(SEXP sexp) {
-    if (sexp == R_NilValue || TYPEOF(sexp) != STRSXP) {
-        return NULL;
-    }
-
-    return CHAR(STRING_ELT(sexp, 0));
-}
-
 #ifdef __cplusplus
 }
 #endif

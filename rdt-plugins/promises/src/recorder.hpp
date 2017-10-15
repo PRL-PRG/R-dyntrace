@@ -5,10 +5,8 @@
 #include <ctime>
 #include <inspect.h>
 #include <tuple>
-
-//#include <Defn.h> // We need this for R_Funtab
-#include "tracer_sexpinfo.h"
-#include "tracer_state.h"
+#include "State.hpp"
+#include "globals.hpp"
 #include <rdt.h>
 #include <set>
 

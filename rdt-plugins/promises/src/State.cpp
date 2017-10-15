@@ -1,24 +1,15 @@
-//
-// Created by nohajc on 27.3.17.
-//
-
-#include "tracer_state.h"
-#include "tracer_conf.h"
-//#include "tracer_output.h"
-#include "tracer_sexpinfo.h"
+#include "State.hpp"
 
 void tracer_state_t::start_pass(const SEXP prom) {
-    if (tracer_conf.overwrite) {
-        reset();
-    }
-
+    reset();
     indent = 0;
-    //clock_id = 0;
+    // clock_id = 0;
 
     // We have to make sure the stack is not empty
     // when referring to the promise created by call to Rdt.
     // This is just a dummy call and environment.
-    fun_stack.push_back(make_tuple((call_id_t) 0, (fn_id_t) 0, function_type::CLOSURE));
+    fun_stack.push_back(
+        make_tuple((call_id_t)0, (fn_id_t)0, function_type::CLOSURE));
     curr_env_stack.push(0);
 
     prom_addr_t prom_addr = get_sexp_address(prom);
@@ -33,14 +24,15 @@ void tracer_state_t::finish_pass() {
     promise_origin.clear();
 }
 
-void tracer_state_t::adjust_stacks(SEXP rho, unwind_info_t & info) {
+void tracer_state_t::adjust_stacks(SEXP rho, unwind_info_t &info) {
     call_id_t call_id;
     env_addr_t call_addr;
 
     // XXX remnant of RDT_CALL_ID
     //(call_id = fun_stack.top()) && get_sexp_address(rho) != call_id
 
-    while (!fun_stack.empty() && (call_addr = curr_env_stack.top()) && get_sexp_address(rho) != call_addr) {
+    while (!fun_stack.empty() && (call_addr = curr_env_stack.top()) &&
+           get_sexp_address(rho) != call_addr) {
         auto elem = fun_stack.back();
         call_id = get<0>(elem);
         curr_env_stack.pop();
@@ -48,7 +40,7 @@ void tracer_state_t::adjust_stacks(SEXP rho, unwind_info_t & info) {
 
         info.unwound_calls.push_back(call_id);
 
-        while(!full_stack.empty()) {
+        while (!full_stack.empty()) {
             auto event = full_stack.back();
             full_stack.pop_back();
 
@@ -59,18 +51,20 @@ void tracer_state_t::adjust_stacks(SEXP rho, unwind_info_t & info) {
                 info.unwound_promises.push_back(event.promise_id);
             }
         }
-        outside_promise_loop:;
+    outside_promise_loop:;
     }
 }
 
-//void tracer_state_t::adjust_prom_stack(SEXP rho, vector<prom_id_t> & unwound_promises) {
+// void tracer_state_t::adjust_prom_stack(SEXP rho, vector<prom_id_t> &
+// unwound_promises) {
 //    prom_id_t prom_id;
 //    env_addr_t call_addr;
 //
 //    // XXX remnant of RDT_CALL_ID
 //    //(call_id = fun_stack.top()) && get_sexp_address(rho) != call_id
 //
-//    while (!fun_stack.empty() && (call_addr = curr_env_stack.top()) && get_sexp_address(rho) != call_addr) {
+//    while (!fun_stack.empty() && (call_addr = curr_env_stack.top()) &&
+//    get_sexp_address(rho) != call_addr) {
 //        prom_stack_elem_t elem = prom_stack.back();
 //        prom_id = elem.first;
 //        curr_env_stack.pop();
@@ -81,7 +75,10 @@ void tracer_state_t::adjust_stacks(SEXP rho, unwind_info_t & info) {
 //    }
 //}
 
-tracer_state_t::tracer_state_t() {
+tracer_state_t::tracer_state_t(const std::string database_path,
+                               const std::string schema_path,
+                               bool verbose = false)
+    : database_path(database_path), schema_path(schema_path), verbose(verbose) {
     indent = 0;
     clock_id = 0;
     call_id_counter = 0;
@@ -91,6 +88,12 @@ tracer_state_t::tracer_state_t() {
     argument_id_sequence = 0;
     gc_trigger_counter = 0;
 }
+
+const std::string &tracer_state_t::get_database_filepath() const { return database_path; }
+
+const std::string& tracer_state_t::get_schema_filepath() const { return schema_path; }
+
+bool tracer_state_t::get_verbosity_state() const { return verbose; }
 
 void tracer_state_t::reset() {
     clock_id = 0;
@@ -107,9 +110,3 @@ void tracer_state_t::reset() {
     argument_ids.clear();
     promise_ids.clear();
 }
-
-tracer_state_t& tracer_state_t::get_instance() {
-    static tracer_state_t tracer_state;
-    return tracer_state;
-}
-

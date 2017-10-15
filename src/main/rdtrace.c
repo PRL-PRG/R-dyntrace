@@ -236,7 +236,7 @@ void rdt_stop() {
     }
 
     RDT_HOOK(probe_end);
-
+    
     rdt_curr_handler = &rdt_null_handler;
 }
 
