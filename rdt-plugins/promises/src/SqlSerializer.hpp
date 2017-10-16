@@ -18,11 +18,12 @@ class SqlSerializer {
     void serialize_function_exit(const closure_info_t &info) {}
     void serialize_builtin_entry(const builtin_info_t &info);
     void serialize_builtin_exit(const builtin_info_t &info) {}
-    void serialize_force_promise_entry(const prom_info_t &info);
-    void serialize_force_promise_exit(const prom_info_t &info);
+    void serialize_force_promise_entry(const prom_info_t &info, int clock_id);
+    void serialize_force_promise_exit(const prom_info_t &info, int clock_id);
     void serialize_promise_created(const prom_basic_info_t &info);
-    void serialize_promise_lookup(const prom_info_t &info);
-    void serialize_promise_expression_lookup(const prom_info_t &info);
+    void serialize_promise_lookup(const prom_info_t &info, int clock_id);
+    void serialize_promise_expression_lookup(const prom_info_t &info,
+                                             int clock_id);
     void serialize_promise_lifecycle(const prom_gc_info_t &info);
     void serialize_vector_alloc(const type_gc_info_t &info);
     void serialize_gc_exit(const gc_info_t &info);
@@ -38,7 +39,8 @@ class SqlSerializer {
     void finalize_statements();
 
     sqlite3_stmt *populate_promise_evaluation_statement(const prom_info_t &info,
-                                                        const int type);
+                                                        const int type,
+                                                        int clock_id);
 
     sqlite3_stmt *populate_call_statement(const call_info_t &info);
 

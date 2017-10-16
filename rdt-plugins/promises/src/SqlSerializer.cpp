@@ -147,25 +147,24 @@ void SqlSerializer::serialize_vector_alloc(const type_gc_info_t &info) {
     execute(insert_type_distribution_statement);
 }
 
-void SqlSerializer::serialize_promise_expression_lookup(
-    const prom_info_t &info) {
+void SqlSerializer::serialize_promise_expression_lookup(const prom_info_t &info,
+                                                        int clock_id) {
     execute(populate_promise_evaluation_statement(
-        info, RDT_SQL_LOOKUP_PROMISE_EXPRESSION));
+        info, RDT_SQL_LOOKUP_PROMISE_EXPRESSION, clock_id));
 }
 
-void SqlSerializer::serialize_promise_lookup(const prom_info_t &info) {
-    execute(
-        populate_promise_evaluation_statement(info, RDT_SQL_LOOKUP_PROMISE));
+void SqlSerializer::serialize_promise_lookup(const prom_info_t &info,
+                                             int clock_id) {
+    execute(populate_promise_evaluation_statement(info, RDT_SQL_LOOKUP_PROMISE,
+                                                  clock_id));
 }
 
 // TODO - can type be included in the info struct itself ?
 // TODO - better way for state access ?
-sqlite3_stmt *
-SqlSerializer::populate_promise_evaluation_statement(const prom_info_t &info,
-                                                     const int type) {
+sqlite3_stmt *SqlSerializer::populate_promise_evaluation_statement(
+    const prom_info_t &info, const int type, int clock_id) {
 
-    sqlite3_bind_int(insert_promise_evaluation_statement, 1,
-                     tracer_state().clock_id++);
+    sqlite3_bind_int(insert_promise_evaluation_statement, 1, clock_id);
     sqlite3_bind_int(insert_promise_evaluation_statement, 2, type);
     sqlite3_bind_int(insert_promise_evaluation_statement, 3, info.prom_id);
     sqlite3_bind_int(insert_promise_evaluation_statement, 4, info.from_call_id);
@@ -230,21 +229,23 @@ void SqlSerializer::serialize_builtin_entry(const builtin_info_t &info) {
     /* always */ { execute(populate_call_statement(info)); }
 }
 
-void SqlSerializer::serialize_force_promise_entry(const prom_info_t &info) {
+void SqlSerializer::serialize_force_promise_entry(const prom_info_t &info,
+                                                  int clock_id) {
     if (info.prom_id < 0) // if this is a promise from the outside
         if (!negative_promise_already_inserted(info.prom_id)) {
             execute(populate_insert_promise_statement(info));
         }
 
-    execute(populate_promise_evaluation_statement(info, RDT_SQL_FORCE_PROMISE));
+    execute(populate_promise_evaluation_statement(info, RDT_SQL_FORCE_PROMISE,
+                                                  clock_id));
 }
 
-void SqlSerializer::serialize_force_promise_exit(const prom_info_t &info) {
+void SqlSerializer::serialize_force_promise_exit(const prom_info_t &info,
+                                                 int clock_id) {
     sqlite3_bind_int(insert_promise_return_statement, 1,
                      to_underlying_type(info.return_type));
     sqlite3_bind_int(insert_promise_return_statement, 2, info.prom_id);
-    sqlite3_bind_int(insert_promise_return_statement, 3,
-                     tracer_state().clock_id);
+    sqlite3_bind_int(insert_promise_return_statement, 3, clock_id);
     execute(insert_promise_return_statement);
 }
 

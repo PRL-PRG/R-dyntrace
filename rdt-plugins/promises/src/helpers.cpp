@@ -1,4 +1,6 @@
 #include "globals.hpp"
+#include <cassert>
+#include <sstream>
 
 rid_t get_sexp_address(SEXP e) { return (rid_t)e; }
 

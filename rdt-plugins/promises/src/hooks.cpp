@@ -186,7 +186,9 @@ void force_promise_entry(const SEXP symbol, const SEXP rho) {
     PROTECT(rho);
 
     prom_info_t info = force_promise_entry_get_info(symbol, rho);
-    tracer_serializer().serialize_force_promise_entry(info);
+    tracer_serializer().serialize_force_promise_entry(info,
+                                                      tracer_state().clock_id);
+    tracer_state().clock_id++;
     if (info.prom_id >= 0) {
         tracer_serializer().serialize_promise_lifecycle(
             {info.prom_id, 1, tracer_state().gc_trigger_counter});
@@ -201,7 +203,8 @@ void force_promise_exit(const SEXP symbol, const SEXP rho, const SEXP val) {
     PROTECT(val);
 
     prom_info_t info = force_promise_exit_get_info(symbol, rho, val);
-    tracer_serializer().serialize_force_promise_exit(info);
+    tracer_serializer().serialize_force_promise_exit(info, tracer_state().clock_id);
+    tracer_state().clock_id++;
 
     UNPROTECT(3);
 }
@@ -213,7 +216,9 @@ void promise_lookup(const SEXP symbol, const SEXP rho, const SEXP val) {
 
     prom_info_t info = promise_lookup_get_info(symbol, rho, val);
     if (info.prom_id >= 0) {
-        tracer_serializer().serialize_promise_lookup(info);
+        tracer_serializer().serialize_promise_lookup(info,
+                                                     tracer_state().clock_id);
+        tracer_state().clock_id++;
         tracer_serializer().serialize_promise_lifecycle(
             {info.prom_id, 1, tracer_state().gc_trigger_counter});
     }
@@ -227,7 +232,9 @@ void promise_expression_lookup(const SEXP prom, const SEXP rho) {
 
     prom_info_t info = promise_expression_lookup_get_info(prom, rho);
     if (info.prom_id >= 0) {
-        tracer_serializer().serialize_promise_expression_lookup(info);
+        tracer_serializer().serialize_promise_expression_lookup(
+            info, tracer_state().clock_id);
+        tracer_state().clock_id++;
         tracer_serializer().serialize_promise_lifecycle(
             {info.prom_id, 1, tracer_state().gc_trigger_counter});
     }
