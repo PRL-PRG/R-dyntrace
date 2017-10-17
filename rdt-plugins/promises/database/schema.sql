@@ -2,6 +2,8 @@
 -- Separate statements in this file with semicolons.
 -- Do not use semicolons for anything else.
 
+pragma synchronous = off;
+
 create table if not exists metadata (
     --[ data ]-----------------------------------------------------------------
     key text not null,

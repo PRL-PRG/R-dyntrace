@@ -2,8 +2,8 @@
 
 static tracer_state_t *create_tracer_state(SEXP options) {
     return new tracer_state_t(
-        sexp_to_string(get_named_list_element(options, "database-path")),
-        sexp_to_string(get_named_list_element(options, "schema-path")),
+        sexp_to_string(get_named_list_element(options, "database_filepath")),
+        sexp_to_string(get_named_list_element(options, "schema_filepath")),
         sexp_to_bool(get_named_list_element(options, "verbose"), false));
 }
 
@@ -15,7 +15,10 @@ static SqlSerializer *create_tracer_serializer(const tracer_state_t &state) {
 
 static rdt_handler *create_rdt_handler() {
 
-    rdt_handler *h = (rdt_handler *)malloc(sizeof(rdt_handler));
+    // calloc initializes the memory to zero. This ensures that probes not
+    // attached to hooks will point to NULL. Replacing calloc with malloc will
+    // cause segfaults.
+    rdt_handler *h = (rdt_handler *)calloc(1, sizeof(rdt_handler));
 
     h->probe_begin = begin;
     h->probe_end = end;

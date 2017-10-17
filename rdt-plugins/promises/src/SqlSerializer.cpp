@@ -2,7 +2,7 @@
 
 SqlSerializer::SqlSerializer(const std::string &database_filepath,
                              const std::string &schema_filepath, bool verbose)
-    : verbose(verbose) {
+    : verbose(verbose), indent(0) {
     open_database(database_filepath);
     create_tables(schema_filepath);
     prepare_statements();
@@ -21,8 +21,8 @@ void SqlSerializer::open_database(const std::string database_path) {
 }
 
 void SqlSerializer::create_tables(const std::string schema_path) {
-    execute(compile("pragma synchronous = off;"));
-    execute(compile(get_file_contents(schema_path.c_str())));
+    sqlite3_exec(database, get_file_contents(schema_path.c_str()), nullptr,
+                 nullptr, nullptr);
 }
 
 SqlSerializer::~SqlSerializer() {
@@ -119,6 +119,14 @@ void SqlSerializer::execute(sqlite3_stmt *statement) {
              << sqlite3_sql(statement) << "\", "
              << "message (" << outcome << "): " << sqlite3_errmsg(database)
              << "\n";
+        exit(1);
+    }
+
+    if (verbose) {
+        for (int i = 1; i < indent; ++i) {
+            std::cerr << "│    ";
+        }
+        std::cerr << "├── " << sqlite3_expanded_sql(statement) << std::endl;
     }
     sqlite3_reset(statement);
 }
@@ -217,6 +225,12 @@ void SqlSerializer::serialize_function_entry(const closure_info_t &info) {
     for (int index = 0; index < info.arguments.size(); ++index) {
         execute(populate_promise_association_statement(info, index));
     }
+
+    indent += 1;
+}
+
+void SqlSerializer::serialize_function_exit(const closure_info_t &info) {
+    indent -= 1;
 }
 
 void SqlSerializer::serialize_builtin_entry(const builtin_info_t &info) {
@@ -226,7 +240,12 @@ void SqlSerializer::serialize_builtin_entry(const builtin_info_t &info) {
         execute(populate_function_statement(info));
     }
 
-    /* always */ { execute(populate_call_statement(info)); }
+    execute(populate_call_statement(info));
+    indent += 1;
+}
+
+void SqlSerializer::serialize_builtin_exit(const builtin_info_t &info) {
+    indent -= 1;
 }
 
 void SqlSerializer::serialize_force_promise_entry(const prom_info_t &info,
@@ -238,10 +257,13 @@ void SqlSerializer::serialize_force_promise_entry(const prom_info_t &info,
 
     execute(populate_promise_evaluation_statement(info, RDT_SQL_FORCE_PROMISE,
                                                   clock_id));
+
+    indent += 1;
 }
 
 void SqlSerializer::serialize_force_promise_exit(const prom_info_t &info,
                                                  int clock_id) {
+    indent -= 1;
     sqlite3_bind_int(insert_promise_return_statement, 1,
                      to_underlying_type(info.return_type));
     sqlite3_bind_int(insert_promise_return_statement, 2, info.prom_id);
@@ -252,6 +274,8 @@ void SqlSerializer::serialize_force_promise_exit(const prom_info_t &info,
 void SqlSerializer::serialize_promise_created(const prom_basic_info_t &info) {
     execute(populate_insert_promise_statement(info));
 }
+
+void SqlSerializer::serialize_unwind(const unwind_info_t &info) {}
 
 sqlite3_stmt *SqlSerializer::populate_insert_promise_statement(
     const prom_basic_info_t &info) {

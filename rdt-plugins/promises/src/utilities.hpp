@@ -22,6 +22,8 @@ std::string sexp_to_string(SEXP value,
                            std::string default_value = std::string(""));
 
 template <typename T>
-std::underlying_type_t<T> to_underlying_type(const T &enum_val);
+std::underlying_type_t<T> to_underlying_type(const T &enum_val) {
+    return static_cast<std::underlying_type_t<T>>(enum_val);
+}
 
 #endif /* __UTILITIES_HPP__ */

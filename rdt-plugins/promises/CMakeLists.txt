@@ -13,13 +13,17 @@ add_definitions(-DHAVE_CONFIG_H)
 # Find SQLITE:
 
 # Look for the header file.
-find_path(SQLITE3_INCLUDE_DIR NAMES sqlite3.h)
+#find_path(SQLITE3_INCLUDE_DIR NAMES sqlite3.h)
 
 # Look for the library.
-find_library(SQLITE3_LIBRARY NAMES sqlite3)
+#find_library(SQLITE3_LIBRARY NAMES sqlite3)
 
 
 set(SOURCE_FILES
+    src/sqlite/sqlite3.h
+    src/sqlite/sqlite3ext.h
+    src/sqlite/sqlite3.c
+    src/sqlite/shell.c
     src/utilities.hpp
     src/utilities.cpp
     src/hooks.hpp
@@ -31,12 +35,14 @@ set(SOURCE_FILES
     src/recorder.hpp
     src/recorder.cpp
     src/State.hpp
+    src/helpers.cpp
     src/State.cpp
     src/SqlSerializer.hpp
-    src/SqlSerializer.cpp
-    src/helpers.cpp)
+    src/SqlSerializer.cpp)
+    
 
 # R include paths (in our R-dyntrace repo)
+include_directories(src/sqlite)
 include_directories(../../src/library/rdt/src)
 include_directories(../../src/main)
 include_directories(../../include)
@@ -47,13 +53,13 @@ include_directories(../../src/include/Rmodules)
 include_directories(../../src/include/vg)
 
 # Include SQLITE
-include_directories(SQLITE3_INCLUDE_DIR)
+#include_directories(SQLITE3_INCLUDE_DIR)
 
 # Add library target
 add_library(rdt_promises SHARED ${SOURCE_FILES})
 
 # Link SQLITE
-target_link_libraries(rdt_promises ${SQLITE3_LIBRARY})
+#target_link_libraries(rdt_promises ${SQLITE3_LIBRARY})
 
 # This tells the linker not to complain about undefined symbols
 # which are from the loader module (R in this case).

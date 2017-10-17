@@ -10,12 +10,19 @@ suppressPackageStartupMessages(library("compiler"))
 #cmd <- "~/workspace/R-dyntrace/bin/R CMD BATCH" #paste(shQuote(file.path(R.home("bin"), "R")))
 #sys.env <- as.character(c("R_KEEP_PKG_SOURCE=yes", "R_ENABLE_JIT=0"))
 
-option_list <- list( 
+root_dir = paste("traces",
+                 "promises",
+                 format(Sys.time(), "%Y-%m-%d-%H-%M-%S"),
+                 sep="/")
+
+option_list <- list(
   make_option(c("-c", "--command"), action="store", type="character", default="~/workspace/R-dyntrace/bin/R CMD BATCH",
               help="Command to execute", metavar="command"),
-  make_option(c("-o", "--output-dir"), action="store", type="character", default="data",
+  make_option(c("-o", "--output-dir"), action="store", type="character", default=root_dir,
               help="Output dirctory for results (*.sqlite, etc) [default].", metavar="output_dir"),
-  make_option(c("--tmp-dir"), action="store", type="character", default="data",
+  make_option(c("--tmp-dir"), action="store", type="character", default=root_dir,
+              help="Temporary output directory (garbage)", metavar="tmp_dir"),
+  make_option(c("--schema-filepath"), action="store", type="character", default="data",
               help="Temporary output directory (garbage)", metavar="tmp_dir"),
   make_option(c("--compile"), action="store_true", default=FALSE,
               help="compile vignettes before execution [default]", metavar="compile")
@@ -34,7 +41,7 @@ dir.create(instrumented.code.dir, recursive = TRUE, showWarnings = TRUE)
 log.dir <- paste(cfg$options$`tmp-dir`, "log", sep="/")
 dir.create(log.dir, recursive = TRUE, showWarnings = TRUE)
 
-rdt.cmd.head <- function(first, path)
+rdt.cmd.head <- function(database_filepath, schema_filepath, verbose=TRUE)
   paste(
    # "loadNamespace <- function(package, lib.loc = NULL,\n",
   #  "                          keep.source = getOption('keep.source.pkgs'),\n",
@@ -47,15 +54,10 @@ rdt.cmd.head <- function(first, path)
   #  "}\n\n",
     ###############"gcinfo(verbose = TRUE)\n",
     "Rdt(tracer='promises',\n",
-    "output='d',\n", 
-    "path='", path, "',\n", 
-    "format='psql',\n",
-    "pretty.print=FALSE,\n",
-    "overwrite=", first, ",\n", 
-    "synthetic.call.id=TRUE,\n", 
-    "include.configuration=TRUE,\n",
-    "reload.state=", !first, ",\n",
-    "block={\n\n",
+    "    database_filepath='", database_filepath, "',\n",
+    "    schema_filepath='", schema_filepath, "',\n",
+    "    verbose=FALSE,\n",
+    "    block={\n\n",
     sep="")
 
 rdt.cmd.tail<- function(path)
@@ -65,6 +67,12 @@ rdt.cmd.tail<- function(path)
                       sep = "")
 
 instrument.vignettes <- function(packages) {
+
+  new_packages <- setdiff(packages, rownames(installed.packages()))
+  if (length(new_packages) > 0) {
+    install.packages(new_packages, repos='http://cran.us.r-project.org')
+  }
+  
   i.packages <- 0
   n.packages <- length(packages)
   total.vignettes <- 0
@@ -79,12 +87,12 @@ instrument.vignettes <- function(packages) {
     result.set <- vignette(package = package)
     vignettes.in.package <- result.set$results[,3]
     
-    tracer.output.path <- paste(cfg$options$`output-dir`, "/", package, ".sqlite", sep="")
-    
     i.vignettes = 0
     n.vignettes = length(vignettes.in.package)
     
     for (vignette.name in vignettes.in.package) {
+      dir.create(paste(cfg$options$`output-dir`, package, sep = "/"))
+      tracer.output.path <- paste(cfg$options$`output-dir`, "/", package, "/", vignette.name, ".sqlite", sep="")
       i.vignettes <- i.vignettes + 1
       total.vignettes <- total.vignettes + 1
       
@@ -97,7 +105,10 @@ instrument.vignettes <- function(packages) {
       write(paste("[", i.packages, "/", n.packages, "::", i.vignettes, "/", n.vignettes, "/", total.vignettes, "] Writing vignette to: ", instrumented.code.path, sep=""), stdout())
 
       vignette.code <- readLines(vignette.code.path)
-      instrumented.code <- c(rdt.cmd.head(i.vignettes == 1, tracer.output.path), vignette.code, rdt.cmd.tail(paste(tracer.output.path, "-", i.vignettes, "-", n.vignettes, ".ok", sep="")))      
+      instrumented.code <- c(rdt.cmd.head(tracer.output.path, "./rdt-plugins/promises/database/schema.sql"),
+                             paste0("    ", vignette.code),
+                             rdt.cmd.tail(paste(tracer.output.path, "-",
+                                                i.vignettes, "-", n.vignettes, ".ok", sep="")))
       write(instrumented.code, instrumented.code.path)
       
       write(paste("[", i.packages, "/", n.packages, "::", i.vignettes, "/", n.vignettes, "/", total.vignettes, "] Done instrumenting vignette: ", vignette.name, " from ", package, sep=""), stdout())

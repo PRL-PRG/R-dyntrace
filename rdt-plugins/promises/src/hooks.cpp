@@ -236,7 +236,7 @@ void promise_expression_lookup(const SEXP prom, const SEXP rho) {
             info, tracer_state().clock_id);
         tracer_state().clock_id++;
         tracer_serializer().serialize_promise_lifecycle(
-            {info.prom_id, 1, tracer_state().gc_trigger_counter});
+            {info.prom_id, 3, tracer_state().gc_trigger_counter});
     }
 
     UNPROTECT(2);

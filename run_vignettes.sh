@@ -37,4 +37,3 @@ do
     time $CMD $i 2>&1 | tee "$i.log" 
     echo "$i" >> packages_done
 done   
-

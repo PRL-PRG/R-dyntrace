@@ -15,9 +15,9 @@ class SqlSerializer {
     void serialize_start_trace(const metadata_t &info);
     void serialize_finish_trace(const metadata_t &info);
     void serialize_function_entry(const closure_info_t &info);
-    void serialize_function_exit(const closure_info_t &info) {}
+    void serialize_function_exit(const closure_info_t &info);
     void serialize_builtin_entry(const builtin_info_t &info);
-    void serialize_builtin_exit(const builtin_info_t &info) {}
+    void serialize_builtin_exit(const builtin_info_t &info);
     void serialize_force_promise_entry(const prom_info_t &info, int clock_id);
     void serialize_force_promise_exit(const prom_info_t &info, int clock_id);
     void serialize_promise_created(const prom_basic_info_t &info);
@@ -27,7 +27,7 @@ class SqlSerializer {
     void serialize_promise_lifecycle(const prom_gc_info_t &info);
     void serialize_vector_alloc(const type_gc_info_t &info);
     void serialize_gc_exit(const gc_info_t &info);
-    void serialize_unwind(const unwind_info_t &info) {}
+    void serialize_unwind(const unwind_info_t &info);
 
   private:
     sqlite3_stmt *compile(const char *statement);
@@ -58,6 +58,7 @@ class SqlSerializer {
     sqlite3_stmt *populate_insert_argument_statement(const closure_info_t &info,
                                                      int index);
     bool verbose;
+    int indent;
     sqlite3 *database = nullptr;
     sqlite3_stmt *insert_metadata_statement = nullptr;
     sqlite3_stmt *insert_function_statement = nullptr;

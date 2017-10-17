@@ -89,9 +89,13 @@ tracer_state_t::tracer_state_t(const std::string database_path,
     gc_trigger_counter = 0;
 }
 
-const std::string &tracer_state_t::get_database_filepath() const { return database_path; }
+const std::string &tracer_state_t::get_database_filepath() const {
+    return database_path;
+}
 
-const std::string& tracer_state_t::get_schema_filepath() const { return schema_path; }
+const std::string &tracer_state_t::get_schema_filepath() const {
+    return schema_path;
+}
 
 bool tracer_state_t::get_verbosity_state() const { return verbose; }
 

@@ -426,31 +426,3 @@ string full_sexp_type_to_number_string(full_sexp_type type) {
     }
     return result.str();
 }
-
-template <typename T>
-void get_stack_parent(T &info, vector<stack_event_t> &stack) {
-    // put the body here
-    static_assert(std::is_base_of<prom_basic_info_t, T>::value ||
-                      std::is_base_of<prom_info_t, T>::value ||
-                      std::is_base_of<call_info_t, T>::value,
-                  "get_stack_parent is only applicable for arguments of types: "
-                  "prom_basic_info_t,  prom_info_t, or call_info_t.");
-
-    if (!stack.empty()) {
-        stack_event_t stack_elem = stack.back();
-        // parent type
-        info.parent_on_stack.type = stack_elem.type;
-        switch (info.parent_on_stack.type) {
-            case stack_type::PROMISE:
-                info.parent_on_stack.promise_id = stack_elem.call_id;
-                break;
-            case stack_type::CALL:
-                info.parent_on_stack.call_id = stack_elem.promise_id;
-                break;
-            case stack_type::NONE:
-                break;
-        }
-    } else {
-        info.parent_on_stack.type = stack_type::NONE;
-    }
-}

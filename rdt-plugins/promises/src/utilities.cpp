@@ -8,7 +8,7 @@ int get_file_size(std::ifstream &file) {
     return length;
 }
 
-const char *get_file_contents(const std::string &filepath) {
+const char *get_file_contents(const char *filepath) {
     std::ifstream file(filepath);
     if (!file.good()) {
         std::cerr << "ERROR - Unable to open file " << filepath;
@@ -23,11 +23,6 @@ const char *get_file_contents(const std::string &filepath) {
 
 bool file_exists(const std::string &filepath) {
     return std::ifstream(filepath).good();
-}
-
-template <typename T>
-std::underlying_type_t<T> to_underlying_type(const T &enum_val) {
-    return static_cast<std::underlying_type_t<T>>(enum_val);
 }
 
 bool sexp_to_bool(SEXP value, bool default_value) {
