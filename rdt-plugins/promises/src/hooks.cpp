@@ -5,10 +5,8 @@ void begin(const SEXP prom) {
     tracer_state().start_pass(prom);
 
     metadata_t metadata;
-    //= rec.get_metadata_from_environment();
     get_environment_metadata(metadata);
     get_current_time_metadata(metadata, "START");
-
     tracer_serializer().serialize_start_trace(metadata);
     UNPROTECT(1);
 }

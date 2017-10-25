@@ -15,13 +15,16 @@ findPlugins <- function() {
 	}
 }
 
-Rdt <- function(block, tracer="default", ...) {
+Rdt <- function(code_block, tracer="", library_filepath="", ...) {
+    if (missing(tracer)) stop("tracer name is required")
+    if (missing(library_filepath)) stop("library filepath is required")
+
     stopifnot(is.character(tracer) && length(tracer) == 1 && nchar(tracer) > 0)
-    if (missing(block)) stop("block is required")
+    stopifnot(is.character(library_filepath) && length(library_filepath) == 1 && nchar(library_filepath) > 0)
 
     #start.time <- proc.time()
 
-    retval <- .Call(C_Rdt, tracer, environment(), list(...))
+    retval <- .Call(C_Rdt, tracer, library_filepath, environment(), list(...))
 
     #end.time <- proc.time()
     #write("Tracing done, elapsed time:", stderr())
@@ -29,7 +32,6 @@ Rdt <- function(block, tracer="default", ...) {
 
     retval
 }
-
 
 wrap.executor <- function(executor)
     function(expr, current_vignette, total_vignettes, vignette_name, vignette_package, ...) {

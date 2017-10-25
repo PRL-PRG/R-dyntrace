@@ -42,7 +42,7 @@ static std::string infer_lib_location(const std::string &path, const std::string
     if (std::regex_match(fn_name, tracer_name_match, tracer_name_ex)) {
         if (tracer_name_match.size() == 2) {
             tracer_name = tracer_name_match[1].str().c_str();
-            return path + "/" + tracer_name + "/librdt_" + tracer_name + LIB_EXT;
+            return path + "/" + tracer_name + "/lib/librdt-" + tracer_name + LIB_EXT;
         }
     }
 

@@ -109,6 +109,7 @@ typedef struct rdt_handler {
     // Parameter rho is the target environment.
     // RDT_HOOK(probe_jump_ctxt, env, val) in src/main/context.c:findcontext()
     void (*probe_jump_ctxt)(const SEXP rho, const SEXP val);
+  
     // RDT_HOOK(probe_S3_generic_entry, generic, obj) in src/main/objects.c:usemethod()
     void (*probe_S3_generic_entry)(const char *generic, const SEXP object);
     // RDT_HOOK(probe_S3_generic_exit ... in src/main/objects.c:usemethod()

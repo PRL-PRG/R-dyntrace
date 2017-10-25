@@ -1,0 +1,52 @@
+#!/bin/bash
+
+#CMD='bin/Rscript rdt-plugins/promises/R/benchmark.R'
+#CMD='bin/Rscript compose_testable_vignettes.R'
+#CMD='bin/R --slave --no-restore --debugger=gdb --file=compose_testable_vignettes.R --args'
+# $1 is the R executable passed by the caller of this script
+# $4 is the script to be executed by R
+BASE_DIR=$(cd $(dirname "$0")/../; pwd)
+R_BIN=$(cd $BASE_DIR/../../bin/; pwd)/R
+FILE=$(cd .; pwd)/compose_testable_vignettes.R
+LIBRARY_FILEPATH=$BASE_DIR/lib/librdt-promises.so
+SCHEMA_FILEPATH=$BASE_DIR/database/schema.sql
+OUTPUT_DIR=$BASE_DIR/traces/`date +"%Y-%m-%d-%H-%M-%S"`
+LOG_DIR=$OUTPUT_DIR/logs/
+mkdir -p $OUTPUT_DIR
+mkdir -p $LOG_DIR
+
+CMD="$R_BIN --debugger=gdb --slave --no-restore --file=$FILE --args --output-dir=${OUTPUT_DIR} --library-filepath=${LIBRARY_FILEPATH} --schema-filepath=${SCHEMA_FILEPATH}"
+
+export R_COMPILE_PKGS=1
+export R_DISABLE_BYTECODE=0
+export R_ENABLE_JIT=3
+export R_KEEP_PKG_SOURCE=yes
+
+export RDT_COMPILE_VIGNETTE=false
+
+PACKAGES=
+
+if $RDT_COMPILE_VIGNETTE
+then 
+    CMD="$CMD --compile"        
+fi    
+
+if [ $# -ge 1 ]
+then
+    PACKAGES="$@"
+else
+    #PACKAGES="vcd rpart survival mclust party mvtnorm igraph"
+    #ALL_PACKAGES="grid ggplot2 haven readr readxl stringr tibble tidyverse digest colorspace kernlab vcd rpart survival mclust party mvtnorm igraph dplyr"
+    # $2 is the package file passed by the caller of this script
+    PACKAGES=`cat ../data/r-package-anthology.csv | grep -v '^#' | grep -v '^$' | tr -s ' ' | tail -n +2 | cut -f 2 -d';' | xargs echo`
+fi
+
+echo > packages_done
+
+for i in $PACKAGES
+do 
+    echo "$CMD $i"
+    # $3 is the output file passed by the caller of this script
+    time $CMD $i 2>&1 | tee "${LOG_DIR}/$i.log" 
+    echo "$i" >> packages_done
+done

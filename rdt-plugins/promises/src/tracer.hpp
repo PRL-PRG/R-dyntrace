@@ -19,9 +19,9 @@
 extern "C" {
 #endif
 
-rdt_handler *setup_promises_tracing(SEXP options);
+rdt_handler *setup_tracing(SEXP options);
 
-void cleanup_promise_tracing(SEXP options);
+void cleanup_tracing(SEXP options);
 
 #ifdef __cplusplus
 }

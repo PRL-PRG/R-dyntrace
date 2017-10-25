@@ -42,13 +42,13 @@ static rdt_handler *create_rdt_handler() {
     return h;
 }
 
-rdt_handler *setup_promises_tracing(SEXP options) {
+rdt_handler *setup_tracing(SEXP options) {
     set_tracer_state(create_tracer_state(options));
     set_tracer_serializer(create_tracer_serializer(tracer_state()));
     return create_rdt_handler();
 }
 
-void cleanup_promise_tracing(SEXP options) {
+void cleanup_tracing(SEXP options) {
     delete &tracer_serializer();
     delete &tracer_state();
 }

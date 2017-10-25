@@ -10,10 +10,11 @@
 extern "C" {
 #endif
 
-SEXP Rdt(SEXP tracer, SEXP rho, SEXP options);
+SEXP Rdt(SEXP tracer, SEXP library_filepath, SEXP rho,
+         SEXP options);
 
-typedef rdt_handler *(*tracer_setup_ptr_t)(SEXP);
-typedef void (*tracer_cleanup_ptr_t)(SEXP);
+typedef rdt_handler *(*tracer_setup_t)(SEXP);
+typedef void (*tracer_cleanup_t)(SEXP);
 
 rdt_handler *setup_default_tracing(SEXP options);
 rdt_handler *setup_noop_tracing(SEXP options);

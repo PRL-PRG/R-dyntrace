@@ -37,6 +37,8 @@ class SqlSerializer {
     void create_tables(const std::string schema_path);
     void prepare_statements();
     void finalize_statements();
+    void unindent();
+    void indent();
 
     sqlite3_stmt *populate_promise_evaluation_statement(const prom_info_t &info,
                                                         const int type,
@@ -58,7 +60,7 @@ class SqlSerializer {
     sqlite3_stmt *populate_insert_argument_statement(const closure_info_t &info,
                                                      int index);
     bool verbose;
-    int indent;
+    int indentation;
     sqlite3 *database = nullptr;
     sqlite3_stmt *insert_metadata_statement = nullptr;
     sqlite3_stmt *insert_function_statement = nullptr;
