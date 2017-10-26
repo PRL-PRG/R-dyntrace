@@ -103,7 +103,7 @@ instrument.vignettes <- function(packages) {
       write(paste("[", i.packages, "/", n.packages, "::", i.vignettes, "/", n.vignettes, "/", total.vignettes, "] Writing vignette to: ", instrumented.code.path, sep=""), stdout())
 
       vignette.code <- readLines(vignette.code.path)
-      instrumented.code <- c(rdt.cmd.head(cfg$options$`library-filepath`, tracer.output.path, cfg$options$`schema-filepath`),
+      instrumented.code <- c(rdt.cmd.head(cfg$options$`library-filepath`, tracer.output.path, cfg$options$`schema-filepath`, verbose = FALSE),
                              paste0("    ", vignette.code),
                              rdt.cmd.tail(paste(tracer.output.path, "-",
                                                 i.vignettes, "-", n.vignettes, ".ok", sep="")))

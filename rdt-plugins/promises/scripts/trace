@@ -15,7 +15,7 @@ LOG_DIR=$OUTPUT_DIR/logs/
 mkdir -p $OUTPUT_DIR
 mkdir -p $LOG_DIR
 
-CMD="$R_BIN --debugger=gdb --slave --no-restore --file=$FILE --args --output-dir=${OUTPUT_DIR} --library-filepath=${LIBRARY_FILEPATH} --schema-filepath=${SCHEMA_FILEPATH}"
+CMD="$R_BIN --slave --debugger=gdb --no-restore --file=$FILE --args --output-dir=${OUTPUT_DIR} --library-filepath=${LIBRARY_FILEPATH} --schema-filepath=${SCHEMA_FILEPATH}"
 
 export R_COMPILE_PKGS=1
 export R_DISABLE_BYTECODE=0

@@ -16,11 +16,6 @@ SEXP Rdt(SEXP tracer, SEXP library_filepath, SEXP rho,
 typedef rdt_handler *(*tracer_setup_t)(SEXP);
 typedef void (*tracer_cleanup_t)(SEXP);
 
-rdt_handler *setup_default_tracing(SEXP options);
-rdt_handler *setup_noop_tracing(SEXP options);
-rdt_handler *setup_debug_tracing(SEXP options);
-rdt_handler *setup_specialsxp_tracing(SEXP options);
-
 const char *get_string(SEXP sexp);
 
 #ifdef __cplusplus

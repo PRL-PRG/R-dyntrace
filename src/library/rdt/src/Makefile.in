@@ -14,10 +14,6 @@ R_SHARE_DIR = $(R_HOME)/share
 R_INCLUDE_DIR = $(R_HOME)/include
 
 SOURCES_C = init.c rdt.c
-SOURCES_CXX = rdt_noop.cpp rdt_debug.cpp rdt_trace.cpp \
-	          dyn_fn_lookup.cpp \
-	          rdt_specialsxp.cpp
-
 
 DEPENDS = $(SOURCES_C:.c=.d)
 DEPENDS += $(SOURCES_CXX:.cpp=.d)
