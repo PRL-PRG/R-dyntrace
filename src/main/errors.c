@@ -32,8 +32,8 @@
 #include <Rmath.h> /* for imax2 */
 #include <R_ext/Print.h>
 
-#ifdef ENABLE_RDT
-#include <rdtrace.h>
+#ifdef ENABLE_DYNTRACE
+#include <Rdyntrace.h>
 #endif
 
 #ifndef min
@@ -776,15 +776,15 @@ void NORET errorcall(SEXP call, const char *format,...)
 	/* behave like error( */
 	call = getCurrentCall();
 
-#ifdef ENABLE_RDT
-    if (RDT_IS_ENABLED(probe_error)) {
+#ifdef ENABLE_DYNTRACE
+    if (dyntrace_is_active() && DYNTRACE_SHOULD_PROBE(probe_error)) {
 	char *message = NULL;
 
 	va_start(ap, format);
 	vasprintf(&message, format, ap);
 	va_end(ap);
 
-	RDT_FIRE_PROBE(probe_error, call, message);
+	DYNTRACE_PROBE_ERROR(call, message);
 
 	free(message);
     }	

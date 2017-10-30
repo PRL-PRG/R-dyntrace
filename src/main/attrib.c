@@ -25,7 +25,8 @@
 #include <Defn.h>
 #include <Internal.h>
 #include <Rmath.h>
-#include "rdtrace.h"
+#include <Rdyntrace.h>
+
 
 static SEXP installAttrib(SEXP, SEXP, SEXP);
 static SEXP removeAttrib(SEXP, SEXP);
@@ -104,8 +105,8 @@ SEXP attribute_hidden getAttrib0(SEXP vec, SEXP name)
     SEXP s;
     int len, i, any;
 
-#ifdef RDT_IS_ENABLED
-    if(tracing_is_active()) {
+#ifdef ENABLE_DYNTRACE
+    if(dyntrace_is_active()) {
         return R_NilValue;
     }
 #endif

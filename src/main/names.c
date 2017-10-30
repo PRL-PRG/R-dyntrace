@@ -27,7 +27,7 @@
 #define R_USE_SIGNALS 1
 #include <Defn.h>
 #include <Internal.h>
-
+//#include <Rdyntrace.h>
 #include <Print.h>
 #include "arithmetic.h" /* for do_math[1234], do_cmathfuns */
 
@@ -124,6 +124,7 @@ FUNTAB R_FunTab[] =
 {"nargs",	do_nargs,	1,	1,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"on.exit",	do_onexit,	0,	100,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
 {"forceAndCall",do_forceAndCall,	0,	0,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
+{"dyntrace", do_dyntrace, 0, 0,	3, {PP_FUNCALL, PREC_FN, 0}},
 
 /* .Internals */
 
@@ -155,7 +156,6 @@ FUNTAB R_FunTab[] =
 {"makeLazy",	do_makelazy,	0,	111,	5,	{PP_FUNCALL, PREC_FN,	  0}},
 {"identical",	do_identical,	0,	11,	8,	{PP_FUNCALL, PREC_FN,	  0}},
 {"C_tryCatchHelper",do_tryCatchHelper,0,11,	-1,	{PP_FUNCALL, PREC_FN,	0}},
-
 
 /* Binary Operators, all primitives */
 /* these are group generic and so need to eval args */

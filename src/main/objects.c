@@ -31,7 +31,7 @@
 #include <Internal.h>
 #include <R_ext/RS.h> /* for Calloc, Realloc and for S4 object bit */
 
-#include <rdtrace.h>
+#include <Rdyntrace.h>
 
 static SEXP GetObject(RCNTXT *cptr)
 {
@@ -85,7 +85,7 @@ static SEXP GetObject(RCNTXT *cptr)
 	else {
 	    SEXP s_saved = s;
 	    s = PRVALUE(s);
-	    RDT_HOOK(probe_promise_lookup, s_saved, R_BaseEnv, s);
+	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(s_saved, R_BaseEnv, s);
 	}
     }
     return(s);
@@ -297,7 +297,7 @@ static
 SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
 		    const char *generic, SEXP rho, SEXP callrho, SEXP defrho) {
 
-    RDT_HOOK(probe_S3_dispatch_entry, generic, CHAR(STRING_ELT(dotClass, 0)), method, PRVALUE(CAR(cptr->promargs)));
+  DYNTRACE_PROBE_S3_DISPATCH_ENTRY(generic, CHAR(STRING_ELT(dotClass, 0)), method, PRVALUE(CAR(cptr->promargs)));
 
     SEXP newvars = PROTECT(createS3Vars(
 	PROTECT(mkString(generic)),
@@ -343,7 +343,7 @@ SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
     R_GlobalContext->callflag = CTXT_RETURN;
     UNPROTECT(5); /* "generic,method", newvars, newcall, matchedarg */
 
-    RDT_HOOK(probe_S3_dispatch_exit, generic, CHAR(STRING_ELT(dotClass, 0)), method, PRVALUE(CAR(cptr->promargs)), ans);
+    DYNTRACE_PROBE_S3_DISPATCH_EXIT(generic, CHAR(STRING_ELT(dotClass, 0)), method, PRVALUE(CAR(cptr->promargs)), ans);
 
     return ans;
 }
@@ -352,7 +352,7 @@ attribute_hidden
 int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	      SEXP rho, SEXP callrho, SEXP defrho, SEXP *ans)
 {
-    RDT_HOOK(probe_S3_generic_entry, generic, obj);
+  DYNTRACE_PROBE_S3_GENERIC_ENTRY(generic, obj);
 
     SEXP klass, method, sxp;
     SEXP op;
@@ -388,7 +388,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	    }
 	    UNPROTECT(2); /* klass, sxp */
 
-	    RDT_HOOK(probe_S3_generic_exit, generic, obj, *ans);
+	    DYNTRACE_PROBE_S3_GENERIC_EXIT(generic, obj, *ans);
 
 	    return 1;
 	}
@@ -400,13 +400,13 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 			      rho, callrho, defrho);
 	UNPROTECT(2); /* klass, sxp */
 
-	RDT_HOOK(probe_S3_generic_exit, generic, obj, *ans);
+	DYNTRACE_PROBE_S3_GENERIC_EXIT(generic, obj, *ans);
 	return 1;
     }
     UNPROTECT(2); /* klass, sxp */
     cptr->callflag = CTXT_RETURN;
 
-    RDT_HOOK(probe_S3_generic_exit, generic, obj, NULL);
+    DYNTRACE_PROBE_S3_GENERIC_EXIT(generic, obj, NULL);
     return 0;
 }
 

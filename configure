@@ -949,9 +949,9 @@ R_PAPERSIZE
 R_PRINTCMD
 BYTE_COMPILE_PACKAGES_FALSE
 BYTE_COMPILE_PACKAGES_TRUE
-RDT_OBJ
-RDT_SRC
-RDT_HANDLERS
+DYNTRACE_OBJ
+DYNTRACE_SRC
+DYNTRACER
 WANT_JAVA_FALSE
 WANT_JAVA_TRUE
 BUILD_LTO_FALSE
@@ -1058,7 +1058,7 @@ with_system_tre
 with_valgrind_instrumentation
 with_system_valgrind_headers
 with_internal_tzcode
-enable_rdt
+enable_dyntrace
 with_recommended_packages
 with_ICU
 enable_byte_compiled_packages
@@ -1808,7 +1808,7 @@ Optional Features:
   --enable-prebuilt-html  build static HTML help pages [no]
   --enable-lto            enable link-time optimization [no]
   --enable-java           enable Java [yes]
-  --enable-rdt            Dynamic tracing for R [yes]
+  --enable-dyntrace       Dynamic tracing for R [yes]
   --enable-byte-compiled-packages
                           byte-compile base and recommended packages [yes]
   --enable-static[=PKGS]  (libtool) build static libraries [default=no]
@@ -4272,19 +4272,19 @@ else
 fi
 
 
-# Check whether --enable-rdt was given.
-if test "${enable_rdt+set}" = set; then :
-  enableval=$enable_rdt; enable_rdt=$enableval
+# Check whether --enable-dyntrace was given.
+if test "${enable_dyntrace+set}" = set; then :
+  enableval=$enable_dyntrace; enable_dyntrace=$enableval
 else
-  enable_rdt=yes
+  enable_dyntrace=yes
 fi
 
 
-if test "${enable_rdt}" = "yes"; then
-  RDT_SRC="rdtrace.c"
-  RDT_OBJ="rdtrace.o"
+if test "${enable_dyntrace}" = "yes"; then
+  DYNTRACE_SRC="dyntrace.c"
+  DYNTRACE_OBJ="dyntrace.o"
 
-$as_echo "#define ENABLE_RDT 1" >>confdefs.h
+$as_echo "#define ENABLE_DYNTRACE 1" >>confdefs.h
 
 fi
 
@@ -50806,7 +50806,7 @@ esac
 
 ac_config_headers="$ac_config_headers src/include/config.h"
 
-ac_config_files="$ac_config_files Makeconf Makefile doc/Makefile doc/html/Makefile doc/manual/Makefile etc/Makefile etc/Makeconf etc/Renviron etc/javaconf etc/ldpaths m4/Makefile po/Makefile share/Makefile src/Makefile src/appl/Makefile src/extra/Makefile src/extra/blas/Makefile src/extra/intl/Makefile src/extra/tre/Makefile src/extra/tzone/Makefile src/extra/xdr/Makefile src/include/Makefile src/include/Rmath.h0 src/include/R_ext/Makefile src/library/Recommended/Makefile src/library/Makefile src/library/base/DESCRIPTION src/library/base/Makefile src/library/compiler/DESCRIPTION src/library/compiler/Makefile src/library/datasets/DESCRIPTION src/library/datasets/Makefile src/library/graphics/DESCRIPTION src/library/graphics/Makefile src/library/graphics/src/Makefile src/library/grDevices/DESCRIPTION src/library/grDevices/Makefile src/library/grDevices/src/Makefile src/library/grDevices/src/cairo/Makefile src/library/grid/DESCRIPTION src/library/grid/Makefile src/library/grid/src/Makefile src/library/methods/DESCRIPTION src/library/methods/Makefile src/library/methods/src/Makefile src/library/parallel/DESCRIPTION src/library/parallel/Makefile src/library/parallel/src/Makefile src/library/profile/Makefile src/library/rdt/src/Makefile src/library/rdt/Makefile src/library/stats/DESCRIPTION src/library/stats/Makefile src/library/stats/src/Makefile src/library/stats4/DESCRIPTION src/library/stats4/Makefile src/library/splines/DESCRIPTION src/library/splines/Makefile src/library/splines/src/Makefile src/library/tcltk/DESCRIPTION src/library/tcltk/Makefile src/library/tcltk/src/Makefile src/library/tools/DESCRIPTION src/library/tools/Makefile src/library/tools/src/Makefile src/library/translations/DESCRIPTION src/library/translations/Makefile src/library/utils/DESCRIPTION src/library/utils/Makefile src/library/utils/src/Makefile src/main/Makefile src/modules/Makefile src/modules/X11/Makefile src/modules/internet/Makefile src/modules/lapack/Makefile src/nmath/Makefile src/nmath/standalone/Makefile src/scripts/Makefile src/scripts/R.sh src/scripts/Rcmd src/scripts/f77_f2c src/scripts/javareconf src/scripts/mkinstalldirs src/scripts/pager src/scripts/rtags src/unix/Makefile tests/Makefile tests/Embedding/Makefile tests/Examples/Makefile tools/Makefile"
+ac_config_files="$ac_config_files Makeconf Makefile doc/Makefile doc/html/Makefile doc/manual/Makefile etc/Makefile etc/Makeconf etc/Renviron etc/javaconf etc/ldpaths m4/Makefile po/Makefile share/Makefile src/Makefile src/appl/Makefile src/extra/Makefile src/extra/blas/Makefile src/extra/intl/Makefile src/extra/tre/Makefile src/extra/tzone/Makefile src/extra/xdr/Makefile src/include/Makefile src/include/Rmath.h0 src/include/R_ext/Makefile src/library/Recommended/Makefile src/library/Makefile src/library/base/DESCRIPTION src/library/base/Makefile src/library/compiler/DESCRIPTION src/library/compiler/Makefile src/library/datasets/DESCRIPTION src/library/datasets/Makefile src/library/graphics/DESCRIPTION src/library/graphics/Makefile src/library/graphics/src/Makefile src/library/grDevices/DESCRIPTION src/library/grDevices/Makefile src/library/grDevices/src/Makefile src/library/grDevices/src/cairo/Makefile src/library/grid/DESCRIPTION src/library/grid/Makefile src/library/grid/src/Makefile src/library/methods/DESCRIPTION src/library/methods/Makefile src/library/methods/src/Makefile src/library/parallel/DESCRIPTION src/library/parallel/Makefile src/library/parallel/src/Makefile src/library/profile/Makefile src/library/stats/DESCRIPTION src/library/stats/Makefile src/library/stats/src/Makefile src/library/stats4/DESCRIPTION src/library/stats4/Makefile src/library/splines/DESCRIPTION src/library/splines/Makefile src/library/splines/src/Makefile src/library/tcltk/DESCRIPTION src/library/tcltk/Makefile src/library/tcltk/src/Makefile src/library/tools/DESCRIPTION src/library/tools/Makefile src/library/tools/src/Makefile src/library/translations/DESCRIPTION src/library/translations/Makefile src/library/utils/DESCRIPTION src/library/utils/Makefile src/library/utils/src/Makefile src/main/Makefile src/modules/Makefile src/modules/X11/Makefile src/modules/internet/Makefile src/modules/lapack/Makefile src/nmath/Makefile src/nmath/standalone/Makefile src/scripts/Makefile src/scripts/R.sh src/scripts/Rcmd src/scripts/f77_f2c src/scripts/javareconf src/scripts/mkinstalldirs src/scripts/pager src/scripts/rtags src/unix/Makefile tests/Makefile tests/Embedding/Makefile tests/Examples/Makefile tools/Makefile"
 
 
 ac_config_commands="$ac_config_commands stamp-h"
@@ -52227,8 +52227,6 @@ do
     "src/library/parallel/Makefile") CONFIG_FILES="$CONFIG_FILES src/library/parallel/Makefile" ;;
     "src/library/parallel/src/Makefile") CONFIG_FILES="$CONFIG_FILES src/library/parallel/src/Makefile" ;;
     "src/library/profile/Makefile") CONFIG_FILES="$CONFIG_FILES src/library/profile/Makefile" ;;
-    "src/library/rdt/src/Makefile") CONFIG_FILES="$CONFIG_FILES src/library/rdt/src/Makefile" ;;
-    "src/library/rdt/Makefile") CONFIG_FILES="$CONFIG_FILES src/library/rdt/Makefile" ;;
     "src/library/stats/DESCRIPTION") CONFIG_FILES="$CONFIG_FILES src/library/stats/DESCRIPTION" ;;
     "src/library/stats/Makefile") CONFIG_FILES="$CONFIG_FILES src/library/stats/Makefile" ;;
     "src/library/stats/src/Makefile") CONFIG_FILES="$CONFIG_FILES src/library/stats/src/Makefile" ;;

@@ -108,7 +108,7 @@
 
 #include "RBufferUtils.h"
 
-#include "rdtrace.h"
+#include <Rdyntrace.h>
 typedef R_StringBuffer DeparseBuffer;
 
 typedef struct {
@@ -501,8 +501,8 @@ SEXP attribute_hidden do_dump(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 static void linebreak(Rboolean *lbreak, LocalParseData *d)
 {
-#ifdef RDT_IS_ENABLED
-    if(tracing_is_active()) {
+#ifdef ENABLE_DYNTRACE
+    if(dyntrace_is_active()) {
         return;
     }
 #endif
@@ -1160,7 +1160,7 @@ void deparse2buff(SEXP s, LocalParseData *d)
 		if (isSymbol(CAR(s))) {
 		    val = SYMVALUE(CAR(s));
 		    if (TYPEOF(val) == PROMSXP) {
-            if(tracing_is_active()) {
+            if(dyntrace_is_active()) {
                 val = PRCODE(val);
             } else {
               val = eval(val, R_BaseEnv);
@@ -1285,8 +1285,8 @@ void deparse2buff(SEXP s, LocalParseData *d)
 
 static void writeline(LocalParseData *d)
 {
-#ifdef RDT_IS_ENABLED
-    if(tracing_is_active()) {
+#ifdef ENABLE_DYNTRACE
+    if(dyntrace_is_active()) {
         return;
     }
 #endif
