@@ -655,7 +655,7 @@ SEXP eval(SEXP e, SEXP rho)
 
 		DYNTRACE_PROBE_PROMISE_FORCE_ENTRY(e, rho);
 		tmp = forcePromise(tmp);
-		DYNTRACE_PROBE_PROMISE_FORCE_EXIT(e, rho, tmp); // SUSPICIOUS, should TMP be protected for the duration?
+		DYNTRACE_PROBE_PROMISE_FORCE_EXIT(e, rho, tmp);
 
 		UNPROTECT(1);
 	    }
@@ -4629,6 +4629,7 @@ SEXP R_BytecodeExpr(SEXP e)
 
 SEXP R_PromiseExpr(SEXP p)
 {
+    DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(p);
     return bytecodeExpr(PRCODE(p));
 }
 

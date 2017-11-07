@@ -6,8 +6,8 @@ export R_KEEP_PKG_SOURCE=yes
 export CXX="g++ -std=c++14"
 
 ./tools/rsync-recommended &&
-./configure --with-blas --with-lapack --without-ICU --with-x \
-            --without-tcltk --without-aqua --with-recommended-packages \
-            --without-internal-tzcode --with-included-gettext --enable-rdt &&
+./configure --with-blas --with-lapack --without-ICU --with-x --without-aqua \
+            --with-recommended-packages --without-internal-tzcode \
+            --with-included-gettext --enable-rdt &&
 make clean &&
 make -j8

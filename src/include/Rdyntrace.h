@@ -152,13 +152,12 @@ extern "C" {
   UNPROTECT(3);                                                                \
   DYNTRACE_PROBE_FOOTER;
 
-#define DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(prom, rho)                    \
+#define DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(prom)                         \
   DYNTRACE_PROBE_HEADER(probe_promise_expression_lookup);                      \
   PROTECT(prom);                                                               \
-  PROTECT(rho);                                                                \
   dyntrace_active_dyntracer->probe_promise_expression_lookup(                  \
-      dyntrace_active_dyntrace_context, prom, rho);                            \
-  UNPROTECT(2);                                                                \
+      dyntrace_active_dyntrace_context, prom);                                 \
+  UNPROTECT(1);                                                                \
   DYNTRACE_PROBE_FOOTER;
 
 #define DYNTRACE_PROBE_ERROR(call, message)                                    \
@@ -223,6 +222,14 @@ extern "C" {
   UNPROTECT(2);                                                                \
   DYNTRACE_PROBE_FOOTER;
 
+#define DYNTRACE_PROBE_NEW_ENVIRONMENT(rho)                                    \
+  DYNTRACE_PROBE_HEADER(probe_new_environment);                                \
+  PROTECT(rho);                                                                \
+  dyntrace_active_dyntracer->probe_new_environment(                            \
+      dyntrace_active_dyntrace_context, rho);                                  \
+  UNPROTECT(1);                                                                \
+  DYNTRACE_PROBE_FOOTER;
+
 #define DYNTRACE_PROBE_S3_GENERIC_ENTRY(generic, object)                       \
   DYNTRACE_PROBE_HEADER(probe_S3_generic_entry);                               \
   PROTECT(object);                                                             \
@@ -274,7 +281,7 @@ extern "C" {
 #define DYNTRACE_PROBE_PROMISE_FORCE_ENTRY(symbol, rho)
 #define DYNTRACE_PROBE_PROMISE_FORCE_EXIT(symbol, rho, val)
 #define DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(symbol, rho, val)
-#define DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(prom, rho)
+#define DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(prom)
 #define DYNTRACE_PROBE_ERROR(call, message)
 #define DYNTRACE_PROBE_VECTOR_ALLOC(sexptype, length, bytes, scref)
 #define DYNTRACE_PROBE_EVAL_ENTRY(e, rho)
@@ -283,6 +290,7 @@ extern "C" {
 #define DYNTRACE_PROBE_GC_EXIT(gc_count, vcells, ncells)
 #define DYNTRACE_PROBE_GC_PROMISE_UNMARKED(promise)
 #define DYNTRACE_PROBE_JUMP_CTXT(rho, val)
+#define DYNTRACE_PROBE_NEW_ENVIRONMENT(rho)
 #define DYNTRACE_PROBE_S3_GENERIC_ENTRY(generic, object)
 #define DYNTRACE_PROBE_S3_GENERIC_EXIT(generic, object, retval)
 #define DYNTRACE_PROBE_S3_DISPATCH_ENTRY(generic, clazz, method, object)
@@ -366,7 +374,7 @@ typedef struct {
   // Look for DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(...) in
   // src/main/coerce.c
   void (*probe_promise_expression_lookup)(dyntrace_context_t *dyntrace_context,
-                                          const SEXP prom, const SEXP rho);
+                                          const SEXP prom);
   // DYNTRACE_PROBE_ERROR(call, message) in
   // src/main/errors.c:errorcall()
   void (*probe_error)(dyntrace_context_t *dyntrace_context, const SEXP call,
@@ -398,7 +406,11 @@ typedef struct {
   // RDT_HOOK(probe_jump_ctxt, env, val) in src/main/context.c:findcontext()
   void (*probe_jump_ctxt)(dyntrace_context_t *dyntrace_context, const SEXP rho,
                           const SEXP val);
-
+  // Fires when the interpreter creates a new environment.
+  // Parameter rho is the newly created environment.
+  // DYNTRACE_PROBE_NEW_ENVIRONMENT(..) in src/main/memory.c:NewEnvironment()
+  void (*probe_new_environment)(dyntrace_context_t *dyntrace_context,
+                                const SEXP rho);
   // RDT_HOOK(probe_S3_generic_entry, generic, obj) in
   // src/main/objects.c:usemethod()
   void (*probe_S3_generic_entry)(dyntrace_context_t *dyntrace_context,
@@ -441,8 +453,12 @@ int dyntrace_dyntracer_is_active();
 int dyntrace_dyntracer_probe_is_active();
 void dyntrace_disable_garbage_collector();
 void dyntrace_reinstate_garbage_collector();
-dyntracer_t *dyntrace_unwrap_dyntracer(SEXP wrapped_dyntracer);
-SEXP dyntrace_wrap_dyntracer(dyntracer_t *dyntracer, const char *classname);
+dyntracer_t *dyntracer_from_sexp(SEXP dyntracer_sexp);
+SEXP dyntracer_to_sexp(dyntracer_t *dyntracer, const char *classname);
+dyntracer_t *dyntracer_replace_sexp(SEXP dyntracer_sexp,
+                                    dyntracer_t *new_dyntracer);
+SEXP dyntracer_destroy_sexp(SEXP dyntracer_sexp,
+                            void (*destroy_dyntracer)(dyntracer_t *dyntracer));
 
 // ----------------------------------------------------------------------------
 // helpers

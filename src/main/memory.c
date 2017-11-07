@@ -2402,6 +2402,7 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 	v = CDR(v);
 	n = CDR(n);
     }
+    DYNTRACE_PROBE_NEW_ENVIRONMENT(newrho);
     return (newrho);
 }
 

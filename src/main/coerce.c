@@ -2529,8 +2529,6 @@ SEXP substitute(SEXP lang, SEXP rho)
     switch (TYPEOF(lang)) {
     case PROMSXP:
 
-  DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(lang, rho);
-
 	return substitute(PREXPR(lang), rho);
     case SYMSXP:
 	if (rho != R_NilValue) {
