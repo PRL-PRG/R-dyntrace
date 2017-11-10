@@ -44,7 +44,11 @@ dyntracer_t * dyntracer_replace_sexp(SEXP dyntracer_sexp,
 SEXP dyntracer_destroy_sexp(SEXP dyntracer_sexp,
                             void (*destroy_dyntracer)(dyntracer_t * dyntracer)) {
     dyntracer_t * dyntracer = dyntracer_replace_sexp(dyntracer_sexp, NULL);
-    destroy_dyntracer(dyntracer);
+    /* free dyntracer iff it has not already been freed.
+       this check ensures that multiple calls to destroy_dyntracer on the same
+       object do not crash the process. */
+    if(dyntracer != NULL)
+      destroy_dyntracer(dyntracer);
     return R_NilValue;
 }
 
@@ -71,6 +75,8 @@ SEXP do_dyntrace(SEXP call, SEXP op, SEXP args, SEXP rho) {
     PROTECT(expression = findVar(CADR(args), rho));
     PROTECT(environment = eval(CADDR(args), rho));
 
+    if(dyntracer == NULL)
+      error("dyntracer is NULL");
     /* create dyntrace context */
     dyntrace_active_dyntrace_context = create_dyntrace_context(dyntracer);    
     
