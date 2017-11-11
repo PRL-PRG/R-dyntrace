@@ -8,6 +8,6 @@ export CXX="g++ -std=c++14"
 ./tools/rsync-recommended &&
 ./configure --with-blas --with-lapack --without-ICU --with-x --without-aqua \
             --with-recommended-packages --without-internal-tzcode \
-            --with-included-gettext --enable-rdt &&
+            --with-included-gettext --enable-dyntrace &&
 make clean &&
 make -j8

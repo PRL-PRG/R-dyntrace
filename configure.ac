@@ -440,9 +440,9 @@ AC_ARG_WITH([internal-tzcode],
 [use_internal_tzcode=${withval}],
 [use_internal_tzcode=default])
 
-AC_ARG_ENABLE(rdt,
-AS_HELP_STRING([--enable-rdt],[Dynamic tracing for R @<:@yes@:>@]),
-[enable_rdt=$enableval], [enable_rdt=yes])
+AC_ARG_ENABLE(dyntrace,
+AS_HELP_STRING([--enable-dyntrace],[Dynamic tracing for R @<:@yes@:>@]),
+[enable_dyntrace=$enableval], [enable_dyntrace=yes])
 
 if test "${enable_dyntrace}" = "yes"; then
   DYNTRACE_SRC="dyntrace.c"
@@ -2725,8 +2725,6 @@ AC_CONFIG_FILES(
   src/library/parallel/Makefile
   src/library/parallel/src/Makefile
   src/library/profile/Makefile
-  src/library/rdt/src/Makefile
-  src/library/rdt/Makefile
   src/library/stats/DESCRIPTION
   src/library/stats/Makefile
   src/library/stats/src/Makefile

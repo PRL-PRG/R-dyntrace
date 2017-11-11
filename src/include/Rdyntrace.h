@@ -302,135 +302,259 @@ extern "C" {
 DYNTRACE TYPE DEFINITIONS
 ---------------------------------------------------------------------------- */
 typedef struct {
-  int begin_time;
-  int end_time;
+    int begin_time;
+    int end_time;
 } dyntracing_context_t;
 
 typedef struct {
-  void *dyntracer_context;
-  dyntracing_context_t *dyntracing_context;
+    void *dyntracer_context;
+    dyntracing_context_t *dyntracing_context;
 } dyntrace_context_t;
 
 typedef struct {
-  // Fires when the tracer starts.
-  // Not an interpreter hook. It is called from
-  // src/main/rdtrace.c:rdt_start() which is called from
-  // src/library/rdt/src/rdt.c:Rdt() (the entrypoint)
-  void (*probe_begin)(dyntrace_context_t *dyntrace_context, const SEXP prom);
-  // Fires when the tracer ends (after the traced call returns)
-  // Not an interpreter hook. It is called from
-  // src/main/rdtrace.c:rdt_stop() which is called from
-  // src/library/rdt/src/rdtc:Rdt()
-  void (*probe_end)(dyntrace_context_t *dyntrace_context);
-  // Fires on every R function call.
-  // Look for RDT_HOOK(probe_function_entry, call, op, newrho) in
-  // src/main/eval.c
-  void (*probe_function_entry)(dyntrace_context_t *dyntrace_context,
-                               const SEXP call, const SEXP op, const SEXP rho);
-  // Fires after every R function call.
-  // Look for RDT_HOOK(probe_function_exit, call, op, newrho, tmp) in
-  // src/main/eval.c
-  void (*probe_function_exit)(dyntrace_context_t *dyntrace_context,
-                              const SEXP call, const SEXP op, const SEXP rho,
-                              const SEXP retval);
-  // Fires on every BUILTINSXP call.
-  // Look for RDT_HOOK(probe_builtin_entry ... in src/main/eval.c
-  void (*probe_builtin_entry)(dyntrace_context_t *dyntrace_context,
-                              const SEXP call, const SEXP op, const SEXP rho);
-  // Fires after every BUILTINSXP call.
-  // Look for RDT_HOOK(probe_builtin_exit ... in src/main/eval.c
-  void (*probe_builtin_exit)(dyntrace_context_t *dyntrace_context,
-                             const SEXP call, const SEXP op, const SEXP rho,
-                             const SEXP retval);
-  // Fires on every SPECIALSXP call.
-  // Look for RDT_HOOK(probe_specialsxp_entry ... in src/main/eval.c
-  void (*probe_specialsxp_entry)(dyntrace_context_t *dyntrace_context,
-                                 const SEXP call, const SEXP op,
+
+    /***************************************************************************
+    Fires when the tracer starts. Not an interpreter hook.
+    Look for DYNTRACE_PROBE_BEGIN(...) in
+    - src/main/dyntrace.c
+    ***************************************************************************/
+    void (*probe_begin)(dyntrace_context_t *dyntrace_context,
+                        const SEXP prom);
+
+    /***************************************************************************
+    Fires when the tracer ends (after the traced call returns).
+    Not an interpreter hook.
+    Look for DYNTRACE_PROBE_END(...) in
+    - src/main/dyntrace.c
+    ***************************************************************************/
+    void (*probe_end)(dyntrace_context_t *dyntrace_context);
+
+    /***************************************************************************
+    Fires on every R function call.
+    Look for DYNTRACE_PROBE_FUNCTION_ENTRY(...) in
+    - src/main/eval.c
+    ***************************************************************************/
+    void (*probe_function_entry)(dyntrace_context_t *dyntrace_context,
+                                 const SEXP call,
+                                 const SEXP op,
                                  const SEXP rho);
-  // Fires after every SPECIALSXP call.
-  // Look for RDT_HOOK(probe_specialsxp_exit ... in src/main/eval.c
-  void (*probe_specialsxp_exit)(dyntrace_context_t *dyntrace_context,
-                                const SEXP call, const SEXP op, const SEXP rho,
+
+    /***************************************************************************
+    Fires after every R function call.
+    Look for DYNTRACE_PROBE_FUNCTION_EXIT(...) in
+    - src/main/eval.c
+    ***************************************************************************/
+    void (*probe_function_exit)(dyntrace_context_t *dyntrace_context,
+                                const SEXP call,
+                                const SEXP op,
+                                const SEXP rho,
                                 const SEXP retval);
-  // Fires on promise allocation.
-  // DYNTRACE_PROBE_PROMISE_CREATED(...) in src/main/memory.c:mkPROMISE()
-  void (*probe_promise_created)(dyntrace_context_t *dyntrace_context,
-                                const SEXP prom, const SEXP rho);
-  // Fires when a promise is forced (accessed for the first time)
-  // Look for DYNTRACE_PROBE_PROMISE_FORCE_ENTRY(...) in src/main/eval.c
-  void (*probe_promise_force_entry)(dyntrace_context_t *dyntrace_context,
-                                    const SEXP symbol, const SEXP rho);
-  // Fires right after a promise is forced
-  // Look for DYNTRACE_PROBE_PROMISE_FORCE_EXIT(...) in src/main/eval.c
-  void (*probe_promise_force_exit)(dyntrace_context_t *dyntrace_context,
-                                   const SEXP symbol, const SEXP rho,
-                                   const SEXP val);
-  // Fires when a promise is accessed but already forced
-  // Look for DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(...) in src/main/eval.c
-  void (*probe_promise_value_lookup)(dyntrace_context_t *dyntrace_context,
-                                     const SEXP symbol, const SEXP rho,
-                                     const SEXP val);
-  // Fires when the expression inside a promise is accessed
-  // Look for DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(...) in
-  // src/main/coerce.c
-  void (*probe_promise_expression_lookup)(dyntrace_context_t *dyntrace_context,
-                                          const SEXP prom);
-  // DYNTRACE_PROBE_ERROR(call, message) in
-  // src/main/errors.c:errorcall()
-  void (*probe_error)(dyntrace_context_t *dyntrace_context, const SEXP call,
-                      const char *message);
-  // RDT_HOOK(probe_vector_alloc ... in src/main/memory.c:allocVector3()
-  void (*probe_vector_alloc)(dyntrace_context_t *dyntrace_context, int sexptype,
-                             long length, long bytes, const char *srcref);
-  // RDT_HOOK(probe_eval_entry, e, rho) in src/main/eval.c:eval()
-  void (*probe_eval_entry)(dyntrace_context_t *dyntrace_context, SEXP e,
-                           SEXP rho);
-  // RDT_HOOK(probe_eval_exit, e, rho, e) in src/main/eval.c:eval()
-  void (*probe_eval_exit)(dyntrace_context_t *dyntrace_context, SEXP e,
-                          SEXP rho, SEXP retval);
-  // RDT_HOOK(probe_gc_entry, size_needed) in
-  // src/main/memory.c:R_gc_internal()
-  void (*probe_gc_entry)(dyntrace_context_t *dyntrace_context,
-                         R_size_t size_needed);
-  // RDT_HOOK(probe_gc_exit, gc_count, vcells, ncells) in
-  // src/main/memory.c:R_gc_internal()
-  void (*probe_gc_exit)(dyntrace_context_t *dyntrace_context, int gc_count,
-                        double vcells, double ncells);
-  // Fires when a promise gets garbage collected
-  // RDT_HOOK(probe_gc_promise_unmarked, s) in
-  // src/main/memory.c:TryToReleasePages()
-  void (*probe_gc_promise_unmarked)(dyntrace_context_t *dyntrace_context,
-                                    const SEXP promise);
-  // Fires when the interpreter is about to longjump into a different context.
-  // Parameter rho is the target environment.
-  // RDT_HOOK(probe_jump_ctxt, env, val) in src/main/context.c:findcontext()
-  void (*probe_jump_ctxt)(dyntrace_context_t *dyntrace_context, const SEXP rho,
-                          const SEXP val);
-  // Fires when the interpreter creates a new environment.
-  // Parameter rho is the newly created environment.
-  // DYNTRACE_PROBE_NEW_ENVIRONMENT(..) in src/main/memory.c:NewEnvironment()
-  void (*probe_new_environment)(dyntrace_context_t *dyntrace_context,
+
+    /***************************************************************************
+    Fires on every BUILTINSXP call.
+    Look for DYNTRACE_PROBE_BUILTIN_ENTRY(...) in
+    - src/main/eval.c
+    ***************************************************************************/
+    void (*probe_builtin_entry)(dyntrace_context_t *dyntrace_context,
+                                const SEXP call,
+                                const SEXP op,
                                 const SEXP rho);
-  // RDT_HOOK(probe_S3_generic_entry, generic, obj) in
-  // src/main/objects.c:usemethod()
-  void (*probe_S3_generic_entry)(dyntrace_context_t *dyntrace_context,
-                                 const char *generic, const SEXP object);
-  // RDT_HOOK(probe_S3_generic_exit ... in src/main/objects.c:usemethod()
-  void (*probe_S3_generic_exit)(dyntrace_context_t *dyntrace_context,
-                                const char *generic, const SEXP object,
-                                const SEXP retval);
-  // RDT_HOOK(probe_S3_dispatch_entry ... in
-  // src/main/objects.c:dispatchMethod()
-  void (*probe_S3_dispatch_entry)(dyntrace_context_t *dyntrace_context,
-                                  const char *generic, const char *clazz,
-                                  const SEXP method, const SEXP object);
-  // RDT_HOOK(probe_S3_dispatch_exit ... in
-  // src/main/objects.c:dispatchMethod()
-  void (*probe_S3_dispatch_exit)(dyntrace_context_t *dyntrace_context,
-                                 const char *generic, const char *clazz,
-                                 const SEXP method, const SEXP object,
-                                 const SEXP retval);
-  void *context;
+
+    /***************************************************************************
+    Fires after every BUILTINSXP call.
+    Look for DYNTRACE_PROBE_BUILTIN_EXIT(...) in
+    - src/main/eval.c
+    ***************************************************************************/
+    void (*probe_builtin_exit)(dyntrace_context_t *dyntrace_context,
+                               const SEXP call,
+                               const SEXP op,
+                               const SEXP rho,
+                               const SEXP retval);
+
+    /***************************************************************************
+    Fires on every SPECIALSXP call.
+    Look for DYNTRACE_PROBE_SPECIALSXP_ENTRY(...) in
+    - src/main/eval.c
+    ***************************************************************************/
+    void (*probe_specialsxp_entry)(dyntrace_context_t *dyntrace_context,
+                                   const SEXP call,
+                                   const SEXP op,
+                                   const SEXP rho);
+
+    /***************************************************************************
+    Fires after every SPECIALSXP call.
+    Look for DYNTRACE_PROBE_SPECIALSXP_EXIT(...) in
+    - in src/main/eval.c
+    ***************************************************************************/
+    void (*probe_specialsxp_exit)(dyntrace_context_t *dyntrace_context,
+                                  const SEXP call,
+                                  const SEXP op,
+                                  const SEXP rho,
+                                  const SEXP retval);
+
+    /***************************************************************************
+    Fires on promise allocation.
+    Look for DYNTRACE_PROBE_PROMISE_CREATED(...) in
+    - src/main/memory.c
+    ***************************************************************************/
+    void (*probe_promise_created)(dyntrace_context_t *dyntrace_context,
+                                  const SEXP prom,
+                                  const SEXP rho);
+
+    /***************************************************************************
+    Fires when a promise is forced (accessed for the first time).
+    Look for DYNTRACE_PROBE_PROMISE_FORCE_ENTRY(...) in
+    - src/main/eval.c
+    ***************************************************************************/
+    void (*probe_promise_force_entry)(dyntrace_context_t *dyntrace_context,
+                                      const SEXP symbol,
+                                      const SEXP rho);
+
+    /***************************************************************************
+    Fires right after a promise is forced.
+    Look for DYNTRACE_PROBE_PROMISE_FORCE_EXIT(...) in
+    - src/main/eval.c
+    ***************************************************************************/
+    void (*probe_promise_force_exit)(dyntrace_context_t *dyntrace_context,
+                                     const SEXP symbol,
+                                     const SEXP rho,
+                                     const SEXP val);
+
+    /***************************************************************************
+    Fires when a promise is accessed but already forced.
+    Look for DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(...) in
+    - src/main/eval.c
+    ***************************************************************************/
+    void (*probe_promise_value_lookup)(dyntrace_context_t *dyntrace_context,
+                                       const SEXP symbol,
+                                       const SEXP rho,
+                                       const SEXP val);
+
+    /***************************************************************************
+    Fires when the expression inside a promise is accessed.
+    Look for DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(...) in
+    - src/main/coerce.c
+    ***************************************************************************/
+    void (*probe_promise_expression_lookup)(dyntrace_context_t *dyntrace_context,
+                                            const SEXP prom);
+
+    /***************************************************************************
+    Look for DYNTRACE_PROBE_ERROR(...) in
+    - src/main/errors.c
+    ***************************************************************************/
+    void (*probe_error)(dyntrace_context_t *dyntrace_context,
+                        const SEXP call,
+                        const char *message);
+
+    /***************************************************************************
+    Look for DYNTRACE_PROBE_VECTOR_ALLOC(...) in
+    - src/main/memory.c
+    ***************************************************************************/
+    void (*probe_vector_alloc)(dyntrace_context_t *dyntrace_context,
+                               int sexptype,
+                               long length,
+                               long bytes,
+                               const char *srcref);
+
+    /***************************************************************************
+    Look for DYNTRACE_PROBE_EVAL_ENTRY(...) in
+    - src/main/eval.c
+    ***************************************************************************/
+    void (*probe_eval_entry)(dyntrace_context_t *dyntrace_context,
+                             SEXP e,
+                             SEXP rho);
+
+    /***************************************************************************
+    Look for DYNTRACE_PROBE_EVAL_EXIT(...) in
+    - src/main/eval.c
+    ***************************************************************************/
+    void (*probe_eval_exit)(dyntrace_context_t *dyntrace_context,
+                            SEXP e,
+                            SEXP rho,
+                            SEXP retval);
+
+    /***************************************************************************
+    Look for DYNTRACE_PROBE_GC_ENTRY(...) in
+    - src/main/memory.c
+    ***************************************************************************/
+    void (*probe_gc_entry)(dyntrace_context_t *dyntrace_context,
+                           R_size_t size_needed);
+
+    /***************************************************************************
+    Look for DYNTRACE_PROBE_GC_EXIT(...) in
+    - src/main/memory.c
+    ***************************************************************************/
+    void (*probe_gc_exit)(dyntrace_context_t *dyntrace_context,
+                          int gc_count,
+                          double vcells,
+                          double ncells);
+
+    /***************************************************************************
+    Fires when a promise gets garbage collected
+    Look for DYNTRACE_PROBE_GC_PROMISE_UNMARKED(...) in
+    - src/main/memory.c
+    ***************************************************************************/
+    void (*probe_gc_promise_unmarked)(dyntrace_context_t *dyntrace_context,
+                                      const SEXP promise);
+
+    /***************************************************************************
+    Fires when the interpreter is about to longjump into a different context.
+    Parameter rho is the target environment.
+    Look for DYNTRACE_PROBE_JUMP_CTXT(...) in
+    - src/main/context.c
+    ***************************************************************************/
+    void (*probe_jump_ctxt)(dyntrace_context_t *dyntrace_context,
+                            const SEXP rho,
+                            const SEXP val);
+
+    /***************************************************************************
+    Fires when the interpreter creates a new environment.
+    Parameter rho is the newly created environment.
+    Look for DYNTRACE_PROBE_NEW_ENVIRONMENT(..) in
+    - src/main/memory.c
+    ***************************************************************************/
+    void (*probe_new_environment)(dyntrace_context_t *dyntrace_context,
+                                  const SEXP rho);
+
+    /***************************************************************************
+    Look for DYNTRACE_PROBE_S3_GENERIC_ENTRY(...) in
+    - src/main/objects.c
+    ***************************************************************************/
+    void (*probe_S3_generic_entry)(dyntrace_context_t *dyntrace_context,
+                                   const char *generic,
+                                   const SEXP object);
+
+    /***************************************************************************
+    Look for DYNTRACE_PROBE_S3_GENERIC_EXIT(...) in
+    - src/main/objects.c
+    ***************************************************************************/
+    void (*probe_S3_generic_exit)(dyntrace_context_t *dyntrace_context,
+                                  const char *generic,
+                                  const SEXP object,
+                                  const SEXP retval);
+
+    /***************************************************************************
+    Look for DYNTRACE_PROBE_S3_DISPATCH_ENTRY(...) in
+    - src/main/objects.c
+    ***************************************************************************/
+    void (*probe_S3_dispatch_entry)(dyntrace_context_t *dyntrace_context,
+                                    const char *generic,
+                                    const char *clazz,
+                                    const SEXP method,
+                                    const SEXP object);
+
+    /***************************************************************************
+    Look for DYNTRACE_PROBE_S3_DISPATCH_EXIT(...) in
+    - src/main/objects.c
+    ***************************************************************************/
+    void (*probe_S3_dispatch_exit)(dyntrace_context_t *dyntrace_context,
+                                   const char *generic,
+                                   const char *clazz,
+                                   const SEXP method,
+                                   const SEXP object,
+                                   const SEXP retval);
+
+    void *context;
 } dyntracer_t;
 
 // ----------------------------------------------------------------------------
@@ -471,20 +595,5 @@ const char *get_string(SEXP sexp);
 #ifdef __cplusplus
 }
 #endif
-
-#define RDT_HOOK(name, ...)                                                    \
-  if (RDT_IS_ENABLED(name)) {                                                  \
-    if (tracing_is_active()) {                                                 \
-      printf("[ERROR] - [NESTED HOOK EXECUTION] - %s triggers %s\n",           \
-             RDT_ACTIVE_HOOK_NAME, #name);                                     \
-      printf("Exiting program ...\n");                                         \
-      exit(1);                                                                 \
-    }                                                                          \
-    RDT_ACTIVE_HOOK_NAME = #name;                                              \
-    disable_garbage_collector();                                               \
-    RDT_FIRE_PROBE(name, (rdt_curr_handler->context), ##__VA_ARGS__);          \
-    reinstate_garbage_collector();                                             \
-    RDT_ACTIVE_HOOK_NAME = NULL;                                               \
-  }
 
 #endif /* __DYNTRACE_H__ */

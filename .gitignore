@@ -114,7 +114,6 @@ etc/ldpaths
 libconftest.dSYM
 libtool
 modules
-rdtrace_probes.h
 share/dtrace/freebsd-vm/.vagrant
 src/extra/intl/charset.alias
 src/extra/intl/charsetalias.h
@@ -149,6 +148,5 @@ stamp-R
 stamp-docs
 /src/**/all.R
 .Rproj.user
-src/library/rdt/..Rcheck
 cscope.out
 cscope.files
