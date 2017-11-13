@@ -18,13 +18,16 @@ extern "C" {
 #define DYNTRACE_PROBE_HEADER(probe_name)                                      \
   if (dyntrace_active_dyntracer != NULL &&                                     \
       dyntrace_active_dyntracer->probe_name != NULL) {                         \
+    dyntrace_active_dyntrace_context -> dyntracing_context -> execution_time.expression += dyntrace_reset_stopwatch(); \
+    dyntrace_active_dyntrace_context -> dyntracing_context -> execution_count.probe_name++; \
     CHECK_REENTRANCY(probe_name);                                              \
     dyntrace_active_dyntracer_probe_name = #probe_name;                        \
     dyntrace_disable_garbage_collector();
 
-#define DYNTRACE_PROBE_FOOTER                                                  \
+#define DYNTRACE_PROBE_FOOTER(probe_name)                                      \
   dyntrace_reinstate_garbage_collector();                                      \
   dyntrace_active_dyntracer_probe_name = NULL;                                 \
+  dyntrace_active_dyntrace_context -> dyntracing_context -> execution_time.probe_name += dyntrace_reset_stopwatch(); \
   }
 
 #define CHECK_REENTRANCY(probe_name)                                           \
@@ -41,12 +44,12 @@ extern "C" {
   dyntrace_active_dyntracer->probe_begin(dyntrace_active_dyntrace_context,     \
                                          prom);                                \
   UNPROTECT(1);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_begin);
 
 #define DYNTRACE_PROBE_END()                                                   \
   DYNTRACE_PROBE_HEADER(probe_end);                                            \
   dyntrace_active_dyntracer->probe_end(dyntrace_active_dyntrace_context);      \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_end);
 
 #define DYNTRACE_SHOULD_PROBE(probe_name)                                      \
   (dyntrace_active_dyntracer->probe_name != NULL)
@@ -59,7 +62,7 @@ extern "C" {
   dyntrace_active_dyntracer->probe_function_entry(                             \
       dyntrace_active_dyntrace_context, call, op, rho);                        \
   UNPROTECT(3);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_function_entry);
 
 #define DYNTRACE_PROBE_FUNCTION_EXIT(call, op, rho, retval)                    \
   DYNTRACE_PROBE_HEADER(probe_function_exit);                                  \
@@ -70,7 +73,7 @@ extern "C" {
   dyntrace_active_dyntracer->probe_function_exit(                              \
       dyntrace_active_dyntrace_context, call, op, rho, retval);                \
   UNPROTECT(4);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_function_exit);
 
 #define DYNTRACE_PROBE_BUILTIN_ENTRY(call, op, rho)                            \
   DYNTRACE_PROBE_HEADER(probe_builtin_entry);                                  \
@@ -80,7 +83,7 @@ extern "C" {
   dyntrace_active_dyntracer->probe_builtin_entry(                              \
       dyntrace_active_dyntrace_context, call, op, rho);                        \
   UNPROTECT(3);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_builtin_entry);
 
 #define DYNTRACE_PROBE_BUILTIN_EXIT(call, op, rho, retval)                     \
   DYNTRACE_PROBE_HEADER(probe_builtin_exit);                                   \
@@ -91,7 +94,7 @@ extern "C" {
   dyntrace_active_dyntracer->probe_builtin_exit(                               \
       dyntrace_active_dyntrace_context, call, op, rho, retval);                \
   UNPROTECT(4);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_builtin_exit);
 
 #define DYNTRACE_PROBE_SPECIALSXP_ENTRY(call, op, rho)                         \
   DYNTRACE_PROBE_HEADER(probe_specialsxp_entry);                               \
@@ -101,7 +104,7 @@ extern "C" {
   dyntrace_active_dyntracer->probe_specialsxp_entry(                           \
       dyntrace_active_dyntrace_context, call, op, rho);                        \
   UNPROTECT(3);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_specialsxp_entry);
 
 #define DYNTRACE_PROBE_SPECIALSXP_EXIT(call, op, rho, retval)                  \
   DYNTRACE_PROBE_HEADER(probe_specialsxp_exit);                                \
@@ -112,7 +115,7 @@ extern "C" {
   dyntrace_active_dyntracer->probe_specialsxp_exit(                            \
       dyntrace_active_dyntrace_context, call, op, rho, retval);                \
   UNPROTECT(4);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_specialsxp_exit);
 
 #define DYNTRACE_PROBE_PROMISE_CREATED(prom, rho)                              \
   DYNTRACE_PROBE_HEADER(probe_promise_created);                                \
@@ -121,7 +124,7 @@ extern "C" {
   dyntrace_active_dyntracer->probe_promise_created(                            \
       dyntrace_active_dyntrace_context, prom, rho);                            \
   UNPROTECT(2);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_promise_created);
 
 #define DYNTRACE_PROBE_PROMISE_FORCE_ENTRY(symbol, rho)                        \
   DYNTRACE_PROBE_HEADER(probe_promise_force_entry);                            \
@@ -130,7 +133,7 @@ extern "C" {
   dyntrace_active_dyntracer->probe_promise_force_entry(                        \
       dyntrace_active_dyntrace_context, symbol, rho);                          \
   UNPROTECT(2);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_promise_force_entry);
 
 #define DYNTRACE_PROBE_PROMISE_FORCE_EXIT(symbol, rho, val)                    \
   DYNTRACE_PROBE_HEADER(probe_promise_force_exit);                             \
@@ -140,7 +143,7 @@ extern "C" {
   dyntrace_active_dyntracer->probe_promise_force_exit(                         \
       dyntrace_active_dyntrace_context, symbol, rho, val);                     \
   UNPROTECT(3);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_promise_force_exit);
 
 #define DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(symbol, rho, val)                  \
   DYNTRACE_PROBE_HEADER(probe_promise_value_lookup);                           \
@@ -150,7 +153,7 @@ extern "C" {
   dyntrace_active_dyntracer->probe_promise_value_lookup(                       \
       dyntrace_active_dyntrace_context, symbol, rho, val);                     \
   UNPROTECT(3);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_promise_value_lookup);
 
 #define DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(prom)                         \
   DYNTRACE_PROBE_HEADER(probe_promise_expression_lookup);                      \
@@ -158,7 +161,7 @@ extern "C" {
   dyntrace_active_dyntracer->probe_promise_expression_lookup(                  \
       dyntrace_active_dyntrace_context, prom);                                 \
   UNPROTECT(1);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_promise_expression_lookup);
 
 #define DYNTRACE_PROBE_ERROR(call, message)                                    \
   DYNTRACE_PROBE_HEADER(probe_error);                                          \
@@ -166,13 +169,13 @@ extern "C" {
   dyntrace_active_dyntracer->probe_error(dyntrace_active_dyntrace_context,     \
                                          call, message);                       \
   UNPROTECT(1);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_error);
 
 #define DYNTRACE_PROBE_VECTOR_ALLOC(sexptype, length, bytes, srcref)           \
   DYNTRACE_PROBE_HEADER(probe_vector_alloc);                                   \
   dyntrace_active_dyntracer->probe_vector_alloc(                               \
       dyntrace_active_dyntrace_context, sexptype, length, bytes, srcref);      \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_vector_alloc);
 
 #define DYNTRACE_PROBE_EVAL_ENTRY(e, rho)                                      \
   DYNTRACE_PROBE_HEADER(probe_eval_entry);                                     \
@@ -181,7 +184,7 @@ extern "C" {
   dyntrace_active_dyntracer->probe_eval_entry(                                 \
       dyntrace_active_dyntrace_context, e, rho);                               \
   UNPROTECT(2);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_eval_entry);
 
 #define DYNTRACE_PROBE_EVAL_EXIT(e, rho, retval)                               \
   DYNTRACE_PROBE_HEADER(probe_eval_exit);                                      \
@@ -191,19 +194,19 @@ extern "C" {
   dyntrace_active_dyntracer->probe_eval_exit(dyntrace_active_dyntrace_context, \
                                              e, rho, retval);                  \
   UNPROTECT(3);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_eval_exit);
 
 #define DYNTRACE_PROBE_GC_ENTRY(size_needed)                                   \
   DYNTRACE_PROBE_HEADER(probe_gc_entry);                                       \
   dyntrace_active_dyntracer->probe_gc_entry(dyntrace_active_dyntrace_context,  \
                                             size_needed);                      \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_gc_entry);
 
 #define DYNTRACE_PROBE_GC_EXIT(gc_count, vcells, ncells)                       \
   DYNTRACE_PROBE_HEADER(probe_gc_exit);                                        \
   dyntrace_active_dyntracer->probe_gc_exit(dyntrace_active_dyntrace_context,   \
                                            gc_count, vcells, ncells);          \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_gc_exit);
 
 #define DYNTRACE_PROBE_GC_PROMISE_UNMARKED(promise)                            \
   DYNTRACE_PROBE_HEADER(probe_gc_promise_unmarked);                            \
@@ -211,7 +214,7 @@ extern "C" {
   dyntrace_active_dyntracer->probe_gc_promise_unmarked(                        \
       dyntrace_active_dyntrace_context, promise);                              \
   UNPROTECT(1);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_gc_promise_unmarked);
 
 #define DYNTRACE_PROBE_JUMP_CTXT(rho, val)                                     \
   DYNTRACE_PROBE_HEADER(probe_jump_ctxt);                                      \
@@ -220,7 +223,7 @@ extern "C" {
   dyntrace_active_dyntracer->probe_jump_ctxt(dyntrace_active_dyntrace_context, \
                                              rho, val);                        \
   UNPROTECT(2);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_jump_ctxt);
 
 #define DYNTRACE_PROBE_NEW_ENVIRONMENT(rho)                                    \
   DYNTRACE_PROBE_HEADER(probe_new_environment);                                \
@@ -228,7 +231,7 @@ extern "C" {
   dyntrace_active_dyntracer->probe_new_environment(                            \
       dyntrace_active_dyntrace_context, rho);                                  \
   UNPROTECT(1);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_new_environment);
 
 #define DYNTRACE_PROBE_S3_GENERIC_ENTRY(generic, object)                       \
   DYNTRACE_PROBE_HEADER(probe_S3_generic_entry);                               \
@@ -236,7 +239,7 @@ extern "C" {
   dyntrace_active_dyntracer->probe_S3_generic_entry(                           \
       dyntrace_active_dyntrace_context, generic, object);                      \
   UNPROTECT(1);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_S3_generic_entry);
 
 #define DYNTRACE_PROBE_S3_GENERIC_EXIT(generic, object, retval)                \
   DYNTRACE_PROBE_HEADER(probe_S3_generic_exit);                                \
@@ -245,7 +248,7 @@ extern "C" {
   dyntrace_active_dyntracer->probe_S3_generic_exit(                            \
       dyntrace_active_dyntrace_context, generic, object, retval);              \
   UNPROTECT(2);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_S3_generic_exit);
 
 #define DYNTRACE_PROBE_S3_DISPATCH_ENTRY(generic, clazz, method, object)       \
   DYNTRACE_PROBE_HEADER(probe_S3_dispatch_entry);                              \
@@ -254,7 +257,7 @@ extern "C" {
   dyntrace_active_dyntracer->probe_S3_dispatch_entry(                          \
       dyntrace_active_dyntrace_context, generic, clazz, method, object);       \
   UNPROTECT(2);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_S3_dispatch_entry);
 
 #define DYNTRACE_PROBE_S3_DISPATCH_EXIT(generic, clazz, method, object,        \
                                         retval)                                \
@@ -266,7 +269,7 @@ extern "C" {
       dyntrace_active_dyntrace_context, generic, clazz, method, object,        \
       retval);                                                                 \
   UNPROTECT(3);                                                                \
-  DYNTRACE_PROBE_FOOTER;
+  DYNTRACE_PROBE_FOOTER(probe_S3_dispatch_exit);
 
 #else
 #define DYNTRACE_PROBE_BEGIN(prom)
@@ -301,9 +304,80 @@ extern "C" {
 /* ----------------------------------------------------------------------------
 DYNTRACE TYPE DEFINITIONS
 ---------------------------------------------------------------------------- */
+
 typedef struct {
-    int begin_time;
-    int end_time;
+    clock_t probe_begin;
+    clock_t probe_end;
+    clock_t probe_function_entry;
+    clock_t probe_function_exit;
+    clock_t probe_builtin_entry;
+    clock_t probe_builtin_exit;
+    clock_t probe_specialsxp_entry;
+    clock_t probe_specialsxp_exit;
+    clock_t probe_promise_created;
+    clock_t probe_promise_force_entry;
+    clock_t probe_promise_force_exit;
+    clock_t probe_promise_value_lookup;
+    clock_t probe_promise_expression_lookup;
+    clock_t probe_error;
+    clock_t probe_vector_alloc;
+    clock_t probe_eval_entry;
+    clock_t probe_eval_exit;
+    clock_t probe_gc_entry;
+    clock_t probe_gc_exit;
+    clock_t probe_gc_promise_unmarked;
+    clock_t probe_jump_ctxt;
+    clock_t probe_new_environment;
+    clock_t probe_S3_generic_entry;
+    clock_t probe_S3_generic_exit;
+    clock_t probe_S3_dispatch_entry;
+    clock_t probe_S3_dispatch_exit;
+    clock_t expression;
+} execution_time_t;
+
+typedef struct {
+    unsigned int probe_begin;
+    unsigned int probe_end;
+    unsigned int probe_function_entry;
+    unsigned int probe_function_exit;
+    unsigned int probe_builtin_entry;
+    unsigned int probe_builtin_exit;
+    unsigned int probe_specialsxp_entry;
+    unsigned int probe_specialsxp_exit;
+    unsigned int probe_promise_created;
+    unsigned int probe_promise_force_entry;
+    unsigned int probe_promise_force_exit;
+    unsigned int probe_promise_value_lookup;
+    unsigned int probe_promise_expression_lookup;
+    unsigned int probe_error;
+    unsigned int probe_vector_alloc;
+    unsigned int probe_eval_entry;
+    unsigned int probe_eval_exit;
+    unsigned int probe_gc_entry;
+    unsigned int probe_gc_exit;
+    unsigned int probe_gc_promise_unmarked;
+    unsigned int probe_jump_ctxt;
+    unsigned int probe_new_environment;
+    unsigned int probe_S3_generic_entry;
+    unsigned int probe_S3_generic_exit;
+    unsigned int probe_S3_dispatch_entry;
+    unsigned int probe_S3_dispatch_exit;
+    unsigned int expression;
+} execution_count_t;
+
+typedef struct {
+    const char * r_compile_pkgs;
+    const char * r_disable_bytecode;
+    const char * r_enable_jit;
+    const char * r_keep_pkg_source;
+} environment_variables_t;
+
+typedef struct {
+    execution_time_t execution_time;
+    execution_count_t execution_count;
+    environment_variables_t environment_variables;
+    const char* begin_datetime;
+    const char* end_datetime;
 } dyntracing_context_t;
 
 typedef struct {
@@ -569,6 +643,8 @@ extern const char *dyntrace_active_dyntracer_probe_name;
 extern int dyntrace_garbage_collector_state;
 // context of dyntrace
 extern dyntrace_context_t *dyntrace_active_dyntrace_context;
+// stopwatch for measuring execution time
+extern clock_t dyntrace_stopwatch;
 
 SEXP do_dyntrace(SEXP call, SEXP op, SEXP args, SEXP rho);
 int dyntrace_is_active();
@@ -577,6 +653,7 @@ int dyntrace_dyntracer_is_active();
 int dyntrace_dyntracer_probe_is_active();
 void dyntrace_disable_garbage_collector();
 void dyntrace_reinstate_garbage_collector();
+clock_t dyntrace_reset_stopwatch();
 dyntracer_t *dyntracer_from_sexp(SEXP dyntracer_sexp);
 SEXP dyntracer_to_sexp(dyntracer_t *dyntracer, const char *classname);
 dyntracer_t *dyntracer_replace_sexp(SEXP dyntracer_sexp,
