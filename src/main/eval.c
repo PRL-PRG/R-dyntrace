@@ -499,6 +499,7 @@ void attribute_hidden check_stack_balance(SEXP op, int save)
 static SEXP forcePromise(SEXP e)
 {
     if (PRVALUE(e) == R_UnboundValue) {
+      DYNTRACE_PROBE_PROMISE_FORCE_ENTRY(e);
 	RPRSTACK prstack;
 	SEXP val;
 	if(PRSEEN(e)) {
@@ -531,6 +532,9 @@ static SEXP forcePromise(SEXP e)
 	SET_PRVALUE(e, val);
 	SET_NAMED (val, 2);
 	SET_PRENV(e, R_NilValue);
+  DYNTRACE_PROBE_PROMISE_FORCE_EXIT(e);
+    } else {
+      DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(e);
     }
     return PRVALUE(e);
 }
@@ -652,16 +656,13 @@ SEXP eval(SEXP e, SEXP rho)
 		/* not sure the PROTECT is needed here but keep it to
 		   be on the safe side. */
 		PROTECT(tmp);
-
-		DYNTRACE_PROBE_PROMISE_FORCE_ENTRY(e, rho);
 		tmp = forcePromise(tmp);
-		DYNTRACE_PROBE_PROMISE_FORCE_EXIT(e, rho, tmp);
-
 		UNPROTECT(1);
 	    }
 	    else {
+        SEXP temp_promise = tmp;
 		tmp = PRVALUE(tmp);
-		DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(e, rho, tmp);
+		DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(temp_promise);
 	    }
 	    SET_NAMED(tmp, 2);
 	}
@@ -673,12 +674,7 @@ SEXP eval(SEXP e, SEXP rho)
 	    /* We could just unconditionally use the return value from
 	       forcePromise; the test avoids the function call if the
 	       promise is already evaluated. */
-		DYNTRACE_PROBE_PROMISE_FORCE_ENTRY(e, rho);
 		forcePromise(e);
-		DYNTRACE_PROBE_PROMISE_FORCE_EXIT(e, rho, PRVALUE(e));
-	}
-	else {
-		DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(e, rho, PRVALUE(e));
 	}
 	tmp = PRVALUE(e);
 	/* This does _not_ change the value of NAMED on the value tmp,
@@ -2264,18 +2260,8 @@ SEXP attribute_hidden do_function(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (TYPEOF(op) == PROMSXP) {
     // Tracing: we now handle this. Not sure how to trigger it though.
         int not_forced = PRVALUE(op) == R_UnboundValue;
-        if (not_forced) {
-          DYNTRACE_PROBE_PROMISE_FORCE_ENTRY(op, rho);
-        }
         SEXP op_saved = op;
         op = forcePromise(op);
-        if (not_forced) {
-          DYNTRACE_PROBE_PROMISE_FORCE_EXIT(op_saved, rho, op); // SUSPICIOUS, op
-        }
-        else {
-          DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(op_saved, rho, op);
-        }
-
         SET_NAMED(op, 2);
     }
     if (length(args) < 2) WrongArgCount("function");
@@ -4007,19 +3993,7 @@ static R_INLINE SEXP getPrimitive(SEXP symbol, SEXPTYPE type, SEXP rho)
 {
     SEXP value = SYMVALUE(symbol);
     if (TYPEOF(value) == PROMSXP) {
-    // Tracing: we dont't handle this. Not sure why not. This can potentially happen a lot, actually.
-        int not_forced = PRVALUE(value) == R_UnboundValue;
-        if (not_forced) {
-          DYNTRACE_PROBE_PROMISE_FORCE_ENTRY(symbol, rho);
-        }
         value = forcePromise(value);
-        if (not_forced) {
-          DYNTRACE_PROBE_PROMISE_FORCE_EXIT(symbol, rho, value); // SUSPICIOUs value unprotected
-        }
-        else {
-          DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(symbol, rho, value);
-        }
-
 	SET_NAMED(value, 2);
     }
     if (TYPEOF(value) != type) {
@@ -4074,20 +4048,7 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 {
     SEXP op = getPrimitive(opsym, BUILTINSXP, rho);
     if (TYPEOF(op) == PROMSXP) {
-
-        // Tracing: we didn't handle this. Not sure why not.
-        int not_forced = PRVALUE(op) == R_UnboundValue;
-        if (not_forced) {
-          DYNTRACE_PROBE_PROMISE_FORCE_ENTRY(opsym, rho);
-        }
         op = forcePromise(op);
-        if (not_forced) {
-          DYNTRACE_PROBE_PROMISE_FORCE_EXIT(opsym, rho, op); // SUSPICIOUS op
-        }
-        else {
-          DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(opsym, rho, op);
-        }
-
         SET_NAMED(op, 2);
     }
     if (isObject(x) || isObject(y)) {
@@ -4810,14 +4771,12 @@ static R_INLINE SEXP FORCE_PROMISE(SEXP value, SEXP symbol, SEXP rho,
         if (keepmiss && R_isMissing(symbol, rho)) {
             value = R_MissingArg;
         } else {
-          DYNTRACE_PROBE_PROMISE_FORCE_ENTRY(symbol, rho);
-
             value = forcePromise(value);
-            DYNTRACE_PROBE_PROMISE_FORCE_EXIT(symbol, rho, value);
         }
     } else {
+        SEXP temp_promise = value;
         value = PRVALUE(value);
-        DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(symbol, rho, value);
+        DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(temp_promise);
     }
     SET_NAMED(value, 2);
     return value;
@@ -4908,7 +4867,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 			value = FORCE_PROMISE(value, symbol, rho, keepmiss); \
 		    }							\
 		    else {						\
-            DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(value, rho, pv) \
+            DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(value) \
 		        value = pv;					\
 		    }							\
 		}							\
@@ -6373,18 +6332,8 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP value = SYMVALUE(symbol);
 	if (TYPEOF(value) == PROMSXP) {
         // Tracing: we didnt't handle this. Not sure why not. Also not sure what a GETSYMFUN op is.
-        int not_forced = PRVALUE(value) == R_UnboundValue;
-        if (not_forced) {
-          DYNTRACE_PROBE_PROMISE_FORCE_ENTRY(symbol, rho);
-        }
+        
         value = forcePromise(value);
-        if (not_forced) {
-          DYNTRACE_PROBE_PROMISE_FORCE_EXIT(symbol, rho, value);
-        }
-        else {
-          DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(symbol, rho, value);
-        }
-
         SET_NAMED(value, 2);
 	}
 	if(RTRACE(value)) {

@@ -17,6 +17,7 @@ dyntracer_t *dyntrace_active_dyntracer = NULL;
 const char *dyntrace_active_dyntracer_probe_name = NULL;
 int dyntrace_garbage_collector_state = 0;
 clock_t dyntrace_stopwatch;
+int dyntrace_privileged_mode_flag = 0;
 
 dyntracer_t * dyntracer_from_sexp(SEXP dyntracer_sexp) {
     return (dyntracer_t *)R_ExternalPtrAddr(dyntracer_sexp);
@@ -51,6 +52,18 @@ SEXP dyntracer_destroy_sexp(SEXP dyntracer_sexp,
     if(dyntracer != NULL)
       destroy_dyntracer(dyntracer);
     return R_NilValue;
+}
+
+void dyntrace_enable_privileged_mode() {
+    dyntrace_privileged_mode_flag = 1;
+}
+
+void dyntrace_disable_privileged_mode() {
+    dyntrace_privileged_mode_flag = 0;
+}
+
+int dyntrace_is_priviliged_mode() {
+    return dyntrace_privileged_mode_flag;  
 }
 
 static const char * get_current_datetime() {
@@ -100,7 +113,7 @@ SEXP do_dyntrace(SEXP call, SEXP op, SEXP args, SEXP rho) {
       error("dyntracer is NULL");
     /* create dyntrace context */
     dyntrace_active_dyntrace_context = create_dyntrace_context(dyntracer);    
-    
+
     /* begin dyntracing */
     dyntrace_active_dyntracer = dyntracer;
     dyntrace_stopwatch = clock();
@@ -170,7 +183,7 @@ SEXP get_named_list_element(const SEXP list, const char *name) {
     return e;
 }
 
-const char* serialize_sexp(SEXP s) {
+char* serialize_sexp(SEXP s) {
 
     LocalParseData parse_data = {0, 0, 0, 0, /*startline = */TRUE, 0,
                                  NULL, /*DeparseBuffer=*/{NULL, 0, BUFSIZE},
