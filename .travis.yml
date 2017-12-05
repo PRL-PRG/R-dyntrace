@@ -22,6 +22,7 @@ addons:
       - liblzma-dev
       - libsqlite3-dev
       - libc++-dev
+      - libiomp5
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then . tools/ci/before_install-osx.sh; fi

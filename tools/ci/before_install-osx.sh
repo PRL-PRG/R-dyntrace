@@ -10,6 +10,7 @@ brew link --overwrite gcc
 
 brew install xz
 brew install sqlite
-
+brew install libiomp
+brew install clang-omp
 brew install ccache
 export PATH=/usr/local/opt/ccache/libexec:$PATH

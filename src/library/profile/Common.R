@@ -42,7 +42,7 @@ if(!interactive() && is.null(getOption("showErrorCalls")))
 local({dp <- Sys.getenv("R_DEFAULT_PACKAGES")
        if(identical(dp, "")) ## it fact methods is done first
            dp <- c("datasets", "utils", "grDevices", "graphics",
-                   "stats", "methods", "rdt")
+                   "stats", "methods")
        else if(identical(dp, "NULL")) dp <- character(0)
        else dp <- strsplit(dp, ",")[[1]]
        dp <- sub("[[:blank:]]*([[:alnum:]]+)", "\\1", dp) # strip whitespace

@@ -440,18 +440,18 @@ AC_ARG_WITH([internal-tzcode],
 [use_internal_tzcode=${withval}],
 [use_internal_tzcode=default])
 
-AC_ARG_ENABLE(rdt,
-AS_HELP_STRING([--enable-rdt],[Dynamic tracing for R @<:@yes@:>@]),
-[enable_rdt=$enableval], [enable_rdt=yes])
+AC_ARG_ENABLE(dyntrace,
+AS_HELP_STRING([--enable-dyntrace],[Dynamic tracing for R @<:@yes@:>@]),
+[enable_dyntrace=$enableval], [enable_dyntrace=yes])
 
-if test "${enable_rdt}" = "yes"; then
-  RDT_SRC="rdtrace.c"
-  RDT_OBJ="rdtrace.o"
-  AC_DEFINE(ENABLE_RDT, 1, [RDT is enabled])
+if test "${enable_dyntrace}" = "yes"; then
+  DYNTRACE_SRC="dyntrace.c"
+  DYNTRACE_OBJ="dyntrace.o"
+  AC_DEFINE(ENABLE_DYNTRACE, 1, [DYNTRACE is enabled])
 fi
-AC_SUBST(RDT_HANDLERS)
-AC_SUBST(RDT_SRC)
-AC_SUBST(RDT_OBJ)
+AC_SUBST(DYNTRACER)
+AC_SUBST(DYNTRACE_SRC)
+AC_SUBST(DYNTRACE_OBJ)
 
 ## <FIXME>
 ## Completely disable using libtool for building shlibs until libtool
@@ -2725,8 +2725,6 @@ AC_CONFIG_FILES(
   src/library/parallel/Makefile
   src/library/parallel/src/Makefile
   src/library/profile/Makefile
-  src/library/rdt/src/Makefile
-  src/library/rdt/Makefile
   src/library/stats/DESCRIPTION
   src/library/stats/Makefile
   src/library/stats/src/Makefile

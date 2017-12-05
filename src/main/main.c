@@ -38,7 +38,7 @@
 #include "Fileio.h"
 #include "Parse.h"
 #include "Startup.h"
-#include "rdtrace.h"
+#include <Rdyntrace.h>
 
 #include <locale.h>
 #include <R_ext/Print.h>
@@ -1065,10 +1065,6 @@ extern SA_TYPE SaveAction; /* from src/main/startup.c */
 
 static void end_Rmainloop(void)
 {
-#ifdef ENABLE_RDT
-    rdt_stop(NULL);
-#endif
-
     /* refrain from printing trailing '\n' in slave mode */
     if (!R_Slave)
 	Rprintf("\n");

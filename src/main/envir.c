@@ -95,6 +95,7 @@
 #include <Defn.h>
 #include <Internal.h>
 #include <R_ext/Callbacks.h>
+#include <Rdyntrace.h>
 
 #define FAST_BASE_CACHE_LOOKUP  /* Define to enable fast lookups of symbols */
 				/*    in global cache from base environment */
@@ -848,6 +849,7 @@ void attribute_hidden unbindVar(SEXP symbol, SEXP rho)
 	SEXP list;
 	list = RemoveFromList(symbol, FRAME(rho), &found);
 	if (found) {
+      DYNTRACE_PROBE_ENVIRONMENT_REMOVE_VAR(symbol, rho);
 	    if (rho == R_GlobalEnv) R_DirtyImage = 1;
 	    SET_FRAME(rho, list);
 	}
@@ -1181,12 +1183,15 @@ static SEXP findGlobalVar(SEXP symbol)
     SEXP vl, rho;
     Rboolean canCache = TRUE;
     vl = R_GetGlobalCache(symbol);
-    if (vl != R_UnboundValue)
+    if (vl != R_UnboundValue) {
+      DYNTRACE_PROBE_ENVIRONMENT_LOOKUP_VAR(symbol, vl, R_GlobalEnv);
 	return vl;
+  }
     for (rho = R_GlobalEnv; rho != R_EmptyEnv; rho = ENCLOS(rho)) {
 	if (rho != R_BaseEnv) { /* we won't have R_BaseNamespace */
 	    vl = findVarLocInFrame(rho, symbol, &canCache);
 	    if (vl != R_NilValue) {
+        DYNTRACE_PROBE_ENVIRONMENT_LOOKUP_VAR(symbol, BINDING_VALUE(vl), rho);
 		if(canCache)
 		    R_AddGlobalCache(symbol, vl);
 		return BINDING_VALUE(vl);
@@ -1195,6 +1200,7 @@ static SEXP findGlobalVar(SEXP symbol)
 	    vl = SYMBOL_BINDING_VALUE(symbol);
 	    if (vl != R_UnboundValue)
 		R_AddGlobalCache(symbol, symbol);
+      DYNTRACE_PROBE_ENVIRONMENT_LOOKUP_VAR(symbol, vl, rho);
 	    return vl;
 	}
 
@@ -1219,7 +1225,10 @@ SEXP findVar(SEXP symbol, SEXP rho)
        R_GlobalEnv */
     while (rho != R_GlobalEnv && rho != R_EmptyEnv) {
 	vl = findVarInFrame3(rho, symbol, TRUE /* get rather than exists */);
-	if (vl != R_UnboundValue) return (vl);
+	if (vl != R_UnboundValue) {
+    DYNTRACE_PROBE_ENVIRONMENT_LOOKUP_VAR(symbol, vl, rho);
+    return (vl);
+  }
 	rho = ENCLOS(rho);
     }
     if (rho == R_GlobalEnv)
@@ -1229,7 +1238,10 @@ SEXP findVar(SEXP symbol, SEXP rho)
 #else
     while (rho != R_EmptyEnv) {
 	vl = findVarInFrame3(rho, symbol, TRUE);
-	if (vl != R_UnboundValue) return (vl);
+	if (vl != R_UnboundValue) {
+    DYNTRACE_PROBE_ENVIRONMENT_LOOKUP_VAR(symbol, vl, rho);
+    return (vl);
+  }
 	rho = ENCLOS(rho);
     }
     return R_UnboundValue;
@@ -1533,6 +1545,7 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
 	    error(_("cannot assign variables to this database"));
 	PROTECT(value);
 	table->assign(CHAR(PRINTNAME(symbol)), value, table);
+  DYNTRACE_PROBE_ENVIRONMENT_DEFINE_VAR(symbol, value, rho);
 	UNPROTECT(1);
 #ifdef USE_GLOBAL_CACHE
 	if (IS_GLOBAL_FRAME(rho)) R_FlushGlobalCache(symbol);
@@ -1542,6 +1555,7 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
 
     if (rho == R_BaseNamespace || rho == R_BaseEnv) {
 	gsetVar(symbol, value, rho);
+  DYNTRACE_PROBE_ENVIRONMENT_DEFINE_VAR(symbol, value, rho);
     } else {
 #ifdef USE_GLOBAL_CACHE
 	if (IS_GLOBAL_FRAME(rho)) R_FlushGlobalCache(symbol);
@@ -1557,6 +1571,7 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
 		if (TAG(frame) == symbol) {
 		    SET_BINDING_VALUE(frame, value);
 		    SET_MISSING(frame, 0);	/* Over-ride */
+        DYNTRACE_PROBE_ENVIRONMENT_DEFINE_VAR(symbol, value, rho);
 		    return;
 		}
 		frame = CDR(frame);
@@ -1575,6 +1590,7 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
 	    hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
 	    R_HashSet(hashcode, symbol, HASHTAB(rho), value,
 		      FRAME_IS_LOCKED(rho));
+      DYNTRACE_PROBE_ENVIRONMENT_DEFINE_VAR(symbol, value, rho);
 	    if (R_HashSizeCheck(HASHTAB(rho)))
 		SET_HASHTAB(rho, R_HashResize(HASHTAB(rho)));
 	}
@@ -1723,7 +1739,10 @@ void setVar(SEXP symbol, SEXP value, SEXP rho)
     SEXP vl;
     while (rho != R_EmptyEnv) {
 	vl = setVarInFrame(rho, symbol, value);
-	if (vl != R_NilValue) return;
+	if (vl != R_NilValue) {
+    DYNTRACE_PROBE_ENVIRONMENT_ASSIGN_VAR(symbol, value, rho);
+    return;
+  }
 	rho = ENCLOS(rho);
     }
     defineVar(symbol, value, R_GlobalEnv);
@@ -1855,6 +1874,7 @@ static int RemoveVariable(SEXP name, int hashcode, SEXP env)
 	table = (R_ObjectTable *) R_ExternalPtrAddr(HASHTAB(env));
 	if(table->remove == NULL)
 	    error(_("cannot remove variables from this database"));
+  DYNTRACE_PROBE_ENVIRONMENT_REMOVE_VAR(name, env);
 	return(table->remove(CHAR(PRINTNAME(name)), table));
     }
 

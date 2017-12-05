@@ -101,7 +101,7 @@ extern void *Rm_realloc(void * p, size_t n);
 #define free Rm_free
 #endif
 
-#include <rdtrace.h>
+#include <Rdyntrace.h>
 
 /* malloc uses size_t.  We are assuming here that size_t is at least
    as large as unsigned long.  Changed from int at 1.6.0 to (i) allow
@@ -960,7 +960,7 @@ static void TryToReleasePages(void)
 		    s = (SEXP) data;
 		    if (NODE_IS_MARKED(s)) {
 			in_use = 1;
-#ifndef ENABLE_RDT
+#ifndef ENABLE_DYNTRACE
 			break;
 #endif
 		    }
@@ -1747,13 +1747,13 @@ static void RunGenCollect(R_size_t size_needed)
     FORWARD_NODE(R_StringHash);
     PROCESS_NODES();
 
-#ifdef ENABLE_RDT
+#ifdef ENABLE_DYNTRACE
     // TODO - generalize this for other objects
     s = NEXT_NODE(R_GenHeap[0].New);
     while (s != R_GenHeap[0].New) {
         SEXP next = NEXT_NODE(s);
         if (TYPEOF(s) != FREESXP && TYPEOF(s) == PROMSXP) {
-            RDT_HOOK(probe_gc_promise_unmarked, s);
+          DYNTRACE_PROBE_GC_PROMISE_UNMARKED(s);
             TYPEOF(s) = FREESXP;
         }
         s = next;
@@ -2402,6 +2402,7 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 	v = CDR(v);
 	n = CDR(n);
     }
+    DYNTRACE_PROBE_NEW_ENVIRONMENT(newrho);
     return (newrho);
 }
 
@@ -2442,7 +2443,7 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     ATTRIB(s) = R_NilValue;
 
     PROTECT(rho);
-    RDT_HOOK(probe_promise_created, s, rho);
+    DYNTRACE_PROBE_PROMISE_CREATED(s, rho);
     UNPROTECT(1);
     return s;
 }
@@ -2538,9 +2539,7 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 	    SET_SHORT_VEC_TRUELENGTH(s, 0);
 	    SET_NAMED(s, 0);
 	    INIT_REFCNT(s);
-#ifdef RDT_IS_ENABLED
-      RDT_HOOK(probe_vector_alloc, type, length, NODE_SIZE(type), "");
-#endif
+      DYNTRACE_PROBE_VECTOR_ALLOC(type, length, NODE_SIZE(type), "");
 	    return(s);
 	}
     }
@@ -2726,7 +2725,7 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 		R_ReportAllocation(hdrsize + size * sizeof(VECREC));
 #endif
         // TODO: can I get the source location?
-        RDT_HOOK(probe_vector_alloc, type, length, (hdrsize + size * sizeof(VECREC)), "");
+    DYNTRACE_PROBE_VECTOR_ALLOC(type, length, (hdrsize + size * sizeof(VECREC)), "");
 	    } else s = NULL; /* suppress warning */
 	    if (! success) {
 		double dsize = (double)size * sizeof(VECREC)/1024.0;
@@ -2957,7 +2956,7 @@ static void R_gc_internal(R_size_t size_needed)
       return;
     }
 
-    RDT_HOOK(probe_gc_entry, size_needed);
+    DYNTRACE_PROBE_GC_ENTRY(size_needed);
 
     gc_pending = FALSE;
 
@@ -2997,14 +2996,14 @@ static void R_gc_internal(R_size_t size_needed)
 	first_bad_sexp_type_line = bad_sexp_type_line;
     }
 
-#ifndef RDT_IS_ENABLED
+#ifndef ENABLE_DYNTRACE
     if (gc_reporting) {
 #endif
 	ncells = onsize - R_Collected;
 	nfrac = (100.0 * ncells) / R_NSize;
 	/* We try to make this consistent with the results returned by gc */
 	ncells = 0.1*ceil(10*ncells * sizeof(SEXPREC)/Mega);
-#ifdef RDT_IS_ENABLED
+#ifdef ENABLE_DYNTRACE
     if (gc_reporting)
 #endif
 	REprintf("\n%.1f Mbytes of cons cells used (%d%%)\n",
@@ -3012,12 +3011,12 @@ static void R_gc_internal(R_size_t size_needed)
 	vcells = R_VSize - VHEAP_FREE();
 	vfrac = (100.0 * vcells) / R_VSize;
 	vcells = 0.1*ceil(10*vcells * vsfac/Mega);
-#ifdef RDT_IS_ENABLED
+#ifdef ENABLE_DYNTRACE
     if (gc_reporting)
 #endif
 	REprintf("%.1f Mbytes of vectors used (%d%%)\n",
 		 vcells, (int) (vfrac + 0.5));
-#ifndef RDT_IS_ENABLED
+#ifndef ENABLE_DYNTRACE
     }
 #endif
 
@@ -3076,7 +3075,7 @@ static void R_gc_internal(R_size_t size_needed)
     }
     /* compiler constants are checked in RunGenCollect */
 
-    RDT_HOOK(probe_gc_exit, gc_count, vcells, ncells);
+    DYNTRACE_PROBE_GC_EXIT(gc_count, vcells, ncells);
 }
 
 

@@ -1,0 +1,63 @@
+n;  package;                source; n.vignettes; output.size
+1;  grid;                   base;   13;          
+2;  dplyr;                  cran;   8;           
+3;  rivr;                   cran;   3;           
+4;  stringr;                cran;   2;           
+5;  vcd;                    cran;   2;
+6;  mvtnorm;                cran;   1;
+7;  ggplot2;                cran;   2;           
+8;  colorspace;             cran;   1;           
+9;  proto;                  cran;   2;           
+10; gamclass;               cran;   11;           
+11; copula;                 cran;   13;          
+12; caschrono;              cran;   10;          
+13; catdata;                cran;   45;
+14; Sleuth3;                cran;   13;                   
+15; lmtest;                 cran;   1;           
+16; BMS;                    cran;   1;           
+17; Biostrings;             bioc;   5;            
+18; S4Vectors;              bioc;   2;           
+19; IRanges;                bioc;   1;           
+20; Biobase;                bioc;   3;           
+21; GenomicRanges;          bioc;   5;           
+22; GenomeInfoDb;           bioc;   2;           
+23; BiocParallel;           bioc;   2;           
+24; SummarizedExperiment;   bioc;   1;           
+25; annotate;               bioc;   8;           
+#
+# selection criteria: popularity, no. of vignettes (>0), recommendations
+#
+# some sources:
+# http://www.crantastic.org/
+# https://www.bioconductor.org/packages/stats/
+# http://www.kdnuggets.com/2015/06/top-20-r-packages.html
+# http://r-forge.r-project.org/softwaremap/trove_list.php
+# https://cran.r-project.org/web/views/
+# https://www.r-statistics.com/2013/06/top-100-r-packages-for-2013-jan-may/
+
+# possible candidates:
+# RColorBrewer
+# car
+# Hmisc
+# mvtnorm
+# rgl
+# XML
+# gtools
+# sp
+# Matrix
+# lmtest
+# survival
+# caTools
+# xtable
+# xts
+# rpart
+# evaluate
+# sandwich
+# leaps
+# RSQLite
+# psych
+# KernSmooth
+# sem
+# vcd
+# cluster
+# 

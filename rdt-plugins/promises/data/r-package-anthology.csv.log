@@ -1,0 +1,7 @@
+[1/1] Instrumenting vignettes for package: data/r-package-anthology.csv
+Error in find.package(package, lib.loc) : 
+  there is no package called ‘data/r-package-anthology.csv’
+Calls: execute.external.programs ... instrument.vignettes -> vignette -> <Anonymous> -> find.package
+In addition: Warning message:
+package ‘data/r-package-anthology.csv’ is not available (for R Under development) 
+Execution halted

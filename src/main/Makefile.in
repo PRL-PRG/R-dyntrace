@@ -47,7 +47,7 @@ EXTRA_SOURCES_C = \
 
 DEPENDS = $(SOURCES_C:.c=.d) $(EXTRA_SOURCES_C:.c=.d)
 SOURCES = $(SOURCES_C) $(SOURCES_F)
-OBJECTS = $(SOURCES_C:.c=.o) $(SOURCES_F:.f=.o) @LIBOBJS@ @ALLOCA@ @RDT_OBJ@
+OBJECTS = $(SOURCES_C:.c=.o) $(SOURCES_F:.f=.o) @LIBOBJS@ @ALLOCA@ @DYNTRACE_OBJ@
 HEADERS = \
 	RBufferUtils.h Rcomplex.h Rstrptime.h \
 	arithmetic.h \

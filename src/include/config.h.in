@@ -15,8 +15,8 @@
    language is requested. */
 #undef ENABLE_NLS
 
-/* RDT is enabled */
-#undef ENABLE_RDT
+/* DYNTRACE is enabled */
+#undef ENABLE_DYNTRACE
 
 /* Define to dummy `main' function (if any) required to link to the Fortran
    libraries. */
