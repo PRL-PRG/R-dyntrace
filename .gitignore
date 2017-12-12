@@ -150,3 +150,13 @@ stamp-docs
 .Rproj.user
 cscope.out
 cscope.files
+
+# Generated headers
+src/include/Rmath.h
+src/include/libintl.h
+
+# Recommended libraries
+src/library/Recommended/*.tgz
+src/library/Recommended/*.tar.gz
+src/library/Recommended/stamp-recommended
+
