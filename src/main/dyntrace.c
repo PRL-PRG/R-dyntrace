@@ -202,3 +202,7 @@ inline const char *get_string(SEXP sexp) {
 
     return CHAR(STRING_ELT(sexp, 0));
 }
+
+int newhashpjw(const char *s) {
+    return R_Newhashpjw(s);
+}

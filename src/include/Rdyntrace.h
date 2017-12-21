@@ -714,6 +714,7 @@ SEXP dyntracer_destroy_sexp(SEXP dyntracer_sexp,
 SEXP get_named_list_element(const SEXP list, const char *name);
 char *serialize_sexp(SEXP s);
 const char *get_string(SEXP sexp);
+int newhashpjw(const char *s);
 #ifdef __cplusplus
 }
 #endif
