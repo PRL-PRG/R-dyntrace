@@ -68,8 +68,8 @@ int dyntrace_is_priviliged_mode() {
 
 static const char * get_current_datetime() {
     time_t current_time = time(NULL);
-    strtok(current_time, "\n"); // remove new-lines
-    return ctime(&current_time);
+    char * time_string = ctime(&current_time);
+    return strtok(time_string, "\n"); // remove new-lines
 }
 
 static void assign_environment_variables(environment_variables_t * environment_variables) {
