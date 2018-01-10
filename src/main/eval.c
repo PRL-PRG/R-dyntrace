@@ -7071,7 +7071,7 @@ SEXP R_bcEncode(SEXP bytes)
     }
 }
 
-static int findOp(void *addr)
+int findOp(void *addr)
 {
     int i;
 

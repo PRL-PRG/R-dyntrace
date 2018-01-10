@@ -705,7 +705,7 @@ dyntracer_t *dyntracer_replace_sexp(SEXP dyntracer_sexp,
                                     dyntracer_t *new_dyntracer);
 SEXP dyntracer_destroy_sexp(SEXP dyntracer_sexp,
                             void (*destroy_dyntracer)(dyntracer_t *dyntracer));
-
+int findOp(void *addr);
 // ----------------------------------------------------------------------------
 // helpers
 // ----------------------------------------------------------------------------
