@@ -14,6 +14,7 @@
 
 dyntrace_context_t * dyntrace_active_dyntrace_context = NULL;
 dyntracer_t *dyntrace_active_dyntracer = NULL;
+int dyntrace_check_reentrancy = 1;
 const char *dyntrace_active_dyntracer_probe_name = NULL;
 int dyntrace_garbage_collector_state = 0;
 clock_t dyntrace_stopwatch;

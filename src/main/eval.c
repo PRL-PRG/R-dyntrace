@@ -496,7 +496,7 @@ void attribute_hidden check_stack_balance(SEXP op, int save)
 }
 
 
-static SEXP forcePromise(SEXP e)
+SEXP forcePromise(SEXP e)
 {
     if (PRVALUE(e) == R_UnboundValue) {
       DYNTRACE_PROBE_PROMISE_FORCE_ENTRY(e);

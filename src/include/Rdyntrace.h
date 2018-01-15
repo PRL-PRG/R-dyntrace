@@ -35,9 +35,11 @@ extern "C" {
   }
 
 #define CHECK_REENTRANCY(probe_name)                                           \
-  if (dyntrace_active_dyntracer_probe_name != NULL) {                          \
-    Rf_error("[ERROR] - [NESTED HOOK EXECUTION] - %s triggers %s\n",           \
-             dyntrace_active_dyntracer_probe_name, #probe_name);               \
+  if (dyntrace_check_reentrancy) {                                             \
+    if (dyntrace_active_dyntracer_probe_name != NULL) {                        \
+      Rf_error("[ERROR] - [NESTED HOOK EXECUTION] - %s triggers %s\n",         \
+               dyntrace_active_dyntracer_probe_name, #probe_name);             \
+    }                                                                          \
   }
 
 #define DYNTRACE_PROBE_BEGIN(prom)                                             \
@@ -678,6 +680,7 @@ typedef struct {
 // the current dyntracer
 extern dyntracer_t *dyntrace_active_dyntracer;
 // name of currently executing probe
+extern int dyntrace_check_reentrancy;
 extern const char *dyntrace_active_dyntracer_probe_name;
 // state of garbage collector before the hook is triggered
 extern int dyntrace_garbage_collector_state;
