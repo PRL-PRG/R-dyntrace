@@ -679,8 +679,9 @@ typedef struct {
 
 // the current dyntracer
 extern dyntracer_t *dyntrace_active_dyntracer;
-// name of currently executing probe
+ // flag to disable reentrancy check
 extern int dyntrace_check_reentrancy;
+// name of currently executing probe
 extern const char *dyntrace_active_dyntracer_probe_name;
 // state of garbage collector before the hook is triggered
 extern int dyntrace_garbage_collector_state;
