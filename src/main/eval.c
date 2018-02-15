@@ -531,8 +531,9 @@ SEXP forcePromise(SEXP e)
 	SET_PRSEEN(e, 0);
 	SET_PRVALUE(e, val);
 	SET_NAMED (val, 2);
+    DYNTRACE_PROBE_PROMISE_FORCE_EXIT(e);
 	SET_PRENV(e, R_NilValue);
-  DYNTRACE_PROBE_PROMISE_FORCE_EXIT(e);
+
     } else {
       DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(e);
     }
