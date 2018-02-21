@@ -501,11 +501,6 @@ SEXP attribute_hidden do_dump(SEXP call, SEXP op, SEXP args, SEXP rho)
 
 static void linebreak(Rboolean *lbreak, LocalParseData *d)
 {
-#ifdef ENABLE_DYNTRACE
-    if(dyntrace_is_active()) {
-        return;
-    }
-#endif
     if (d->len > d->cutoff) {
 	if (!*lbreak) {
 	    *lbreak = TRUE;
@@ -1287,7 +1282,11 @@ static void writeline(LocalParseData *d)
 {
 #ifdef ENABLE_DYNTRACE
     if(dyntrace_is_active()) {
-        return;
+      print2buff("\n", d);
+      d->linenumber++;
+      /* reset */
+      d->startline = TRUE;
+      return;
     }
 #endif
     if (d->strvec != R_NilValue && d->linenumber < d->maxlines)

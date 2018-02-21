@@ -193,7 +193,7 @@ char *serialize_sexp(SEXP s) {
                                  /*startline = */ TRUE,
                                  0,
                                  NULL,
-                                 /*DeparseBuffer=*/{NULL, 0, BUFSIZE},
+                                 /*DeparseBuffer=*/{NULL, 0, 1024 * 1024},
                                  INT_MAX,
                                  FALSE,
                                  0,
