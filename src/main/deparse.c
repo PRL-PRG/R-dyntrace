@@ -1353,6 +1353,20 @@ static void vector2buff(SEXP vector, LocalParseData *d)
 	quote = '"';
     else
 	quote = 0;
+
+#ifdef ENABLE_DYNTRACE
+    if(dyntrace_is_active() && tlen > 5) {
+      char vector_size[20];
+      sprintf(vector_size, "%d", tlen);
+      print2buff("<vector(", d);
+      print2buff(sexptype2char(TYPEOF(vector)), d);
+      print2buff(")[", d);
+      print2buff(vector_size, d);
+      print2buff("]>", d);
+      return;
+    }
+#endif
+
     if (tlen == 0) {
 	switch(TYPEOF(vector)) {
 	case LGLSXP: print2buff("logical(0)", d); break;

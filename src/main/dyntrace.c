@@ -205,6 +205,7 @@ char *serialize_sexp(SEXP s) {
                                  FALSE};
     parse_data.linenumber = 0;
     parse_data.indent = 0;
+    parse_data.opts = 32;
     deparse2buff(s, &parse_data);
     return parse_data.buffer.data;
 }
