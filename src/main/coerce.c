@@ -26,6 +26,7 @@
 /* interval at which to check interrupts */
 #define NINTERRUPT 10000000
 
+#include <Rdyntrace.h>
 #include <Defn.h> /*-- Maybe modularize into own Coerce.h ..*/
 #include <Internal.h>
 #include <float.h> /* for DBL_DIG */
@@ -34,7 +35,7 @@
 #include <Rmath.h>
 #include <Print.h>
 
-#include <Rdyntrace.h>
+
 
 /* This section of code handles type conversion for elements */
 /* of data vectors.  Type coercion throughout R should use these */

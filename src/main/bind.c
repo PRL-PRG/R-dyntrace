@@ -25,6 +25,7 @@
 # include <config.h>
 #endif
 
+#include <Rdyntrace.h>
 #include <Defn.h>
 #include <Internal.h>
 #include <R_ext/PrtUtil.h> // for IndexWidth
@@ -35,8 +36,6 @@
 static R_StringBuffer cbuff = {NULL, 0, MAXELTSIZE};
 
 #include "duplicate.h"
-
-#include <Rdyntrace.h>
 
 #define LIST_ASSIGN(x) {SET_VECTOR_ELT(data->ans_ptr, data->ans_length, x); data->ans_length++;}
 

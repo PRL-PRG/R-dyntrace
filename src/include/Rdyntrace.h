@@ -1,7 +1,17 @@
 #ifndef __DYNTRACE_H__
 #define __DYNTRACE_H__
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <R.h>
+
+//#include <Rinterface.h>
+#define HAVE_DECL_SIZE_MAX 1
+#define R_USE_SIGNALS 1
+#include <Defn.h>
+
 #include <Rinternals.h>
 #include <config.h>
 #include <libintl.h>
@@ -10,8 +20,8 @@
 extern "C" {
 #endif
 #include <stdint.h>
-#define HAVE_DECL_SIZE_MAX 1
-#include <Defn.h>
+
+
 
 #ifdef ENABLE_DYNTRACE
 
@@ -216,14 +226,29 @@ extern "C" {
     UNPROTECT(1);                                                              \
     DYNTRACE_PROBE_FOOTER(probe_gc_promise_unmarked);
 
-#define DYNTRACE_PROBE_JUMP_CTXT(rho, val)                                     \
+#define DYNTRACE_PROBE_BEGIN_CTXT(cptr)                                        \
+    DYNTRACE_PROBE_HEADER(probe_begin_ctxt);                                   \
+    PROTECT(cptr);                                                             \
+    dyntrace_active_dyntracer->probe_begin_ctxt(                               \
+        dyntrace_active_dyntrace_context, cptr);                               \
+    UNPROTECT(1);                                                              \
+    DYNTRACE_PROBE_FOOTER(probe_begin_ctxt);
+
+#define DYNTRACE_PROBE_JUMP_CTXT(cptr)                                         \
     DYNTRACE_PROBE_HEADER(probe_jump_ctxt);                                    \
-    PROTECT(rho);                                                              \
-    PROTECT(val);                                                              \
+    PROTECT(cptr);                                                             \
     dyntrace_active_dyntracer->probe_jump_ctxt(                                \
-        dyntrace_active_dyntrace_context, rho, val);                           \
-    UNPROTECT(2);                                                              \
+        dyntrace_active_dyntrace_context, cptr);                               \
+    UNPROTECT(1);                                                              \
     DYNTRACE_PROBE_FOOTER(probe_jump_ctxt);
+
+#define DYNTRACE_PROBE_END_CTXT(cptr)                                          \
+    DYNTRACE_PROBE_HEADER(probe_end_ctxt);                                     \
+    PROTECT(cptr);                                                             \
+    dyntrace_active_dyntracer->probe_end_ctxt(                                 \
+        dyntrace_active_dyntrace_context, cptr);                               \
+    UNPROTECT(1);                                                              \
+    DYNTRACE_PROBE_FOOTER(probe_end_ctxt);
 
 #define DYNTRACE_PROBE_NEW_ENVIRONMENT(rho)                                    \
     DYNTRACE_PROBE_HEADER(probe_new_environment);                              \
@@ -331,7 +356,9 @@ extern "C" {
 #define DYNTRACE_PROBE_GC_ENTRY(size_needed)
 #define DYNTRACE_PROBE_GC_EXIT(gc_count, vcells, ncells)
 #define DYNTRACE_PROBE_GC_PROMISE_UNMARKED(promise)
+#define DYNTRACE_PROBE_BEGIN_CTXT(cptr)
 #define DYNTRACE_PROBE_JUMP_CTXT(rho, val)
+#define DYNTRACE_PROBE_END_CTXT(cptr)
 #define DYNTRACE_PROBE_NEW_ENVIRONMENT(rho)
 #define DYNTRACE_PROBE_S3_GENERIC_ENTRY(generic, object)
 #define DYNTRACE_PROBE_S3_GENERIC_EXIT(generic, object, retval)
@@ -369,6 +396,8 @@ typedef struct {
     clock_t probe_gc_exit;
     clock_t probe_gc_promise_unmarked;
     clock_t probe_jump_ctxt;
+    clock_t probe_begin_ctxt;
+    clock_t probe_end_ctxt;
     clock_t probe_new_environment;
     clock_t probe_S3_generic_entry;
     clock_t probe_S3_generic_exit;
@@ -403,6 +432,8 @@ typedef struct {
     unsigned int probe_gc_exit;
     unsigned int probe_gc_promise_unmarked;
     unsigned int probe_jump_ctxt;
+    unsigned int probe_begin_ctxt;
+    unsigned int probe_end_ctxt;
     unsigned int probe_new_environment;
     unsigned int probe_S3_generic_entry;
     unsigned int probe_S3_generic_exit;
@@ -603,7 +634,23 @@ typedef struct {
     - src/main/context.c
     ***************************************************************************/
     void (*probe_jump_ctxt)(dyntrace_context_t *dyntrace_context,
-                            const SEXP rho, const SEXP val);
+                            const RCNTXT *context);
+
+    /***************************************************************************
+    Fires when the interpreter creates a new context.
+    Look for DYNTRACE_PROBE_BEGIN_CTXT(...) in
+    - src/main/context.c
+    ***************************************************************************/
+    void (*probe_begin_ctxt)(dyntrace_context_t *dyntrace_context,
+                            const RCNTXT *context);
+
+    /***************************************************************************
+    Fires when the interpreter discards a context.
+    Look for DYNTRACE_PROBE_END_CTXT(...) in
+    - src/main/context.c
+    ***************************************************************************/
+    void (*probe_end_ctxt)(dyntrace_context_t *dyntrace_context,
+                             const RCNTXT *context);
 
     /***************************************************************************
     Fires when the interpreter creates a new environment.

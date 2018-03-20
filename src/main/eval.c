@@ -735,7 +735,7 @@ SEXP eval(SEXP e, SEXP rho)
 	    DYNTRACE_PROBE_SPECIALSXP_EXIT(e, op, rho, tmp);
 	}
 	else if (TYPEOF(op) == BUILTINSXP) {
-    DYNTRACE_PROBE_BUILTIN_ENTRY(e, op, rho);
+        DYNTRACE_PROBE_BUILTIN_ENTRY(e, op, rho);// XXX after begincontext?
 
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
 	    const void *vmax = vmaxget();
@@ -1636,18 +1636,18 @@ static R_INLINE SEXP R_execClosure(SEXP call, SEXP newrho, SEXP sysparent,
 	    cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 	    R_ReturnedValue = R_NilValue;  /* remove restart token */
 	    cntxt.returnValue = eval(body, newrho);
+        DYNTRACE_PROBE_FUNCTION_EXIT(call, op, newrho, cntxt.returnValue);
 	}
 	else
 	    cntxt.returnValue = R_ReturnedValue;
     }
-    else
-	/* make it available to on.exit and implicitly protect */
-	cntxt.returnValue = eval(body, newrho);
-
+    else {
+        /* make it available to on.exit and implicitly protect */
+        cntxt.returnValue = eval(body, newrho);
+        DYNTRACE_PROBE_FUNCTION_EXIT(call, op, newrho, cntxt.returnValue);
+    }
     R_Srcref = cntxt.srcref;
     endcontext(&cntxt);
-
-    DYNTRACE_PROBE_FUNCTION_EXIT(call, op, newrho, cntxt.returnValue);
 
     if (dbg) {
 	Rprintf("exiting from: ");
@@ -1679,7 +1679,7 @@ SEXP R_forceAndCall(SEXP e, int n, SEXP rho)
 	int flag = PRIMPRINT(fun);
 	PROTECT(tmp = evalList(CDR(e), rho, e, 0));
 	if (flag < 2) R_Visible = flag != 1;
-	DYNTRACE_PROBE_BUILTIN_ENTRY(e, fun, rho);
+	DYNTRACE_PROBE_BUILTIN_ENTRY(e, fun, rho); // XXX after begincontext?
 	/* We used to insert a context only if profiling,
 	   but helps for tracebacks on .C etc. */
 	if (R_Profiling || (PPINFO(fun).kind == PP_FOREIGN)) {
@@ -6495,7 +6495,7 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	flag = PRIMPRINT(fun);
 	R_Visible = flag != 1;
 	SEXP value;
-	DYNTRACE_PROBE_BUILTIN_ENTRY(call, fun, rho);
+	DYNTRACE_PROBE_BUILTIN_ENTRY(call, fun, rho); // XXX after begincontext?
 	if (R_Profiling && IS_TRUE_BUILTIN(fun)) {
 	    RCNTXT cntxt;
 	    SEXP oldref = R_Srcref;

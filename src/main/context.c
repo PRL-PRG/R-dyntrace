@@ -236,6 +236,7 @@ void attribute_hidden NORET R_jumpctxt(RCNTXT * targetcptr, int mask, SEXP val)
 	R_OldCStackLimit = 0;
     }
 
+	DYNTRACE_PROBE_JUMP_CTXT(cptr);
     LONGJMP(cptr->cjmpbuf, mask);
 }
 
@@ -278,6 +279,8 @@ void begincontext(RCNTXT * cptr, int flags,
     cptr->jumpmask = 0;
 
     R_GlobalContext = cptr;
+
+    DYNTRACE_PROBE_BEGIN_CTXT(cptr);
 }
 
 
@@ -302,8 +305,11 @@ void endcontext(RCNTXT * cptr)
     if (R_ExitContext == cptr)
 	R_ExitContext = NULL;
     /* continue jumping if this was reached as an intermetiate jump */
-    if (cptr->jumptarget)
-	R_jumpctxt(cptr->jumptarget, cptr->jumpmask, cptr->returnValue);
+    DYNTRACE_PROBE_END_CTXT(cptr);
+    if (cptr->jumptarget) {
+        //DYNTRACE_PROBE_JUMP_CTXT(env, val);
+        R_jumpctxt(cptr->jumptarget, cptr->jumpmask, cptr->returnValue);
+    }
 
     R_GlobalContext = cptr->nextcontext;
 }
@@ -319,8 +325,10 @@ void attribute_hidden NORET findcontext(int mask, SEXP env, SEXP val)
 	for (cptr = R_GlobalContext;
 	     cptr != NULL && cptr->callflag != CTXT_TOPLEVEL;
 	     cptr = cptr->nextcontext)
-	    if (cptr->callflag & CTXT_LOOP && cptr->cloenv == env )
-		R_jumpctxt(cptr, mask, val);
+	    if (cptr->callflag & CTXT_LOOP && cptr->cloenv == env ) {
+            //DYNTRACE_PROBE_JUMP_CTXT(env, val);
+            R_jumpctxt(cptr, mask, val);
+        }
 	error(_("no loop for break/next, jumping to top level"));
     }
     else {				/* return; or browser */
@@ -328,7 +336,7 @@ void attribute_hidden NORET findcontext(int mask, SEXP env, SEXP val)
 	     cptr != NULL && cptr->callflag != CTXT_TOPLEVEL;
 	     cptr = cptr->nextcontext)
 	    if ((cptr->callflag & mask) && cptr->cloenv == env) {
-        DYNTRACE_PROBE_JUMP_CTXT(env, val);
+        //DYNTRACE_PROBE_JUMP_CTXT(env, val);
 		R_jumpctxt(cptr, mask, val);
             }
 	error(_("no function to return from, jumping to top level"));
@@ -339,12 +347,14 @@ void attribute_hidden NORET R_JumpToContext(RCNTXT *target, int mask, SEXP val)
 {
     RCNTXT *cptr;
     for (cptr = R_GlobalContext;
-	 cptr != NULL && cptr->callflag != CTXT_TOPLEVEL;
-	 cptr = cptr->nextcontext) {
-	if (cptr == target)
-	    R_jumpctxt(cptr, mask, val);
-	if (cptr == R_ExitContext)
-	    R_ExitContext = NULL;
+	     cptr != NULL && cptr->callflag != CTXT_TOPLEVEL;
+	     cptr = cptr->nextcontext) {
+        if (cptr == target) {
+            //DYNTRACE_PROBE_JUMP_CTXT(target->cloenv, val);
+            R_jumpctxt(cptr, mask, val);
+        }
+        if (cptr == R_ExitContext)
+            R_ExitContext = NULL;
     }
     error(_("target context is not on the stack"));
 }
