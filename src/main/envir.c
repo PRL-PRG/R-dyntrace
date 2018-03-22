@@ -1571,7 +1571,7 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
 		if (TAG(frame) == symbol) {
 		    SET_BINDING_VALUE(frame, value);
 		    SET_MISSING(frame, 0);	/* Over-ride */
-        DYNTRACE_PROBE_ENVIRONMENT_DEFINE_VAR(symbol, value, rho);
+        DYNTRACE_PROBE_ENVIRONMENT_ASSIGN_VAR(symbol, value, rho);
 		    return;
 		}
 		frame = CDR(frame);
@@ -1580,6 +1580,7 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
 		error(_("cannot add bindings to a locked environment"));
 	    SET_FRAME(rho, CONS(value, FRAME(rho)));
 	    SET_TAG(FRAME(rho), symbol);
+      DYNTRACE_PROBE_ENVIRONMENT_DEFINE_VAR(symbol, value, rho);
 	}
 	else {
 	    c = PRINTNAME(symbol);
