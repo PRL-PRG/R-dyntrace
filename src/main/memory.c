@@ -2394,15 +2394,16 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
     ENCLOS(newrho) = CHK(rho);
     HASHTAB(newrho) = R_NilValue;
     ATTRIB(newrho) = R_NilValue;
-
+    DYNTRACE_PROBE_NEW_ENVIRONMENT(newrho);
     v = CHK(valuelist);
     n = CHK(namelist);
     while (v != R_NilValue && n != R_NilValue) {
 	SET_TAG(v, TAG(n));
+  DYNTRACE_PROBE_ENVIRONMENT_DEFINE_VAR(TAG(n), v, newrho);
 	v = CDR(v);
 	n = CDR(n);
     }
-    DYNTRACE_PROBE_NEW_ENVIRONMENT(newrho);
+
     return (newrho);
 }
 
