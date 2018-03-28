@@ -173,6 +173,14 @@ extern "C" {
     UNPROTECT(1);                                                              \
     DYNTRACE_PROBE_FOOTER(probe_promise_expression_lookup);
 
+#define DYNTRACE_PROBE_PROMISE_ENVIRONMENT_LOOKUP(promise)                     \
+    DYNTRACE_PROBE_HEADER(probe_promise_environment_lookup);                   \
+    PROTECT(promise);                                                          \
+    dyntrace_active_dyntracer->probe_promise_environment_lookup(               \
+        dyntrace_active_dyntrace_context, promise);                            \
+    UNPROTECT(1);                                                              \
+    DYNTRACE_PROBE_FOOTER(probe_promise_environment_lookup);
+
 #define DYNTRACE_PROBE_ERROR(call, message)                                    \
     DYNTRACE_PROBE_HEADER(probe_error);                                        \
     PROTECT(call);                                                             \
@@ -345,6 +353,7 @@ extern "C" {
 #define DYNTRACE_PROBE_PROMISE_FORCE_EXIT(promise)
 #define DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(promise)
 #define DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(promise)
+#define DYNTRACE_PROBE_PROMISE_ENVIRONMENT_LOOKUP(promise)
 #define DYNTRACE_PROBE_ERROR(call, message)
 #define DYNTRACE_PROBE_VECTOR_ALLOC(sexptype, length, bytes, scref)
 #define DYNTRACE_PROBE_EVAL_ENTRY(e, rho)
@@ -384,6 +393,7 @@ typedef struct {
     clock_t probe_promise_force_exit;
     clock_t probe_promise_value_lookup;
     clock_t probe_promise_expression_lookup;
+    clock_t probe_promise_environment_lookup;
     clock_t probe_error;
     clock_t probe_vector_alloc;
     clock_t probe_eval_entry;
@@ -420,6 +430,7 @@ typedef struct {
     unsigned int probe_promise_force_exit;
     unsigned int probe_promise_value_lookup;
     unsigned int probe_promise_expression_lookup;
+    unsigned int probe_promise_environment_lookup;
     unsigned int probe_error;
     unsigned int probe_vector_alloc;
     unsigned int probe_eval_entry;
@@ -570,6 +581,14 @@ typedef struct {
     - src/main/coerce.c
     ***************************************************************************/
     void (*probe_promise_expression_lookup)(
+        dyntrace_context_t *dyntrace_context, const SEXP promise);
+
+    /***************************************************************************
+      Fires when the environment inside a promise is accessed.
+      Look for DYNTRACE_PROBE_PROMISE_ENVIRONMENT_LOOKUP(...) in
+      - src/main/eval.c
+    ***************************************************************************/
+    void (*probe_promise_environment_lookup)(
         dyntrace_context_t *dyntrace_context, const SEXP promise);
 
     /***************************************************************************
