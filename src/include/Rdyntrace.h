@@ -228,26 +228,22 @@ extern "C" {
 
 #define DYNTRACE_PROBE_BEGIN_CTXT(cptr)                                        \
     DYNTRACE_PROBE_HEADER(probe_begin_ctxt);                                   \
-    PROTECT(cptr);                                                             \
     dyntrace_active_dyntracer->probe_begin_ctxt(                               \
         dyntrace_active_dyntrace_context, cptr);                               \
-    UNPROTECT(1);                                                              \
     DYNTRACE_PROBE_FOOTER(probe_begin_ctxt);
 
-#define DYNTRACE_PROBE_JUMP_CTXT(cptr)                                         \
+#define DYNTRACE_PROBE_JUMP_CTXT(cptr, val, restart)                           \
     DYNTRACE_PROBE_HEADER(probe_jump_ctxt);                                    \
-    PROTECT(cptr);                                                             \
+    PROTECT(val);                                                              \
     dyntrace_active_dyntracer->probe_jump_ctxt(                                \
-        dyntrace_active_dyntrace_context, cptr);                               \
+        dyntrace_active_dyntrace_context, cptr, val, restart);                 \
     UNPROTECT(1);                                                              \
     DYNTRACE_PROBE_FOOTER(probe_jump_ctxt);
 
 #define DYNTRACE_PROBE_END_CTXT(cptr)                                          \
     DYNTRACE_PROBE_HEADER(probe_end_ctxt);                                     \
-    PROTECT(cptr);                                                             \
     dyntrace_active_dyntracer->probe_end_ctxt(                                 \
         dyntrace_active_dyntrace_context, cptr);                               \
-    UNPROTECT(1);                                                              \
     DYNTRACE_PROBE_FOOTER(probe_end_ctxt);
 
 #define DYNTRACE_PROBE_NEW_ENVIRONMENT(rho)                                    \
@@ -634,7 +630,8 @@ typedef struct {
     - src/main/context.c
     ***************************************************************************/
     void (*probe_jump_ctxt)(dyntrace_context_t *dyntrace_context,
-                            const RCNTXT *context);
+                            const RCNTXT *context, const SEXP returnValue,
+                            int restart);
 
     /***************************************************************************
     Fires when the interpreter creates a new context.

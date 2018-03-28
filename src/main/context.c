@@ -236,7 +236,7 @@ void attribute_hidden NORET R_jumpctxt(RCNTXT * targetcptr, int mask, SEXP val)
 	R_OldCStackLimit = 0;
     }
 
-	DYNTRACE_PROBE_JUMP_CTXT(cptr);
+	DYNTRACE_PROBE_JUMP_CTXT(cptr, val, val == R_RestartToken);
     LONGJMP(cptr->cjmpbuf, mask);
 }
 
