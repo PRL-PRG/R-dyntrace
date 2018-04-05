@@ -157,27 +157,27 @@ extern "C" {
     UNPROTECT(1);                                                              \
     DYNTRACE_PROBE_FOOTER(probe_promise_force_exit);
 
-#define DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(promise)                           \
+#define DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(promise, in_force)                 \
     DYNTRACE_PROBE_HEADER(probe_promise_value_lookup);                         \
     PROTECT(promise);                                                          \
     dyntrace_active_dyntracer->probe_promise_value_lookup(                     \
-        dyntrace_active_dyntrace_context, promise);                            \
+        dyntrace_active_dyntrace_context, promise, in_force);                  \
     UNPROTECT(1);                                                              \
     DYNTRACE_PROBE_FOOTER(probe_promise_value_lookup);
 
-#define DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(promise)                      \
+#define DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(promise, in_force)            \
     DYNTRACE_PROBE_HEADER(probe_promise_expression_lookup);                    \
     PROTECT(promise);                                                          \
     dyntrace_active_dyntracer->probe_promise_expression_lookup(                \
-        dyntrace_active_dyntrace_context, promise);                            \
+        dyntrace_active_dyntrace_context, promise, in_force);                  \
     UNPROTECT(1);                                                              \
     DYNTRACE_PROBE_FOOTER(probe_promise_expression_lookup);
 
-#define DYNTRACE_PROBE_PROMISE_ENVIRONMENT_LOOKUP(promise)                     \
+#define DYNTRACE_PROBE_PROMISE_ENVIRONMENT_LOOKUP(promise, in_force)           \
     DYNTRACE_PROBE_HEADER(probe_promise_environment_lookup);                   \
     PROTECT(promise);                                                          \
     dyntrace_active_dyntracer->probe_promise_environment_lookup(               \
-        dyntrace_active_dyntrace_context, promise);                            \
+        dyntrace_active_dyntrace_context, promise, in_force);                  \
     UNPROTECT(1);                                                              \
     DYNTRACE_PROBE_FOOTER(probe_promise_environment_lookup);
 
@@ -573,7 +573,7 @@ typedef struct {
     - src/main/eval.c
     ***************************************************************************/
     void (*probe_promise_value_lookup)(dyntrace_context_t *dyntrace_context,
-                                       const SEXP promise);
+                                       const SEXP promise, int in_force);
 
     /***************************************************************************
     Fires when the expression inside a promise is accessed.
@@ -581,7 +581,7 @@ typedef struct {
     - src/main/coerce.c
     ***************************************************************************/
     void (*probe_promise_expression_lookup)(
-        dyntrace_context_t *dyntrace_context, const SEXP promise);
+        dyntrace_context_t *dyntrace_context, const SEXP promise, int in_force);
 
     /***************************************************************************
       Fires when the environment inside a promise is accessed.
@@ -589,7 +589,7 @@ typedef struct {
       - src/main/eval.c
     ***************************************************************************/
     void (*probe_promise_environment_lookup)(
-        dyntrace_context_t *dyntrace_context, const SEXP promise);
+        dyntrace_context_t *dyntrace_context, const SEXP promise, int in_force);
 
     /***************************************************************************
     Look for DYNTRACE_PROBE_ERROR(...) in

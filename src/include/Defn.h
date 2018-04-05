@@ -1458,3 +1458,8 @@ extern void *alloca(size_t);
  *- page-delimiter: "^/\\*---"
  *- End:
  */
+
+static SEXP get_PRCODE(SEXP);
+static SEXP get_PREXPR(SEXP);
+static SEXP get_PRVALUE(SEXP);
+static SEXP get_PRENV(SEXP);

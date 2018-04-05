@@ -496,6 +496,8 @@ void attribute_hidden check_stack_balance(SEXP op, int save)
 }
 
 
+
+
 SEXP forcePromise(SEXP e)
 {
     if (PRVALUE(e) == R_UnboundValue) {
@@ -535,7 +537,7 @@ SEXP forcePromise(SEXP e)
 	SET_PRENV(e, R_NilValue);
 
     } else {
-      DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(e);
+      DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(e, 1);
     }
     return PRVALUE(e);
 }
@@ -663,7 +665,7 @@ SEXP eval(SEXP e, SEXP rho)
 	    else {
         SEXP temp_promise = tmp;
 		tmp = PRVALUE(tmp);
-		DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(temp_promise);
+		DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(temp_promise, 1);
 	    }
 	    SET_NAMED(tmp, 2);
 	}
@@ -4592,7 +4594,7 @@ SEXP R_BytecodeExpr(SEXP e)
 
 SEXP R_PromiseExpr(SEXP p)
 {
-    DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(p);
+    DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(p, 0);
     return bytecodeExpr(PRCODE(p));
 }
 
@@ -4778,7 +4780,7 @@ static R_INLINE SEXP FORCE_PROMISE(SEXP value, SEXP symbol, SEXP rho,
     } else {
         SEXP temp_promise = value;
         value = PRVALUE(value);
-        DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(temp_promise);
+        DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(temp_promise, 1);
     }
     SET_NAMED(value, 2);
     return value;
@@ -4869,7 +4871,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 			value = FORCE_PROMISE(value, symbol, rho, keepmiss); \
 		    }							\
 		    else {						\
-            DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(value) \
+            DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(value, 1) \
 		        value = pv;					\
 		    }							\
 		}							\
@@ -7726,4 +7728,24 @@ SEXP R_ParseEvalString(const char *str, SEXP env)
     SEXP val = eval(VECTOR_ELT(ps, 0), env);
     UNPROTECT(2); /* s, ps */
     return val;
+}
+
+static SEXP get_PRCODE(SEXP prom) {
+    DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(prom, 0);
+    return PRCODE(prom);
+}
+
+static SEXP get_PREXPR(SEXP prom) {
+    DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(prom, 0);
+    return PREXPR(prom);
+}
+
+static SEXP get_PRVALUE(SEXP prom) {
+    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(prom, 0);
+    return PRVALUE(prom);
+}
+
+static SEXP get_PRENV(SEXP prom) {
+    DYNTRACE_PROBE_PROMISE_ENVIRONMENT_LOOKUP(prom, 0);
+    return PRENV(prom);
 }

@@ -1178,7 +1178,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 
     for (t = args; t != R_NilValue; t = CDR(t)) {
 	u = PRVALUE(CAR(t));
-	DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t));
+	DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t), 0);
 	if((isMatrix(u) ? nrows(u) : length(u)) > 0) {
 	    lenmin = 1;
 	    break;
@@ -1190,7 +1190,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     int na = 0;
     for (t = args; t != R_NilValue; t = CDR(t), na++) {
 	u = PRVALUE(CAR(t));
-	DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t));
+	DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t), 0);
 	dims = getAttrib(u, R_DimSymbol);
 	if (length(dims) == 2) {
 	    if (mrows == -1)
@@ -1211,7 +1211,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 
     for (t = args, na = 0; t != R_NilValue; t = CDR(t), na++) {
 	u = PRVALUE(CAR(t));
-	DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t));
+	DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t), 0);
 	dims = getAttrib(u, R_DimSymbol);
 	if (length(dims) == 2) {
 	    dn = getAttrib(u, R_DimNamesSymbol);
@@ -1246,7 +1246,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     if (mode == STRSXP) {
 	for (t = args; t != R_NilValue; t = CDR(t)) {
 	    u = PRVALUE(CAR(t));
-	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t));
+	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t), 0);
 	    if (isMatrix(u) || length(u) >= lenmin) {
 		u = coerceVector(u, STRSXP);
 		R_xlen_t k = XLENGTH(u);
@@ -1259,7 +1259,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     else if (mode == VECSXP) {
 	for (t = args; t != R_NilValue; t = CDR(t)) {
 	    u = PRVALUE(CAR(t));
-	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t));
+	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t), 0);
 	    int umatrix = isMatrix(u); /* might be lost in coercion to VECSXP */
 	    if (umatrix || length(u) >= lenmin) {
 		/* we cannot assume here that coercion will work */
@@ -1296,7 +1296,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     else if (mode == CPLXSXP) {
 	for (t = args; t != R_NilValue; t = CDR(t)) {
 	    u = PRVALUE(CAR(t));
-	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t));
+	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t), 0);
 	    if (isMatrix(u) || length(u) >= lenmin) {
 		u = coerceVector(u, CPLXSXP);
 		R_xlen_t k = XLENGTH(u);
@@ -1309,7 +1309,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     else if (mode == RAWSXP) {
 	for (t = args; t != R_NilValue; t = CDR(t)) {
 	    u = PRVALUE(CAR(t));
-	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t));
+	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t), 0);
 	    if (isMatrix(u) || length(u) >= lenmin) {
 		u = coerceVector(u, RAWSXP);
 		R_xlen_t k = XLENGTH(u);
@@ -1322,7 +1322,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     else { /* everything else, currently REALSXP, INTSXP, LGLSXP */
 	for (t = args; t != R_NilValue; t = CDR(t)) {
 	    u = PRVALUE(CAR(t)); /* type of u can be any of: RAW, LGL, INT, REAL, or NULL */
-	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t));
+	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t), 0);
 	    if (isMatrix(u) || length(u) >= lenmin) {
 		R_xlen_t k = xlength(u); /* use xlength since u can be NULL */
 		R_xlen_t idx = (!isMatrix(u)) ? rows : k;
@@ -1376,7 +1376,7 @@ static SEXP cbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 	int j = 0;
 	for (t = args; t != R_NilValue; t = CDR(t)) {
 	    u = PRVALUE(CAR(t));
-	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t));
+	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t), 0);
 	    if (isMatrix(u)) {
 		v = getAttrib(u, R_DimNamesSymbol);
 
@@ -1444,7 +1444,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 
     for (t = args; t != R_NilValue; t = CDR(t)) {
 	u = PRVALUE(CAR(t));
-	DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t));
+	DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t), 0);
 	if((isMatrix(u) ? ncols(u) : length(u)) > 0) {
 	    lenmin = 1;
 	    break;
@@ -1456,7 +1456,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     int na = 0;
     for (t = args; t != R_NilValue; t = CDR(t), na++) {
 	u = PRVALUE(CAR(t));
-	DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t));
+	DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t), 0);
 	dims = getAttrib(u, R_DimSymbol);
 	if (length(dims) == 2) {
 	    if (mcols == -1)
@@ -1478,7 +1478,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     na = 0;
     for (t = args; t != R_NilValue; t = CDR(t), na++) {
 	u = PRVALUE(CAR(t));
-	DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t));
+	DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t), 0);
 	dims = getAttrib(u, R_DimSymbol);
 	if (length(dims) == 2) {
 	    dn = getAttrib(u, R_DimNamesSymbol);
@@ -1515,7 +1515,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     if (mode == STRSXP) {
 	for (t = args; t != R_NilValue; t = CDR(t)) {
 	    u = PRVALUE(CAR(t));
-	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t));
+	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t), 0);
 	    if (isMatrix(u) || length(u) >= lenmin) {
 		u = coerceVector(u, STRSXP);
 		R_xlen_t k = XLENGTH(u);
@@ -1528,7 +1528,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     else if (mode == VECSXP) {
 	for (t = args; t != R_NilValue; t = CDR(t)) {
 	    u = PRVALUE(CAR(t));
-	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t));
+	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t), 0);
 	    int umatrix = isMatrix(u), urows = umatrix ? nrows(u) : 1; /* coercing to VECSXP will lose these. PR#15468 */
 	    if (umatrix || length(u) >= lenmin) {
 		PROTECT(u = coerceVector(u, mode));
@@ -1545,7 +1545,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     else if (mode == RAWSXP) {
 	for (t = args; t != R_NilValue; t = CDR(t)) {
 	    u = PRVALUE(CAR(t));
-	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t));
+	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t), 0);
 	    if (isMatrix(u) || length(u) >= lenmin) {
 		u = coerceVector(u, RAWSXP);
 		R_xlen_t k = XLENGTH(u);
@@ -1559,7 +1559,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     else if (mode == CPLXSXP) {
 	for (t = args; t != R_NilValue; t = CDR(t)) {
 	    u = PRVALUE(CAR(t));
-	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t));
+	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t), 0);
 	    if (isMatrix(u) || length(u) >= lenmin) {
 		u = coerceVector(u, CPLXSXP);
 		R_xlen_t k = XLENGTH(u);
@@ -1573,7 +1573,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
     else { /* everything else, currently REALSXP, INTSXP, LGLSXP */
 	for (t = args; t != R_NilValue; t = CDR(t)) {
 	    u = PRVALUE(CAR(t)); /* type of u can be any of: RAW, LGL, INT, REAL */
-	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t));
+	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t), 0);
 	    if (isMatrix(u) || length(u) >= lenmin) {
 		R_xlen_t k = XLENGTH(u);
 		R_xlen_t idx = (isMatrix(u)) ? nrows(u) : (k > 0);
@@ -1620,7 +1620,7 @@ static SEXP rbind(SEXP call, SEXP args, SEXPTYPE mode, SEXP rho,
 	int j = 0;
 	for (t = args; t != R_NilValue; t = CDR(t)) {
 	    u = PRVALUE(CAR(t));
-	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t));
+	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(t), 0);
 	    if (isMatrix(u)) {
 		v = getAttrib(u, R_DimNamesSymbol);
 

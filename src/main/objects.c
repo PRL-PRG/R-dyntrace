@@ -85,7 +85,7 @@ static SEXP GetObject(RCNTXT *cptr)
 	else {
 	    SEXP s_saved = s;
 	    s = PRVALUE(s);
-	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(s_saved);
+	    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(s_saved, 0);
 	}
     }
     return(s);
