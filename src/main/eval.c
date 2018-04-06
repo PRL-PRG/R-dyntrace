@@ -7730,22 +7730,37 @@ SEXP R_ParseEvalString(const char *str, SEXP env)
     return val;
 }
 
-static SEXP get_PRCODE(SEXP prom) {
+SEXP get_PRCODE(SEXP prom) {
     DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(prom, 0);
     return PRCODE(prom);
 }
 
-static SEXP get_PREXPR(SEXP prom) {
+SEXP get_PREXPR(SEXP prom) {
     DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(prom, 0);
     return PREXPR(prom);
 }
 
-static SEXP get_PRVALUE(SEXP prom) {
+SEXP get_PRVALUE(SEXP prom) {
     DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(prom, 0);
     return PRVALUE(prom);
 }
 
-static SEXP get_PRENV(SEXP prom) {
+SEXP get_PRENV(SEXP prom) {
     DYNTRACE_PROBE_PROMISE_ENVIRONMENT_LOOKUP(prom, 0);
     return PRENV(prom);
+}
+
+void set_PRCODE(SEXP prom, SEXP value) {
+    //FIXME DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(prom, 0);
+    SET_PRCODE(prom, value);
+}
+
+void set_PRVALUE(SEXP prom, SEXP value) {
+    //FIXME DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(prom, 0);
+    SET_PRVALUE(prom, value);
+}
+
+void set_PRENV(SEXP prom, SEXP value) {
+    //FIXME DYNTRACE_PROBE_PROMISE_ENVIRONMENT_LOOKUP(prom, 0);
+    SET_PRENV(prom, value);
 }

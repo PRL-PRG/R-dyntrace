@@ -1456,6 +1456,13 @@ SEXP R_FixupRHS(SEXP x, SEXP y);
     } while (FALSE)
 #endif
 
+SEXP get_PRCODE(SEXP);
+SEXP get_PREXPR(SEXP);
+SEXP get_PRVALUE(SEXP);
+SEXP get_PRENV(SEXP);
+void set_PRCODE(SEXP, SEXP);
+void set_PRVALUE(SEXP, SEXP);
+void set_PRENV(SEXP, SEXP);
 
 #ifdef __cplusplus
 }

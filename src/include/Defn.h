@@ -1459,7 +1459,10 @@ extern void *alloca(size_t);
  *- End:
  */
 
-static SEXP get_PRCODE(SEXP);
-static SEXP get_PREXPR(SEXP);
-static SEXP get_PRVALUE(SEXP);
-static SEXP get_PRENV(SEXP);
+SEXP get_PRCODE(SEXP);
+SEXP get_PREXPR(SEXP);
+SEXP get_PRVALUE(SEXP);
+SEXP get_PRENV(SEXP);
+void set_PRCODE(SEXP, SEXP);
+void set_PRVALUE(SEXP, SEXP);
+void set_PRENV(SEXP, SEXP);
