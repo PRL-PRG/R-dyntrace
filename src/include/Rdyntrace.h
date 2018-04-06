@@ -181,6 +181,30 @@ extern "C" {
     UNPROTECT(1);                                                              \
     DYNTRACE_PROBE_FOOTER(probe_promise_environment_lookup);
 
+#define DYNTRACE_PROBE_PROMISE_VALUE_SET(promise, in_force)                    \
+    DYNTRACE_PROBE_HEADER(probe_promise_value_lookup);                         \
+    PROTECT(promise);                                                          \
+    dyntrace_active_dyntracer->probe_promise_value_set(                        \
+        dyntrace_active_dyntrace_context, promise, in_force);                  \
+    UNPROTECT(1);                                                              \
+    DYNTRACE_PROBE_FOOTER(probe_promise_value_lookup);
+
+#define DYNTRACE_PROBE_PROMISE_EXPRESSION_SET(promise, in_force)               \
+    DYNTRACE_PROBE_HEADER(probe_promise_expression_lookup);                    \
+    PROTECT(promise);                                                          \
+    dyntrace_active_dyntracer->probe_promise_expression_set(                   \
+        dyntrace_active_dyntrace_context, promise, in_force);                  \
+    UNPROTECT(1);                                                              \
+    DYNTRACE_PROBE_FOOTER(probe_promise_expression_lookup);
+
+#define DYNTRACE_PROBE_PROMISE_ENVIRONMENT_SET(promise, in_force)              \
+    DYNTRACE_PROBE_HEADER(probe_promise_environment_lookup);                   \
+    PROTECT(promise);                                                          \
+    dyntrace_active_dyntracer->probe_promise_environment_set(                  \
+        dyntrace_active_dyntrace_context, promise, in_force);                  \
+    UNPROTECT(1);                                                              \
+    DYNTRACE_PROBE_FOOTER(probe_promise_environment_lookup);
+
 #define DYNTRACE_PROBE_ERROR(call, message)                                    \
     DYNTRACE_PROBE_HEADER(probe_error);                                        \
     PROTECT(call);                                                             \
@@ -590,6 +614,13 @@ typedef struct {
     ***************************************************************************/
     void (*probe_promise_environment_lookup)(
         dyntrace_context_t *dyntrace_context, const SEXP promise, int in_force);
+
+    void (*probe_promise_value_set)(dyntrace_context_t *dyntrace_context,
+                                       const SEXP promise, int in_force);
+    void (*probe_promise_expression_set)(
+            dyntrace_context_t *dyntrace_context, const SEXP promise, int in_force);
+    void (*probe_promise_environment_set)(
+            dyntrace_context_t *dyntrace_context, const SEXP promise, int in_force);
 
     /***************************************************************************
     Look for DYNTRACE_PROBE_ERROR(...) in

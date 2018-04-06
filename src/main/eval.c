@@ -7751,16 +7751,16 @@ SEXP get_PRENV(SEXP prom) {
 }
 
 void set_PRCODE(SEXP prom, SEXP value) {
-    //FIXME DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(prom, 0);
+    DYNTRACE_PROBE_PROMISE_EXPRESSION_SET(prom, 0);
     SET_PRCODE(prom, value);
 }
 
 void set_PRVALUE(SEXP prom, SEXP value) {
-    //FIXME DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(prom, 0);
+    DYNTRACE_PROBE_PROMISE_VALUE_SET(prom, 0);
     SET_PRVALUE(prom, value);
 }
 
 void set_PRENV(SEXP prom, SEXP value) {
-    //FIXME DYNTRACE_PROBE_PROMISE_ENVIRONMENT_LOOKUP(prom, 0);
+    DYNTRACE_PROBE_PROMISE_ENVIRONMENT_SET(prom, 0);
     SET_PRENV(prom, value);
 }
