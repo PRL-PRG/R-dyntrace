@@ -737,7 +737,6 @@ SEXP eval(SEXP e, SEXP rho)
 	    DYNTRACE_PROBE_SPECIALSXP_EXIT(e, op, rho, tmp);
 	}
 	else if (TYPEOF(op) == BUILTINSXP) {
-        DYNTRACE_PROBE_BUILTIN_ENTRY(e, op, rho);// XXX after begincontext?
 
 	    int save = R_PPStackTop, flag = PRIMPRINT(op);
 	    const void *vmax = vmaxget();
@@ -750,12 +749,17 @@ SEXP eval(SEXP e, SEXP rho)
 		SEXP oldref = R_Srcref;
 		begincontext(&cntxt, CTXT_BUILTIN, e,
 			     R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
+    DYNTRACE_PROBE_BUILTIN_ENTRY(e, op, rho);
 		R_Srcref = NULL;
 		tmp = PRIMFUN(op) (e, op, tmp, rho);
 		R_Srcref = oldref;
+    DYNTRACE_PROBE_BUILTIN_EXIT(e, op, rho, tmp);
 		endcontext(&cntxt);
 	    } else {
+    DYNTRACE_PROBE_BUILTIN_ENTRY(e, op, rho);
 		tmp = PRIMFUN(op) (e, op, tmp, rho);
+    DYNTRACE_PROBE_BUILTIN_EXIT(e, op, rho, tmp);
+
 	    }
 #ifdef CHECK_VISIBILITY
 	    if(flag < 2 && R_Visible == flag) {
@@ -767,8 +771,6 @@ SEXP eval(SEXP e, SEXP rho)
 	    UNPROTECT(1);
 	    check_stack_balance(op, save);
 	    vmaxset(vmax);
-
-	    DYNTRACE_PROBE_BUILTIN_EXIT(e, op, rho, tmp);
 	}
 	else if (TYPEOF(op) == CLOSXP) {
 	    PROTECT(tmp = promiseArgs(CDR(e), rho));
@@ -1682,7 +1684,6 @@ SEXP R_forceAndCall(SEXP e, int n, SEXP rho)
 	int flag = PRIMPRINT(fun);
 	PROTECT(tmp = evalList(CDR(e), rho, e, 0));
 	if (flag < 2) R_Visible = flag != 1;
-	DYNTRACE_PROBE_BUILTIN_ENTRY(e, fun, rho); // XXX after begincontext?
 	/* We used to insert a context only if profiling,
 	   but helps for tracebacks on .C etc. */
 	if (R_Profiling || (PPINFO(fun).kind == PP_FOREIGN)) {
@@ -1690,14 +1691,17 @@ SEXP R_forceAndCall(SEXP e, int n, SEXP rho)
 	    SEXP oldref = R_Srcref;
 	    begincontext(&cntxt, CTXT_BUILTIN, e,
 			 R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
+      DYNTRACE_PROBE_BUILTIN_ENTRY(e, fun, rho);
 	    R_Srcref = NULL;
 	    tmp = PRIMFUN(fun) (e, fun, tmp, rho);
 	    R_Srcref = oldref;
+      DYNTRACE_PROBE_BUILTIN_EXIT(e, fun, rho, tmp);
 	    endcontext(&cntxt);
 	} else {
+      DYNTRACE_PROBE_BUILTIN_ENTRY(e, fun, rho);
 	    tmp = PRIMFUN(fun) (e, fun, tmp, rho);
+      DYNTRACE_PROBE_BUILTIN_EXIT(e, fun, rho, tmp);
 	}
-	DYNTRACE_PROBE_BUILTIN_EXIT(e, fun, rho, tmp);
 	if (flag < 2) R_Visible = flag != 1;
 	UNPROTECT(1);
     }
@@ -6498,20 +6502,22 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	flag = PRIMPRINT(fun);
 	R_Visible = flag != 1;
 	SEXP value;
-	DYNTRACE_PROBE_BUILTIN_ENTRY(call, fun, rho); // XXX after begincontext?
 	if (R_Profiling && IS_TRUE_BUILTIN(fun)) {
 	    RCNTXT cntxt;
 	    SEXP oldref = R_Srcref;
 	    begincontext(&cntxt, CTXT_BUILTIN, call,
 			 R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
+      DYNTRACE_PROBE_BUILTIN_ENTRY(call, fun, rho);
 	    R_Srcref = NULL;
 	    value = PRIMFUN(fun) (call, fun, args, rho);
 	    R_Srcref = oldref;
+      DYNTRACE_PROBE_BUILTIN_EXIT(call, fun, rho, value);
 	    endcontext(&cntxt);
 	} else {
+      DYNTRACE_PROBE_BUILTIN_ENTRY(call, fun, rho);
 	    value = PRIMFUN(fun) (call, fun, args, rho);
+      DYNTRACE_PROBE_BUILTIN_EXIT(call, fun, rho, value);
 	}
-	DYNTRACE_PROBE_BUILTIN_EXIT(call, fun, rho, value);
 	if (flag < 2) R_Visible = flag != 1;
 	vmaxset(vmax);
 	POP_CALL_FRAME(value);
