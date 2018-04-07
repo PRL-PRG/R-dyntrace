@@ -863,6 +863,7 @@ void attribute_hidden unbindVar(SEXP symbol, SEXP rho)
 	}
 	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
 	R_HashDelete(hashcode, symbol, HASHTAB(rho));
+  DYNTRACE_PROBE_ENVIRONMENT_REMOVE_VAR(symbol, rho);
 	/* we have no record here if deletion worked */
 	if (rho == R_GlobalEnv) R_DirtyImage = 1;
     }
@@ -893,6 +894,7 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
 	   the binding object in that case, but it isn't clear that
 	   would be useful. LT */
 	c = SYMBOL_BINDING_VALUE(symbol);
+  DYNTRACE_PROBE_ENVIRONMENT_LOOKUP_VAR(symbol, c, rho);
 	return (c == R_UnboundValue) ? R_NilValue : c;
     }
 
@@ -918,6 +920,7 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
 	    if(canCache && table->canCache)
 		*canCache = table->canCache(CHAR(PRINTNAME(symbol)), table);
 	}
+  DYNTRACE_PROBE_ENVIRONMENT_LOOKUP_VAR(symbol, val, rho);
 	return(tmp);
     }
 
@@ -925,6 +928,9 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
 	frame = FRAME(rho);
 	while (frame != R_NilValue && TAG(frame) != symbol)
 	    frame = CDR(frame);
+  if(frame != R_NilValue) {
+      DYNTRACE_PROBE_ENVIRONMENT_LOOKUP_VAR(symbol, CAR(frame), rho);
+  }
 	return frame;
     }
     else {
@@ -935,7 +941,11 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
 	}
 	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
 	/* Will return 'R_NilValue' if not found */
-	return R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
+	SEXP chain = R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
+  if(chain != R_NilValue) {
+      DYNTRACE_PROBE_ENVIRONMENT_LOOKUP_VAR(symbol, BINDING_VALUE(chain), rho);
+  }
+  return chain;
     }
 }
 
@@ -1003,8 +1013,11 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, Rboolean doGet)
     if (TYPEOF(rho) == NILSXP)
 	error(_("use of NULL environment is defunct"));
 
-    if (rho == R_BaseNamespace || rho == R_BaseEnv)
-	return SYMBOL_BINDING_VALUE(symbol);
+    if (rho == R_BaseNamespace || rho == R_BaseEnv) {
+      SEXP value = SYMBOL_BINDING_VALUE(symbol);
+      DYNTRACE_PROBE_ENVIRONMENT_LOOKUP_VAR(symbol, value, rho);
+      return value;
+  }
 
     if (rho == R_EmptyEnv)
 	return R_UnboundValue;
@@ -1024,12 +1037,17 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, Rboolean doGet)
 		    val = R_UnboundValue;
 	    }
 	}
+  if (val != R_UnboundValue)
+    DYNTRACE_PROBE_ENVIRONMENT_LOOKUP_VAR(symbol, val, rho);
 	return(val);
     } else if (HASHTAB(rho) == R_NilValue) {
 	frame = FRAME(rho);
 	while (frame != R_NilValue) {
-	    if (TAG(frame) == symbol)
-		return BINDING_VALUE(frame);
+    if (TAG(frame) == symbol) {
+      SEXP value = BINDING_VALUE(frame);
+      DYNTRACE_PROBE_ENVIRONMENT_LOOKUP_VAR(symbol, value, rho);
+      return value;
+    }
 	    frame = CDR(frame);
 	}
     }
@@ -1041,7 +1059,10 @@ SEXP findVarInFrame3(SEXP rho, SEXP symbol, Rboolean doGet)
 	}
 	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
 	/* Will return 'R_UnboundValue' if not found */
-	return(R_HashGet(hashcode, symbol, HASHTAB(rho)));
+  SEXP value = R_HashGet(hashcode, symbol, HASHTAB(rho));
+  if (value != R_UnboundValue)
+    DYNTRACE_PROBE_ENVIRONMENT_LOOKUP_VAR(symbol, value, rho);
+	return value;
     }
     return R_UnboundValue;
 }
@@ -1056,8 +1077,13 @@ static Rboolean existsVarInFrame(SEXP rho, SEXP symbol)
     if (TYPEOF(rho) == NILSXP)
 	error(_("use of NULL environment is defunct"));
 
-    if (rho == R_BaseNamespace || rho == R_BaseEnv)
-	return SYMBOL_HAS_BINDING(symbol);
+    if (rho == R_BaseNamespace || rho == R_BaseEnv) {
+      Rboolean result = SYMBOL_HAS_BINDING(symbol);
+      if(result) {
+        //DYNTRACE_PROBE_ENVIRONMENT_EXISTS_VAR(symbol, rho);
+      }
+      return result;
+    }
 
     if (rho == R_EmptyEnv)
 	return FALSE;
@@ -1068,8 +1094,10 @@ static Rboolean existsVarInFrame(SEXP rho, SEXP symbol)
 	Rboolean val = FALSE;
 	table = (R_ObjectTable *) R_ExternalPtrAddr(HASHTAB(rho));
 	if(table->active) {
-	    if(table->exists(CHAR(PRINTNAME(symbol)), NULL, table))
+    if(table->exists(CHAR(PRINTNAME(symbol)), NULL, table)) {
+      //DYNTRACE_PROBE_ENVIRONMENT_EXISTS_VAR(symbol, rho);
 		val = TRUE;
+    }
 	    else
 		val = FALSE;
 	}
@@ -1077,8 +1105,10 @@ static Rboolean existsVarInFrame(SEXP rho, SEXP symbol)
     } else if (HASHTAB(rho) == R_NilValue) {
 	frame = FRAME(rho);
 	while (frame != R_NilValue) {
-	    if (TAG(frame) == symbol)
+    if (TAG(frame) == symbol) {
+      //DYNTRACE_PROBE_ENVIRONMENT_EXISTS_VAR(symbol, rho);
 		return TRUE;
+    }
 	    frame = CDR(frame);
 	}
     }
@@ -1091,6 +1121,8 @@ static Rboolean existsVarInFrame(SEXP rho, SEXP symbol)
 	hashcode = HASHVALUE(c) % HASHSIZE(HASHTAB(rho));
 	/* Will return 'R_UnboundValue' if not found */
 	return R_HashExists(hashcode, symbol, HASHTAB(rho));
+  //if(result != R_UnboundValue)
+   //DYNTRACE_PROBE_ENVIRONMENT_EXISTS_VAR(symbol, rho);
     }
     return FALSE;
 }
@@ -1226,7 +1258,7 @@ SEXP findVar(SEXP symbol, SEXP rho)
     while (rho != R_GlobalEnv && rho != R_EmptyEnv) {
 	vl = findVarInFrame3(rho, symbol, TRUE /* get rather than exists */);
 	if (vl != R_UnboundValue) {
-    DYNTRACE_PROBE_ENVIRONMENT_LOOKUP_VAR(symbol, vl, rho);
+    //DYNTRACE_PROBE_ENVIRONMENT_LOOKUP_VAR(symbol, vl, rho); will cause double event, findVarInFrame3 is already probed
     return (vl);
   }
 	rho = ENCLOS(rho);
@@ -1239,7 +1271,7 @@ SEXP findVar(SEXP symbol, SEXP rho)
     while (rho != R_EmptyEnv) {
 	vl = findVarInFrame3(rho, symbol, TRUE);
 	if (vl != R_UnboundValue) {
-    DYNTRACE_PROBE_ENVIRONMENT_LOOKUP_VAR(symbol, vl, rho);
+    //DYNTRACE_PROBE_ENVIRONMENT_LOOKUP_VAR(symbol, vl, rho); will cause double event, findVarInFrame3 is already probed
     return (vl);
   }
 	rho = ENCLOS(rho);
@@ -3326,8 +3358,10 @@ void R_MakeActiveBinding(SEXP sym, SEXP fun, SEXP env)
 	    error(_("symbol already has a regular binding"));
 	else if (BINDING_IS_LOCKED(binding))
 	    error(_("cannot change active binding if binding is locked"));
-	else
-	    SETCAR(binding, fun);
+	else {
+    SETCAR(binding, fun);
+    DYNTRACE_PROBE_ENVIRONMENT_ASSIGN_VAR(sym, fun, env);
+  }
     }
 }
 
