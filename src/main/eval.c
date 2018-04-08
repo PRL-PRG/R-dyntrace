@@ -1562,7 +1562,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
 	if (CAR(a) == R_MissingArg && CAR(f) != R_MissingArg) {
 	    SETCAR(a, mkPROMISE(CAR(f), newrho));
 	    SET_MISSING(a, 2);
-      DYNTRACE_PROBE_ENVIRONMENT_DEFINE_VAR(TAG(f), CAR(a), newrho);
+      DYNTRACE_PROBE_ENVIRONMENT_ASSIGN_VAR(TAG(f), CAR(a), newrho);
 	}
 	f = CDR(f);
 	a = CDR(a);
