@@ -2399,7 +2399,7 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
     n = CHK(namelist);
     while (v != R_NilValue && n != R_NilValue) {
 	SET_TAG(v, TAG(n));
-  DYNTRACE_PROBE_ENVIRONMENT_DEFINE_VAR(TAG(n), v, newrho);
+  DYNTRACE_PROBE_ENVIRONMENT_DEFINE_VAR(TAG(n), CAR(v), newrho);
 	v = CDR(v);
 	n = CDR(n);
     }
