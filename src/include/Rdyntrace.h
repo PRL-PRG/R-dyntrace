@@ -258,6 +258,14 @@ extern "C" {
     UNPROTECT(1);                                                              \
     DYNTRACE_PROBE_FOOTER(probe_gc_promise_unmarked);
 
+#define DYNTRACE_PROBE_GC_FUNCTION_UNMARKED(function)                          \
+    DYNTRACE_PROBE_HEADER(probe_gc_function_unmarked);                         \
+    PROTECT(function);                                                         \
+    dyntrace_active_dyntracer->probe_gc_function_unmarked(                     \
+        dyntrace_active_dyntrace_context, function);                           \
+    UNPROTECT(1);                                                              \
+    DYNTRACE_PROBE_FOOTER(probe_gc_function_unmarked);
+
 #define DYNTRACE_PROBE_BEGIN_CTXT(cptr)                                        \
     DYNTRACE_PROBE_HEADER(probe_begin_ctxt);                                   \
     dyntrace_active_dyntracer->probe_begin_ctxt(                               \
@@ -385,6 +393,7 @@ extern "C" {
 #define DYNTRACE_PROBE_GC_ENTRY(size_needed)
 #define DYNTRACE_PROBE_GC_EXIT(gc_count, vcells, ncells)
 #define DYNTRACE_PROBE_GC_PROMISE_UNMARKED(promise)
+#define DYNTRACE_PROBE_GC_FUNCTION_UNMARKED(promise)
 #define DYNTRACE_PROBE_BEGIN_CTXT(cptr)
 #define DYNTRACE_PROBE_JUMP_CTXT(rho, val)
 #define DYNTRACE_PROBE_END_CTXT(cptr)
@@ -425,6 +434,7 @@ typedef struct {
     clock_t probe_gc_entry;
     clock_t probe_gc_exit;
     clock_t probe_gc_promise_unmarked;
+    clock_t probe_gc_function_unmarked;
     clock_t probe_jump_ctxt;
     clock_t probe_begin_ctxt;
     clock_t probe_end_ctxt;
@@ -462,6 +472,7 @@ typedef struct {
     unsigned int probe_gc_entry;
     unsigned int probe_gc_exit;
     unsigned int probe_gc_promise_unmarked;
+    unsigned int probe_gc_function_unmarked;
     unsigned int probe_jump_ctxt;
     unsigned int probe_begin_ctxt;
     unsigned int probe_end_ctxt;
@@ -672,6 +683,14 @@ typedef struct {
     ***************************************************************************/
     void (*probe_gc_promise_unmarked)(dyntrace_context_t *dyntrace_context,
                                       const SEXP promise);
+
+    /***************************************************************************
+    Fires when a closure, builtin, or special gets garbage collected
+    Look for DYNTRACE_PROBE_GC_FUNCTION_UNMARKED(...) in
+    - src/main/memory.c
+    ***************************************************************************/
+    void (*probe_gc_function_unmarked)(dyntrace_context_t *dyntrace_context,
+                                      const SEXP function);
 
     /***************************************************************************
     Fires when the interpreter is about to longjump into a different context.

@@ -1756,6 +1756,12 @@ static void RunGenCollect(R_size_t size_needed)
           DYNTRACE_PROBE_GC_PROMISE_UNMARKED(s);
             TYPEOF(s) = FREESXP;
         }
+        else if (TYPEOF(s) != FREESXP && (TYPEOF(s) == CLOSXP
+                                      || TYPEOF(s) == SPECIALSXP
+                                      || TYPEOF(s) == BUILTINSXP)) {
+          DYNTRACE_PROBE_GC_FUNCTION_UNMARKED(s);
+            TYPEOF(s) = FREESXP;
+        }
         s = next;
     }
 #endif
