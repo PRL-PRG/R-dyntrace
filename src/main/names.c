@@ -19,6 +19,7 @@
  *  https://www.R-project.org/Licenses/
  */
 
+#include <Rdyntrace.h>
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -124,6 +125,7 @@ FUNTAB R_FunTab[] =
 {"nargs",	do_nargs,	1,	1,	0,	{PP_FUNCALL, PREC_FN,	0}},
 {"on.exit",	do_onexit,	0,	100,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
 {"forceAndCall",do_forceAndCall,	0,	0,	-1,	{PP_FUNCALL, PREC_FN,	  0}},
+{"dyntrace", do_dyntrace, 0, 0,	3, {PP_FUNCALL, PREC_FN, 0}},
 
 /* .Internals */
 

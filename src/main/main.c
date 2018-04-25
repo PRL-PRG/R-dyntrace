@@ -38,7 +38,7 @@
 #include "Fileio.h"
 #include "Parse.h"
 #include "Startup.h"
-
+#include <Rdyntrace.h>
 #include <locale.h>
 #include <R_ext/Print.h>
 

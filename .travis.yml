@@ -1,0 +1,12 @@
+language: c
+
+dist: bionic
+
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install gfortran
+  - sudo apt-get install liblzma-dev
+  - wget https://zlib.net/zlib-1.2.11.tar.gz && tar -xvf zlib-1.2.11.tar.gz && cd zlib-1.2.11 && ./configure && sudo make && sudo make install && cd ../
+  - wget https://ftp.pcre.org/pub/pcre/pcre-8.42.tar.gz && tar -xvf pcre-8.42.tar.gz && cd pcre-8.42 && ./configure --enable-utf8 --enable-unicode-properties && sudo make && sudo make install && cd ../
+
+script: ./build
