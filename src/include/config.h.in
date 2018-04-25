@@ -18,6 +18,9 @@
    language is requested. */
 #undef ENABLE_NLS
 
+/* DYNTRACE is enabled */
+#undef ENABLE_DYNTRACE
+
 /* Define to dummy `main' function (if any) required to link to the Fortran
    libraries. */
 #undef FC_DUMMY_MAIN

@@ -107,6 +107,7 @@
 #include <config.h>
 #endif
 
+#include <Rdyntrace.h>
 #define R_USE_SIGNALS 1
 #include <Defn.h>
 #include <Internal.h>
@@ -236,7 +237,7 @@ void attribute_hidden NORET R_jumpctxt(RCNTXT * targetcptr, int mask, SEXP val)
 	R_CStackLimit = R_OldCStackLimit;
 	R_OldCStackLimit = 0;
     }
-
+    DYNTRACE_PROBE_CONTEXT_JUMP(cptr, val, val == R_RestartToken);
     LONGJMP(cptr->cjmpbuf, mask);
 }
 
@@ -277,6 +278,7 @@ void begincontext(RCNTXT * cptr, int flags,
     cptr->jumpmask = 0;
 
     R_GlobalContext = cptr;
+    DYNTRACE_PROBE_CONTEXT_ENTRY(cptr);
 }
 
 
@@ -314,6 +316,7 @@ void endcontext(RCNTXT * cptr)
     }
     if (R_ExitContext == cptr)
 	R_ExitContext = NULL;
+    DYNTRACE_PROBE_CONTEXT_EXIT(cptr);
     /* continue jumping if this was reached as an intermetiate jump */
     if (jumptarget)
 	/* cptr->returnValue is undefined */

@@ -19,6 +19,7 @@
 
 /* <UTF8> byte-level access is only to compare with chars <= 0x7F */
 
+#include <Rdyntrace.h>
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -1875,6 +1876,7 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	if      (type == CLOSXP && CLOENV(s) == R_NilValue) SET_CLOENV(s, R_BaseEnv);
 	else if (type == PROMSXP && PRENV(s) == R_NilValue) SET_PRENV(s, R_BaseEnv);
 	if (set_lastname) strcpy(lastname, "<unknown>");
+	DYNTRACE_PROBE_DESERIALIZE_OBJECT(s);
 	UNPROTECT(1); /* s */
 	return s;
     default:

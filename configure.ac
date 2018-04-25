@@ -357,6 +357,13 @@ AC_ARG_ENABLE([java],
 [want_java=yes])
 AM_CONDITIONAL(WANT_JAVA, [test "x${want_java}" = xyes])
 
+AC_ARG_ENABLE(dyntrace,
+[AS_HELP_STRING([--enable-dyntrace],[Dynamic tracing for R @<:@yes@:>@])],
+[enable_dyntrace=$enableval], [enable_dyntrace=yes])
+if test "${enable_dyntrace}" = "yes"; then
+  AC_DEFINE(ENABLE_DYNTRACE, 1, [DYNTRACE is enabled])
+fi
+
 ### ** Optional packages.
 
 ## BLAS.

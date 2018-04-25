@@ -52,7 +52,7 @@ for(f in ls(.ArgsEnv, all.names=TRUE))
 ff <- as.list(baseenv(), all.names=TRUE)
 ff <- names(ff)[vapply(ff, is.primitive, logical(1L))]
 
-known <- c(names(.GenericArgsEnv), names(.ArgsEnv), tools::langElts)
+known <- c(names(.GenericArgsEnv), names(.ArgsEnv), tools::langElts, "dyntrace")
 stopifnot(ff %in% known, known %in% ff)
 
 

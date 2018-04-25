@@ -102,6 +102,8 @@ extern void *Rm_realloc(void * p, size_t n);
 #define free Rm_free
 #endif
 
+#include <Rdyntrace.h>
+
 /* malloc uses size_t.  We are assuming here that size_t is at least
    as large as unsigned long.  Changed from int at 1.6.0 to (i) allow
    2-4Gb objects on 32-bit system and (ii) objects limited only by
@@ -1098,7 +1100,7 @@ static void ReleaseLargeFreeVectors()
 	    SEXP next = NEXT_NODE(s);
 	    if (CHAR(s) != NULL) {
 		R_size_t size;
-#ifdef PROTECTCHECK
+#if defined(PROTECTCHECK) || defined(ENABLE_DYNTRACE)
 		if (TYPEOF(s) == FREESXP)
 		    size = STDVEC_LENGTH(s);
 		else
@@ -1850,6 +1852,71 @@ static int RunGenCollect(R_size_t size_needed)
     FORWARD_NODE(R_StringHash);
     PROCESS_NODES();
 
+#ifdef ENABLE_DYNTRACE
+    if (dyntrace_active_dyntracer != NULL) {
+#define SETOLDTYPE(s, t) SETLEVELS(s, t)
+        SEXP s;
+        int i;
+
+        for (i = 0; i < NUM_SMALL_NODE_CLASSES; i++) {
+            s = NEXT_NODE(R_GenHeap[i].New);
+
+            /* First unmark all promises because promises also contain environment
+               expression and value inside of them. This ensures that when the probe
+               processes an unmarked promise, it still has access to the type of
+               the promise expression, value and environment.*/
+            while (s != R_GenHeap[i].New) {
+                SEXP next = NEXT_NODE(s);
+                if (TYPEOF(s) == PROMSXP) {
+                    DYNTRACE_PROBE_GC_UNMARK(s);
+                    SETOLDTYPE(s, TYPEOF(s));
+                    TYPEOF(s) = FREESXP;
+                }
+                s = next;
+            }
+
+            /* This code unmarks all non promise objects. There is no explicit check for
+               promises because promises that have been processed in the previous loop
+               have their type set to FREESXP. */
+            s = NEXT_NODE(R_GenHeap[i].New);
+            while (s != R_GenHeap[i].New) {
+                SEXP next = NEXT_NODE(s);
+                if (TYPEOF(s) != NEWSXP) {
+                    if(TYPEOF(s) != FREESXP ) {
+                        DYNTRACE_PROBE_GC_UNMARK(s);
+                        SETOLDTYPE(s, TYPEOF(s));
+                        TYPEOF(s) = FREESXP;
+                    }
+                }
+                s = next;
+            }
+        }
+
+        for (i = CUSTOM_NODE_CLASS; i <= LARGE_NODE_CLASS; i++) {
+            s = NEXT_NODE(R_GenHeap[i].New);
+            while (s != R_GenHeap[i].New) {
+                SEXP next = NEXT_NODE(s);
+                if (TYPEOF(s) != NEWSXP) {
+                   if(TYPEOF(s) != FREESXP) {
+                       /**** could also leave this alone and restore the old
+                             node type in ReleaseLargeFreeVectors before
+                             calculating size */
+                       if (CHAR(s) != NULL) {
+                           R_size_t size = getVecSizeInVEC(s);
+                           SET_STDVEC_LENGTH(s, size);
+                       }
+                       DYNTRACE_PROBE_GC_UNMARK(s);
+                       SETOLDTYPE(s, TYPEOF(s));
+                       SET_TYPEOF(s, FREESXP);
+                   }
+                }
+                s = next;
+            }
+        }
+    }
+#endif
+
+
 #ifdef PROTECTCHECK
     for(i=0; i< NUM_SMALL_NODE_CLASSES;i++){
 	s = NEXT_NODE(R_GenHeap[i].New);
@@ -2374,6 +2441,7 @@ SEXP allocSExp(SEXPTYPE t)
     CDR(s) = R_NilValue;
     TAG(s) = R_NilValue;
     ATTRIB(s) = R_NilValue;
+    DYNTRACE_PROBE_GC_ALLOCATE(s);
     return s;
 }
 
@@ -2424,6 +2492,7 @@ SEXP cons(SEXP car, SEXP cdr)
     CDR(s) = CHK(cdr); if (cdr) INCREMENT_REFCNT(cdr);
     TAG(s) = R_NilValue;
     ATTRIB(s) = R_NilValue;
+    DYNTRACE_PROBE_GC_ALLOCATE(s);
     return s;
 }
 
@@ -2456,6 +2525,7 @@ SEXP attribute_hidden CONS_NR(SEXP car, SEXP cdr)
     CDR(s) = CHK(cdr);
     TAG(s) = R_NilValue;
     ATTRIB(s) = R_NilValue;
+    DYNTRACE_PROBE_GC_ALLOCATE(s);
     return s;
 }
 
@@ -2509,10 +2579,13 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
     HASHTAB(newrho) = R_NilValue;
     ATTRIB(newrho) = R_NilValue;
 
+    DYNTRACE_PROBE_GC_ALLOCATE(newrho);
+
     v = CHK(valuelist);
     n = CHK(namelist);
     while (v != R_NilValue && n != R_NilValue) {
 	SET_TAG(v, TAG(n));
+  DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_DEFINE(TAG(n), CAR(v), newrho);
 	v = CDR(v);
 	n = CDR(n);
     }
@@ -2554,6 +2627,7 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     PRVALUE(s) = R_UnboundValue;
     PRSEEN(s) = 0;
     ATTRIB(s) = R_NilValue;
+    DYNTRACE_PROBE_GC_ALLOCATE(s);
     return s;
 }
 
@@ -2650,6 +2724,7 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 	    SET_STDVEC_LENGTH(s, (R_len_t) length); // is 1
 	    SET_STDVEC_TRUELENGTH(s, 0);
 	    INIT_REFCNT(s);
+      DYNTRACE_PROBE_GC_ALLOCATE(s);
 	    return(s);
 	}
     }
@@ -2735,7 +2810,8 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 #endif
 	s = allocList((int) length);
 	SET_TYPEOF(s, LANGSXP);
-	return s;
+  DYNTRACE_PROBE_GC_ALLOCATE(s);
+  return s;
     case LISTSXP:
 #ifdef LONG_VECTOR_SUPPORT
 	if (length > R_SHORT_LEN_MAX) error("invalid length for pairlist");
@@ -2897,6 +2973,7 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
     else if (type == RAWSXP)
 	VALGRIND_MAKE_MEM_UNDEFINED(RAW(s), actual_size);
 #endif
+    DYNTRACE_PROBE_GC_ALLOCATE(s);
     return s;
 }
 
@@ -2921,6 +2998,7 @@ SEXP allocS4Object(void)
    SEXP s;
    GC_PROT(s = allocSExpNonCons(S4SXP));
    SET_S4_OBJECT(s);
+   DYNTRACE_PROBE_GC_ALLOCATE(s);
    return s;
 }
 
@@ -3097,6 +3175,9 @@ static void R_gc_internal(R_size_t size_needed)
       gc_pending = TRUE;
       return;
     }
+
+    DYNTRACE_PROBE_GC_ENTRY(size_needed);
+
     gc_pending = FALSE;
 
     R_size_t onsize = R_NSize /* can change during collection */;
@@ -3220,6 +3301,7 @@ static void R_gc_internal(R_size_t size_needed)
 	LOGICAL(R_LogicalNAValue)[0] = NA_LOGICAL;
 	gc_error("internal logical NA value has been modified");
     }
+    DYNTRACE_PROBE_GC_EXIT(gc_count);
 }
 
 
@@ -4291,15 +4373,65 @@ void (SET_HASHTAB)(SEXP x, SEXP v) { FIX_REFCNT(x, HASHTAB(x), v); CHECK_OLD_TO_
 void (SET_ENVFLAGS)(SEXP x, int v) { SET_ENVFLAGS(x, v); }
 
 /* Promise Accessors */
-SEXP (PRCODE)(SEXP x) { return CHK(PRCODE(CHK(x))); }
-SEXP (PRENV)(SEXP x) { return CHK(PRENV(CHK(x))); }
-SEXP (PRVALUE)(SEXP x) { return CHK(PRVALUE(CHK(x))); }
+SEXP (PRCODE)(SEXP x) {
+    DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(x);
+    return CHK(PRCODE(CHK(x)));
+}
+
+SEXP (PRENV)(SEXP x) {
+    DYNTRACE_PROBE_PROMISE_ENVIRONMENT_LOOKUP(x);
+    return CHK(PRENV(CHK(x)));
+}
+
+SEXP (PRVALUE)(SEXP x) {
+    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(x);
+    return CHK(PRVALUE(CHK(x)));
+}
+
 int (PRSEEN)(SEXP x) { return PRSEEN(CHK(x)); }
 
-void (SET_PRENV)(SEXP x, SEXP v){ FIX_REFCNT(x, PRENV(x), v); CHECK_OLD_TO_NEW(x, v); PRENV(x) = v; }
-void (SET_PRVALUE)(SEXP x, SEXP v) { FIX_REFCNT(x, PRVALUE(x), v); CHECK_OLD_TO_NEW(x, v); PRVALUE(x) = v; }
-void (SET_PRCODE)(SEXP x, SEXP v) { FIX_REFCNT(x, PRCODE(x), v); CHECK_OLD_TO_NEW(x, v); PRCODE(x) = v; }
+void (SET_PRENV)(SEXP x, SEXP v){
+    DYNTRACE_PROBE_PROMISE_ENVIRONMENT_ASSIGN(x, v);
+    FIX_REFCNT(x, PRENV(x), v);
+    CHECK_OLD_TO_NEW(x, v);
+    PRENV(x) = v;
+}
+
+void (SET_PRVALUE)(SEXP x, SEXP v) {
+    DYNTRACE_PROBE_PROMISE_VALUE_ASSIGN(x, v);
+    FIX_REFCNT(x, PRVALUE(x), v);
+    CHECK_OLD_TO_NEW(x, v);
+    PRVALUE(x) = v;
+}
+
+void (SET_PRCODE)(SEXP x, SEXP v) {
+    DYNTRACE_PROBE_PROMISE_EXPRESSION_ASSIGN(x, v);
+    FIX_REFCNT(x, PRCODE(x), v);
+    CHECK_OLD_TO_NEW(x, v);
+    PRCODE(x) = v;
+}
+
 void (SET_PRSEEN)(SEXP x, int v) { SET_PRSEEN(CHK(x), v); }
+
+
+void (SET_PRENV_UNPROBED)(SEXP x, SEXP v) {
+  FIX_REFCNT(x, PRENV(x), v);
+  CHECK_OLD_TO_NEW(x, v);
+  PRENV(x) = v;
+}
+
+void (SET_PRVALUE_UNPROBED)(SEXP x, SEXP v) {
+  FIX_REFCNT(x, PRVALUE(x), v);
+  CHECK_OLD_TO_NEW(x, v);
+  PRVALUE(x) = v;
+}
+
+void (SET_PRCODE_UNPROBED)(SEXP x, SEXP v) {
+  FIX_REFCNT(x, PRCODE(x), v);
+  CHECK_OLD_TO_NEW(x, v);
+  PRCODE(x) = v;
+}
+
 
 /* Hashing Accessors */
 #ifdef TESTING_WRITE_BARRIER

@@ -30,6 +30,7 @@
 #include <Defn.h>
 #include <Internal.h>
 #include <R_ext/RS.h> /* for Calloc, Realloc and for S4 object bit */
+#include <Rdyntrace.h>
 
 static SEXP GetObject(RCNTXT *cptr)
 {
@@ -80,8 +81,10 @@ static SEXP GetObject(RCNTXT *cptr)
     if (TYPEOF(s) == PROMSXP) {
 	if (PRVALUE(s) == R_UnboundValue)
 	    s = eval(s, R_BaseEnv);
-	else
-	    s = PRVALUE(s);
+	else {
+      DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(s);
+      s = PRVALUE(s);
+  }
     }
     return(s);
 }
@@ -93,7 +96,9 @@ static SEXP applyMethod(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newvars)
 	int save = R_PPStackTop, flag = PRIMPRINT(op);
 	const void *vmax = vmaxget();
 	R_Visible = flag != 1;
+	DYNTRACE_PROBE_SPECIAL_ENTRY(call, op, args, rho, DYNTRACE_DISPATCH_S3);
 	ans = PRIMFUN(op) (call, op, args, rho);
+	DYNTRACE_PROBE_SPECIAL_EXIT(call, op, args, rho, DYNTRACE_DISPATCH_S3, ans);
 	if (flag < 2) R_Visible = flag != 1;
 	check_stack_balance(op, save);
 	vmaxset(vmax);
@@ -108,14 +113,16 @@ static SEXP applyMethod(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newvars)
 	const void *vmax = vmaxget();
 	PROTECT(args = evalList(args, rho, call, 0));
 	R_Visible = flag != 1;
+	DYNTRACE_PROBE_BUILTIN_ENTRY(call, op, args, rho, DYNTRACE_DISPATCH_S3);
 	ans = PRIMFUN(op) (call, op, args, rho);
+	DYNTRACE_PROBE_BUILTIN_EXIT(call, op, args, rho, DYNTRACE_DISPATCH_S3, ans);
 	if (flag < 2) R_Visible = flag != 1;
 	UNPROTECT(1);
 	check_stack_balance(op, save);
 	vmaxset(vmax);
     }
     else if (TYPEOF(op) == CLOSXP) {
-	ans = applyClosure(call, op, args, rho, newvars);
+  ans = applyClosure(call, op, args, rho, newvars, DYNTRACE_DISPATCH_S3);
     }
     else
 	ans = R_NilValue;  /* for -Wall */
@@ -330,6 +337,9 @@ SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
 
 #ifdef UNUSED
 static int match_to_obj(SEXP arg, SEXP obj) {
+  if(arg != obj && TYPEOF(arg) == PROMSXP) {
+    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(arg);
+  }
   return (arg == obj) ||
     (TYPEOF(arg) == PROMSXP && PRVALUE(arg) == obj);
 }
@@ -390,6 +400,9 @@ static
 SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
 		    const char *generic, SEXP rho, SEXP callrho, SEXP defrho) {
 
+  DYNTRACE_PROBE_S3_DISPATCH_ENTRY(generic, dotClass,
+                                   op, sxp, (cptr->promargs));
+
     SEXP newvars = PROTECT(createS3Vars(
 	PROTECT(mkString(generic)),
 	R_BlankScalarString,
@@ -437,6 +450,9 @@ SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
     R_GlobalContext->callflag = CTXT_RETURN;
     UNPROTECT(5); /* "generic,method", newvars, newcall, matchedarg */
 
+    DYNTRACE_PROBE_S3_DISPATCH_EXIT(generic, dotClass,
+                                    op, sxp, cptr->promargs, ans);
+
     return ans;
 }
 
@@ -453,6 +469,9 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 
     cptr = R_GlobalContext;
     op = cptr->callfun;
+
+    DYNTRACE_PROBE_S3_GENERIC_ENTRY(generic, op, obj);
+
     PROTECT(klass = R_data_class2(obj));
 
     nclass = length(klass);
@@ -477,6 +496,9 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 				      rho, callrho, defrho);
 	    }
 	    UNPROTECT(2); /* klass, sxp */
+
+      DYNTRACE_PROBE_S3_GENERIC_EXIT(generic, op, obj, *ans);
+
 	    return 1;
 	}
     }
@@ -486,10 +508,16 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	*ans = dispatchMethod(op, sxp, R_NilValue, cptr, method, generic,
 			      rho, callrho, defrho);
 	UNPROTECT(2); /* klass, sxp */
+
+  DYNTRACE_PROBE_S3_GENERIC_EXIT(generic, op, obj, *ans);
+
 	return 1;
     }
     UNPROTECT(2); /* klass, sxp */
     cptr->callflag = CTXT_RETURN;
+
+    DYNTRACE_PROBE_S3_GENERIC_EXIT(generic, op, obj, NULL);
+
     return 0;
 }
 
@@ -1587,7 +1615,7 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 		if (length(s) != length(args)) error(_("dispatch error"));
 		for (a = args, b = s; a != R_NilValue; a = CDR(a), b = CDR(b))
 		    SET_PRVALUE(CAR(b), CAR(a));
-		value =  applyClosure(call, value, s, rho, suppliedvars);
+		value =  applyClosure(call, value, s, rho, suppliedvars, DYNTRACE_DISPATCH_S4);
 #ifdef ADJUST_ENVIR_REFCNTS
 		unpromiseArgs(s);
 #endif
@@ -1597,7 +1625,7 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 		/* INC/DEC of REFCNT needed for non-tracking args */
 		for (SEXP a = args; a != R_NilValue; a = CDR(a))
 		    INCREMENT_REFCNT(CAR(a));
-		value = applyClosure(call, value, args, rho, suppliedvars);
+		value = applyClosure(call, value, args, rho, suppliedvars, DYNTRACE_DISPATCH_S4);
 		for (SEXP a = args; a != R_NilValue; a = CDR(a))
 		    DECREMENT_REFCNT(CAR(a));
                 UNPROTECT(1);
@@ -1617,13 +1645,13 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 	if (length(s) != length(args)) error(_("dispatch error"));
 	for (a = args, b = s; a != R_NilValue; a = CDR(a), b = CDR(b))
 	    SET_PRVALUE(CAR(b), CAR(a));
-	value = applyClosure(call, fundef, s, rho, R_NilValue);
+	value = applyClosure(call, fundef, s, rho, R_NilValue, DYNTRACE_DISPATCH_S4);
 	UNPROTECT(1);
     } else {
 	/* INC/DEC of REFCNT needed for non-tracking args */
 	for (SEXP a = args; a != R_NilValue; a = CDR(a))
 	    INCREMENT_REFCNT(CAR(a));
-	value = applyClosure(call, fundef, args, rho, R_NilValue);
+	value = applyClosure(call, fundef, args, rho, R_NilValue, DYNTRACE_DISPATCH_S4);
 	for (SEXP a = args; a != R_NilValue; a = CDR(a))
 	    DECREMENT_REFCNT(CAR(a));
     }
