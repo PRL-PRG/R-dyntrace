@@ -1042,6 +1042,7 @@ enable_maintainer_mode
 enable_strict_barrier
 enable_prebuilt_html
 enable_lto
+enable_dyntrace
 enable_java
 with_blas
 with_lapack
@@ -1804,6 +1805,7 @@ Optional Features:
   --enable-prebuilt-html  build static HTML help pages [no]
   --enable-lto            enable link-time optimization [no]
   --enable-java           enable Java [yes]
+  --enable-dyntrace       Dynamic tracing for R [yes]
   --enable-byte-compiled-packages
                           byte-compile base and recommended packages [yes]
   --enable-static[=PKGS]  (libtool) build static libraries [default=no]
@@ -4034,6 +4036,16 @@ else
   WANT_JAVA_FALSE=
 fi
 
+# Check whether --enable-dyntrace was given.
+if test "${enable_dyntrace+set}" = set; then :
+  enableval=$enable_dyntrace; enable_dyntrace=$enableval
+else
+  enable_dyntrace=yes
+fi
+
+if test "${enable_dyntrace}" = "yes"; then
+  $as_echo "#define ENABLE_DYNTRACE 1" >>confdefs.h
+fi
 
 ### ** Optional packages.
 

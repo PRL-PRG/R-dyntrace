@@ -21,10 +21,13 @@
    Does byte-level handling in primitive_case, but only of ASCII chars
 */
 
+#include <Rdyntrace.h>
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
 
+#include <Rdyntrace.h>
 #include <Defn.h>
 #undef _
 
@@ -1038,6 +1041,7 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
     char *buf, *bufptr;
     int nargs, i, lwidth = 0;
 
+    DYNTRACE_PROBE_S4_GENERIC_ENTRY(fname, ev, fdef);
     if(!R_mtable) {
 	R_mtable = install(".MTable");
 	R_allmtable = install(".AllMTable");
@@ -1054,7 +1058,8 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
 	if(TYPEOF(fdef) != CLOSXP) {
 	    error(_("failed to get the generic for the primitive \"%s\""),
 		  CHAR(asChar(fname)));
-	    return R_NilValue;
+      DYNTRACE_PROBE_S4_GENERIC_EXIT(fname, ev, fdef, R_NilValue);
+      return R_NilValue;
 	}
 	f_env = CLOENV(fdef);
 	break;
@@ -1083,9 +1088,12 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
 	else {
 	    /*  get its class */
 	    argEvalCleanup_t cleandata = { .fname = fname, .arg_sym = arg_sym };
-	    if(arg_sym == R_dots)
+	    if(arg_sym == R_dots) {
+		DYNTRACE_PROBE_S4_DISPATCH_ARGUMENT(dyntrace_lookup_environment(ev, install("..1")));
 		thisClass = dots_class(ev, &cleandata);
+		}
 	    else {
+		DYNTRACE_PROBE_S4_DISPATCH_ARGUMENT(dyntrace_lookup_environment(ev, arg_sym));
 		SEXP arg = PROTECT(R_evalHandleError(arg_sym, ev,
 						     &argEvalCleanup,
 						     &cleandata));
@@ -1147,6 +1155,7 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
 	break;
     }
     UNPROTECT(nprotect);
+    DYNTRACE_PROBE_S4_GENERIC_EXIT(fname, ev, fdef, val);
     return val;
 }
 

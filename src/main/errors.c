@@ -64,7 +64,7 @@ static int noBreakWarning = 0;
 
 static void try_jump_to_restart(void);
 // The next is crucial to the use of NORET attributes.
-static void NORET
+void NORET
 jump_to_top_ex(Rboolean, Rboolean, Rboolean, Rboolean, Rboolean);
 static void signalInterrupt(void);
 static char * R_ConciseTraceback(SEXP call, int skip);
@@ -936,7 +936,7 @@ static void try_jump_to_restart(void)
 /* calling the code installed by on.exit along the way */
 /* and finally longjmping to the innermost TOPLEVEL context */
 
-static void jump_to_top_ex(Rboolean traceback,
+void jump_to_top_ex(Rboolean traceback,
 			   Rboolean tryUserHandler,
 			   Rboolean processWarnings,
 			   Rboolean resetConsole,

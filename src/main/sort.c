@@ -19,6 +19,8 @@
  *  https://www.R-project.org/Licenses/
  */
 
+#include <Rdyntrace.h>
+
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -1575,7 +1577,7 @@ SEXP attribute_hidden do_xtfrm(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(fn = findFun(install("xtfrm.default"), rho));
     PROTECT(prargs = promiseArgs(args, R_GlobalEnv));
     SET_PRVALUE(CAR(prargs), CAR(args));
-    ans = applyClosure(call, fn, prargs, rho, R_NilValue);
+    ans = applyClosure(call, fn, prargs, rho, R_NilValue, DYNTRACE_DISPATCH_NONE);
     UNPROTECT(2);
     return ans;
 

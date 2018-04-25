@@ -23,6 +23,8 @@
 #include <config.h>
 #endif
 
+#include <Rdyntrace.h>
+
 /* interval at which to check interrupts */
 #define NINTERRUPT 10000000
 
@@ -2725,6 +2727,7 @@ SEXP substitute(SEXP lang, SEXP rho)
     SEXP t;
     switch (TYPEOF(lang)) {
     case PROMSXP:
+        DYNTRACE_PROBE_PROMISE_SUBSTITUTE(lang);
 	return substitute(PREXPR(lang), rho);
     case SYMSXP:
 	if (rho != R_NilValue) {
@@ -2732,7 +2735,8 @@ SEXP substitute(SEXP lang, SEXP rho)
 	    if (t != R_UnboundValue) {
 		if (TYPEOF(t) == PROMSXP) {
 		    do {
-			t = PREXPR(t);
+	    DYNTRACE_PROBE_PROMISE_SUBSTITUTE(t);
+	    t = PREXPR(t);
 		    } while(TYPEOF(t) == PROMSXP);
 		    /* make sure code will not be modified: */
 		    ENSURE_NAMEDMAX(t);
@@ -2838,6 +2842,7 @@ SEXP attribute_hidden do_substitute(SEXP call, SEXP op, SEXP args, SEXP rho)
     PROTECT(env);
     PROTECT(t = CONS(duplicate(CAR(argList)), R_NilValue));
     s = substituteList(t, env);
+    DYNTRACE_PROBE_SUBSTITUTE_CALL(CAR(argList), env, rho, CAR(s));
     UNPROTECT(3);
     return CAR(s);
 }
