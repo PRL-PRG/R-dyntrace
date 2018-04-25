@@ -83,7 +83,7 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-
+#include <Rdyntrace.h>
 #include <Defn.h>
 #include <Internal.h>
 #include <R_ext/RS.h> /* for test of S4 objects */
@@ -1543,7 +1543,10 @@ int R_DispatchOrEvalSP(SEXP call, SEXP op, const char *generic, SEXP args,
     }
     PROTECT(args);
     int disp = DispatchOrEval(call, op, generic, args, rho, ans, 0, 0);
-    if (prom) DECREMENT_LINKS(PRVALUE(prom));
+    if (prom) {
+      DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(prom);
+      DECREMENT_LINKS(PRVALUE(prom));
+    }
     UNPROTECT(1);
     return disp;
 }

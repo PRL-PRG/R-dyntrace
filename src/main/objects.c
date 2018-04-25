@@ -30,6 +30,7 @@
 #include <Defn.h>
 #include <Internal.h>
 #include <R_ext/RS.h> /* for Calloc, Realloc and for S4 object bit */
+#include <Rdyntrace.h>
 
 static SEXP GetObject(RCNTXT *cptr)
 {
@@ -78,6 +79,7 @@ static SEXP GetObject(RCNTXT *cptr)
 	s = CAR(cptr->promargs);
 
     if (TYPEOF(s) == PROMSXP) {
+      DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(s);
 	if (PRVALUE(s) == R_UnboundValue)
 	    s = eval(s, R_BaseEnv);
 	else
@@ -305,6 +307,9 @@ SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
 
 #ifdef UNUSED
 static int match_to_obj(SEXP arg, SEXP obj) {
+  if(arg != obj && TYPEOF(arg) == PROMSXP) {
+    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(arg);
+  }
   return (arg == obj) ||
     (TYPEOF(arg) == PROMSXP && PRVALUE(arg) == obj);
 }
@@ -365,6 +370,10 @@ static
 SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
 		    const char *generic, SEXP rho, SEXP callrho, SEXP defrho) {
 
+  DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(cptr->promargs));
+  DYNTRACE_PROBE_S3_DISPATCH_ENTRY(generic, CHAR(STRING_ELT(dotClass, 0)),
+                                   method, PRVALUE(CAR(cptr->promargs)));
+
     SEXP newvars = PROTECT(createS3Vars(
 	PROTECT(mkString(generic)),
 	R_BlankScalarString,
@@ -409,6 +418,10 @@ SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
     R_GlobalContext->callflag = CTXT_RETURN;
     UNPROTECT(5); /* "generic,method", newvars, newcall, matchedarg */
 
+    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(cptr->promargs));
+    DYNTRACE_PROBE_S3_DISPATCH_EXIT(generic, CHAR(STRING_ELT(dotClass, 0)),
+                                    method, PRVALUE(CAR(cptr->promargs)), ans);
+
     return ans;
 }
 
@@ -416,6 +429,8 @@ attribute_hidden
 int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	      SEXP rho, SEXP callrho, SEXP defrho, SEXP *ans)
 {
+    DYNTRACE_PROBE_S3_GENERIC_ENTRY(generic, obj);
+
     SEXP klass, method, sxp;
     SEXP op;
     int i, nclass;
@@ -449,6 +464,9 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 				      rho, callrho, defrho);
 	    }
 	    UNPROTECT(2); /* klass, sxp */
+
+      DYNTRACE_PROBE_S3_GENERIC_EXIT(generic, obj, *ans);
+
 	    return 1;
 	}
     }
@@ -458,10 +476,16 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	*ans = dispatchMethod(op, sxp, R_NilValue, cptr, method, generic,
 			      rho, callrho, defrho);
 	UNPROTECT(2); /* klass, sxp */
+
+  DYNTRACE_PROBE_S3_GENERIC_EXIT(generic, obj, *ans);
+
 	return 1;
     }
     UNPROTECT(2); /* klass, sxp */
     cptr->callflag = CTXT_RETURN;
+
+    DYNTRACE_PROBE_S3_GENERIC_EXIT(generic, obj, NULL);
+
     return 0;
 }
 

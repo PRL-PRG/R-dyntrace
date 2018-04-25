@@ -112,6 +112,8 @@
 #include <trioremap.h>
 #endif
 
+#include <Rdyntrace.h>
+
 #define BUFSIZE 512
 
 #define MIN_Cutoff 20
@@ -150,7 +152,7 @@ typedef struct {
 static SEXP deparse1WithCutoff(SEXP call, Rboolean abbrev, int cutoff,
 			       Rboolean backtick, int opts, int nlines);
 static void args2buff(SEXP, int, int, LocalParseData *);
-static void deparse2buff(SEXP, LocalParseData *);
+void deparse2buff(SEXP, LocalParseData *);
 static void print2buff(const char *, LocalParseData *);
 static void printtab2buff(int, LocalParseData *);
 static void writeline(LocalParseData *);
@@ -863,7 +865,7 @@ static Rboolean parenthesizeCaller(SEXP s)
    WARNINCOMPLETE but that is not used below this point. */
 #define SHOW_ATTR_OR_NMS (SHOWATTRIBUTES | NICE_NAMES)
 
-static void deparse2buff(SEXP s, LocalParseData *d)
+void deparse2buff(SEXP s, LocalParseData *d)
 {
     Rboolean lookahead = FALSE, lbreak = FALSE, fnarg = d->fnarg;
     attr_type attr = STRUC_ATTR;

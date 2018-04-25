@@ -25,6 +25,7 @@
 # include <config.h>
 #endif
 
+#include <Rdyntrace.h>
 #include <Defn.h>
 #undef _
 
@@ -235,14 +236,19 @@ SEXP R_quick_method_check(SEXP args, SEXP mlist, SEXP fdef)
     while(!isNull(args) && !isNull(methods)) {
 	object = CAR(args); args = CDR(args);
 	if(TYPEOF(object) == PROMSXP) {
+      DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(object);
 	    if(PRVALUE(object) == R_UnboundValue) {
+        DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(object);
+        DYNTRACE_PROBE_PROMISE_ENVIRONMENT_LOOKUP(object);
 		SEXP tmp = eval(PRCODE(object), PRENV(object));
 		PROTECT(tmp); nprotect++;
 		SET_PRVALUE(object,  tmp);
 		object = tmp;
 	    }
-	    else
+	    else {
+        DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(object);
 		object = PRVALUE(object);
+      }
 	}
 	class = CHAR(STRING_ELT(R_data_class(object, TRUE), 0));
 	value = R_element_named(methods, class);
@@ -307,14 +313,19 @@ SEXP R_quick_dispatch(SEXP args, SEXP genericEnv, SEXP fdef)
     while(!isNull(args) && nargs < nsig) {
 	object = CAR(args); args = CDR(args);
 	if(TYPEOF(object) == PROMSXP) {
+      DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(object);
 	    if(PRVALUE(object) == R_UnboundValue) {
+        DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(object);
+        DYNTRACE_PROBE_PROMISE_ENVIRONMENT_LOOKUP(object);
 		SEXP tmp = eval(PRCODE(object), PRENV(object));
 		PROTECT(tmp); nprotect++;
 		SET_PRVALUE(object,  tmp);
 		object = tmp;
 	    }
-	    else
+	    else {
+        DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(object);
 		object = PRVALUE(object);
+      }
 	}
 	if(object == R_MissingArg)
 	    class = "missing";

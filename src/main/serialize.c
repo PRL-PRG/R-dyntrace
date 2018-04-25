@@ -19,6 +19,7 @@
 
 /* <UTF8> byte-level access is only to compare with chars <= 0x7F */
 
+#include <Rdyntrace.h>
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -1851,7 +1852,10 @@ static SEXP ReadItem (SEXP ref_table, R_inpstream_t stream)
 	SETCDR(s, ReadItem(ref_table, stream));
 	/* For reading closures and promises stored in earlier versions, convert NULL env to baseenv() */
 	if      (type == CLOSXP && CLOENV(s) == R_NilValue) SET_CLOENV(s, R_BaseEnv);
-	else if (type == PROMSXP && PRENV(s) == R_NilValue) SET_PRENV(s, R_BaseEnv);
+	else if (type == PROMSXP && PRENV(s) == R_NilValue) {
+    DYNTRACE_PROBE_PROMISE_ENVIRONMENT_LOOKUP(s);
+    SET_PRENV(s, R_BaseEnv);
+  }
 	UNPROTECT(1); /* s */
 	return s;
     default:
