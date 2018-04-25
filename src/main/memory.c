@@ -102,6 +102,8 @@ extern void *Rm_realloc(void * p, size_t n);
 #define free Rm_free
 #endif
 
+#include <Rdyntrace.h>
+
 /* malloc uses size_t.  We are assuming here that size_t is at least
    as large as unsigned long.  Changed from int at 1.6.0 to (i) allow
    2-4Gb objects on 32-bit system and (ii) objects limited only by
@@ -1039,7 +1041,7 @@ static void ReleaseLargeFreeVectors()
 	    SEXP next = NEXT_NODE(s);
 	    if (CHAR(s) != NULL) {
 		R_size_t size;
-#ifdef PROTECTCHECK
+#if defined(PROTECTCHECK) || defined(ENABLE_DYNTRACE)
 		if (TYPEOF(s) == FREESXP)
 		    size = STDVEC_LENGTH(s);
 		else
@@ -1779,6 +1781,52 @@ static void RunGenCollect(R_size_t size_needed)
     FORWARD_NODE(R_StringHash);
     PROCESS_NODES();
 
+#ifdef ENABLE_DYNTRACE
+    {
+#define SETOLDTYPE(s, t) SETLEVELS(s, t)
+        SEXP s;
+        int i;
+
+        for(i=0; i< NUM_SMALL_NODE_CLASSES;i++) {
+            s = NEXT_NODE(R_GenHeap[i].New);
+            while (s != R_GenHeap[i].New) {
+                SEXP next = NEXT_NODE(s);
+                if (TYPEOF(s) != NEWSXP) {
+                    if(TYPEOF(s) != FREESXP ) {
+                        DYNTRACE_PROBE_GC_UNMARK(s);
+                        SETOLDTYPE(s, TYPEOF(s));
+                        TYPEOF(s) = FREESXP;
+                    }
+                }
+                s = next;
+            }
+        }
+
+        for (i = CUSTOM_NODE_CLASS; i <= LARGE_NODE_CLASS; i++) {
+            s = NEXT_NODE(R_GenHeap[i].New);
+            while (s != R_GenHeap[i].New) {
+                SEXP next = NEXT_NODE(s);
+                if (TYPEOF(s) != NEWSXP) {
+                   if(TYPEOF(s) != FREESXP) {
+                       /**** could also leave this alone and restore the old
+                             node type in ReleaseLargeFreeVectors before
+                             calculating size */
+                       if (CHAR(s) != NULL) {
+                           R_size_t size = getVecSizeInVEC(s);
+                           SET_STDVEC_LENGTH(s, size);
+                       }
+                       DYNTRACE_PROBE_GC_UNMARK(s);
+                       SETOLDTYPE(s, TYPEOF(s));
+                       SET_TYPEOF(s, FREESXP);
+                   }
+                }
+                s = next;
+            }
+        }
+    }
+#endif
+
+
 #ifdef PROTECTCHECK
     for(i=0; i< NUM_SMALL_NODE_CLASSES;i++){
 	s = NEXT_NODE(R_GenHeap[i].New);
@@ -2130,7 +2178,7 @@ void attribute_hidden InitMemory()
     TAG(R_NilValue) = R_NilValue;
     ATTRIB(R_NilValue) = R_NilValue;
     MARK_NOT_MUTABLE(R_NilValue);
-
+    DYNTRACE_PROBE_GC_ALLOCATE(R_NilValue);
     R_BCNodeStackBase =
 	(R_bcstack_t *) malloc(R_BCNODESTACKSIZE * sizeof(R_bcstack_t));
     if (R_BCNodeStackBase == NULL)
@@ -2280,6 +2328,7 @@ SEXP allocSExp(SEXPTYPE t)
     CDR(s) = R_NilValue;
     TAG(s) = R_NilValue;
     ATTRIB(s) = R_NilValue;
+    DYNTRACE_PROBE_GC_ALLOCATE(s);
     return s;
 }
 
@@ -2330,6 +2379,7 @@ SEXP cons(SEXP car, SEXP cdr)
     CDR(s) = CHK(cdr); if (cdr) INCREMENT_REFCNT(cdr);
     TAG(s) = R_NilValue;
     ATTRIB(s) = R_NilValue;
+    DYNTRACE_PROBE_GC_ALLOCATE(s);
     return s;
 }
 
@@ -2362,6 +2412,7 @@ SEXP CONS_NR(SEXP car, SEXP cdr)
     CDR(s) = CHK(cdr);
     TAG(s) = R_NilValue;
     ATTRIB(s) = R_NilValue;
+    DYNTRACE_PROBE_GC_ALLOCATE(s);
     return s;
 }
 
@@ -2415,10 +2466,13 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
     HASHTAB(newrho) = R_NilValue;
     ATTRIB(newrho) = R_NilValue;
 
+    DYNTRACE_PROBE_GC_ALLOCATE(newrho);
+
     v = CHK(valuelist);
     n = CHK(namelist);
     while (v != R_NilValue && n != R_NilValue) {
 	SET_TAG(v, TAG(n));
+  DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_DEFINE(TAG(n), CAR(v), newrho);
 	v = CDR(v);
 	n = CDR(n);
     }
@@ -2460,6 +2514,7 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     PRVALUE(s) = R_UnboundValue;
     PRSEEN(s) = 0;
     ATTRIB(s) = R_NilValue;
+    DYNTRACE_PROBE_GC_ALLOCATE(s);
     return s;
 }
 
@@ -2557,6 +2612,7 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 	    SET_STDVEC_TRUELENGTH(s, 0);
 	    SET_NAMED(s, 0);
 	    INIT_REFCNT(s);
+      DYNTRACE_PROBE_GC_ALLOCATE(s);
 	    return(s);
 	}
     }
@@ -2805,6 +2861,7 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
     else if (type == RAWSXP)
 	VALGRIND_MAKE_MEM_UNDEFINED(RAW(s), actual_size);
 #endif
+    DYNTRACE_PROBE_GC_ALLOCATE(s);
     return s;
 }
 
@@ -2829,6 +2886,7 @@ SEXP allocS4Object(void)
    SEXP s;
    GC_PROT(s = allocSExpNonCons(S4SXP));
    SET_S4_OBJECT(s);
+   DYNTRACE_PROBE_GC_ALLOCATE(s);
    return s;
 }
 
@@ -2971,6 +3029,9 @@ static void R_gc_internal(R_size_t size_needed)
       gc_pending = TRUE;
       return;
     }
+
+    DYNTRACE_PROBE_GC_ENTRY(size_needed);
+
     gc_pending = FALSE;
 
     R_size_t onsize = R_NSize /* can change during collection */;
@@ -3077,6 +3138,9 @@ static void R_gc_internal(R_size_t size_needed)
 	error("internal logical NA value has been modified");
     }
     /* compiler constants are checked in RunGenCollect */
+
+    DYNTRACE_PROBE_GC_EXIT(gc_count);
+
 }
 
 
@@ -3878,14 +3942,44 @@ void (SET_HASHTAB)(SEXP x, SEXP v) { FIX_REFCNT(x, HASHTAB(x), v); CHECK_OLD_TO_
 void (SET_ENVFLAGS)(SEXP x, int v) { SET_ENVFLAGS(x, v); }
 
 /* Promise Accessors */
-SEXP (PRCODE)(SEXP x) { return CHK(PRCODE(CHK(x))); }
-SEXP (PRENV)(SEXP x) { return CHK(PRENV(CHK(x))); }
-SEXP (PRVALUE)(SEXP x) { return CHK(PRVALUE(CHK(x))); }
+SEXP (PRCODE)(SEXP x) {
+    DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(x);
+    return CHK(PRCODE(CHK(x)));
+}
+
+SEXP (PRENV)(SEXP x) {
+    DYNTRACE_PROBE_PROMISE_ENVIRONMENT_LOOKUP(x);
+    return CHK(PRENV(CHK(x)));
+}
+
+SEXP (PRVALUE)(SEXP x) {
+    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(x);
+    return CHK(PRVALUE(CHK(x)));
+}
+
 int (PRSEEN)(SEXP x) { return PRSEEN(CHK(x)); }
 
-void (SET_PRENV)(SEXP x, SEXP v){ FIX_REFCNT(x, PRENV(x), v); CHECK_OLD_TO_NEW(x, v); PRENV(x) = v; }
-void (SET_PRVALUE)(SEXP x, SEXP v) { FIX_REFCNT(x, PRVALUE(x), v); CHECK_OLD_TO_NEW(x, v); PRVALUE(x) = v; }
-void (SET_PRCODE)(SEXP x, SEXP v) { FIX_REFCNT(x, PRCODE(x), v); CHECK_OLD_TO_NEW(x, v); PRCODE(x) = v; }
+void (SET_PRENV)(SEXP x, SEXP v){
+    DYNTRACE_PROBE_PROMISE_ENVIRONMENT_ASSIGN(x, v);
+    FIX_REFCNT(x, PRENV(x), v);
+    CHECK_OLD_TO_NEW(x, v);
+    PRENV(x) = v;
+}
+
+void (SET_PRVALUE)(SEXP x, SEXP v) {
+    DYNTRACE_PROBE_PROMISE_VALUE_ASSIGN(x, v);
+    FIX_REFCNT(x, PRVALUE(x), v);
+    CHECK_OLD_TO_NEW(x, v);
+    PRVALUE(x) = v;
+}
+
+void (SET_PRCODE)(SEXP x, SEXP v) {
+    DYNTRACE_PROBE_PROMISE_EXPRESSION_ASSIGN(x, v);
+    FIX_REFCNT(x, PRCODE(x), v);
+    CHECK_OLD_TO_NEW(x, v);
+    PRCODE(x) = v;
+}
+
 void (SET_PRSEEN)(SEXP x, int v) { SET_PRSEEN(CHK(x), v); }
 
 /* Hashing Accessors */
