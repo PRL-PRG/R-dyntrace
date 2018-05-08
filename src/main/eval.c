@@ -696,7 +696,9 @@ SEXP eval(SEXP e, SEXP rho)
 	    const void *vmax = vmaxget();
 	    PROTECT(e);
 	    R_Visible = flag != 1;
+      DYNTRACE_PROBE_SPECIAL_ENTRY(e, op, rho);
 	    tmp = PRIMFUN(op) (e, op, CDR(e), rho);
+      DYNTRACE_PROBE_SPECIAL_EXIT(e, op, rho, tmp);
 #ifdef CHECK_VISIBILITY
 	    if(flag < 2 && R_Visible == flag) {
 		char *nm = PRIMNAME(op);
@@ -724,11 +726,15 @@ SEXP eval(SEXP e, SEXP rho)
 		begincontext(&cntxt, CTXT_BUILTIN, e,
 			     R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
 		R_Srcref = NULL;
+    DYNTRACE_PROBE_BUILTIN_ENTRY(e, op, rho);
 		tmp = PRIMFUN(op) (e, op, tmp, rho);
+    DYNTRACE_PROBE_BUILTIN_EXIT(e, op, rho, tmp);
 		R_Srcref = oldref;
 		endcontext(&cntxt);
 	    } else {
+    DYNTRACE_PROBE_BUILTIN_ENTRY(e, op, rho);
 		tmp = PRIMFUN(op) (e, op, tmp, rho);
+    DYNTRACE_PROBE_BUILTIN_EXIT(e, op, rho, tmp);
 	    }
 #ifdef CHECK_VISIBILITY
 	    if(flag < 2 && R_Visible == flag) {
@@ -1752,16 +1758,21 @@ static R_INLINE SEXP R_execClosure(SEXP call, SEXP newrho, SEXP sysparent,
 	    if (R_ReturnedValue == R_RestartToken) {
 		cntxt.callflag = CTXT_RETURN;  /* turn restart off */
 		R_ReturnedValue = R_NilValue;  /* remove restart token */
+    DYNTRACE_PROBE_CLOSURE_ENTRY(call, op, newrho);
 		cntxt.returnValue = eval(body, newrho);
+    DYNTRACE_PROBE_CLOSURE_EXIT(call, op, newrho, cntxt.returnValue);
 	    } else
 		cntxt.returnValue = R_ReturnedValue;
 	}
 	else
 	    cntxt.returnValue = NULL; /* undefined */
     }
-    else
+    else {
 	/* make it available to on.exit and implicitly protect */
+      DYNTRACE_PROBE_CLOSURE_ENTRY(call, op, newrho);
 	cntxt.returnValue = eval(body, newrho);
+    DYNTRACE_PROBE_CLOSURE_EXIT(call, op, newrho, cntxt.returnValue);
+    }
 
     R_Srcref = cntxt.srcref;
     endcontext(&cntxt);
@@ -1790,7 +1801,9 @@ SEXP R_forceAndCall(SEXP e, int n, SEXP rho)
 	int flag = PRIMPRINT(fun);
 	PROTECT(e);
 	R_Visible = flag != 1;
+  DYNTRACE_PROBE_SPECIAL_ENTRY(e, fun, rho);
 	tmp = PRIMFUN(fun) (e, fun, CDR(e), rho);
+  DYNTRACE_PROBE_SPECIAL_EXIT(e, fun, rho, tmp);
 	if (flag < 2) R_Visible = flag != 1;
 	UNPROTECT(1);
     }
@@ -1806,11 +1819,15 @@ SEXP R_forceAndCall(SEXP e, int n, SEXP rho)
 	    begincontext(&cntxt, CTXT_BUILTIN, e,
 			 R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
 	    R_Srcref = NULL;
+      DYNTRACE_PROBE_BUILTIN_ENTRY(e, fun, rho);
 	    tmp = PRIMFUN(fun) (e, fun, tmp, rho);
+      DYNTRACE_PROBE_BUILTIN_EXIT(e, fun, rho, tmp);
 	    R_Srcref = oldref;
 	    endcontext(&cntxt);
 	} else {
+      DYNTRACE_PROBE_BUILTIN_ENTRY(e, fun, rho);
 	    tmp = PRIMFUN(fun) (e, fun, tmp, rho);
+      DYNTRACE_PROBE_BUILTIN_EXIT(e, fun, rho, tmp);
 	}
 	if (flag < 2) R_Visible = flag != 1;
 	UNPROTECT(1);
@@ -4254,8 +4271,11 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
 #define Builtin1(do_fun,which,rho) do { \
   SEXP call = VECTOR_ELT(constants, GETOP()); \
   SETSTACK(-1, CONS_NR(GETSTACK(-1), R_NilValue));		     \
-  SETSTACK(-1, do_fun(call, getPrimitive(which, BUILTINSXP), \
-		      GETSTACK(-1), rho));		     \
+  SEXP op = getPrimitive(which, BUILTINSXP); \
+  DYNTRACE_PROBE_BUILTIN_ENTRY(call, op, rho);            \
+  SEXP result = do_fun(call, op, GETSTACK(-1), rho);     \
+  DYNTRACE_PROBE_BUILTIN_EXIT(call, op, rho, result); \
+  SETSTACK(-1, result);		     \
   R_Visible = TRUE;					     \
   NEXT(); \
 } while(0)
@@ -4267,8 +4287,11 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
   SEXP tmp = CONS_NR(stack1, R_NilValue); \
   SETSTACK(-2, CONS_NR(stack2, tmp));     \
   R_BCNodeStackTop--; \
-  SETSTACK(-1, do_fun(call, getPrimitive(which, BUILTINSXP),	\
-		      GETSTACK(-1), rho));			\
+  SEXP op = getPrimitive(which, BUILTINSXP); \
+  DYNTRACE_PROBE_BUILTIN_ENTRY(call, op, rho);        \
+  SEXP result = do_fun(call, op, GETSTACK(-1), rho); \
+  DYNTRACE_PROBE_BUILTIN_EXIT(call, op, rho, result); \
+  SETSTACK(-1, result);			\
   R_Visible = TRUE;						\
   NEXT(); \
 } while(0)
@@ -4277,7 +4300,10 @@ static SEXP cmp_arith2(SEXP call, int opval, SEXP opsym, SEXP x, SEXP y,
   SEXP call = VECTOR_ELT(constants, GETOP()); \
   SEXP x = GETSTACK(-2); \
   SEXP y = GETSTACK(-1); \
-  SETSTACK(-2, do_fun(call, opval, opsym, x, y,rho));	\
+  DYNTRACE_PROBE_BUILTIN_ENTRY(call, opsym, rho);         \
+  SEXP result = do_fun(call, opval, opsym, x, y,rho);    \
+  DYNTRACE_PROBE_BUILTIN_EXIT(call, opsym, rho, result);  \
+  SETSTACK(-2, result);	\
   R_BCNodeStackTop--; \
   R_Visible = TRUE; \
   NEXT(); \
@@ -6725,13 +6751,17 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  checkForMissings(args, call);
 	  flag = PRIMPRINT(fun);
 	  R_Visible = flag != 1;
+    DYNTRACE_PROBE_BUILTIN_ENTRY(call, fun, rho);
 	  value = PRIMFUN(fun) (call, fun, args, rho);
+    DYNTRACE_PROBE_BUILTIN_EXIT(call, fun, rho, value);
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case SPECIALSXP:
 	  flag = PRIMPRINT(fun);
 	  R_Visible = flag != 1;
+    DYNTRACE_PROBE_SPECIAL_ENTRY(call, fun, rho);
 	  value = PRIMFUN(fun) (call, fun, markSpecialArgs(CDR(call)), rho);
+    DYNTRACE_PROBE_SPECIAL_EXIT(call, fun, rho, value);
 	  if (flag < 2) R_Visible = flag != 1;
 	  break;
 	case CLOSXP:
@@ -6764,11 +6794,15 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    begincontext(&cntxt, CTXT_BUILTIN, call,
 			 R_BaseEnv, R_BaseEnv, R_NilValue, R_NilValue);
 	    R_Srcref = NULL;
+      DYNTRACE_PROBE_BUILTIN_ENTRY(call, fun, rho);
 	    value = PRIMFUN(fun) (call, fun, args, rho);
+      DYNTRACE_PROBE_BUILTIN_EXIT(call, fun, rho, value);
 	    R_Srcref = oldref;
 	    endcontext(&cntxt);
 	} else {
+      DYNTRACE_PROBE_BUILTIN_ENTRY(call, fun, rho);
 	    value = PRIMFUN(fun) (call, fun, args, rho);
+      DYNTRACE_PROBE_BUILTIN_EXIT(call, fun, rho, value);
 	}
 	if (flag < 2) R_Visible = flag != 1;
 	vmaxset(vmax);
@@ -6788,7 +6822,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	}
 	flag = PRIMPRINT(fun);
 	R_Visible = flag != 1;
+  DYNTRACE_PROBE_SPECIAL_ENTRY(call, fun, rho);
 	SEXP value = PRIMFUN(fun) (call, fun, markSpecialArgs(CDR(call)), rho);
+  DYNTRACE_PROBE_SPECIAL_EXIT(call, fun, rho, value);
 	if (flag < 2) R_Visible = flag != 1;
 	vmaxset(vmax);
 	BCNPUSH(value);
@@ -7079,7 +7115,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  SETCAR(args, lhs);
 	  /* make the call */
 	  checkForMissings(args, call);
+    DYNTRACE_PROBE_BUILTIN_ENTRY(call, fun, rho);
 	  value = PRIMFUN(fun) (call, fun, args, rho);
+    DYNTRACE_PROBE_BUILTIN_EXIT(call, fun, rho, value);
 	  break;
 	case SPECIALSXP:
 	  /* duplicate arguments and protect */
@@ -7095,7 +7133,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  prom = mkRHSPROMISE(vexpr, rhs);
 	  SETCAR(last, prom);
 	  /* make the call */
+    DYNTRACE_PROBE_SPECIAL_ENTRY(call, fun, rho);
 	  value = PRIMFUN(fun) (call, fun, args, rho);
+    DYNTRACE_PROBE_SPECIAL_EXIT(call, fun, rho, value);
 	  UNPROTECT(1);
 	  break;
 	case CLOSXP:
@@ -7133,7 +7173,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  SETCAR(args, lhs);
 	  /* make the call */
 	  checkForMissings(args, call);
+    DYNTRACE_PROBE_BUILTIN_ENTRY(call, fun, rho);
 	  value = PRIMFUN(fun) (call, fun, args, rho);
+    DYNTRACE_PROBE_BUILTIN_EXIT(call, fun, rho, value);
 	  break;
 	case SPECIALSXP:
 	  /* duplicate arguments and put into stack for GC protection */
@@ -7144,7 +7186,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  prom = R_mkEVPROMISE_NR(R_TmpvalSymbol, lhs);
 	  SETCAR(args, prom);
 	  /* make the call */
+    DYNTRACE_PROBE_SPECIAL_ENTRY(call, fun, rho);
 	  value = PRIMFUN(fun) (call, fun, args, rho);
+    DYNTRACE_PROBE_SPECIAL_EXIT(call, fun, rho, value);
 	  break;
 	case CLOSXP:
 	  /* replace first argument with evaluated promise for LHS */
