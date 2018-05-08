@@ -537,6 +537,8 @@ static SEXP forcePromise(SEXP e)
 /* some places, e.g. deparse2buff, call this with a promise and rho = NULL */
 SEXP eval(SEXP e, SEXP rho)
 {
+    DYNTRACE_PROBE_EVAL_ENTRY(e, rho);
+
     SEXP op, tmp;
     static int evalcount = 0;
 
@@ -578,6 +580,9 @@ SEXP eval(SEXP e, SEXP rho)
 	   to replacement functions won't modify constants in
 	   expressions.  */
 	ENSURE_NAMEDMAX(e);
+
+  DYNTRACE_PROBE_EVAL_EXIT(e, rho, e);
+
 	return e;
     default: break;
     }
@@ -768,6 +773,9 @@ SEXP eval(SEXP e, SEXP rho)
     R_EvalDepth = depthsave;
     R_Srcref = srcrefsave;
     R_BCIntActive = bcintactivesave;
+
+    DYNTRACE_PROBE_EVAL_EXIT(e, rho, tmp);
+
     return (tmp);
 }
 
