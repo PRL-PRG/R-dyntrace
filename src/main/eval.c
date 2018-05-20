@@ -495,6 +495,7 @@ void attribute_hidden check_stack_balance(SEXP op, int save)
 
 static SEXP forcePromise(SEXP e)
 {
+    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(e);
     if (PRVALUE(e) == R_UnboundValue) {
 	RPRSTACK prstack;
 	SEXP val;
@@ -529,6 +530,7 @@ static SEXP forcePromise(SEXP e)
 	ENSURE_NAMEDMAX(val);
 	SET_PRENV(e, R_NilValue);
     }
+    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(e);
     return PRVALUE(e);
 }
 
@@ -645,6 +647,7 @@ SEXP eval(SEXP e, SEXP rho)
 	    else error(_("argument is missing, with no default"));
 	}
 	else if (TYPEOF(tmp) == PROMSXP) {
+      DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(tmp);
 	    if (PRVALUE(tmp) == R_UnboundValue) {
 		/* not sure the PROTECT is needed here but keep it to
 		   be on the safe side. */
@@ -652,17 +655,22 @@ SEXP eval(SEXP e, SEXP rho)
 		tmp = forcePromise(tmp);
 		UNPROTECT(1);
 	    }
-	    else tmp = PRVALUE(tmp);
+	    else {
+        DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(tmp);
+        tmp = PRVALUE(tmp);
+      }
 	    ENSURE_NAMEDMAX(tmp);
 	}
 	else ENSURE_NAMED(tmp); /* should not really be needed - LT */
 	break;
     case PROMSXP:
+      DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(e);
 	if (PRVALUE(e) == R_UnboundValue)
 	    /* We could just unconditionally use the return value from
 	       forcePromise; the test avoids the function call if the
 	       promise is already evaluated. */
 	    forcePromise(e);
+  DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(e);
 	tmp = PRVALUE(e);
 	/* This does _not_ change the value of NAMED on the value tmp,
 	   in contrast to the handling of promises bound to symbols in
@@ -4997,13 +5005,17 @@ static void NORET UNBOUND_VARIABLE_ERROR(SEXP symbol)
 static R_INLINE SEXP FORCE_PROMISE(SEXP value, SEXP symbol, SEXP rho,
 				   Rboolean keepmiss)
 {
+    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(value);
     if (PRVALUE(value) == R_UnboundValue) {
 	/**** R_isMissing is inefficient */
 	if (keepmiss && R_isMissing(symbol, rho))
 	    value = R_MissingArg;
 	else value = forcePromise(value);
     }
-    else value = PRVALUE(value);
+    else {
+      DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(value);
+      value = PRVALUE(value);
+    }
     ENSURE_NAMEDMAX(value);
     return value;
 }
@@ -5080,6 +5092,7 @@ static R_INLINE SEXP getvar(SEXP symbol, SEXP rho,
 	    value = CAR(cell); \
 	    if (TYPEOF(value) != SYMSXP) {	\
 		if (TYPEOF(value) == PROMSXP) {		\
+        DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(value); \
 		    SEXP pv = PRVALUE(value);		\
 		    if (pv == R_UnboundValue) {		\
 			SEXP symbol = VECTOR_ELT(constants, sidx);	\
@@ -5941,6 +5954,7 @@ static R_INLINE SEXP SymbolValue(SEXP sym)
     else {
 	SEXP value = SYMVALUE(sym);
 	if (TYPEOF(value) == PROMSXP) {
+      DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(value);
 	    value = PRVALUE(value);
 	    if (value == R_UnboundValue)
 		value = eval(sym, R_BaseEnv);
@@ -6087,8 +6101,10 @@ static Rboolean maybePrimitiveCall(SEXP expr)
 
     if (TYPEOF(CAR(expr)) == SYMSXP) {
 	SEXP value = SYMVALUE(CAR(expr));
-	if (TYPEOF(value) == PROMSXP)
+	if (TYPEOF(value) == PROMSXP) {
+      DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(value);
 	    value = PRVALUE(value);
+  }
 	return TYPEOF(value) == BUILTINSXP || TYPEOF(value) == SPECIALSXP;
     }
     return FALSE;

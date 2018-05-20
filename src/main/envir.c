@@ -2209,6 +2209,9 @@ R_isMissing(SEXP symbol, SEXP rho)
 	if (IS_ACTIVE_BINDING(vl))
 	    return 0;
 	SETCAR(vl, findRootPromise(CAR(vl)));
+  if(TYPEOF(CAR(vl)) == PROMSXP) {
+    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(vl));
+  }
 	if (TYPEOF(CAR(vl)) == PROMSXP &&
 	    PRVALUE(CAR(vl)) == R_UnboundValue &&
 	    TYPEOF(PREXPR(CAR(vl))) == SYMSXP) {

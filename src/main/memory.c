@@ -3880,7 +3880,10 @@ void (SET_ENVFLAGS)(SEXP x, int v) { SET_ENVFLAGS(x, v); }
 /* Promise Accessors */
 SEXP (PRCODE)(SEXP x) { return CHK(PRCODE(CHK(x))); }
 SEXP (PRENV)(SEXP x) { return CHK(PRENV(CHK(x))); }
-SEXP (PRVALUE)(SEXP x) { return CHK(PRVALUE(CHK(x))); }
+SEXP (PRVALUE)(SEXP x) {
+  DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(x);
+  return CHK(PRVALUE(CHK(x)));
+}
 int (PRSEEN)(SEXP x) { return PRSEEN(CHK(x)); }
 
 void (SET_PRENV)(SEXP x, SEXP v){ FIX_REFCNT(x, PRENV(x), v); CHECK_OLD_TO_NEW(x, v); PRENV(x) = v; }
