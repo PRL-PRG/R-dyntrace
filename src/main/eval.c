@@ -4830,6 +4830,7 @@ SEXP R_BytecodeExpr(SEXP e)
 
 SEXP R_PromiseExpr(SEXP p)
 {
+  DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(p);
     return bytecodeExpr(PRCODE(p));
 }
 
