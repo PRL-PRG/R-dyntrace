@@ -1779,6 +1779,45 @@ static void RunGenCollect(R_size_t size_needed)
     FORWARD_NODE(R_StringHash);
     PROCESS_NODES();
 
+#ifdef ENABLE_DYNTRACE
+    {
+        SEXP s;
+        int i;
+        for(i=0; i< NUM_SMALL_NODE_CLASSES;i++){
+            s = NEXT_NODE(R_GenHeap[i].New);
+            while (s != R_GenHeap[i].New) {
+                SEXP next = NEXT_NODE(s);
+                if (TYPEOF(s) != FREESXP ) {
+                    DYNTRACE_PROBE_GC_UNMARK(s);
+                    SETOLDTYPE(s, TYPEOF(s));
+                    TYPEOF(s) = FREESXP;
+                }
+                s = next;
+            }
+        }
+
+        for (i = CUSTOM_NODE_CLASS; i <= LARGE_NODE_CLASS; i++) {
+            s = NEXT_NODE(R_GenHeap[i].New);
+            while (s != R_GenHeap[i].New) {
+                SEXP next = NEXT_NODE(s);
+                if (TYPEOF(s) != FREESXP) {
+                    /**** could also leave this alone and restore the old
+                          node type in ReleaseLargeFreeVectors before
+                          calculating size */
+                    if (CHAR(s) != NULL) {
+                        R_size_t size = getVecSizeInVEC(s);
+                        SET_STDVEC_LENGTH(s, size);
+                    }
+                    DYNTRACE_PROBE_GC_UNMARK(s);
+                    SETOLDTYPE(s, TYPEOF(s));
+                    SET_TYPEOF(s, FREESXP);
+                }
+            }
+        }
+    }
+#endif
+
+
 #ifdef PROTECTCHECK
     for(i=0; i< NUM_SMALL_NODE_CLASSES;i++){
 	s = NEXT_NODE(R_GenHeap[i].New);
@@ -2130,7 +2169,7 @@ void attribute_hidden InitMemory()
     TAG(R_NilValue) = R_NilValue;
     ATTRIB(R_NilValue) = R_NilValue;
     MARK_NOT_MUTABLE(R_NilValue);
-
+    DYNTRACE_PROBE_ALLOCATE(R_NilValue);
     R_BCNodeStackBase =
 	(R_bcstack_t *) malloc(R_BCNODESTACKSIZE * sizeof(R_bcstack_t));
     if (R_BCNodeStackBase == NULL)
@@ -2280,6 +2319,7 @@ SEXP allocSExp(SEXPTYPE t)
     CDR(s) = R_NilValue;
     TAG(s) = R_NilValue;
     ATTRIB(s) = R_NilValue;
+    DYNTRACE_PROBE_ALLOCATE(s);
     return s;
 }
 
@@ -2330,6 +2370,7 @@ SEXP cons(SEXP car, SEXP cdr)
     CDR(s) = CHK(cdr); if (cdr) INCREMENT_REFCNT(cdr);
     TAG(s) = R_NilValue;
     ATTRIB(s) = R_NilValue;
+    DYNTRACE_PROBE_ALLOCATE(s);
     return s;
 }
 
@@ -2362,6 +2403,7 @@ SEXP CONS_NR(SEXP car, SEXP cdr)
     CDR(s) = CHK(cdr);
     TAG(s) = R_NilValue;
     ATTRIB(s) = R_NilValue;
+    DYNTRACE_PROBE_ALLOCATE(s);
     return s;
 }
 
@@ -2422,6 +2464,7 @@ SEXP NewEnvironment(SEXP namelist, SEXP valuelist, SEXP rho)
 	v = CDR(v);
 	n = CDR(n);
     }
+    DYNTRACE_PROBE_ALLOCATE(newrho);
     return (newrho);
 }
 
@@ -2460,6 +2503,7 @@ SEXP attribute_hidden mkPROMISE(SEXP expr, SEXP rho)
     PRVALUE(s) = R_UnboundValue;
     PRSEEN(s) = 0;
     ATTRIB(s) = R_NilValue;
+    DYNTRACE_PROBE_ALLOCATE(s);
     return s;
 }
 
@@ -2557,6 +2601,7 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 	    SET_STDVEC_TRUELENGTH(s, 0);
 	    SET_NAMED(s, 0);
 	    INIT_REFCNT(s);
+      DYNTRACE_PROBE_ALLOCATE(s);
 	    return(s);
 	}
     }
@@ -2805,6 +2850,7 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
     else if (type == RAWSXP)
 	VALGRIND_MAKE_MEM_UNDEFINED(RAW(s), actual_size);
 #endif
+    DYNTRACE_PROBE_ALLOCATE(s);
     return s;
 }
 
@@ -2829,6 +2875,7 @@ SEXP allocS4Object(void)
    SEXP s;
    GC_PROT(s = allocSExpNonCons(S4SXP));
    SET_S4_OBJECT(s);
+   DYNTRACE_PROBE_ALLOCATE(s);
    return s;
 }
 
@@ -2971,6 +3018,9 @@ static void R_gc_internal(R_size_t size_needed)
       gc_pending = TRUE;
       return;
     }
+
+    DYNTRACE_PROBE_GC_ENTRY(size_needed);
+
     gc_pending = FALSE;
 
     R_size_t onsize = R_NSize /* can change during collection */;
@@ -3077,6 +3127,9 @@ static void R_gc_internal(R_size_t size_needed)
 	error("internal logical NA value has been modified");
     }
     /* compiler constants are checked in RunGenCollect */
+
+    DYNTRACE_PROBE_GC_EXIT(gc_count);
+
 }
 
 

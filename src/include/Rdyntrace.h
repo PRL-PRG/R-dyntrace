@@ -242,27 +242,27 @@ extern "C" {
         dyntrace_active_dyntrace_context, size_needed);                        \
     DYNTRACE_PROBE_FOOTER(probe_gc_entry);
 
-#define DYNTRACE_PROBE_GC_EXIT(gc_count, vcells, ncells)                       \
+#define DYNTRACE_PROBE_GC_EXIT(gc_count)                                       \
     DYNTRACE_PROBE_HEADER(probe_gc_exit);                                      \
     dyntrace_active_dyntracer->probe_gc_exit(dyntrace_active_dyntrace_context, \
-                                             gc_count, vcells, ncells);        \
+                                             gc_count);                        \
     DYNTRACE_PROBE_FOOTER(probe_gc_exit);
 
-#define DYNTRACE_PROBE_GC_PROMISE_UNMARKED(promise)                            \
-    DYNTRACE_PROBE_HEADER(probe_gc_promise_unmarked);                          \
-    PROTECT(promise);                                                          \
-    dyntrace_active_dyntracer->probe_gc_promise_unmarked(                      \
-        dyntrace_active_dyntrace_context, promise);                            \
+#define DYNTRACE_PROBE_ALLOCATE(object)                                        \
+    DYNTRACE_PROBE_HEADER(probe_allocate);                                     \
+    PROTECT(object);                                                           \
+    dyntrace_active_dyntracer->probe_allocate(                                 \
+        dyntrace_active_dyntrace_context, object);                             \
     UNPROTECT(1);                                                              \
-    DYNTRACE_PROBE_FOOTER(probe_gc_promise_unmarked);
+    DYNTRACE_PROBE_FOOTER(probe_allocate);
 
-#define DYNTRACE_PROBE_GC_FUNCTION_UNMARKED(function)                          \
-    DYNTRACE_PROBE_HEADER(probe_gc_function_unmarked);                         \
-    PROTECT(function);                                                         \
-    dyntrace_active_dyntracer->probe_gc_function_unmarked(                     \
-        dyntrace_active_dyntrace_context, function);                           \
+#define DYNTRACE_PROBE_GC_UNMARK(object)                                       \
+    DYNTRACE_PROBE_HEADER(probe_gc_unmark);                                    \
+    PROTECT(object);                                                           \
+    dyntrace_active_dyntracer->probe_gc_unmark(                                \
+        dyntrace_active_dyntrace_context, object);                             \
     UNPROTECT(1);                                                              \
-    DYNTRACE_PROBE_FOOTER(probe_gc_function_unmarked);
+    DYNTRACE_PROBE_FOOTER(probe_gc_unmark);
 
 #define DYNTRACE_PROBE_CONTEXT_BEGIN(cptr)                                     \
     DYNTRACE_PROBE_HEADER(probe_context_begin);                                \
@@ -389,8 +389,9 @@ extern "C" {
 #define DYNTRACE_PROBE_EVAL_ENTRY(e, rho)
 #define DYNTRACE_PROBE_EVAL_EXIT(e, rho, retval)
 #define DYNTRACE_PROBE_GC_ENTRY(size_needed)
-#define DYNTRACE_PROBE_GC_EXIT(gc_count, vcells, ncells)
-#define DYNTRACE_PROBE_GC_PROMISE_UNMARKED(promise)
+#define DYNTRACE_PROBE_GC_EXIT(gc_count)
+#define DYNTRACE_PROBE_GC_UNMARK(object)
+#define DYNTRACE_PROBE_GC_ALLOCATE(object)
 #define DYNTRACE_PROBE_CONTEXT_BEGIN(cptr)
 #define DYNTRACE_PROBE_CONTEXT_END(cptr)
 #define DYNTRACE_PROBE_CONTEXT_JUMP(cptr, val, restart)
@@ -668,24 +669,22 @@ typedef struct {
     Look for DYNTRACE_PROBE_GC_EXIT(...) in
     - src/main/memory.c
     ***************************************************************************/
-    void (*probe_gc_exit)(dyntrace_context_t *dyntrace_context, int gc_count,
-                          double vcells, double ncells);
+    void (*probe_gc_exit)(dyntrace_context_t *dyntrace_context, int gc_count);
 
     /***************************************************************************
-    Fires when a promise gets garbage collected
-    Look for DYNTRACE_PROBE_GC_PROMISE_UNMARKED(...) in
+    Fires when an object gets garbage collected
+    Look for DYNTRACE_PROBE_GC_UNMARK(...) in
     - src/main/memory.c
     ***************************************************************************/
-    void (*probe_gc_promise_unmarked)(dyntrace_context_t *dyntrace_context,
-                                      const SEXP promise);
+    void (*probe_gc_unmark)(dyntrace_context_t *dyntrace_context, const SEXP object);
 
     /***************************************************************************
-    Fires when a closure, builtin, or special gets garbage collected
-    Look for DYNTRACE_PROBE_GC_FUNCTION_UNMARKED(...) in
+    Fires when an object gets allocated
+    Look for DYNTRACE_PROBE_ALLOCATE(...) in
     - src/main/memory.c
     ***************************************************************************/
-    void (*probe_gc_function_unmarked)(dyntrace_context_t *dyntrace_context,
-                                      const SEXP function);
+    void (*probe_allocate)(dyntrace_context_t *dyntrace_context, const SEXP object);
+
 
     /***************************************************************************
     Fires when the interpreter is about to longjump into a different context.
