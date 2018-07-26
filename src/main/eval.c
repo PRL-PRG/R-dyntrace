@@ -495,8 +495,7 @@ void attribute_hidden check_stack_balance(SEXP op, int save)
 
 static SEXP forcePromise(SEXP e)
 {
-    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(e);
-    if (PRVALUE(e) == R_UnboundValue) {
+  if (PRVALUE(e) == R_UnboundValue) {
       DYNTRACE_PROBE_PROMISE_FORCE_ENTRY(e);
 	RPRSTACK prstack;
 	SEXP val;
@@ -1693,6 +1692,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars)
     while (f != R_NilValue) {
 	if (CAR(a) == R_MissingArg && CAR(f) != R_MissingArg) {
 	    SETCAR(a, mkPROMISE(CAR(f), newrho));
+      DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_ASSIGN(TAG(f), CAR(a), newrho);
 	    SET_MISSING(a, 2);
 	}
 	f = CDR(f);
@@ -2313,8 +2313,11 @@ SEXP attribute_hidden do_for(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    default:
 		errorcall(call, _("invalid for() loop sequence"));
 	    }
-	    if (CAR(cell) == R_UnboundValue || ! SET_BINDING_VALUE(cell, v))
+	    if (CAR(cell) == R_UnboundValue || ! SET_BINDING_VALUE(cell, v)) {
 		defineVar(sym, v, rho);
+      } else {
+        DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_ASSIGN(sym, v, rho)
+      }
 	}
 	if (!bgn && RDEBUG(rho) && !R_GlobalContext->browserfinish) {
 	    SrcrefPrompt("debug", R_Srcref);
@@ -2756,6 +2759,7 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP args, SEXP rho)
 		error(_("invalid function in complex assignment"));
 	}
 	SET_TEMPVARLOC_FROM_CAR(tmploc, lhs);
+  DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_ASSIGN(R_TmpvalSymbol, R_GetVarLocValue(tmploc), rho);
 	PROTECT(rhs = replaceCall(tmp, R_TmpvalSymbol, CDDR(expr), rhsprom));
 	rhs = eval(rhs, rho);
 	SET_PRVALUE(rhsprom, rhs);
@@ -2783,6 +2787,7 @@ static SEXP applydefine(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    error(_("invalid function in complex assignment"));
     }
     SET_TEMPVARLOC_FROM_CAR(tmploc, lhs);
+    DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_ASSIGN(R_TmpvalSymbol, R_GetVarLocValue(tmploc), rho);
     PROTECT(expr = assignCall(asymSymbol[PRIMVAL(op)], CDR(lhs),
 			      afun, R_TmpvalSymbol, CDDR(expr), rhsprom));
     expr = eval(expr, rho);
@@ -6543,8 +6548,11 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	  default:
 	    error(_("invalid sequence argument in for loop"));
 	  }
-	  if (CAR(cell) == R_UnboundValue || ! SET_BINDING_VALUE(cell, value))
+	  if (CAR(cell) == R_UnboundValue || ! SET_BINDING_VALUE(cell, value)) {
 	      defineVar(BINDING_SYMBOL(cell), value, rho);
+    } else {
+        DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_ASSIGN(BINDING_SYMBOL(cell), value, rho);
+    }
 	  BC_CHECK_SIGINT();
 	  pc = codebase + label;
 	}
@@ -6631,7 +6639,9 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	    PROTECT(value);
 	    defineVar(symbol, value, rho);
 	    UNPROTECT(1);
-	}
+	} else {
+      DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_ASSIGN(TAG(loc), value, rho)
+  }
 	NEXT();
       }
     OP(GETFUN, 1):
@@ -6952,8 +6962,11 @@ static SEXP bcEval(SEXP body, SEXP rho, Rboolean useCache)
 	SEXP cell = GET_BINDING_CELL_CACHE(symbol, rho, vcache, sidx);
 	SEXP value = GETSTACK(-1); /* leave on stack for GC protection */
 	INCREMENT_NAMED(value);
-	if (! SET_BINDING_VALUE(cell, value))
+	if (! SET_BINDING_VALUE(cell, value)) {
 	    defineVar(symbol, value, rho);
+  } else {
+      DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_ASSIGN(TAG(cell), value, rho);
+  }
 	R_BCNodeStackTop--; /* now pop LHS value off the stack */
 	/* original right-hand side value is now on top of stack again */
 #ifdef OLD_RHS_NAMED

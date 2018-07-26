@@ -1056,7 +1056,7 @@ int	R_GetFDLimit();
 int	R_EnsureFDLimit(int);
 
 /* environment cell access */
-typedef struct { SEXP cell; } R_varloc_t; /* use struct to prevent casting */
+typedef struct { SEXP cell; SEXP env;} R_varloc_t; /* use struct to prevent casting */
 #define R_VARLOC_IS_NULL(loc) ((loc).cell == NULL)
 R_varloc_t R_findVarLocInFrame(SEXP, SEXP);
 SEXP R_GetVarLocValue(R_varloc_t);

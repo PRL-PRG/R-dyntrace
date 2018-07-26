@@ -155,7 +155,7 @@ static void args2buff(SEXP, int, int, LocalParseData *);
 void deparse2buff(SEXP, LocalParseData *);
 static void print2buff(const char *, LocalParseData *);
 static void printtab2buff(int, LocalParseData *);
-static void writeline(LocalParseData *);
+void writeline(LocalParseData *);
 static void vec2buff   (SEXP, LocalParseData *, Rboolean do_names);
 static void vector2buff(SEXP, LocalParseData *);
 static void src2buff1(SEXP, LocalParseData *);
@@ -1476,7 +1476,7 @@ void deparse2buff(SEXP s, LocalParseData *d)
 /* If there is a string array active point to that, and */
 /* otherwise we are counting lines so don't do anything. */
 
-static void writeline(LocalParseData *d)
+void writeline(LocalParseData *d)
 {
     if (d->strvec != R_NilValue && d->linenumber < d->maxlines)
 	SET_STRING_ELT(d->strvec, d->linenumber, mkChar(d->buffer.data));

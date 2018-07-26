@@ -689,13 +689,15 @@ dyntracer_t *dyntracer_replace_sexp(SEXP dyntracer_sexp,
                                     dyntracer_t *new_dyntracer);
 SEXP dyntracer_destroy_sexp(SEXP dyntracer_sexp,
                             void (*destroy_dyntracer)(dyntracer_t *dyntracer));
-SEXP lookup_environment(SEXP rho, SEXP key);
-SEXP get_promise_expression(SEXP prom);
+SEXP dyntrace_lookup_environment(SEXP rho, SEXP key);
+SEXP dyntrace_get_promise_expression(SEXP promise);
+SEXP dyntrace_get_promise_environment(SEXP promise);
+SEXP dyntrace_get_promise_value(SEXP promise);
 // ----------------------------------------------------------------------------
 // helpers
 // ----------------------------------------------------------------------------
 
-const char *serialize_sexp(SEXP s);
+SEXP serialize_sexp(SEXP s, int *linecount);
 int findOp(void *addr);
 int newhashpjw(const char *s);
 

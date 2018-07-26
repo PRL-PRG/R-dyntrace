@@ -963,6 +963,7 @@ R_varloc_t R_findVarLocInFrame(SEXP rho, SEXP symbol)
     SEXP binding = findVarLocInFrame(rho, symbol, NULL);
     R_varloc_t val;
     val.cell = binding == R_NilValue ? NULL : binding;
+    val.env = rho;
     return val;
 }
 
@@ -988,6 +989,7 @@ attribute_hidden
 void R_SetVarLocValue(R_varloc_t vl, SEXP value)
 {
     SET_BINDING_VALUE(vl.cell, value);
+    DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_ASSIGN(TAG(vl.cell), value, vl.env);
 }
 
 
@@ -1643,7 +1645,7 @@ void defineVar(SEXP symbol, SEXP value, SEXP rho)
   the variables from addVars are not present in env and that addVars does
   not have duplicit variables.
 */
-
+//TODO - add probes here.
 attribute_hidden
 void addMissingVarsToNewEnv(SEXP env, SEXP addVars)
 {
@@ -1656,8 +1658,10 @@ void addMissingVarsToNewEnv(SEXP env, SEXP addVars)
 
     /* append variables from env after addVars */
     SEXP aprev = addVars;
+    DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_DEFINE(TAG(aprev), CAR(aprev), env);
     SEXP a = CDR(addVars);
     while (a != R_NilValue) {
+      DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_DEFINE(TAG(a), CAR(a), env);
 	aprev = a;
 	a = CDR(a);
     }
