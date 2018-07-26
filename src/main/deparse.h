@@ -37,4 +37,5 @@ typedef struct {
 } LocalParseData;
 
 void deparse2buff(SEXP, LocalParseData *);
+void writeline(LocalParseData *);
 #endif /* __DEPARSE_H__ */

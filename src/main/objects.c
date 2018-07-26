@@ -370,7 +370,6 @@ static
 SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
 		    const char *generic, SEXP rho, SEXP callrho, SEXP defrho) {
 
-  DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(cptr->promargs));
   DYNTRACE_PROBE_S3_DISPATCH_ENTRY(generic, CHAR(STRING_ELT(dotClass, 0)),
                                    method, PRVALUE(CAR(cptr->promargs)));
 
@@ -418,7 +417,6 @@ SEXP dispatchMethod(SEXP op, SEXP sxp, SEXP dotClass, RCNTXT *cptr, SEXP method,
     R_GlobalContext->callflag = CTXT_RETURN;
     UNPROTECT(5); /* "generic,method", newvars, newcall, matchedarg */
 
-    DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(CAR(cptr->promargs));
     DYNTRACE_PROBE_S3_DISPATCH_EXIT(generic, CHAR(STRING_ELT(dotClass, 0)),
                                     method, PRVALUE(CAR(cptr->promargs)), ans);
 

@@ -1,9 +1,9 @@
 #include <Rdyntrace.h>
 #include <Rinternals.h>
-#include <deparse.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <deparse.h>
 
 dyntracer_t *dyntrace_active_dyntracer = NULL;
 int dyntrace_check_reentrancy = 1;
@@ -85,11 +85,54 @@ void dyntrace_disable_privileged_mode() { dyntrace_privileged_mode_flag = 0; }
 
 int dyntrace_is_priviliged_mode() { return dyntrace_privileged_mode_flag; }
 
+
+#define DYNTRACE_PARSE_DATA_BUFFER_SIZE (1024 * 1024 * 8)
+#define DYNTRACE_PARSE_DATA_MAXLINES (10000)
+
+static LocalParseData dyntrace_parse_data = {
+  0,
+  0,
+  0,
+  0,
+  /*startline = */ TRUE,
+  0,
+  NULL,
+  /*DeparseBuffer=*/{NULL, 0, DYNTRACE_PARSE_DATA_BUFFER_SIZE},
+  INT_MAX,
+  FALSE,
+  0,
+  TRUE,
+#ifdef longstring_WARN
+  FALSE,
+#endif
+  DYNTRACE_PARSE_DATA_MAXLINES,
+  TRUE,
+  0,
+  FALSE};
+
+static void allocate_dyntrace_parse_data() {
+  dyntrace_parse_data.buffer.data =
+    (char *)malloc(DYNTRACE_PARSE_DATA_BUFFER_SIZE);
+  dyntrace_parse_data.strvec =
+    PROTECT(allocVector(STRSXP, DYNTRACE_PARSE_DATA_MAXLINES));
+}
+
+static void deallocate_dyntrace_parse_data() {
+  free(dyntrace_parse_data.buffer.data);
+  UNPROTECT(1);
+}
+
 SEXP do_dyntrace(SEXP call, SEXP op, SEXP args, SEXP rho) {
     int eval_error = FALSE;
     SEXP code_block, expression, environment, result;
     dyntracer_t *dyntracer = NULL;
     dyntracer_t *dyntrace_previous_dyntracer = dyntrace_active_dyntracer;
+
+    dyntrace_active_dyntracer = NULL;
+
+    /* set this to NULL to let allocation happen below
+       without any probes getting executed. */
+    allocate_dyntrace_parse_data();
 
     /* extract objects from argument list */
     dyntracer = dyntracer_from_sexp(eval(CAR(args), rho));
@@ -114,6 +157,12 @@ SEXP do_dyntrace(SEXP call, SEXP op, SEXP args, SEXP rho) {
 
     DYNTRACE_PROBE_DYNTRACE_EXIT(expression, environment, result, eval_error);
 
+    /* set this to NULL to let deallocation happen below
+       without any probes getting executed. */
+    dyntrace_active_dyntracer = NULL;
+
+    deallocate_dyntrace_parse_data();
+
     dyntrace_active_dyntracer = dyntrace_previous_dyntracer;
 
     UNPROTECT(3);
@@ -137,42 +186,19 @@ void dyntrace_reinstate_garbage_collector() {
     R_GCEnabled = dyntrace_garbage_collector_state;
 }
 
-#define DYNTRACE_PARSE_DATA_BUFFER_SIZE (1024 * 1024 * 8)
-static LocalParseData dyntrace_parse_data = {
-    0,
-    0,
-    0,
-    0,
-    /*startline = */ TRUE,
-    0,
-    NULL,
-    /*DeparseBuffer=*/{NULL, 0, DYNTRACE_PARSE_DATA_BUFFER_SIZE},
-    INT_MAX,
-    FALSE,
-    0,
-    TRUE,
-#ifdef longstring_WARN
-    FALSE,
-#endif
-    INT_MAX,
-    TRUE,
-    0,
-    FALSE};
-
-const char *serialize_sexp(SEXP s) {
-  int opts = 32;
+SEXP serialize_sexp(SEXP s, int* linecount) {
+  int opts = DELAYPROMISES | USESOURCE;
   dyntrace_enable_privileged_mode();
-  if(dyntrace_parse_data.buffer.data != NULL) {
-    dyntrace_parse_data.buffer.data[0] = '\0';
-    dyntrace_parse_data.strvec = R_NilValue;
-  }
-  dyntrace_parse_data.buffer.bufsize = 0;
+  dyntrace_parse_data.buffer.data[0] = '\0';
+  dyntrace_parse_data.len = 0;
   dyntrace_parse_data.linenumber = 0;
   dyntrace_parse_data.indent = 0;
   dyntrace_parse_data.opts = opts;
   deparse2buff(s, &dyntrace_parse_data);
+  writeline(&dyntrace_parse_data);
+  *linecount = dyntrace_parse_data.linenumber;
   dyntrace_disable_privileged_mode();
-  return dyntrace_parse_data.buffer.data;
+  return dyntrace_parse_data.strvec;
 }
 
 int newhashpjw(const char *s) { return R_Newhashpjw(s); }
@@ -184,6 +210,14 @@ SEXP lookup_environment(SEXP rho, SEXP key) {
   return value;
 }
 
-SEXP get_promise_expression(SEXP prom) {
-    return (prom)->u.promsxp.expr;
+SEXP dyntrace_get_promise_expression(SEXP promise) {
+    return (promise)->u.promsxp.expr;
+}
+
+SEXP dyntrace_get_promise_environment(SEXP promise) {
+    return (promise)->u.promsxp.env;
+}
+
+SEXP dyntrace_get_promise_value(SEXP promise) {
+    return (promise)->u.promsxp.value;
 }
