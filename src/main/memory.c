@@ -1789,6 +1789,24 @@ static void RunGenCollect(R_size_t size_needed)
 
         for (i = 0; i < NUM_SMALL_NODE_CLASSES; i++) {
             s = NEXT_NODE(R_GenHeap[i].New);
+
+            /* First unmark all promises because promises also contain environment
+               expression and value inside of them. This ensures that when the probe
+               processes an unmarked promise, it still has access to the type of
+               the promise expression, value and environment.*/
+            while (s != R_GenHeap[i].New) {
+                SEXP next = NEXT_NODE(s);
+                if (TYPEOF(s) == PROMSXP) {
+                    DYNTRACE_PROBE_GC_UNMARK(s);
+                    SETOLDTYPE(s, TYPEOF(s));
+                    TYPEOF(s) = FREESXP;
+                }
+                s = next;
+            }
+
+            /* This code unmarks all non promise objects. There is no explicit check for
+               promises because promises that have been processed in the previous loop
+               have their type set to FREESXP. */
             while (s != R_GenHeap[i].New) {
                 SEXP next = NEXT_NODE(s);
                 if (TYPEOF(s) != NEWSXP) {
