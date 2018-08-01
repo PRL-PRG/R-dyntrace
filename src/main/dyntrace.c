@@ -203,7 +203,7 @@ SEXP serialize_sexp(SEXP s, int* linecount) {
 
 int newhashpjw(const char *s) { return R_Newhashpjw(s); }
 
-SEXP lookup_environment(SEXP rho, SEXP key) {
+SEXP dyntrace_lookup_environment(SEXP rho, SEXP key) {
   dyntrace_disable_probe(probe_environment_variable_lookup);
   SEXP value = findVarInFrame3(rho, key, TRUE);
   dyntrace_enable_probe(probe_environment_variable_lookup);
