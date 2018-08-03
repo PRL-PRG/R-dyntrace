@@ -517,8 +517,6 @@ static SEXP forcePromise(SEXP e)
 	prstack.promise = e;
 	prstack.next = R_PendingPromises;
 	R_PendingPromises = &prstack;
-  DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(e);
-  DYNTRACE_PROBE_PROMISE_ENVIRONMENT_LOOKUP(e);
 	val = eval(PRCODE(e), PRENV(e));
 
 	/* Pop the stack, unmark the promise and set its value field.
@@ -527,9 +525,9 @@ static SEXP forcePromise(SEXP e)
 	   fancy games with delayedAssign() */
 	R_PendingPromises = prstack.next;
 	SET_PRSEEN(e, 0);
-	SET_PRVALUE(e, val);
+	SET_PRVALUE_UNPROBED(e, val);
 	ENSURE_NAMEDMAX(val);
-	SET_PRENV(e, R_NilValue);
+	SET_PRENV_UNPROBED(e, R_NilValue);
   DYNTRACE_PROBE_PROMISE_FORCE_EXIT(e);
     }
     DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(e);
@@ -4335,7 +4333,9 @@ SETSTACK(-1, result);		     \
   R_Visible = TRUE;						\
   NEXT(); \
 } while(0)
-
+// TODO - insert these back
+//DYNTRACE_PROBE_BUILTIN_ENTRY(call, opval, tmp_args, rho);
+//DYNTRACE_PROBE_BUILTIN_EXIT(call, opval, tmp_args, rho, result);
 #define NewBuiltin2(do_fun,opval,opsym,rho) do {	\
   SEXP call = VECTOR_ELT(constants, GETOP()); \
   SEXP x = GETSTACK(-2); \
@@ -4343,9 +4343,7 @@ SETSTACK(-1, result);		     \
   { \
     SEXP tmp_args = CONS_NR(x, CONS_NR(y, R_NilValue));  \
     PROTECT(tmp_args); \
-    DYNTRACE_PROBE_BUILTIN_ENTRY(call, opsym, tmp_args, rho);  \
     SEXP result = do_fun(call, opval, opsym, x, y,rho);    \
-    DYNTRACE_PROBE_BUILTIN_EXIT(call, opsym, tmp_args, rho, result); \
     UNPROTECT(1); \
     SETSTACK(-2, result);	\
   } \

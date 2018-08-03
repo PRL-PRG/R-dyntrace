@@ -1807,6 +1807,7 @@ static void RunGenCollect(R_size_t size_needed)
             /* This code unmarks all non promise objects. There is no explicit check for
                promises because promises that have been processed in the previous loop
                have their type set to FREESXP. */
+            s = NEXT_NODE(R_GenHeap[i].New);
             while (s != R_GenHeap[i].New) {
                 SEXP next = NEXT_NODE(s);
                 if (TYPEOF(s) != NEWSXP) {
@@ -3999,6 +4000,26 @@ void (SET_PRCODE)(SEXP x, SEXP v) {
 }
 
 void (SET_PRSEEN)(SEXP x, int v) { SET_PRSEEN(CHK(x), v); }
+
+
+void (SET_PRENV_UNPROBED)(SEXP x, SEXP v){
+  FIX_REFCNT(x, PRENV(x), v);
+  CHECK_OLD_TO_NEW(x, v);
+  PRENV(x) = v;
+}
+
+void (SET_PRVALUE_UNPROBED)(SEXP x, SEXP v) {
+  FIX_REFCNT(x, PRVALUE(x), v);
+  CHECK_OLD_TO_NEW(x, v);
+  PRVALUE(x) = v;
+}
+
+void (SET_PRCODE_UNPROBED)(SEXP x, SEXP v) {
+  FIX_REFCNT(x, PRCODE(x), v);
+  CHECK_OLD_TO_NEW(x, v);
+  PRCODE(x) = v;
+}
+
 
 /* Hashing Accessors */
 #ifdef TESTING_WRITE_BARRIER
