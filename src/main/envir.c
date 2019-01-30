@@ -1407,6 +1407,7 @@ static int ddVal(SEXP symbol)
 
 SEXP ddfind(int i, SEXP rho)
 {
+    SEXP value;
     if(i <= 0)
 	error(_("indexing '...' with non-positive index %d"), i);
     /* first look for ... symbol  */
@@ -1414,7 +1415,12 @@ SEXP ddfind(int i, SEXP rho)
     if (vl != R_UnboundValue) {
 	if (length_DOTS(vl) >= i) {
 	    vl = nthcdr(vl, i - 1);
-	    return(CAR(vl));
+	    value = CAR(vl);
+      char symbol_name[50];
+      sprintf(symbol_name, "..%d", i);
+      SEXP symbol = install(symbol_name);
+      DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_LOOKUP(symbol, value, rho);
+      return value;
 	}
 	else // length(...) < i
 	    error(ngettext("the ... list does not contain any elements",
