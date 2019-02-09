@@ -693,6 +693,8 @@ SEXP dyntrace_lookup_environment(SEXP rho, SEXP key);
 SEXP dyntrace_get_promise_expression(SEXP promise);
 SEXP dyntrace_get_promise_environment(SEXP promise);
 SEXP dyntrace_get_promise_value(SEXP promise);
+int dyntrace_get_c_function_argument_evaluation(SEXP op);
+int dyntrace_get_c_function_arity(SEXP op);
 // ----------------------------------------------------------------------------
 // helpers
 // ----------------------------------------------------------------------------

@@ -221,3 +221,11 @@ SEXP dyntrace_get_promise_environment(SEXP promise) {
 SEXP dyntrace_get_promise_value(SEXP promise) {
     return (promise)->u.promsxp.value;
 }
+
+int dyntrace_get_c_function_argument_evaluation(SEXP op) {
+    return (R_FunTab[(op)->u.primsxp.offset].eval) % 10;
+}
+
+int dyntrace_get_c_function_arity(SEXP op) {
+    return PRIMARITY(op);
+}
