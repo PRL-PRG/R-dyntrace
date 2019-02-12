@@ -264,40 +264,50 @@ extern "C" {
     UNPROTECT(1);                                                              \
     DYNTRACE_PROBE_FOOTER(probe_context_jump);
 
-#define DYNTRACE_PROBE_S3_GENERIC_ENTRY(generic, object)                       \
-    DYNTRACE_PROBE_HEADER(probe_S3_generic_entry);                             \
-    PROTECT(object);                                                           \
-    dyntrace_active_dyntracer->probe_S3_generic_entry(                         \
-        dyntrace_active_dyntracer, generic, object);                           \
-    UNPROTECT(1);                                                              \
+#define DYNTRACE_PROBE_S3_GENERIC_ENTRY(generic, generic_method, object)         \
+    DYNTRACE_PROBE_HEADER(probe_S3_generic_entry);                               \
+    PROTECT(generic_method);                                                     \
+    PROTECT(object);                                                             \
+    dyntrace_active_dyntracer->probe_S3_generic_entry(dyntrace_active_dyntracer, \
+                                                      generic, generic_method,   \
+                                                      object);                   \
+    UNPROTECT(2);                                                                \
     DYNTRACE_PROBE_FOOTER(probe_S3_generic_entry);
 
-#define DYNTRACE_PROBE_S3_GENERIC_EXIT(generic, object, retval)                \
-    DYNTRACE_PROBE_HEADER(probe_S3_generic_exit);                              \
-    PROTECT(object);                                                           \
-    PROTECT(retval);                                                           \
-    dyntrace_active_dyntracer->probe_S3_generic_exit(                          \
-        dyntrace_active_dyntracer, generic, object, retval);                   \
-    UNPROTECT(2);                                                              \
+#define DYNTRACE_PROBE_S3_GENERIC_EXIT(generic, generic_method, object, retval)  \
+    DYNTRACE_PROBE_HEADER(probe_S3_generic_exit);                                \
+    PROTECT(generic_method);                                                     \
+    PROTECT(object);                                                             \
+    PROTECT(retval);                                                             \
+    dyntrace_active_dyntracer->probe_S3_generic_exit(dyntrace_active_dyntracer,  \
+                                                     generic, generic_method,    \
+                                                     object, retval);            \
+    UNPROTECT(3);                                                                \
     DYNTRACE_PROBE_FOOTER(probe_S3_generic_exit);
 
-#define DYNTRACE_PROBE_S3_DISPATCH_ENTRY(generic, cls, method, object)         \
-    DYNTRACE_PROBE_HEADER(probe_S3_dispatch_entry);                            \
-    PROTECT(method);                                                           \
-    PROTECT(object);                                                           \
-    dyntrace_active_dyntracer->probe_S3_dispatch_entry(                        \
-        dyntrace_active_dyntracer, generic, cls, method, object);              \
-    UNPROTECT(2);                                                              \
+#define DYNTRACE_PROBE_S3_DISPATCH_ENTRY(generic, cls, generic_method, specific_method, objects) \
+    DYNTRACE_PROBE_HEADER(probe_S3_dispatch_entry);                                              \
+    PROTECT(cls);                                                                                \
+    PROTECT(generic_method);                                                                     \
+    PROTECT(specific_method);                                                                    \
+    PROTECT(objects);                                                                            \
+    dyntrace_active_dyntracer->probe_S3_dispatch_entry(                                          \
+        dyntrace_active_dyntracer, generic, cls, generic_method,                                 \
+        specific_method, objects);                                                               \
+    UNPROTECT(4);                                                                                \
     DYNTRACE_PROBE_FOOTER(probe_S3_dispatch_entry);
 
-#define DYNTRACE_PROBE_S3_DISPATCH_EXIT(generic, cls, method, object, retval)  \
-    DYNTRACE_PROBE_HEADER(probe_S3_dispatch_exit);                             \
-    PROTECT(method);                                                           \
-    PROTECT(object);                                                           \
-    PROTECT(retval);                                                           \
-    dyntrace_active_dyntracer->probe_S3_dispatch_exit(                         \
-        dyntrace_active_dyntracer, generic, cls, method, object, retval);      \
-    UNPROTECT(3);                                                              \
+#define DYNTRACE_PROBE_S3_DISPATCH_EXIT(generic, cls, generic_method, specific_method, objects, return_value) \
+    DYNTRACE_PROBE_HEADER(probe_S3_dispatch_exit);                                                            \
+    PROTECT(cls);                                                                                             \
+    PROTECT(generic_method);                                                                                  \
+    PROTECT(specific_method);                                                                                 \
+    PROTECT(objects);                                                                                         \
+    PROTECT(return_value);                                                                                    \
+    dyntrace_active_dyntracer->probe_S3_dispatch_exit(                                                        \
+        dyntrace_active_dyntracer, generic, cls, generic_method,                                              \
+        specific_method, objects, return_value);                                                              \
+    UNPROTECT(5);                                                                                             \
     DYNTRACE_PROBE_FOOTER(probe_S3_dispatch_exit);
 
 #define DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_DEFINE(symbol, value, rho)         \
@@ -564,27 +574,29 @@ struct dyntracer_t {
     Fires when a generic S3 function is entered.
     ***************************************************************************/
     void (*probe_S3_generic_entry)(dyntracer_t *dyntracer, const char *generic,
-                                   const SEXP object);
+                                   const SEXP generic_method, const SEXP object);
 
     /***************************************************************************
     Fires when a generic S3 function is exited.
     ***************************************************************************/
     void (*probe_S3_generic_exit)(dyntracer_t *dyntracer, const char *generic,
-                                  const SEXP object, const SEXP retval);
+                                  const SEXP generic_method, const SEXP object,
+                                  const SEXP retval);
 
     /***************************************************************************
     Fires when a S3 function is entered.
     ***************************************************************************/
-    void (*probe_S3_dispatch_entry)(dyntracer_t *dyntracer, const char *generic,
-                                    const char *cls, const SEXP method,
-                                    const SEXP object);
+    void (*probe_S3_dispatch_entry)(dyntracer_t *dyntracer, const char* generic,
+                                    const SEXP cls, const SEXP generic_method,
+                                    const SEXP specific_method, const SEXP objects);
 
     /***************************************************************************
     Fires when a S3 function is exited.
     ***************************************************************************/
     void (*probe_S3_dispatch_exit)(dyntracer_t *dyntracer, const char *generic,
-                                   const char *cls, const SEXP method,
-                                   const SEXP object, const SEXP retval);
+                                   const SEXP cls, const SEXP generic_method,
+                                   const SEXP specific_method,
+                                   const SEXP return_value, const SEXP objects);
 
     /***************************************************************************
     Fires when a variable is defined in an environment.
