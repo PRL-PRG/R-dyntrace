@@ -229,3 +229,5 @@ int dyntrace_get_c_function_argument_evaluation(SEXP op) {
 int dyntrace_get_c_function_arity(SEXP op) {
     return PRIMARITY(op);
 }
+
+int dyntrace_get_primitive_offset(SEXP op) { return (op)->u.primsxp.offset; }
