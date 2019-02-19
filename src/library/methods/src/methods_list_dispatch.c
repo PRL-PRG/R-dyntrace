@@ -21,6 +21,8 @@
    Does byte-level handling in primitive_case, but only of ASCII chars
 */
 
+#include <Rdyntrace.h>
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
@@ -236,15 +238,15 @@ SEXP R_quick_method_check(SEXP args, SEXP mlist, SEXP fdef)
     while(!isNull(args) && !isNull(methods)) {
 	object = CAR(args); args = CDR(args);
 	if(TYPEOF(object) == PROMSXP) {
-      DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(object);
 	    if(PRVALUE(object) == R_UnboundValue) {
-        DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(object);
-        DYNTRACE_PROBE_PROMISE_ENVIRONMENT_LOOKUP(object);
-		SEXP tmp = eval(PRCODE(object), PRENV(object));
-		PROTECT(tmp); nprotect++;
-		SET_PRVALUE(object,  tmp);
-		object = tmp;
-	    }
+    DYNTRACE_PROBE_PROMISE_FORCE_ENTRY(object);
+    SEXP tmp = eval(PRCODE(object), PRENV(object));
+    PROTECT(tmp);
+    nprotect++;
+    SET_PRVALUE_UNPROBED(object, tmp);
+    object = tmp;
+    DYNTRACE_PROBE_PROMISE_FORCE_EXIT(object);
+      }
 	    else {
         DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(object);
 		object = PRVALUE(object);
@@ -313,15 +315,15 @@ SEXP R_quick_dispatch(SEXP args, SEXP genericEnv, SEXP fdef)
     while(!isNull(args) && nargs < nsig) {
 	object = CAR(args); args = CDR(args);
 	if(TYPEOF(object) == PROMSXP) {
-      DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(object);
 	    if(PRVALUE(object) == R_UnboundValue) {
-        DYNTRACE_PROBE_PROMISE_EXPRESSION_LOOKUP(object);
-        DYNTRACE_PROBE_PROMISE_ENVIRONMENT_LOOKUP(object);
-		SEXP tmp = eval(PRCODE(object), PRENV(object));
-		PROTECT(tmp); nprotect++;
-		SET_PRVALUE(object,  tmp);
-		object = tmp;
-	    }
+    DYNTRACE_PROBE_PROMISE_FORCE_ENTRY(object);
+    SEXP tmp = eval(PRCODE(object), PRENV(object));
+    PROTECT(tmp);
+    nprotect++;
+    SET_PRVALUE_UNPROBED(object, tmp);
+    object = tmp;
+    DYNTRACE_PROBE_PROMISE_FORCE_EXIT(object);
+      }
 	    else {
         DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(object);
 		object = PRVALUE(object);
@@ -975,6 +977,7 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
     char *buf, *bufptr;
     int nargs, i, lwidth = 0;
 
+    DYNTRACE_PROBE_S4_GENERIC_ENTRY(fname, ev, fdef);
     if(!R_mtable) {
 	R_mtable = install(".MTable");
 	R_allmtable = install(".AllMTable");
@@ -991,7 +994,8 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
 	if(TYPEOF(fdef) != CLOSXP) {
 	    error(_("failed to get the generic for the primitive \"%s\""),
 		  CHAR(asChar(fname)));
-	    return R_NilValue;
+      DYNTRACE_PROBE_S4_GENERIC_EXIT(fname, ev, fdef, R_NilValue);
+      return R_NilValue;
 	}
 	f_env = CLOENV(fdef);
 	break;
@@ -1021,9 +1025,13 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
 	    /*  get its class */
 	    SEXP arg; int check_err = 0;
 	    if(arg_sym == R_dots) {
-		thisClass = dots_class(ev, &check_err);
+          /* we use ..1 because dots_class calls .dotsClass(...) function and
+             .dotsClass(...) is defined as class(...) in RMethodUtils.R */
+          DYNTRACE_PROBE_S4_DISPATCH_ARGUMENT(dyntrace_lookup_environment(ev, install("..1")));
+      thisClass = dots_class(ev, &check_err);
 	    }
 	    else {
+    DYNTRACE_PROBE_S4_DISPATCH_ARGUMENT(dyntrace_lookup_environment(ev, arg_sym));
 		PROTECT(arg = eval(arg_sym, ev));
 		/* PROTECT(arg = R_tryEvalSilent(arg_sym, ev, &check_err)); // <- related to bug PR#16111 */
 		/* if(!check_err) */
@@ -1089,6 +1097,7 @@ SEXP R_dispatchGeneric(SEXP fname, SEXP ev, SEXP fdef)
 	break;
     }
     UNPROTECT(nprotect);
+    DYNTRACE_PROBE_S4_GENERIC_EXIT(fname, ev, fdef, val);
     return val;
 }
 
