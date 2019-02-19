@@ -27,6 +27,7 @@ int dyntrace_probe_promise_expression_lookup_disabled = 0;
 int dyntrace_probe_promise_expression_assign_disabled = 0;
 int dyntrace_probe_promise_environment_lookup_disabled = 0;
 int dyntrace_probe_promise_environment_assign_disabled = 0;
+int dyntrace_probe_promise_substitute_disabled = 0;
 int dyntrace_probe_eval_entry_disabled = 0;
 int dyntrace_probe_eval_exit_disabled = 0;
 int dyntrace_probe_gc_entry_disabled = 0;
@@ -40,6 +41,9 @@ int dyntrace_probe_S3_generic_entry_disabled = 0;
 int dyntrace_probe_S3_generic_exit_disabled = 0;
 int dyntrace_probe_S3_dispatch_entry_disabled = 0;
 int dyntrace_probe_S3_dispatch_exit_disabled = 0;
+int dyntrace_probe_S4_generic_entry_disabled = 0;
+int dyntrace_probe_S4_generic_exit_disabled = 0;
+int dyntrace_probe_S4_dispatch_argument_disabled = 0;
 int dyntrace_probe_environment_variable_define_disabled = 0;
 int dyntrace_probe_environment_variable_assign_disabled = 0;
 int dyntrace_probe_environment_variable_remove_disabled = 0;
@@ -205,7 +209,13 @@ int newhashpjw(const char *s) { return R_Newhashpjw(s); }
 
 SEXP dyntrace_lookup_environment(SEXP rho, SEXP key) {
   dyntrace_disable_probe(probe_environment_variable_lookup);
-  SEXP value = findVarInFrame3(rho, key, TRUE);
+  SEXP value = R_UnboundValue;
+  if (DDVAL(key)) {
+      value = ddfindVar(key, rho);
+  }
+  else {
+    value = findVar(key, rho);
+  }
   dyntrace_enable_probe(probe_environment_variable_lookup);
   return value;
 }

@@ -23,6 +23,8 @@
 #include <config.h>
 #endif
 
+#include <Rdyntrace.h>
+
 /* interval at which to check interrupts */
 #define NINTERRUPT 10000000
 
@@ -33,7 +35,6 @@
 #define R_MSG_list_vec	_("applies only to lists and vectors")
 #include <Rmath.h>
 #include <Print.h>
-
 
 /* This section of code handles type conversion for elements */
 /* of data vectors.  Type coercion throughout R should use these */
@@ -2576,6 +2577,7 @@ SEXP substitute(SEXP lang, SEXP rho)
     SEXP t;
     switch (TYPEOF(lang)) {
     case PROMSXP:
+        DYNTRACE_PROBE_PROMISE_SUBSTITUTE(lang);
 	return substitute(PREXPR(lang), rho);
     case SYMSXP:
 	if (rho != R_NilValue) {
@@ -2583,7 +2585,8 @@ SEXP substitute(SEXP lang, SEXP rho)
 	    if (t != R_UnboundValue) {
 		if (TYPEOF(t) == PROMSXP) {
 		    do {
-			t = PREXPR(t);
+        DYNTRACE_PROBE_PROMISE_SUBSTITUTE(t);
+        t = PREXPR(t);
 		    } while(TYPEOF(t) == PROMSXP);
 		    /* make sure code will not be modified: */
 		    ENSURE_NAMEDMAX(t);

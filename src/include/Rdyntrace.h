@@ -197,6 +197,14 @@ extern "C" {
     UNPROTECT(2);                                                              \
     DYNTRACE_PROBE_FOOTER(probe_promise_environment_assign);
 
+#define DYNTRACE_PROBE_PROMISE_SUBSTITUTE(promise)                             \
+    DYNTRACE_PROBE_HEADER(probe_promise_substitute);                           \
+    PROTECT(promise);                                                          \
+    dyntrace_active_dyntracer->probe_promise_substitute(                       \
+      dyntrace_active_dyntracer, promise);                                     \
+    UNPROTECT(1);                                                              \
+    DYNTRACE_PROBE_FOOTER(probe_promise_substitute);
+
 #define DYNTRACE_PROBE_EVAL_ENTRY(expression, rho)                             \
     DYNTRACE_PROBE_HEADER(probe_eval_entry);                                   \
     PROTECT(expression);                                                       \
@@ -310,6 +318,35 @@ extern "C" {
     UNPROTECT(5);                                                                                             \
     DYNTRACE_PROBE_FOOTER(probe_S3_dispatch_exit);
 
+#define DYNTRACE_PROBE_S4_GENERIC_ENTRY(fname, env, fdef) \
+    DYNTRACE_PROBE_HEADER(probe_S4_generic_entry);        \
+    PROTECT(fname);                                       \
+    PROTECT(env);                                         \
+    PROTECT(fdef);                                        \
+    dyntrace_active_dyntracer->probe_S4_generic_entry(    \
+        dyntrace_active_dyntracer, fname, env, fdef);     \
+    UNPROTECT(3);                                         \
+    DYNTRACE_PROBE_FOOTER(probe_S4_generic_entry);
+
+#define DYNTRACE_PROBE_S4_GENERIC_EXIT(fname, env, fdef, return_value)                 \
+    DYNTRACE_PROBE_HEADER(probe_S4_generic_exit);                                      \
+    PROTECT(fname);                                                                    \
+    PROTECT(env);                                                                      \
+    PROTECT(fdef);                                                                     \
+    PROTECT(return_value);                                                             \
+    dyntrace_active_dyntracer->probe_S4_generic_exit(dyntrace_active_dyntracer,        \
+                                                     fname, env, fdef, return_value);  \
+    UNPROTECT(4);                                                                      \
+    DYNTRACE_PROBE_FOOTER(probe_S4_generic_exit);
+
+#define DYNTRACE_PROBE_S4_DISPATCH_ARGUMENT(argument)      \
+    DYNTRACE_PROBE_HEADER(probe_S4_dispatch_argument);     \
+    PROTECT(argument);                                     \
+    dyntrace_active_dyntracer->probe_S4_dispatch_argument( \
+        dyntrace_active_dyntracer, argument);              \
+    UNPROTECT(1);                                          \
+    DYNTRACE_PROBE_FOOTER(probe_S4_dispatch_argument);
+
 #define DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_DEFINE(symbol, value, rho)         \
     DYNTRACE_PROBE_HEADER(probe_environment_variable_define);                  \
     PROTECT(symbol);                                                           \
@@ -385,6 +422,7 @@ extern "C" {
 #define DYNTRACE_PROBE_PROMISE_EXPRESSION_ASSIGN(promise, expression)
 #define DYNTRACE_PROBE_PROMISE_ENVIRONMENT_LOOKUP(promise)
 #define DYNTRACE_PROBE_PROMISE_ENVIRONMENT_ASSIGN(promise, environment)
+#define DYNTRACE_PROBE_PROMISE_SUBSITUTE(promise)
 
 #define DYNTRACE_PROBE_EVAL_ENTRY(expression, rho)
 #define DYNTRACE_PROBE_EVAL_EXIT(expression, rho, return_value)
@@ -398,10 +436,16 @@ extern "C" {
 #define DYNTRACE_PROBE_CONTEXT_EXIT(context)
 #define DYNTRACE_PROBE_CONTEXT_JUMP(context, return_value, restart)
 
-#define DYNTRACE_PROBE_S3_GENERIC_ENTRY(generic, object)
-#define DYNTRACE_PROBE_S3_GENERIC_EXIT(generic, object, retval)
-#define DYNTRACE_PROBE_S3_DISPATCH_ENTRY(generic, cls, method, object)
-#define DYNTRACE_PROBE_S3_DISPATCH_EXIT(generic, cls, method, object, retval)
+#define DYNTRACE_PROBE_S3_GENERIC_ENTRY(generic, generic_method, object)
+#define DYNTRACE_PROBE_S3_GENERIC_EXIT(generic, generic_method, object, retval)
+#define DYNTRACE_PROBE_S3_DISPATCH_ENTRY(generic, cls, generic_method,    \
+                                         specific_method, objects)
+#define DYNTRACE_PROBE_S3_DISPATCH_EXIT(generic, cls, generic_method,     \
+                                        specific_method, objects, retval)
+
+#define DYNTRACE_PROBE_S4_GENERIC_ENTRY(fname, env, fdef)
+#define DYNTRACE_PROBE_S4_GENERIC_EXIT(fname, env, fdef, return_value)
+#define DYNTRACE_PROBE_S4_DISPATCH_ARGUMENT(argument)
 
 #define DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_DEFINE(symbol, value, rho)
 #define DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_ASSIGN(symbol, value, rho)
@@ -523,6 +567,12 @@ struct dyntracer_t {
                                              const SEXP environment);
 
     /***************************************************************************
+    Fires when the promise expression is looked up by substitute
+    ***************************************************************************/
+    void (*probe_promise_substitute)(dyntracer_t *dyntracer,
+                                     const SEXP promise);
+
+    /***************************************************************************
     Fires when the eval function is entered.
     ***************************************************************************/
     void (*probe_eval_entry)(dyntracer_t *dyntracer, const SEXP expression,
@@ -599,11 +649,31 @@ struct dyntracer_t {
                                    const SEXP return_value, const SEXP objects);
 
     /***************************************************************************
+    Fires when S4 generic is entered
+    ***************************************************************************/
+    void (*probe_S4_generic_entry)(dyntracer_t *dyntracer, const SEXP fname,
+                                   const SEXP env, const SEXP fdef);
+
+    /***************************************************************************
+    Fires when S4 generic is exited
+    ***************************************************************************/
+    void (*probe_S4_generic_exit)(dyntracer_t *dyntracer, const SEXP fname,
+                                  const SEXP env, const SEXP fdef,
+                                  const SEXP return_value);
+
+    /***************************************************************************
+    Fires when finding the class of the argument for S4 dispatch
+    ***************************************************************************/
+    void (*probe_S4_dispatch_argument)(dyntracer_t *dyntracer,
+                                       const SEXP argument);
+
+    /***************************************************************************
     Fires when a variable is defined in an environment.
     ***************************************************************************/
     void (*probe_environment_variable_define)(dyntracer_t *dyntracer,
                                               const SEXP symbol,
-                                              const SEXP value, const SEXP rho);
+                                              const SEXP value,
+                                              const SEXP rho);
 
     /***************************************************************************
     Fires when a variable is assigned in an environment.
@@ -651,6 +721,7 @@ extern int dyntrace_probe_promise_expression_lookup_disabled;
 extern int dyntrace_probe_promise_expression_assign_disabled;
 extern int dyntrace_probe_promise_environment_lookup_disabled;
 extern int dyntrace_probe_promise_environment_assign_disabled;
+extern int dyntrace_probe_promise_substitute_disabled;
 extern int dyntrace_probe_eval_entry_disabled;
 extern int dyntrace_probe_eval_exit_disabled;
 extern int dyntrace_probe_gc_entry_disabled;
@@ -664,6 +735,9 @@ extern int dyntrace_probe_S3_generic_entry_disabled;
 extern int dyntrace_probe_S3_generic_exit_disabled;
 extern int dyntrace_probe_S3_dispatch_entry_disabled;
 extern int dyntrace_probe_S3_dispatch_exit_disabled;
+extern int dyntrace_probe_S4_generic_entry_disabled;
+extern int dyntrace_probe_S4_generic_exit_disabled;
+extern int dyntrace_probe_S4_dispatch_argument_disabled;
 extern int dyntrace_probe_environment_variable_define_disabled;
 extern int dyntrace_probe_environment_variable_assign_disabled;
 extern int dyntrace_probe_environment_variable_remove_disabled;
@@ -708,6 +782,11 @@ SEXP dyntrace_get_promise_value(SEXP promise);
 int dyntrace_get_c_function_argument_evaluation(SEXP op);
 int dyntrace_get_c_function_arity(SEXP op);
 int dyntrace_get_primitive_offset(SEXP op);
+
+void (SET_PRENV_UNPROBED)(SEXP x, SEXP v);
+void (SET_PRVALUE_UNPROBED)(SEXP x, SEXP v);
+void (SET_PRCODE_UNPROBED)(SEXP x, SEXP v);
+
 // ----------------------------------------------------------------------------
 // helpers
 // ----------------------------------------------------------------------------

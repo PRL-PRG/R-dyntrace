@@ -944,7 +944,7 @@ static SEXP findVarLocInFrame(SEXP rho, SEXP symbol, Rboolean *canCache)
 	/* Will return 'R_NilValue' if not found */
 	SEXP chain = R_HashGetLoc(hashcode, symbol, HASHTAB(rho));
   if(chain != R_NilValue) {
-    DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_LOOKUP(symbol, BINDING_VALUE(chain), rho);
+    DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_LOOKUP(symbol, CAR(chain), rho);
   }
   return chain;
     }
@@ -1230,7 +1230,7 @@ static SEXP findGlobalVar(SEXP symbol)
 	if (rho != R_BaseEnv) { /* we won't have R_BaseNamespace */
 	    vl = findVarLocInFrame(rho, symbol, &canCache);
 	    if (vl != R_NilValue) {
-        DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_LOOKUP(symbol, BINDING_VALUE(vl), R_GlobalEnv);
+        DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_LOOKUP(symbol, CAR(vl), R_GlobalEnv);
 		if(canCache)
 		    R_AddGlobalCache(symbol, vl);
 		return BINDING_VALUE(vl);

@@ -4002,7 +4002,7 @@ void (SET_PRCODE)(SEXP x, SEXP v) {
 void (SET_PRSEEN)(SEXP x, int v) { SET_PRSEEN(CHK(x), v); }
 
 
-void (SET_PRENV_UNPROBED)(SEXP x, SEXP v){
+void (SET_PRENV_UNPROBED)(SEXP x, SEXP v) {
   FIX_REFCNT(x, PRENV(x), v);
   CHECK_OLD_TO_NEW(x, v);
   PRENV(x) = v;
