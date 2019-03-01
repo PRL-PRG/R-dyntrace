@@ -43,6 +43,8 @@ int dyntrace_probe_S3_dispatch_entry_disabled = 0;
 int dyntrace_probe_S3_dispatch_exit_disabled = 0;
 int dyntrace_probe_S4_generic_entry_disabled = 0;
 int dyntrace_probe_S4_generic_exit_disabled = 0;
+int dyntrace_probe_S4_dispatch_entry_disabled = 0;
+int dyntrace_probe_S4_dispatch_exit_disabled = 0;
 int dyntrace_probe_S4_dispatch_argument_disabled = 0;
 int dyntrace_probe_environment_variable_define_disabled = 0;
 int dyntrace_probe_environment_variable_assign_disabled = 0;
@@ -233,7 +235,8 @@ SEXP dyntrace_get_promise_value(SEXP promise) {
 }
 
 int dyntrace_get_c_function_argument_evaluation(SEXP op) {
-    return (R_FunTab[(op)->u.primsxp.offset].eval) % 10;
+    int offset = dyntrace_get_primitive_offset(op);
+    return (R_FunTab[offset].eval) % 10;
 }
 
 int dyntrace_get_c_function_arity(SEXP op) {
@@ -241,3 +244,8 @@ int dyntrace_get_c_function_arity(SEXP op) {
 }
 
 int dyntrace_get_primitive_offset(SEXP op) { return (op)->u.primsxp.offset; }
+
+const char* const dyntrace_get_c_function_name(SEXP op) {
+    int offset = dyntrace_get_primitive_offset(op);
+    return R_FunTab[offset].name;
+}

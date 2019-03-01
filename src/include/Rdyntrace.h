@@ -61,73 +61,77 @@ extern "C" {
 #define DYNTRACE_SHOULD_PROBE(probe_name)                                      \
     (dyntrace_active_dyntracer->probe_name != NULL)
 
-#define DYNTRACE_PROBE_CLOSURE_ENTRY(call, op, args, rho)                      \
-    DYNTRACE_PROBE_HEADER(probe_closure_entry);                                \
-    PROTECT(call);                                                             \
-    PROTECT(op);                                                               \
-    PROTECT(args);                                                             \
-    PROTECT(rho);                                                              \
-    dyntrace_active_dyntracer->probe_closure_entry(dyntrace_active_dyntracer,  \
-                                                   call, op, args, rho);       \
-    UNPROTECT(4);                                                              \
+#define DYNTRACE_PROBE_CLOSURE_ENTRY(call, op, args, rho, dispatch)                \
+    DYNTRACE_PROBE_HEADER(probe_closure_entry);                                    \
+    PROTECT(call);                                                                 \
+    PROTECT(op);                                                                   \
+    PROTECT(args);                                                                 \
+    PROTECT(rho);                                                                  \
+    dyntrace_active_dyntracer->probe_closure_entry(dyntrace_active_dyntracer,      \
+                                                   call, op, args, rho, dispatch); \
+    UNPROTECT(4);                                                                  \
     DYNTRACE_PROBE_FOOTER(probe_closure_entry);
 
-#define DYNTRACE_PROBE_CLOSURE_EXIT(call, op, args, rho, retval)               \
+#define DYNTRACE_PROBE_CLOSURE_EXIT(call, op, args, rho, dispatch, retval)     \
     DYNTRACE_PROBE_HEADER(probe_closure_exit);                                 \
     PROTECT(call);                                                             \
     PROTECT(op);                                                               \
     PROTECT(args);                                                             \
     PROTECT(rho);                                                              \
     PROTECT(retval);                                                           \
-    dyntrace_active_dyntracer->probe_closure_exit(                             \
-        dyntrace_active_dyntracer, call, op, args, rho, retval);               \
+    dyntrace_active_dyntracer->probe_closure_exit(dyntrace_active_dyntracer,   \
+                                                  call, op, args, rho,         \
+                                                  dispatch, retval);           \
     UNPROTECT(5);                                                              \
     DYNTRACE_PROBE_FOOTER(probe_closure_exit);
 
-#define DYNTRACE_PROBE_BUILTIN_ENTRY(call, op, args, rho)                      \
-    DYNTRACE_PROBE_HEADER(probe_builtin_entry);                                \
-    PROTECT(call);                                                             \
-    PROTECT(op);                                                               \
-    PROTECT(args);                                                             \
-    PROTECT(rho);                                                              \
-    dyntrace_active_dyntracer->probe_builtin_entry(dyntrace_active_dyntracer,  \
-                                                   call, op, args, rho);       \
-    UNPROTECT(4);                                                              \
+#define DYNTRACE_PROBE_BUILTIN_ENTRY(call, op, args, rho, dispatch)             \
+    DYNTRACE_PROBE_HEADER(probe_builtin_entry);                                 \
+    PROTECT(call);                                                              \
+    PROTECT(op);                                                                \
+    PROTECT(args);                                                              \
+    PROTECT(rho);                                                               \
+      dyntrace_active_dyntracer->probe_builtin_entry(dyntrace_active_dyntracer, \
+                                                     call, op, args, rho,       \
+                                                     dispatch);                 \
+    UNPROTECT(4);                                                               \
     DYNTRACE_PROBE_FOOTER(probe_builtin_entry);
 
-#define DYNTRACE_PROBE_BUILTIN_EXIT(call, op, args, rho, retval)               \
-    DYNTRACE_PROBE_HEADER(probe_builtin_exit);                                 \
-    PROTECT(call);                                                             \
-    PROTECT(op);                                                               \
-    PROTECT(args);                                                             \
-    PROTECT(rho);                                                              \
-    PROTECT(retval);                                                           \
-    dyntrace_active_dyntracer->probe_builtin_exit(                             \
-        dyntrace_active_dyntracer, call, op, args, rho, retval);               \
-    UNPROTECT(5);                                                              \
+#define DYNTRACE_PROBE_BUILTIN_EXIT(call, op, args, rho, dispatch, return_value)   \
+    DYNTRACE_PROBE_HEADER(probe_builtin_exit);                                     \
+    PROTECT(call);                                                                 \
+    PROTECT(op);                                                                   \
+    PROTECT(args);                                                                 \
+    PROTECT(rho);                                                                  \
+    PROTECT(return_value);                                                         \
+    dyntrace_active_dyntracer->probe_builtin_exit(dyntrace_active_dyntracer,       \
+                                                  call, op, args, rho, dispatch,   \
+                                                  return_value);                   \
+    UNPROTECT(5);                                                                  \
     DYNTRACE_PROBE_FOOTER(probe_builtin_exit);
 
-#define DYNTRACE_PROBE_SPECIAL_ENTRY(call, op, args, rho)                      \
-    DYNTRACE_PROBE_HEADER(probe_special_entry);                                \
-    PROTECT(call);                                                             \
-    PROTECT(op);                                                               \
-    PROTECT(args);                                                             \
-    PROTECT(rho);                                                              \
-    dyntrace_active_dyntracer->probe_special_entry(dyntrace_active_dyntracer,  \
-                                                   call, op, args, rho);       \
-    UNPROTECT(4);                                                              \
+#define DYNTRACE_PROBE_SPECIAL_ENTRY(call, op, args, rho, dispatch)                \
+    DYNTRACE_PROBE_HEADER(probe_special_entry);                                    \
+    PROTECT(call);                                                                 \
+    PROTECT(op);                                                                   \
+    PROTECT(args);                                                                 \
+    PROTECT(rho);                                                                  \
+    dyntrace_active_dyntracer->probe_special_entry(dyntrace_active_dyntracer,      \
+                                                   call, op, args, rho, dispatch); \
+    UNPROTECT(4);                                                                  \
     DYNTRACE_PROBE_FOOTER(probe_special_entry);
 
-#define DYNTRACE_PROBE_SPECIAL_EXIT(call, op, args, rho, retval)               \
-    DYNTRACE_PROBE_HEADER(probe_special_exit);                                 \
-    PROTECT(call);                                                             \
-    PROTECT(op);                                                               \
-    PROTECT(args);                                                             \
-    PROTECT(rho);                                                              \
-    PROTECT(retval);                                                           \
-    dyntrace_active_dyntracer->probe_special_exit(                             \
-        dyntrace_active_dyntracer, call, op, args, rho, retval);               \
-    UNPROTECT(5);                                                              \
+#define DYNTRACE_PROBE_SPECIAL_EXIT(call, op, args, rho, dispatch, return_value) \
+    DYNTRACE_PROBE_HEADER(probe_special_exit);                                   \
+    PROTECT(call);                                                               \
+    PROTECT(op);                                                                 \
+    PROTECT(args);                                                               \
+    PROTECT(rho);                                                                \
+    PROTECT(return_value);                                                       \
+    dyntrace_active_dyntracer->probe_special_exit(dyntrace_active_dyntracer,     \
+                                                  call, op, args, rho, dispatch, \
+                                                  return_value);                 \
+    UNPROTECT(5);                                                                \
     DYNTRACE_PROBE_FOOTER(probe_special_exit);
 
 #define DYNTRACE_PROBE_PROMISE_FORCE_ENTRY(promise)                            \
@@ -339,6 +343,29 @@ extern "C" {
     UNPROTECT(4);                                                                      \
     DYNTRACE_PROBE_FOOTER(probe_S4_generic_exit);
 
+#define DYNTRACE_PROBE_S4_DISPATCH_ENTRY(call, op, args, rho)                      \
+    DYNTRACE_PROBE_HEADER(probe_S4_dispatch_entry);                                \
+    PROTECT(call);                                                                 \
+    PROTECT(op);                                                                   \
+    PROTECT(args);                                                                 \
+    PROTECT(rho);                                                                  \
+    dyntrace_active_dyntracer->probe_S4_dispatch_entry(dyntrace_active_dyntracer,  \
+                                                       call, op, args, rho);       \
+    UNPROTECT(4);                                                                  \
+    DYNTRACE_PROBE_FOOTER(probe_S4_dispatch_entry);
+
+#define DYNTRACE_PROBE_S4_DISPATCH_EXIT(call, op, args, rho, return_value)     \
+    DYNTRACE_PROBE_HEADER(probe_S4_dispatch_exit);                             \
+    PROTECT(call);                                                             \
+    PROTECT(op);                                                               \
+    PROTECT(args);                                                             \
+    PROTECT(rho);                                                              \
+    PROTECT(return_value);                                                     \
+    dyntrace_active_dyntracer->probe_S4_dispatch_exit(                         \
+        dyntrace_active_dyntracer, call, op, args, rho, return_value);         \
+    UNPROTECT(5);                                                              \
+    DYNTRACE_PROBE_FOOTER(probe_S4_dispatch_exit);
+
 #define DYNTRACE_PROBE_S4_DISPATCH_ARGUMENT(argument)      \
     DYNTRACE_PROBE_HEADER(probe_S4_dispatch_argument);     \
     PROTECT(argument);                                     \
@@ -407,12 +434,12 @@ extern "C" {
 #define DYNTRACE_PROBE_DYNTRACE_ENTRY(expression, environment)
 #define DYNTRACE_PROBE_DYNTRACE_EXIT(expression, environment, result, error)
 
-#define DYNTRACE_PROBE_CLOSURE_ENTRY(call, op, args, rho)
-#define DYNTRACE_PROBE_CLOSURE_EXIT(call, op, args, rho, retval)
-#define DYNTRACE_PROBE_BUILTIN_ENTRY(call, op, args, rho)
-#define DYNTRACE_PROBE_BUILTIN_EXIT(call, op, args, rho, retval)
-#define DYNTRACE_PROBE_SPECIAL_ENTRY(call, op, args, rho)
-#define DYNTRACE_PROBE_SPECIAL_EXIT(call, op, args, rho, retval)
+#define DYNTRACE_PROBE_CLOSURE_ENTRY(call, op, args, rho, dispatch)
+#define DYNTRACE_PROBE_CLOSURE_EXIT(call, op, args, rho, dispatch, return_value)
+#define DYNTRACE_PROBE_BUILTIN_ENTRY(call, op, args, rho, dispatch)
+#define DYNTRACE_PROBE_BUILTIN_EXIT(call, op, args, rho, dispatch, return_value)
+#define DYNTRACE_PROBE_SPECIAL_ENTRY(call, op, args, rho, dispatch)
+#define DYNTRACE_PROBE_SPECIAL_EXIT(call, op, args, rho, dispatch, return_value)
 
 #define DYNTRACE_PROBE_PROMISE_FORCE_ENTRY(promise)
 #define DYNTRACE_PROBE_PROMISE_FORCE_EXIT(promise)
@@ -445,6 +472,8 @@ extern "C" {
 
 #define DYNTRACE_PROBE_S4_GENERIC_ENTRY(fname, env, fdef)
 #define DYNTRACE_PROBE_S4_GENERIC_EXIT(fname, env, fdef, return_value)
+#define DYNTRACE_PROBE_S4_DISPATCH_ENTRY(call, op, args, rho)
+#define DYNTRACE_PROBE_S4_DISPATCH_ENTRY(call, op, args, rho, return_value)
 #define DYNTRACE_PROBE_S4_DISPATCH_ARGUMENT(argument)
 
 #define DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_DEFINE(symbol, value, rho)
@@ -461,6 +490,15 @@ extern "C" {
 /* ----------------------------------------------------------------------------
    DYNTRACE TYPE DEFINITIONS
 ---------------------------------------------------------------------------- */
+
+enum dyntrace_dispatch_t {
+    DYNTRACE_DISPATCH_NONE,
+    DYNTRACE_DISPATCH_S3,
+    DYNTRACE_DISPATCH_S4
+};
+
+typedef enum dyntrace_dispatch_t dyntrace_dispatch_t;
+
 typedef struct dyntracer_t dyntracer_t;
 
 struct dyntracer_t {
@@ -481,40 +519,45 @@ struct dyntracer_t {
     Fires on every closure call.
     ***************************************************************************/
     void (*probe_closure_entry)(dyntracer_t *dyntracer, const SEXP call,
-                                const SEXP op, const SEXP args, const SEXP rho);
+                                const SEXP op, const SEXP args, const SEXP rho,
+                                dyntrace_dispatch_t dispatch);
 
     /***************************************************************************
     Fires after every R closure call.
     ***************************************************************************/
     void (*probe_closure_exit)(dyntracer_t *dyntracer, const SEXP call,
                                const SEXP op, const SEXP args, const SEXP rho,
-                               const SEXP retval);
+                               dyntrace_dispatch_t dispatch,
+                               const SEXP return_value);
 
     /***************************************************************************
     Fires on every builtin call.
     ***************************************************************************/
     void (*probe_builtin_entry)(dyntracer_t *dyntracer, const SEXP call,
-                                const SEXP op, const SEXP args, const SEXP rho);
+                                const SEXP op, const SEXP args, const SEXP rho,
+                                dyntrace_dispatch_t dispatch);
 
     /***************************************************************************
     Fires after every builtin call.
     ***************************************************************************/
     void (*probe_builtin_exit)(dyntracer_t *dyntracer, const SEXP call,
                                const SEXP op, const SEXP args, const SEXP rho,
-                               const SEXP retval);
+                               dyntrace_dispatch_t dispatch,
+                               const SEXP return_value);
 
     /***************************************************************************
     Fires on every special call.
     ***************************************************************************/
     void (*probe_special_entry)(dyntracer_t *dyntracer, const SEXP call,
-                                const SEXP op, const SEXP args, const SEXP rho);
+                                const SEXP op, const SEXP args, const SEXP rho,
+                                dyntrace_dispatch_t dispatch);
 
     /***************************************************************************
     Fires after every special call.
     ***************************************************************************/
     void (*probe_special_exit)(dyntracer_t *dyntracer, const SEXP call,
                                const SEXP op, const SEXP args, const SEXP rho,
-                               const SEXP retval);
+                               dyntrace_dispatch_t dispatch, const SEXP return_value);
 
     /***************************************************************************
     Fires when a promise expression is evaluated.
@@ -737,6 +780,8 @@ extern int dyntrace_probe_S3_dispatch_entry_disabled;
 extern int dyntrace_probe_S3_dispatch_exit_disabled;
 extern int dyntrace_probe_S4_generic_entry_disabled;
 extern int dyntrace_probe_S4_generic_exit_disabled;
+extern int dyntrace_probe_S4_dispatch_entry_disabled;
+extern int dyntrace_probe_S4_dispatch_exit_disabled;
 extern int dyntrace_probe_S4_dispatch_argument_disabled;
 extern int dyntrace_probe_environment_variable_define_disabled;
 extern int dyntrace_probe_environment_variable_assign_disabled;
@@ -782,10 +827,11 @@ SEXP dyntrace_get_promise_value(SEXP promise);
 int dyntrace_get_c_function_argument_evaluation(SEXP op);
 int dyntrace_get_c_function_arity(SEXP op);
 int dyntrace_get_primitive_offset(SEXP op);
+const char *const dyntrace_get_c_function_name(SEXP op);
 
-void (SET_PRENV_UNPROBED)(SEXP x, SEXP v);
-void (SET_PRVALUE_UNPROBED)(SEXP x, SEXP v);
-void (SET_PRCODE_UNPROBED)(SEXP x, SEXP v);
+void(SET_PRENV_UNPROBED)(SEXP x, SEXP v);
+void(SET_PRVALUE_UNPROBED)(SEXP x, SEXP v);
+void(SET_PRCODE_UNPROBED)(SEXP x, SEXP v);
 
 // ----------------------------------------------------------------------------
 // helpers
