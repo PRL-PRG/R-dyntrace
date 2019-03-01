@@ -95,8 +95,10 @@ static SEXP applyMethod(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newvars)
 	int save = R_PPStackTop, flag = PRIMPRINT(op);
 	const void *vmax = vmaxget();
 	R_Visible = flag != 1;
-	ans = PRIMFUN(op) (call, op, args, rho);
-	if (flag < 2) R_Visible = flag != 1;
+  DYNTRACE_PROBE_SPECIAL_ENTRY(call, op, args, rho, DYNTRACE_DISPATCH_S3);
+  ans = PRIMFUN(op) (call, op, args, rho);
+  DYNTRACE_PROBE_SPECIAL_EXIT(call, op, args, rho, DYNTRACE_DISPATCH_S3, ans);
+  if (flag < 2) R_Visible = flag != 1;
 	check_stack_balance(op, save);
 	vmaxset(vmax);
     }
@@ -110,14 +112,16 @@ static SEXP applyMethod(SEXP call, SEXP op, SEXP args, SEXP rho, SEXP newvars)
 	const void *vmax = vmaxget();
 	PROTECT(args = evalList(args, rho, call, 0));
 	R_Visible = flag != 1;
-	ans = PRIMFUN(op) (call, op, args, rho);
-	if (flag < 2) R_Visible = flag != 1;
+  DYNTRACE_PROBE_BUILTIN_ENTRY(call, op, args, rho, DYNTRACE_DISPATCH_S3);
+  ans = PRIMFUN(op) (call, op, args, rho);
+  DYNTRACE_PROBE_BUILTIN_EXIT(call, op, args, rho, DYNTRACE_DISPATCH_S3, ans);
+  if (flag < 2) R_Visible = flag != 1;
 	UNPROTECT(1);
 	check_stack_balance(op, save);
 	vmaxset(vmax);
     }
     else if (TYPEOF(op) == CLOSXP) {
-	ans = applyClosure(call, op, args, rho, newvars);
+  ans = applyClosure(call, op, args, rho, newvars, DYNTRACE_DISPATCH_S3);
     }
     else
 	ans = R_NilValue;  /* for -Wall */
@@ -289,7 +293,7 @@ SEXP R_LookupMethod(SEXP method, SEXP rho, SEXP callrho, SEXP defrho)
 	    UNPROTECT(1);
 	    return val;
 	}
-    } 
+    }
 
     if(lookup_baseenv_after_globalenv) {
 	if (top == R_GlobalEnv)
@@ -1587,14 +1591,14 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 		if (length(s) != length(args)) error(_("dispatch error"));
 		for (a = args, b = s; a != R_NilValue; a = CDR(a), b = CDR(b))
 		    SET_PRVALUE(CAR(b), CAR(a));
-		value =  applyClosure(call, value, s, rho, suppliedvars);
+		value =  applyClosure(call, value, s, rho, suppliedvars, DYNTRACE_DISPATCH_S4);
 #ifdef ADJUST_ENVIR_REFCNTS
 		unpromiseArgs(s);
 #endif
 		UNPROTECT(2);
 		return value;
 	    } else {
-		value = applyClosure(call, value, args, rho, suppliedvars);
+    value = applyClosure(call, value, args, rho, suppliedvars, DYNTRACE_DISPATCH_S4);
                 UNPROTECT(1);
                 return value;
             }
@@ -1612,10 +1616,10 @@ R_possible_dispatch(SEXP call, SEXP op, SEXP args, SEXP rho,
 	if (length(s) != length(args)) error(_("dispatch error"));
 	for (a = args, b = s; a != R_NilValue; a = CDR(a), b = CDR(b))
 	    SET_PRVALUE(CAR(b), CAR(a));
-	value = applyClosure(call, fundef, s, rho, R_NilValue);
+	value = applyClosure(call, fundef, s, rho, R_NilValue, DYNTRACE_DISPATCH_S4);
 	UNPROTECT(1);
     } else
-	value = applyClosure(call, fundef, args, rho, R_NilValue);
+  value = applyClosure(call, fundef, args, rho, R_NilValue, DYNTRACE_DISPATCH_S4);
     prim_methods[offset] = current;
     if(value == deferred_default_object)
 	return NULL;

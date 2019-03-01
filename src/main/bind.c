@@ -1115,8 +1115,8 @@ SEXP attribute_hidden do_bind(SEXP call, SEXP op, SEXP args, SEXP env)
 	args = CDR(args); // keeping deparse.level for S4 dispatch
     if (method != R_NilValue) { // found an S3 or S4 method
 	PROTECT(method);
-	ans = applyClosure(call, method, args, env, R_NilValue);
-	UNPROTECT(2);
+  ans = applyClosure(call, method, args, env, R_NilValue, DYNTRACE_DISPATCH_NONE);
+  UNPROTECT(2);
 	return ans;
     }
 
