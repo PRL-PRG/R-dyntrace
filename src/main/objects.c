@@ -79,11 +79,12 @@ static SEXP GetObject(RCNTXT *cptr)
 	s = CAR(cptr->promargs);
 
     if (TYPEOF(s) == PROMSXP) {
-      DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(s);
 	if (PRVALUE(s) == R_UnboundValue)
 	    s = eval(s, R_BaseEnv);
-	else
-	    s = PRVALUE(s);
+	else {
+      DYNTRACE_PROBE_PROMISE_VALUE_LOOKUP(s);
+      s = PRVALUE(s);
+  }
     }
     return(s);
 }
