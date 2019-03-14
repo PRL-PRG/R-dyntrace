@@ -1782,7 +1782,7 @@ static void RunGenCollect(R_size_t size_needed)
     PROCESS_NODES();
 
 #ifdef ENABLE_DYNTRACE
-    {
+    if (dyntrace_active_dyntracer != NULL) {
 #define SETOLDTYPE(s, t) SETLEVELS(s, t)
         SEXP s;
         int i;
