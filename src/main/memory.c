@@ -2197,7 +2197,7 @@ void attribute_hidden InitMemory()
     TAG(R_NilValue) = R_NilValue;
     ATTRIB(R_NilValue) = R_NilValue;
     MARK_NOT_MUTABLE(R_NilValue);
-    DYNTRACE_PROBE_GC_ALLOCATE(R_NilValue);
+
     R_BCNodeStackBase =
 	(R_bcstack_t *) malloc(R_BCNODESTACKSIZE * sizeof(R_bcstack_t));
     if (R_BCNodeStackBase == NULL)
@@ -2717,7 +2717,8 @@ SEXP allocVector3(SEXPTYPE type, R_xlen_t length, R_allocator_t *allocator)
 #endif
 	s = allocList((int) length);
 	SET_TYPEOF(s, LANGSXP);
-	return s;
+  DYNTRACE_PROBE_GC_ALLOCATE(s);
+  return s;
     case LISTSXP:
 #ifdef LONG_VECTOR_SUPPORT
 	if (length > R_SHORT_LEN_MAX) error("invalid length for pairlist");
