@@ -249,3 +249,7 @@ const char* const dyntrace_get_c_function_name(SEXP op) {
     int offset = dyntrace_get_primitive_offset(op);
     return R_FunTab[offset].name;
 }
+
+SEXP* dyntrace_get_symbol_table() {
+    return R_SymbolTable;
+}
