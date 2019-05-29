@@ -27,6 +27,7 @@ int dyntrace_probe_promise_expression_lookup_disabled = 0;
 int dyntrace_probe_promise_expression_assign_disabled = 0;
 int dyntrace_probe_promise_environment_lookup_disabled = 0;
 int dyntrace_probe_promise_environment_assign_disabled = 0;
+int dyntrace_probe_substitute_call_disabled = 0;
 int dyntrace_probe_promise_substitute_disabled = 0;
 int dyntrace_probe_eval_entry_disabled = 0;
 int dyntrace_probe_eval_exit_disabled = 0;
