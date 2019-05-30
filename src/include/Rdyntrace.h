@@ -146,6 +146,20 @@ extern "C" {
     UNPROTECT(4);                                                                   \
     DYNTRACE_PROBE_FOOTER(probe_substitute_call);
 
+#define DYNTRACE_PROBE_ASSIGNMENT_CALL(call, op, assignment_type, lhs, rhs, environment, rho) \
+    DYNTRACE_PROBE_HEADER(probe_assignment_call);                                             \
+    PROTECT(call);                                                                            \
+    PROTECT(op);                                                                              \
+    PROTECT(lhs);                                                                             \
+    PROTECT(rhs);                                                                             \
+    PROTECT(environment);                                                                     \
+    PROTECT(rho);                                                                             \
+    dyntrace_active_dyntracer->probe_assignment_call(dyntrace_active_dyntracer, call, op,     \
+                                                     assignment_type, lhs, rhs,               \
+                                                     environment, rho);                       \
+    UNPROTECT(6);                                                                             \
+    DYNTRACE_PROBE_FOOTER(probe_assignment_call);
+
 #define DYNTRACE_PROBE_PROMISE_FORCE_ENTRY(promise)                            \
     DYNTRACE_PROBE_HEADER(probe_promise_force_entry);                          \
     PROTECT(promise);                                                          \
@@ -453,6 +467,7 @@ extern "C" {
 #define DYNTRACE_PROBE_SPECIAL_ENTRY(call, op, args, rho, dispatch)
 #define DYNTRACE_PROBE_SPECIAL_EXIT(call, op, args, rho, dispatch, return_value)
 #define DYNTRACE_PROBE_SUBSTITUTE_CALL(expression, environment, rho, return_value)
+#define DYNTRACE_PROBE_ASSIGNMENT_CALL(call, op, assignment_type, lhs, rhs, environment, rho)
 
 #define DYNTRACE_PROBE_PROMISE_FORCE_ENTRY(promise)
 #define DYNTRACE_PROBE_PROMISE_FORCE_EXIT(promise)
@@ -511,6 +526,14 @@ enum dyntrace_dispatch_t {
 };
 
 typedef enum dyntrace_dispatch_t dyntrace_dispatch_t;
+
+enum dyntrace_assignment_t {
+    DYNTRACE_ASSIGNMENT_ASSIGN,
+    DYNTRACE_ASSIGNMENT_DEFINE,
+    DYNTRACE_ASSIGNMENT_DEFINE_APPLY
+};
+
+typedef enum dyntrace_assignment_t dyntrace_assignment_t;
 
 typedef struct dyntracer_t dyntracer_t;
 
@@ -580,6 +603,18 @@ struct dyntracer_t {
                                   const SEXP environment,
                                   const SEXP rho,
                                   const SEXP return_value);
+
+  /***************************************************************************
+    Fires when assignment is about to happen
+    ***************************************************************************/
+    void (*probe_assignment_call)(dyntracer_t *dyntracer,
+                                  const SEXP call,
+                                  const SEXP op,
+                                  dyntrace_assignment_t assignment_type,
+                                  const SEXP lhs,
+                                  const SEXP rhs,
+                                  const SEXP environment,
+                                  const SEXP rho);
 
     /***************************************************************************
     Fires when a promise expression is evaluated.
@@ -787,6 +822,7 @@ extern int dyntrace_probe_promise_expression_assign_disabled;
 extern int dyntrace_probe_promise_environment_lookup_disabled;
 extern int dyntrace_probe_promise_environment_assign_disabled;
 extern int dyntrace_probe_substitute_call_disabled;
+extern int dyntrace_probe_assignment_call_disabled;
 extern int dyntrace_probe_promise_substitute_disabled;
 extern int dyntrace_probe_eval_entry_disabled;
 extern int dyntrace_probe_eval_exit_disabled;

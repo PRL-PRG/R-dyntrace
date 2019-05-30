@@ -2826,14 +2826,19 @@ SEXP attribute_hidden do_set(SEXP call, SEXP op, SEXP args, SEXP rho)
     case SYMSXP:
 	rhs = eval(CADR(args), rho);
 	INCREMENT_NAMED(rhs);
-	if (PRIMVAL(op) == 2)                       /* <<- */
+	if (PRIMVAL(op) == 2) {                     /* <<- */
+      DYNTRACE_PROBE_ASSIGNMENT_CALL(call, op, DYNTRACE_ASSIGNMENT_ASSIGN, lhs, rhs, ENCLOS(rho), rho);
 	    setVar(lhs, rhs, ENCLOS(rho));
-	else                                        /* <-, = */
+  }
+	else {                                     /* <-, = */
+      DYNTRACE_PROBE_ASSIGNMENT_CALL(call, op, DYNTRACE_ASSIGNMENT_DEFINE, lhs, rhs, rho, rho);
 	    defineVar(lhs, rhs, rho);
+  }
 	R_Visible = FALSE;
 	return rhs;
     case LANGSXP:
 	R_Visible = FALSE;
+  DYNTRACE_PROBE_ASSIGNMENT_CALL(call, op, DYNTRACE_ASSIGNMENT_DEFINE_APPLY, lhs, rhs, rho, rho);
 	return applydefine(call, op, args, rho);
     default:
 	errorcall(call, _("invalid (do_set) left-hand side to assignment"));

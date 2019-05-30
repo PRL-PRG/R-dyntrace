@@ -1849,10 +1849,16 @@ SEXP attribute_hidden do_assign(SEXP call, SEXP op, SEXP args, SEXP rho)
     ginherits = asLogical(CADDDR(args));
     if (ginherits == NA_LOGICAL)
 	error(_("invalid '%s' argument"), "inherits");
-    if (ginherits)
-	setVar(name, val, aenv);
-    else
-	defineVar(name, val, aenv);
+    if (ginherits) {
+      DYNTRACE_PROBE_ASSIGNMENT_CALL(call, op, DYNTRACE_ASSIGNMENT_ASSIGN,
+                                     name, val, aenv, rho);
+      setVar(name, val, aenv);
+    }
+    else {
+      DYNTRACE_PROBE_ASSIGNMENT_CALL(call, op, DYNTRACE_ASSIGNMENT_DEFINE,
+                                     name, val, aenv, rho);
+      defineVar(name, val, aenv);
+    }
     UNPROTECT(1);
     return val;
 }
