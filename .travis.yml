@@ -1,0 +1,13 @@
+install: sudo apt-get install r-base r-base-dev texinfo texlive-latex-base
+
+env:
+  global:
+    - R_KEEP_PKG_SOURCE=1
+    - R_ENABLE_JIT=0
+    - R_COMPILE_PKGS=0
+    - R_DISABLE_BYTECODE=1
+    - OMP_NUM_THREADS=1
+
+script:
+  - ./configure --enable-R-shlib --with-blas --with-lapack --with-included-gettext --disable-byte-compiled-packages
+  - make -j
