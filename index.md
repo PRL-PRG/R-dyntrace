@@ -119,6 +119,19 @@ The framework supports the following probes.
 
 ## Talks
 
-1. [RDT: A Dynamic Tracing Framework for R](https://docs.google.com/presentation/d/1UTMvBIv1Y1ZFG-jXbD28G-Z8oUSB3vgPoSjRAIniurw/edit?usp=sharing "RDT: A Dynamic Tracing Framework for R")
-  @ [RIOT 2019](https://riotworkshop.github.io/ "RIOT 2019") @ [useR! 2019](http://www.user2019.fr/ "useR! 2019")
+1. **[RDT: A Dynamic Tracing Framework for R](https://docs.google.com/presentation/d/1UTMvBIv1Y1ZFG-jXbD28G-Z8oUSB3vgPoSjRAIniurw/edit?usp=sharing "RDT: A Dynamic Tracing Framework for R")** <br/>
+[Aviral Goel](http://aviral.io/ "Aviral Goel") • [Filip Krikava](http://fikovnik.net/ "Filip Krikava") • [Jan Vitek](http://janvitek.org/ "Jan Vitek")<br/>
+@ [RIOT 2019](https://riotworkshop.github.io/ "RIOT 2019") @ [useR! 2019](http://www.user2019.fr/ "useR! 2019")
+
+## Writeups
+
+1. **[RDT: A Dynamic Tracing Framework for R](https://riotworkshop.github.io/abstracts/riot-2019-dynamic-tracing.pdf "RDT: A Dynamic Tracing Framework for R")** <br/>
+[Aviral Goel](http://aviral.io/ "Aviral Goel") • [Filip Krikava](http://fikovnik.net/ "Filip Krikava") • [Jan Vitek](http://janvitek.org/ "Jan Vitek")<br/>
+@ [RIOT 2019](https://riotworkshop.github.io/ "RIOT 2019") @ [useR! 2019](http://www.user2019.fr/ "useR! 2019")
+
+## Publications
+
+1. **On the Design, Implementation and Use of Laziness in R**<br/>
+[Aviral Goel](http://aviral.io/ "Aviral Goel") • [Jan Vitek](http://janvitek.org/ "Jan Vitek")<br/>
+@ [OOPSLA 2019](https://2019.splashcon.org/track/splash-2019-oopsla "Object-Oriented Programming, Systems, Languages & Applications 2019") (conditionally accepted)
 
