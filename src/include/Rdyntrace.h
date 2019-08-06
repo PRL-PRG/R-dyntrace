@@ -448,6 +448,29 @@ extern "C" {
     UNPROTECT(2);                                                              \
     DYNTRACE_PROBE_FOOTER(probe_environment_variable_exists);
 
+#define DYNTRACE_PROBE_ENVIRONMENT_CONTEXT_SENSITIVE_PROMISE_EVAL_ENTRY(symbol, promise, rho)       \
+    DYNTRACE_PROBE_HEADER(probe_environment_context_sensitive_promise_eval_entry);                  \
+    PROTECT(symbol);                                                                                \
+    PROTECT(promise);                                                                               \
+    PROTECT(rho);                                                                                   \
+    dyntrace_active_dyntracer                                                                       \
+        ->probe_environment_context_sensitive_promise_eval_entry(dyntrace_active_dyntracer, symbol, \
+                                                                 promise, rho);                     \
+    UNPROTECT(3);                                                                                   \
+    DYNTRACE_PROBE_FOOTER(probe_environment_context_sensitive_promise_eval_entry);
+
+#define DYNTRACE_PROBE_ENVIRONMENT_CONTEXT_SENSITIVE_PROMISE_EVAL_EXIT(symbol, promise, value, rho)  \
+    DYNTRACE_PROBE_HEADER(probe_environment_context_sensitive_promise_eval_exit);                    \
+    PROTECT(symbol);                                                                                 \
+    PROTECT(promise);                                                                                \
+    PROTECT(value);                                                                                  \
+    PROTECT(rho);                                                                                    \
+    dyntrace_active_dyntracer                                                                        \
+        ->probe_environment_context_sensitive_promise_eval_exit(dyntrace_active_dyntracer, symbol,   \
+                                                                  promise, value, rho);              \
+    UNPROTECT(4);                                                                                    \
+    DYNTRACE_PROBE_FOOTER(probe_environment_context_sensitive_promise_eval_exit);
+
 #define dyntrace_probe_is_enabled(probe_name)                                  \
     (dyntrace_##probe_name##_disabled == 0)
 
@@ -509,6 +532,8 @@ extern "C" {
 #define DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_REMOVE(symbol, rho)
 #define DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_LOOKUP(symbol, value, rho)
 #define DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_EXISTS(symbol, rho)
+#define DYNTRACE_PROBE_ENVIRONMENT_CONTEXT_SENSITIVE_PROMISE_LOOKUP_ENTRY(symbol, promise, rho)
+#define DYNTRACE_PROBE_ENVIRONMENT_CONTEXT_SENSITIVE_PROMISE_LOOKUP_EXIT(symbol, promise, value, rho)
 
 #define dyntrace_probe_is_enabled(probe_name)
 #define dyntrace_disable_probe(probe_name)
@@ -802,6 +827,24 @@ struct dyntracer_t {
     void (*probe_environment_variable_exists)(dyntracer_t *dyntracer,
                                               const SEXP symbol, SEXP rho);
 
+    /***************************************************************************
+    Fires when a promise is about to be evaluated for context sensitive function
+    lookup
+    ***************************************************************************/
+    void (*probe_environment_context_sensitive_promise_eval_entry)(dyntracer_t *dyntracer,
+                                                                   const SEXP symbol,
+                                                                   SEXP promise,
+                                                                   SEXP rho);
+
+    /***************************************************************************
+    Fires when a promise has been evaluated for context sensitive function lookup
+    ***************************************************************************/
+    void (*probe_environment_context_sensitive_promise_eval_exit)(dyntracer_t *dyntracer,
+                                                                  const SEXP symbol,
+                                                                  SEXP promise,
+                                                                  SEXP value,
+                                                                  SEXP rho);
+
     void *state;
 };
 
@@ -847,6 +890,9 @@ extern int dyntrace_probe_environment_variable_assign_disabled;
 extern int dyntrace_probe_environment_variable_remove_disabled;
 extern int dyntrace_probe_environment_variable_lookup_disabled;
 extern int dyntrace_probe_environment_variable_exists_disabled;
+extern int dyntrace_probe_environment_context_sensitive_promise_eval_entry_disabled;
+extern int dyntrace_probe_environment_context_sensitive_promise_eval_exit_disabled;
+
 
 // ----------------------------------------------------------------------------
 // STATE VARIABLES - For Internal Use Only

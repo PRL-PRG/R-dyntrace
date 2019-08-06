@@ -53,6 +53,8 @@ int dyntrace_probe_environment_variable_assign_disabled = 0;
 int dyntrace_probe_environment_variable_remove_disabled = 0;
 int dyntrace_probe_environment_variable_lookup_disabled = 0;
 int dyntrace_probe_environment_variable_exists_disabled = 0;
+int dyntrace_probe_environment_context_sensitive_promise_eval_entry_disabled = 0;
+int dyntrace_probe_environment_context_sensitive_promise_eval_exit_disabled = 0;
 
 dyntracer_t *dyntracer_from_sexp(SEXP dyntracer_sexp) {
     return (dyntracer_t *)R_ExternalPtrAddr(dyntracer_sexp);

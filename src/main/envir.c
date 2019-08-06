@@ -1534,8 +1534,11 @@ SEXP findFun3(SEXP symbol, SEXP rho, SEXP call)
 	if (vl != R_UnboundValue) {
 	    if (TYPEOF(vl) == PROMSXP) {
 		PROTECT(vl);
-		vl = eval(vl, rho);
-		UNPROTECT(1);
+    DYNTRACE_PROBE_ENVIRONMENT_CONTEXT_SENSITIVE_PROMISE_EVAL_ENTRY(symbol, vl, rho);
+    SEXP vl2 = eval(vl, rho);
+    DYNTRACE_PROBE_ENVIRONMENT_CONTEXT_SENSITIVE_PROMISE_EVAL_EXIT(symbol, vl, vl2, rho);
+    UNPROTECT(1);
+    vl = vl2;
 	    }
 	    if (TYPEOF(vl) == CLOSXP || TYPEOF(vl) == BUILTINSXP ||
 		TYPEOF(vl) == SPECIALSXP)
