@@ -58,8 +58,34 @@ extern "C" {
     UNPROTECT(3);                                                              \
     DYNTRACE_PROBE_FOOTER(probe_dyntrace_exit);
 
+#define DYNTRACE_PROBE_DESERIALIZE_OBJECT(object)                                            \
+    DYNTRACE_PROBE_HEADER(probe_deserialize_object);                                         \
+    PROTECT(object);                                                                         \
+    dyntrace_active_dyntracer->probe_deserialize_object(dyntrace_active_dyntracer, object);  \
+    UNPROTECT(1);                                                                            \
+    DYNTRACE_PROBE_FOOTER(probe_deserialize_object);
+
 #define DYNTRACE_SHOULD_PROBE(probe_name)                                      \
     (dyntrace_active_dyntracer->probe_name != NULL)
+
+#define DYNTRACE_PROBE_CLOSURE_ARGUMENT_LIST_CREATION_ENTRY(formals, actuals, parent_rho) \
+    DYNTRACE_PROBE_HEADER( probe_closure_argument_list_creation_entry);                   \
+    PROTECT(formals);                                                                     \
+    PROTECT(actuals);                                                                     \
+    PROTECT(parent_rho);                                                                  \
+    dyntrace_active_dyntracer->probe_closure_argument_list_creation_entry(                \
+        dyntrace_active_dyntracer, formals, actuals, parent_rho);                         \
+    UNPROTECT(3);                                                                         \
+    DYNTRACE_PROBE_FOOTER(probe_closure_argument_list_creation_entry);
+
+
+#define DYNTRACE_PROBE_CLOSURE_ARGUMENT_LIST_CREATION_EXIT(rho)           \
+    DYNTRACE_PROBE_HEADER(probe_closure_argument_list_creation_exit);     \
+    PROTECT(rho);                                                         \
+    dyntrace_active_dyntracer->probe_closure_argument_list_creation_exit( \
+        dyntrace_active_dyntracer, rho);                                  \
+    UNPROTECT(1);                                                         \
+    DYNTRACE_PROBE_FOOTER(probe_closure_argument_list_creation_exit);
 
 #define DYNTRACE_PROBE_CLOSURE_ENTRY(call, op, args, rho, dispatch)                \
     DYNTRACE_PROBE_HEADER(probe_closure_entry);                                    \
@@ -577,6 +603,25 @@ struct dyntracer_t {
                                 SEXP environment, SEXP result, int error);
 
     /***************************************************************************
+    Fires when an object is unserialized
+    ***************************************************************************/
+    void (*probe_deserialize_object)(dyntracer_t *dyntracer, SEXP object);
+
+    /***************************************************************************
+    Fires before every closure call.
+    ***************************************************************************/
+    void (*probe_closure_argument_list_creation_entry)(dyntracer_t *dyntracer,
+                                                       SEXP formals,
+                                                       SEXP actuals,
+                                                       SEXP parent_rho);
+
+    /***************************************************************************
+    Fires before every closure call.
+    ***************************************************************************/
+    void (*probe_closure_argument_list_creation_exit)(dyntracer_t *dyntracer,
+                                                      SEXP rho);
+
+    /***************************************************************************
     Fires on every closure call.
     ***************************************************************************/
     void (*probe_closure_entry)(dyntracer_t *dyntracer, const SEXP call,
@@ -850,6 +895,9 @@ struct dyntracer_t {
 
 extern int dyntrace_probe_dyntrace_entry_disabled;
 extern int dyntrace_probe_dyntrace_exit_disabled;
+extern int dyntrace_probe_deserialize_object_disabled;
+extern int dyntrace_probe_closure_argument_list_creation_entry_disabled;
+extern int dyntrace_probe_closure_argument_list_creation_exit_disabled;
 extern int dyntrace_probe_closure_entry_disabled;
 extern int dyntrace_probe_closure_exit_disabled;
 extern int dyntrace_probe_builtin_entry_disabled;

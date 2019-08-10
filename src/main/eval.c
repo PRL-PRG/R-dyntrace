@@ -1673,6 +1673,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars,
 	reference couting enabled. */
 
     actuals = matchArgs_RC(formals, arglist, call);
+    DYNTRACE_PROBE_CLOSURE_ARGUMENT_LIST_CREATION_ENTRY(formals, actuals, savedrho);
     PROTECT(newrho = NewEnvironment(formals, actuals, savedrho));
 
     /*  Use the default code for unbound formals.  FIXME: It looks like
@@ -1714,6 +1715,7 @@ SEXP applyClosure(SEXP call, SEXP op, SEXP arglist, SEXP rho, SEXP suppliedvars,
 
     UNPROTECT(1); /* newrho - below protected via context */
 
+    DYNTRACE_PROBE_CLOSURE_ARGUMENT_LIST_CREATION_EXIT(newrho);
     /*  If we have a generic function we need to use the sysparent of
 	the generic as the sysparent of the method because the method
 	is a straight substitution of the generic.  */

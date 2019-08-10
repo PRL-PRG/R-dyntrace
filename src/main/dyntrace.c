@@ -13,6 +13,9 @@ int dyntrace_privileged_mode_flag = 0;
 
 int dyntrace_probe_dyntrace_entry_disabled = 0;
 int dyntrace_probe_dyntrace_exit_disabled = 0;
+int dyntrace_probe_deserialize_object_disabled = 0;
+int dyntrace_probe_closure_argument_list_creation_entry_disabled = 0;
+int dyntrace_probe_closure_argument_list_creation_exit_disabled = 0;
 int dyntrace_probe_closure_entry_disabled = 0;
 int dyntrace_probe_closure_exit_disabled = 0;
 int dyntrace_probe_builtin_entry_disabled = 0;
