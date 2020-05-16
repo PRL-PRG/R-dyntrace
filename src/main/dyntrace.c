@@ -190,6 +190,10 @@ int dyntrace_is_active() {
     return (dyntrace_active_dyntracer_probe_name != NULL);
 }
 
+dyntracer_t *dyntrace_get_active_dyntracer() {
+    return dyntrace_active_dyntracer;
+}
+
 void dyntrace_disable_garbage_collector() {
     dyntrace_garbage_collector_state = R_GCEnabled;
     R_GCEnabled = 0;
