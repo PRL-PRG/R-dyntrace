@@ -1,0 +1,46 @@
+on:
+  push:
+    branches:
+      - r-4.0.2
+  pull_request:
+    branches:
+      - r-4.0.2
+
+name: check-all
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+        with:
+          fetch-depth: 1
+
+          ## https://cran.r-project.org/bin/linux/ubuntu/README.html
+          ## https://github.com/rocker-org/rocker/blob/master/r-devel/Dockerfile
+      - name: Add PPA
+        run: |
+          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9
+          sudo add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran40/'
+          sudo apt-get update -q
+          sudo apt-get install r-base r-base-dev build-essential default-jdk g++ gcc gdb gfortran groff-base libblas-dev libbz2-dev libcairo2-dev libcurl4-openssl-dev libjpeg-dev liblapack-dev liblzma-dev libncurses5-dev libpango1.0-dev libpcre3-dev libpng-dev libreadline-dev libtiff5-dev libx11-dev libxt-dev mpack subversion tcl8.6-dev texinfo texlive-base texlive-extra-utils texlive-fonts-extra texlive-fonts-recommended texlive-generic-recommended texlive-latex-base texlive-latex-extra texlive-latex-recommended tk8.6-dev x11proto-core-dev xauth xdg-utils xfonts-base xvfb zlib1g-dev
+
+      - name: Install libcurl4
+        run: |
+          sudo apt-get install libcurl4 libcurl4-openssl-dev -y
+
+      ## https://bugs.r-project.org/bugzilla/show_bug.cgi?id=16843
+      - name: configure
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
+        run: ./configure --with-internal-tzcode
+
+      - name: build
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
+        run: make -j
+
+      - name: check-all
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
+        run: make check-all
