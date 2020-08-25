@@ -1,199 +1,199 @@
-#include <Rdyntrace.h>
-#include <Rinternals.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef HAVE_CONFIG_H
+#    include <config.h>
+#endif
+#include <Defn.h>
 #include <deparse.h>
+#include <Rdyntrace.h>
 
-dyntracer_t *dyntrace_active_dyntracer = NULL;
-int dyntrace_check_reentrancy = 1;
-const char *dyntrace_active_dyntracer_probe_name = NULL;
+dyntracer_t* dyntrace_active_dyntracer = NULL;
+const char* dyntrace_active_dyntracer_callback_name = NULL;
 int dyntrace_garbage_collector_state = 0;
-int dyntrace_privileged_mode_flag = 0;
 
-int dyntrace_probe_dyntrace_entry_disabled = 0;
-int dyntrace_probe_dyntrace_exit_disabled = 0;
-int dyntrace_probe_deserialize_object_disabled = 0;
-int dyntrace_probe_closure_argument_list_creation_entry_disabled = 0;
-int dyntrace_probe_closure_argument_list_creation_exit_disabled = 0;
-int dyntrace_probe_closure_entry_disabled = 0;
-int dyntrace_probe_closure_exit_disabled = 0;
-int dyntrace_probe_builtin_entry_disabled = 0;
-int dyntrace_probe_builtin_exit_disabled = 0;
-int dyntrace_probe_special_entry_disabled = 0;
-int dyntrace_probe_special_exit_disabled = 0;
-int dyntrace_probe_promise_force_entry_disabled = 0;
-int dyntrace_probe_promise_force_exit_disabled = 0;
-int dyntrace_probe_promise_value_lookup_disabled = 0;
-int dyntrace_probe_promise_value_assign_disabled = 0;
-int dyntrace_probe_promise_expression_lookup_disabled = 0;
-int dyntrace_probe_promise_expression_assign_disabled = 0;
-int dyntrace_probe_promise_environment_lookup_disabled = 0;
-int dyntrace_probe_promise_environment_assign_disabled = 0;
-int dyntrace_probe_substitute_call_disabled = 0;
-int dyntrace_probe_assignment_call_disabled = 0;
-int dyntrace_probe_promise_substitute_disabled = 0;
-int dyntrace_probe_eval_entry_disabled = 0;
-int dyntrace_probe_eval_exit_disabled = 0;
-int dyntrace_probe_gc_entry_disabled = 0;
-int dyntrace_probe_gc_exit_disabled = 0;
-int dyntrace_probe_gc_unmark_disabled = 0;
-int dyntrace_probe_gc_allocate_disabled = 0;
-int dyntrace_probe_context_entry_disabled = 0;
-int dyntrace_probe_context_exit_disabled = 0;
-int dyntrace_probe_context_jump_disabled = 0;
-int dyntrace_probe_S3_generic_entry_disabled = 0;
-int dyntrace_probe_S3_generic_exit_disabled = 0;
-int dyntrace_probe_S3_dispatch_entry_disabled = 0;
-int dyntrace_probe_S3_dispatch_exit_disabled = 0;
-int dyntrace_probe_S4_generic_entry_disabled = 0;
-int dyntrace_probe_S4_generic_exit_disabled = 0;
-int dyntrace_probe_S4_dispatch_entry_disabled = 0;
-int dyntrace_probe_S4_dispatch_exit_disabled = 0;
-int dyntrace_probe_S4_dispatch_argument_disabled = 0;
-int dyntrace_probe_environment_variable_define_disabled = 0;
-int dyntrace_probe_environment_variable_assign_disabled = 0;
-int dyntrace_probe_environment_variable_remove_disabled = 0;
-int dyntrace_probe_environment_variable_lookup_disabled = 0;
-int dyntrace_probe_environment_variable_exists_disabled = 0;
-int dyntrace_probe_environment_context_sensitive_promise_eval_entry_disabled = 0;
-int dyntrace_probe_environment_context_sensitive_promise_eval_exit_disabled = 0;
-
-dyntracer_t *dyntracer_from_sexp(SEXP dyntracer_sexp) {
-    return (dyntracer_t *)R_ExternalPtrAddr(dyntracer_sexp);
-}
-
-SEXP dyntracer_to_sexp(dyntracer_t *dyntracer, const char *classname) {
-    SEXP dyntracer_sexp;
-    PROTECT(dyntracer_sexp =
-                R_MakeExternalPtr(dyntracer, install(classname), R_NilValue));
-    SEXP dyntracer_class = PROTECT(allocVector(STRSXP, 1));
-    SET_STRING_ELT(dyntracer_class, 0, mkChar(classname));
-    classgets(dyntracer_sexp, dyntracer_class);
-    UNPROTECT(2);
-    return dyntracer_sexp;
-}
-
-dyntracer_t *dyntracer_replace_sexp(SEXP dyntracer_sexp,
-                                    dyntracer_t *new_dyntracer) {
-    dyntracer_t *old_dyntracer = R_ExternalPtrAddr(dyntracer_sexp);
-    R_SetExternalPtrAddr(dyntracer_sexp, new_dyntracer);
-    return old_dyntracer;
-}
-
-SEXP dyntracer_destroy_sexp(SEXP dyntracer_sexp,
-                            void (*destroy_dyntracer)(dyntracer_t *dyntracer)) {
-    dyntracer_t *dyntracer = dyntracer_replace_sexp(dyntracer_sexp, NULL);
-    /* free dyntracer iff it has not already been freed.
-       this check ensures that multiple calls to destroy_dyntracer on the same
-       object do not crash the process. */
-    if (dyntracer != NULL)
-        destroy_dyntracer(dyntracer);
-    return R_NilValue;
-}
-
-void dyntrace_enable_privileged_mode() { dyntrace_privileged_mode_flag = 1; }
-
-void dyntrace_disable_privileged_mode() { dyntrace_privileged_mode_flag = 0; }
-
-int dyntrace_is_priviliged_mode() { return dyntrace_privileged_mode_flag; }
-
+//void dyntrace_status_initialize(int size) {
+//    dyntrace_tracing_status.index = 0;
+//    dyntrace_tracing_status.size = size;
+//    dyntrace_tracing_status.status_stack = malloc(size * sizeof(int));
+//}
+//
+//void dyntrace_status_finalize() {
+//    dyntrace_tracing_status.index = 0;
+//    dyntrace_tracing_status.size = 0;
+//    free(dyntrace_tracing_status.status_stack);
+//    dyntrace_tracing_status.status_stack = NULL;
+//}
+//
+//void dyntrace_status_push(dyntrace_tracing_status_t* dyntrace_tracing_status,
+//                          int status) {
+//    int index = dyntrace_tracing_status->index;
+//    int size = dyntrace_tracing_status->size;
+//
+//    if (dyntrace_tracing_status->status_stack == NULL) {
+//        return;
+//    }
+//
+//    if (index == size) {
+//        dyntrace_tracing_status->status_stack =
+//            realloc(dyntrace_tracing_status->status_stack, 2 * size);
+//        dyntrace_tracing_status->size *= 2;
+//    }
+//
+//    dyntrace_tracing_status->status_stack[index] = status;
+//    dyntrace_tracing_status->index += 1;
+//}
+//
+//void dyntrace_status_pop(dyntrace_tracing_status_t* dyntrace_tracing_status) {
+//    int index = dyntrace_tracing_status->index;
+//
+//    if (index == 0) {
+//        return;
+//    }
+//
+//    dyntrace_tracing_status->index -= 1;
+//}
+//
+//int dyntrace_status_peek(dyntrace_tracing_status_t* dyntrace_tracing_status) {
+//    int index = dyntrace_tracing_status->index;
+//    return dyntrace_tracing_status->status_stack[index - 1];
+//}
+//
+//void dyntrace_enable_tracing() {
+//    dyntrace_status_push(&dyntrace_tracing_status, 1);
+//}
+//
+//void dyntrace_disable_tracing() {
+//    dyntrace_status_push(&dyntrace_tracing_status, 0);
+//}
+//
+//void dyntrace_reinstate_tracing() {
+//    dyntrace_status_pop(&dyntrace_tracing_status);
+//}
+//
+//int dyntrace_is_tracing_enabled() {
+//    return dyntrace_status_peek(&dyntrace_tracing_status);
+//}
+//
+//int dyntrace_is_tracing_disabled() {
+//    return !dyntrace_is_tracing_enabled();
+//}
 
 #define DYNTRACE_PARSE_DATA_BUFFER_SIZE (1024 * 1024 * 8)
 #define DYNTRACE_PARSE_DATA_MAXLINES (10000)
 
 static LocalParseData dyntrace_parse_data = {
-  0,
-  0,
-  0,
-  0,
-  /*startline = */ TRUE,
-  0,
-  NULL,
-  /*DeparseBuffer=*/{NULL, 0, DYNTRACE_PARSE_DATA_BUFFER_SIZE},
-  INT_MAX,
-  FALSE,
-  0,
-  TRUE,
+    0,
+    0,
+    0,
+    0,
+    /*startline = */ TRUE,
+    0,
+    NULL,
+    /*DeparseBuffer=*/{NULL, 0, DYNTRACE_PARSE_DATA_BUFFER_SIZE},
+    INT_MAX,
+    FALSE,
+    0,
+    TRUE,
 #ifdef longstring_WARN
-  FALSE,
+    FALSE,
 #endif
-  DYNTRACE_PARSE_DATA_MAXLINES,
-  TRUE,
-  0,
-  FALSE};
+    DYNTRACE_PARSE_DATA_MAXLINES,
+    TRUE,
+    0,
+    FALSE};
 
 static void allocate_dyntrace_parse_data() {
-  dyntrace_parse_data.buffer.data =
-    (char *)malloc(DYNTRACE_PARSE_DATA_BUFFER_SIZE);
-  dyntrace_parse_data.strvec =
-    PROTECT(allocVector(STRSXP, DYNTRACE_PARSE_DATA_MAXLINES));
+    dyntrace_parse_data.buffer.data =
+        (char*) malloc(DYNTRACE_PARSE_DATA_BUFFER_SIZE);
+    dyntrace_parse_data.strvec =
+        PROTECT(allocVector(STRSXP, DYNTRACE_PARSE_DATA_MAXLINES));
 }
 
 static void deallocate_dyntrace_parse_data() {
-  free(dyntrace_parse_data.buffer.data);
-  UNPROTECT(1);
+    free(dyntrace_parse_data.buffer.data);
+    UNPROTECT(1);
 }
 
-SEXP do_dyntrace(SEXP call, SEXP op, SEXP args, SEXP rho) {
+//SEXP do_dyntrace(SEXP call, SEXP op, SEXP args, SEXP rho) {
+//    SEXP r_dyntracer;
+//    SEXP code;
+//    SEXP environment;
+//    dyntracer_t* dyntracer = NULL;
+//
+//    if (length(args) != 3) {
+//        Rf_error("dyntrace expects three arguments.");
+//    }
+//
+//    r_dyntracer = eval(CAR(args), rho);
+//
+//    if (TYPEOF(r_dyntracer) != EXTPTRSXP) {
+//        Rf_error("first argument of dyntrace should be a dyntracer object.");
+//    }
+//
+//    dyntracer = dyntracer_from_sexp(r_dyntracer);
+//
+//    if (dyntracer == NULL) {
+//        Rf_error("dyntracer is NULL");
+//    }
+//
+//    code = CADR(args);
+//
+//    environment = eval(CADDR(args), rho);
+//
+//    if (TYPEOF(environment) != ENVSXP) {
+//        Rf_error("third argument of dyntrace should be an environment.");
+//    }
+//
+//    return dyntrace_trace_code(dyntracer, code, environment);
+//}
+
+SEXP dyntrace_trace_code(dyntracer_t* dyntracer, SEXP code, SEXP environment) {
     int eval_error = FALSE;
-    SEXP code_block, expression, environment, result;
-    dyntracer_t *dyntracer = NULL;
-    dyntracer_t *dyntrace_previous_dyntracer = dyntrace_active_dyntracer;
+    SEXP result;
+    dyntracer_t* dyntrace_previous_dyntracer = dyntrace_active_dyntracer;
 
-    if(length(args) != 2) {
-        Rf_error("dyntrace expects two arguments.");
-    }
+    PROTECT(code);
+    PROTECT(environment);
 
-    SEXP dyntracer_sexp = eval(CAR(args), rho);
-    SEXP code_block_sexp = CADR(args);
-
-    if(TYPEOF(dyntracer_sexp) != EXTPTRSXP) {
-        Rf_error("first argument of dyntrace should be a dyntracer object.");
-    }
-
-    if(TYPEOF(code_block_sexp) != SYMSXP) {
-        Rf_error("second argument of dyntrace should be a symbol.");
-    }
+    // dyntrace_status_initialize(100);
 
     dyntrace_active_dyntracer = NULL;
 
     /* set this to NULL to let allocation happen below
-       without any probes getting executed. */
+       without any callbacks getting executed. */
     allocate_dyntrace_parse_data();
-
-    /* extract objects from argument list */
-    dyntracer = dyntracer_from_sexp(dyntracer_sexp);
-    code_block = findVar(code_block_sexp, rho);
-    PROTECT(expression = PRCODE(code_block));
-    PROTECT(environment = PRENV(code_block));
-
-    if (dyntracer == NULL)
-        Rf_error("dyntracer is NULL");
 
     dyntrace_active_dyntracer = dyntracer;
 
-    DYNTRACE_PROBE_DYNTRACE_ENTRY(expression, environment);
+    // dyntrace_enable_tracing();
 
-    PROTECT(result = R_tryEval(expression, environment, &eval_error));
+    DYNTRACE_PROBE_DYNTRACE_ENTRY(code, environment);
+
+    PROTECT(result = R_tryEval(code, environment, &eval_error));
 
     /* we want to return a sensible result for
-       evaluation of the expression */
+       evaluation of the code */
     if (eval_error) {
         result = R_NilValue;
     }
 
-    DYNTRACE_PROBE_DYNTRACE_EXIT(expression, environment, result, eval_error);
+    DYNTRACE_PROBE_DYNTRACE_EXIT(code, environment, result, eval_error);
+
+    //dyntrace_reinstate_tracing();
 
     /* set this to NULL to let deallocation happen below
-       without any probes getting executed. */
+       without any callbacks getting executed. */
     dyntrace_active_dyntracer = NULL;
 
     deallocate_dyntrace_parse_data();
 
     dyntrace_active_dyntracer = dyntrace_previous_dyntracer;
 
+    // dyntrace_status_finalize();
+
     UNPROTECT(3);
+
     return result;
 }
 
@@ -202,10 +202,10 @@ SEXP do_dyntrace(SEXP call, SEXP op, SEXP args, SEXP rho) {
 //-----------------------------------------------------------------------------
 
 int dyntrace_is_active() {
-    return (dyntrace_active_dyntracer_probe_name != NULL);
+    return (dyntrace_active_dyntracer_callback_name != NULL);
 }
 
-dyntracer_t *dyntrace_get_active_dyntracer() {
+dyntracer_t* dyntrace_get_active_dyntracer() {
     return dyntrace_active_dyntracer;
 }
 
@@ -219,33 +219,32 @@ void dyntrace_reinstate_garbage_collector() {
 }
 
 SEXP serialize_sexp(SEXP s, int* linecount) {
-  int opts = DELAYPROMISES | USESOURCE;
-  dyntrace_enable_privileged_mode();
-  dyntrace_parse_data.buffer.data[0] = '\0';
-  dyntrace_parse_data.len = 0;
-  dyntrace_parse_data.linenumber = 0;
-  dyntrace_parse_data.indent = 0;
-  dyntrace_parse_data.opts = opts;
-  deparse2buff(s, &dyntrace_parse_data);
-  writeline(&dyntrace_parse_data);
-  *linecount = dyntrace_parse_data.linenumber;
-  dyntrace_disable_privileged_mode();
-  return dyntrace_parse_data.strvec;
+    int opts = DELAYPROMISES | USESOURCE;
+    //dyntrace_disable_tracing();
+    dyntrace_parse_data.buffer.data[0] = '\0';
+    dyntrace_parse_data.len = 0;
+    dyntrace_parse_data.linenumber = 0;
+    dyntrace_parse_data.indent = 0;
+    dyntrace_parse_data.opts = opts;
+    deparse2buff(s, &dyntrace_parse_data);
+    writeline(&dyntrace_parse_data);
+    *linecount = dyntrace_parse_data.linenumber;
+    //dyntrace_enable_tracing();
+    return dyntrace_parse_data.strvec;
 }
 
-int newhashpjw(const char *s) { return R_Newhashpjw(s); }
+int newhashpjw(const char* s) {
+    return R_Newhashpjw(s);
+}
 
 SEXP dyntrace_lookup_environment(SEXP rho, SEXP key) {
-  dyntrace_disable_probe(probe_environment_variable_lookup);
-  SEXP value = R_UnboundValue;
-  if (DDVAL(key)) {
-      value = ddfindVar(key, rho);
-  }
-  else {
-    value = findVar(key, rho);
-  }
-  dyntrace_enable_probe(probe_environment_variable_lookup);
-  return value;
+    SEXP value = R_UnboundValue;
+    if (DDVAL(key)) {
+        value = ddfindVar(key, rho);
+    } else {
+        value = findVar(key, rho);
+    }
+    return value;
 }
 
 SEXP dyntrace_get_promise_expression(SEXP promise) {
@@ -269,7 +268,9 @@ int dyntrace_get_c_function_arity(SEXP op) {
     return PRIMARITY(op);
 }
 
-int dyntrace_get_primitive_offset(SEXP op) { return (op)->u.primsxp.offset; }
+int dyntrace_get_primitive_offset(SEXP op) {
+    return (op)->u.primsxp.offset;
+}
 
 const char* const dyntrace_get_c_function_name(SEXP op) {
     int offset = dyntrace_get_primitive_offset(op);
@@ -278,4 +279,575 @@ const char* const dyntrace_get_c_function_name(SEXP op) {
 
 SEXP* dyntrace_get_symbol_table() {
     return R_SymbolTable;
+}
+
+dyntracer_t* dyntracer_create(void* data) {
+   /* calloc initializes the memory to zero. This ensures that probes not
+      attached will be NULL. Replacing calloc with malloc will cause segfaults. */
+    dyntracer_t* dyntracer = (dyntracer_t*) (calloc(1, sizeof(dyntracer_t)));
+    dyntracer_set_data(dyntracer, data);
+    return dyntracer;
+}
+
+void* dyntracer_destroy(dyntracer_t* dyntracer) {
+    void* data = dyntracer_get_data(dyntracer);
+    free(dyntracer);
+    return data;
+}
+
+void dyntracer_set_data(dyntracer_t* dyntracer, void* data) {
+    dyntracer->data = data;
+}
+
+int dyntracer_has_data(dyntracer_t* dyntracer) {
+    dyntracer->data != NULL;
+}
+
+void* dyntracer_get_data(dyntracer_t* dyntracer) {
+    return dyntracer->data;
+}
+
+int dyntracer_has_dyntrace_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.dyntrace_entry != NULL;
+}
+int dyntracer_has_dyntrace_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.dyntrace_exit != NULL;
+}
+int dyntracer_has_deserialize_object_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.deserialize_object != NULL;
+}
+int dyntracer_has_closure_argument_list_creation_entry_callback(
+    dyntracer_t* dyntracer) {
+    return dyntracer->callback.closure_argument_list_creation_entry !=
+           NULL;
+}
+int dyntracer_has_closure_argument_list_creation_exit_callback(
+    dyntracer_t* dyntracer) {
+    return dyntracer->callback.closure_argument_list_creation_exit !=
+           NULL;
+}
+int dyntracer_has_closure_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.closure_entry != NULL;
+}
+int dyntracer_has_closure_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.closure_exit != NULL;
+}
+int dyntracer_has_builtin_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.builtin_entry != NULL;
+}
+int dyntracer_has_builtin_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.builtin_exit != NULL;
+}
+int dyntracer_has_special_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.special_entry != NULL;
+}
+int dyntracer_has_special_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.special_exit != NULL;
+}
+int dyntracer_has_substitute_call_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.substitute_call != NULL;
+}
+int dyntracer_has_assignment_call_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.assignment_call != NULL;
+}
+int dyntracer_has_promise_force_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.promise_force_entry != NULL;
+}
+int dyntracer_has_promise_force_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.promise_force_exit != NULL;
+}
+int dyntracer_has_promise_value_lookup_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.promise_value_lookup != NULL;
+}
+int dyntracer_has_promise_value_assign_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.promise_value_assign != NULL;
+}
+int dyntracer_has_promise_expression_lookup_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.promise_expression_lookup != NULL;
+}
+int dyntracer_has_promise_expression_assign_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.promise_expression_assign != NULL;
+}
+int dyntracer_has_promise_environment_lookup_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.promise_environment_lookup != NULL;
+}
+int dyntracer_has_promise_environment_assign_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.promise_environment_assign != NULL;
+}
+int dyntracer_has_promise_substitute_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.promise_substitute != NULL;
+}
+int dyntracer_has_eval_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.eval_entry != NULL;
+}
+int dyntracer_has_eval_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.eval_exit != NULL;
+}
+int dyntracer_has_gc_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.gc_entry != NULL;
+}
+int dyntracer_has_gc_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.gc_exit != NULL;
+}
+int dyntracer_has_gc_unmark_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.gc_unmark != NULL;
+}
+int dyntracer_has_gc_allocate_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.gc_allocate != NULL;
+}
+int dyntracer_has_context_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.context_entry != NULL;
+}
+int dyntracer_has_context_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.context_exit != NULL;
+}
+int dyntracer_has_context_jump_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.context_jump != NULL;
+}
+int dyntracer_has_S3_generic_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.S3_generic_entry != NULL;
+}
+int dyntracer_has_S3_generic_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.S3_generic_exit != NULL;
+}
+int dyntracer_has_S3_dispatch_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.S3_dispatch_entry != NULL;
+}
+int dyntracer_has_S3_dispatch_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.S3_dispatch_exit != NULL;
+}
+int dyntracer_has_S4_generic_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.S4_generic_entry != NULL;
+}
+int dyntracer_has_S4_generic_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.S4_generic_exit != NULL;
+}
+int dyntracer_has_S4_dispatch_argument_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.S4_dispatch_argument != NULL;
+}
+int dyntracer_has_environment_variable_define_callback(
+    dyntracer_t* dyntracer) {
+    return dyntracer->callback.environment_variable_define != NULL;
+}
+int dyntracer_has_environment_variable_assign_callback(
+    dyntracer_t* dyntracer) {
+    return dyntracer->callback.environment_variable_assign != NULL;
+}
+int dyntracer_has_environment_variable_remove_callback(
+    dyntracer_t* dyntracer) {
+    return dyntracer->callback.environment_variable_remove != NULL;
+}
+int dyntracer_has_environment_variable_lookup_callback(
+    dyntracer_t* dyntracer) {
+    return dyntracer->callback.environment_variable_lookup != NULL;
+}
+int dyntracer_has_environment_variable_exists_callback(
+    dyntracer_t* dyntracer) {
+    return dyntracer->callback.environment_variable_exists != NULL;
+}
+int dyntracer_has_environment_context_sensitive_promise_eval_entry_callback(
+    dyntracer_t* dyntracer) {
+    return dyntracer->callback.environment_context_sensitive_promise_eval_entry !=
+           NULL;
+}
+int dyntracer_has_environment_context_sensitive_promise_eval_exit_callback(
+    dyntracer_t* dyntracer) {
+    return dyntracer->callback.environment_context_sensitive_promise_eval_exit !=
+           NULL;
+}
+
+dyntrace_entry_callback_t
+dyntracer_get_dyntrace_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.dyntrace_entry;
+}
+dyntrace_exit_callback_t
+dyntracer_get_dyntrace_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.dyntrace_exit;
+}
+deserialize_object_callback_t
+dyntracer_get_deserialize_object_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.deserialize_object;
+}
+closure_argument_list_creation_entry_callback_t
+dyntracer_get_closure_argument_list_creation_entry_callback(
+    dyntracer_t* dyntracer) {
+    return dyntracer->callback.closure_argument_list_creation_entry;
+}
+closure_argument_list_creation_exit_callback_t
+dyntracer_get_closure_argument_list_creation_exit_callback(
+    dyntracer_t* dyntracer) {
+    return dyntracer->callback.closure_argument_list_creation_exit;
+}
+closure_entry_callback_t
+dyntracer_get_closure_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.closure_entry;
+}
+closure_exit_callback_t
+dyntracer_get_closure_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.closure_exit;
+}
+builtin_entry_callback_t
+dyntracer_get_builtin_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.builtin_entry;
+}
+builtin_exit_callback_t
+dyntracer_get_builtin_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.builtin_exit;
+}
+special_entry_callback_t
+dyntracer_get_special_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.special_entry;
+}
+special_exit_callback_t
+dyntracer_get_special_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.special_exit;
+}
+substitute_call_callback_t
+dyntracer_get_substitute_call_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.substitute_call;
+}
+assignment_call_callback_t
+dyntracer_get_assignment_call_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.assignment_call;
+}
+promise_force_entry_callback_t
+dyntracer_get_promise_force_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.promise_force_entry;
+}
+promise_force_exit_callback_t
+dyntracer_get_promise_force_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.promise_force_exit;
+}
+promise_value_lookup_callback_t
+dyntracer_get_promise_value_lookup_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.promise_value_lookup;
+}
+promise_value_assign_callback_t
+dyntracer_get_promise_value_assign_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.promise_value_assign;
+}
+promise_expression_lookup_callback_t
+dyntracer_get_promise_expression_lookup_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.promise_expression_lookup;
+}
+promise_expression_assign_callback_t
+dyntracer_get_promise_expression_assign_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.promise_expression_assign;
+}
+promise_environment_lookup_callback_t
+dyntracer_get_promise_environment_lookup_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.promise_environment_lookup;
+}
+promise_environment_assign_callback_t
+dyntracer_get_promise_environment_assign_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.promise_environment_assign;
+}
+promise_substitute_callback_t
+dyntracer_get_promise_substitute_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.promise_substitute;
+}
+eval_entry_callback_t
+dyntracer_get_eval_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.eval_entry;
+}
+eval_exit_callback_t dyntracer_get_eval_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.eval_exit;
+}
+gc_entry_callback_t dyntracer_get_gc_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.gc_entry;
+}
+gc_exit_callback_t dyntracer_get_gc_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.gc_exit;
+}
+gc_unmark_callback_t dyntracer_get_gc_unmark_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.gc_unmark;
+}
+gc_allocate_callback_t
+dyntracer_get_gc_allocate_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.gc_allocate;
+}
+context_entry_callback_t
+dyntracer_get_context_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.context_entry;
+}
+context_exit_callback_t
+dyntracer_get_context_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.context_exit;
+}
+context_jump_callback_t
+dyntracer_get_context_jump_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.context_jump;
+}
+S3_generic_entry_callback_t
+dyntracer_get_S3_generic_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.S3_generic_entry;
+}
+S3_generic_exit_callback_t
+dyntracer_get_S3_generic_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.S3_generic_exit;
+}
+S3_dispatch_entry_callback_t
+dyntracer_get_S3_dispatch_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.S3_dispatch_entry;
+}
+S3_dispatch_exit_callback_t
+dyntracer_get_S3_dispatch_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.S3_dispatch_exit;
+}
+S4_generic_entry_callback_t
+dyntracer_get_S4_generic_entry_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.S4_generic_entry;
+}
+S4_generic_exit_callback_t
+dyntracer_get_S4_generic_exit_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.S4_generic_exit;
+}
+S4_dispatch_argument_callback_t
+dyntracer_get_S4_dispatch_argument_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.S4_dispatch_argument;
+}
+environment_variable_define_callback_t
+dyntracer_get_environment_variable_define_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.environment_variable_define;
+}
+environment_variable_assign_callback_t
+dyntracer_get_environment_variable_assign_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.environment_variable_assign;
+}
+environment_variable_remove_callback_t
+dyntracer_get_environment_variable_remove_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.environment_variable_remove;
+}
+environment_variable_lookup_callback_t
+dyntracer_get_environment_variable_lookup_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.environment_variable_lookup;
+}
+environment_variable_exists_callback_t
+dyntracer_get_environment_variable_exists_callback(dyntracer_t* dyntracer) {
+    return dyntracer->callback.environment_variable_exists;
+}
+environment_context_sensitive_promise_eval_entry_callback_t
+dyntracer_get_environment_context_sensitive_promise_eval_entry_callback(
+    dyntracer_t* dyntracer) {
+    return dyntracer->callback
+        .environment_context_sensitive_promise_eval_entry;
+}
+environment_context_sensitive_promise_eval_exit_callback_t
+dyntracer_get_environment_context_sensitive_promise_eval_exit_callback(
+    dyntracer_t* dyntracer) {
+    return dyntracer->callback
+        .environment_context_sensitive_promise_eval_exit;
+}
+
+void dyntracer_set_dyntrace_entry_callback_t(dyntracer_t* dyntracer,
+                                    dyntrace_entry_callback_t callback) {
+    dyntracer->callback.dyntrace_entry = callback;
+}
+
+void dyntracer_set_dyntrace_exit_callback(dyntracer_t* dyntracer,
+                                          dyntrace_exit_callback_t callback) {
+    dyntracer->callback.dyntrace_exit = callback;
+}
+void dyntracer_set_deserialize_object_callback(
+    dyntracer_t* dyntracer,
+    deserialize_object_callback_t callback) {
+    dyntracer->callback.deserialize_object = callback;
+}
+void dyntracer_set_closure_argument_list_creation_entry_callback(
+    dyntracer_t* dyntracer,
+    closure_argument_list_creation_entry_callback_t callback) {
+    dyntracer->callback.closure_argument_list_creation_entry =
+        callback;
+}
+void dyntracer_set_closure_argument_list_creation_exit_callback(
+    dyntracer_t* dyntracer,
+    closure_argument_list_creation_exit_callback_t callback) {
+    dyntracer->callback.closure_argument_list_creation_exit = callback;
+}
+void dyntracer_set_closure_entry_callback(dyntracer_t* dyntracer,
+                                          closure_entry_callback_t callback) {
+    dyntracer->callback.closure_entry = callback;
+}
+void dyntracer_set_closure_exit_callback(dyntracer_t* dyntracer,
+                                         closure_exit_callback_t callback) {
+    dyntracer->callback.closure_exit = callback;
+}
+void dyntracer_set_builtin_entry_callback(dyntracer_t* dyntracer,
+                                          builtin_entry_callback_t callback) {
+    dyntracer->callback.builtin_entry = callback;
+}
+void dyntracer_set_builtin_exit_callback(dyntracer_t* dyntracer,
+                                         builtin_exit_callback_t callback) {
+    dyntracer->callback.builtin_exit = callback;
+}
+void dyntracer_set_special_entry_callback(dyntracer_t* dyntracer,
+                                          special_entry_callback_t callback) {
+    dyntracer->callback.special_entry = callback;
+}
+void dyntracer_set_special_exit_callback(dyntracer_t* dyntracer,
+                                         special_exit_callback_t callback) {
+    dyntracer->callback.special_exit = callback;
+}
+void dyntracer_set_substitute_call_callback(
+    dyntracer_t* dyntracer,
+    substitute_call_callback_t callback) {
+    dyntracer->callback.substitute_call = callback;
+}
+void dyntracer_set_assignment_call_callback(
+    dyntracer_t* dyntracer,
+    assignment_call_callback_t callback) {
+    dyntracer->callback.assignment_call = callback;
+}
+void dyntracer_set_promise_force_entry_callback(
+    dyntracer_t* dyntracer,
+    promise_force_entry_callback_t callback) {
+    dyntracer->callback.promise_force_entry = callback;
+}
+void dyntracer_set_promise_force_exit_callback(
+    dyntracer_t* dyntracer,
+    promise_force_exit_callback_t callback) {
+    dyntracer->callback.promise_force_exit = callback;
+}
+void dyntracer_set_promise_value_lookup_callback(
+    dyntracer_t* dyntracer,
+    promise_value_lookup_callback_t callback) {
+    dyntracer->callback.promise_value_lookup = callback;
+}
+void dyntracer_set_promise_value_assign_callback(
+    dyntracer_t* dyntracer,
+    promise_value_assign_callback_t callback) {
+    dyntracer->callback.promise_value_assign = callback;
+}
+void dyntracer_set_promise_expression_lookup_callback(
+    dyntracer_t* dyntracer,
+    promise_expression_lookup_callback_t callback) {
+    dyntracer->callback.promise_expression_lookup = callback;
+}
+void dyntracer_set_promise_expression_assign_callback(
+    dyntracer_t* dyntracer,
+    promise_expression_assign_callback_t callback) {
+    dyntracer->callback.promise_expression_assign = callback;
+}
+void dyntracer_set_promise_environment_lookup_callback(
+    dyntracer_t* dyntracer,
+    promise_environment_lookup_callback_t callback) {
+    dyntracer->callback.promise_environment_lookup = callback;
+}
+void dyntracer_set_promise_environment_assign_callback(
+    dyntracer_t* dyntracer,
+    promise_environment_assign_callback_t callback) {
+    dyntracer->callback.promise_environment_assign = callback;
+}
+void dyntracer_set_promise_substitute_callback(
+    dyntracer_t* dyntracer,
+    promise_substitute_callback_t callback) {
+    dyntracer->callback.promise_substitute = callback;
+}
+void dyntracer_set_eval_entry_callback(dyntracer_t* dyntracer,
+                                       eval_entry_callback_t callback) {
+    dyntracer->callback.eval_entry = callback;
+}
+void dyntracer_set_eval_exit_callback(dyntracer_t* dyntracer,
+                                      eval_exit_callback_t callback) {
+    dyntracer->callback.eval_exit = callback;
+}
+void dyntracer_set_gc_entry_callback(dyntracer_t* dyntracer,
+                                     gc_entry_callback_t callback) {
+    dyntracer->callback.gc_entry = callback;
+}
+void dyntracer_set_gc_exit_callback(dyntracer_t* dyntracer,
+                                    gc_exit_callback_t callback) {
+    dyntracer->callback.gc_exit = callback;
+}
+void dyntracer_set_gc_unmark_callback(dyntracer_t* dyntracer,
+                                      gc_unmark_callback_t callback) {
+    dyntracer->callback.gc_unmark = callback;
+}
+void dyntracer_set_gc_allocate_callback(dyntracer_t* dyntracer,
+                                        gc_allocate_callback_t callback) {
+    dyntracer->callback.gc_allocate = callback;
+}
+void dyntracer_set_context_entry_callback(dyntracer_t* dyntracer,
+                                          context_entry_callback_t callback) {
+    dyntracer->callback.context_entry = callback;
+}
+void dyntracer_set_context_exit_callback(dyntracer_t* dyntracer,
+                                         context_exit_callback_t callback) {
+    dyntracer->callback.context_exit = callback;
+}
+void dyntracer_set_context_jump_callback(dyntracer_t* dyntracer,
+                                         context_jump_callback_t callback) {
+    dyntracer->callback.context_jump = callback;
+}
+void dyntracer_set_S3_generic_entry_callback(
+    dyntracer_t* dyntracer,
+    S3_generic_entry_callback_t callback) {
+    dyntracer->callback.S3_generic_entry = callback;
+}
+void dyntracer_set_S3_generic_exit_callback(
+    dyntracer_t* dyntracer,
+    S3_generic_exit_callback_t callback) {
+    dyntracer->callback.S3_generic_exit = callback;
+}
+void dyntracer_set_S3_dispatch_entry_callback(
+    dyntracer_t* dyntracer,
+    S3_dispatch_entry_callback_t callback) {
+    dyntracer->callback.S3_dispatch_entry = callback;
+}
+void dyntracer_set_S3_dispatch_exit_callback(
+    dyntracer_t* dyntracer,
+    S3_dispatch_exit_callback_t callback) {
+    dyntracer->callback.S3_dispatch_exit = callback;
+}
+void dyntracer_set_S4_generic_entry_callback(
+    dyntracer_t* dyntracer,
+    S4_generic_entry_callback_t callback) {
+    dyntracer->callback.S4_generic_entry = callback;
+}
+void dyntracer_set_S4_generic_exit_callback(
+    dyntracer_t* dyntracer,
+    S4_generic_exit_callback_t callback) {
+    dyntracer->callback.S4_generic_exit = callback;
+}
+void dyntracer_set_S4_dispatch_argument_callback(
+    dyntracer_t* dyntracer,
+    S4_dispatch_argument_callback_t callback) {
+    dyntracer->callback.S4_dispatch_argument = callback;
+}
+void dyntracer_set_environment_variable_define_callback(
+    dyntracer_t* dyntracer,
+    environment_variable_define_callback_t callback) {
+    dyntracer->callback.environment_variable_define = callback;
+}
+void dyntracer_set_environment_variable_assign_callback(
+    dyntracer_t* dyntracer,
+    environment_variable_assign_callback_t callback) {
+    dyntracer->callback.environment_variable_assign = callback;
+}
+void dyntracer_set_environment_variable_remove_callback(
+    dyntracer_t* dyntracer,
+    environment_variable_remove_callback_t callback) {
+    dyntracer->callback.environment_variable_remove = callback;
+}
+void dyntracer_set_environment_variable_lookup_callback(
+    dyntracer_t* dyntracer,
+    environment_variable_lookup_callback_t callback) {
+    dyntracer->callback.environment_variable_lookup = callback;
+}
+void dyntracer_set_environment_variable_exists_callback(
+    dyntracer_t* dyntracer,
+    environment_variable_exists_callback_t callback) {
+    dyntracer->callback.environment_variable_exists = callback;
+}
+void dyntracer_set_environment_context_sensitive_promise_eval_entry_callback(
+    dyntracer_t* dyntracer,
+    environment_context_sensitive_promise_eval_entry_callback_t callback) {
+    dyntracer->callback
+        .environment_context_sensitive_promise_eval_entry = callback;
+}
+void dyntracer_set_environment_context_sensitive_promise_eval_exit_callback(
+    dyntracer_t* dyntracer,
+    environment_context_sensitive_promise_eval_exit_callback_t callback) {
+    dyntracer->callback
+        .environment_context_sensitive_promise_eval_exit = callback;
 }

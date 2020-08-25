@@ -22,14 +22,13 @@
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
-#include <Rdyntrace.h>
 #define R_USE_SIGNALS 1
 #include <Defn.h>
 #include <Internal.h>
 #include <Rinterface.h>
 #include <Fileio.h>
 #include <R_ext/Print.h>
-
+#include <Rdyntrace.h>
 
 static SEXP bcEval(SEXP, SEXP, Rboolean);
 

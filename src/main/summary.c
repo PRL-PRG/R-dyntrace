@@ -18,8 +18,6 @@
  *  https://www.R-project.org/Licenses/
  */
 
-#include <Rdyntrace.h>
-
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -31,6 +29,8 @@
 #include <float.h> // for DBL_MAX
 
 #include "duplicate.h"
+
+#include <Rdyntrace.h>
 
 #define R_MSG_type	_("invalid 'type' (%s) of argument")
 #define imax2(x, y) ((x < y) ? y : x)

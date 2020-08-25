@@ -23,8 +23,6 @@
 #include <config.h>
 #endif
 
-#include <Rdyntrace.h>
-
 /* interval at which to check interrupts */
 #define NINTERRUPT 10000000
 
@@ -40,6 +38,8 @@
 #ifdef Win32
 #include <trioremap.h> /* for %lld */
 #endif
+
+#include <Rdyntrace.h>
 
 /* This section of code handles type conversion for elements */
 /* of data vectors.  Type coercion throughout R should use these */

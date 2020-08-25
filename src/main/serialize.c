@@ -19,7 +19,6 @@
 
 /* <UTF8> byte-level access is only to compare with chars <= 0x7F */
 
-#include <Rdyntrace.h>
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -38,6 +37,8 @@
 #ifdef Win32
 #include <trioremap.h>
 #endif
+
+#include <Rdyntrace.h>
 
 /* From time to time changes in R, such as the addition of a new SXP,
  * may require changes in the save file format.  Here are some

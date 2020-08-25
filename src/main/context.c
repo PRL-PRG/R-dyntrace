@@ -107,10 +107,10 @@
 #include <config.h>
 #endif
 
-#include <Rdyntrace.h>
 #define R_USE_SIGNALS 1
 #include <Defn.h>
 #include <Internal.h>
+#include <Rdyntrace.h>
 
 /* R_run_onexits - runs the conexit/cend code for all contexts from
    R_GlobalContext down to but not including the argument context.
