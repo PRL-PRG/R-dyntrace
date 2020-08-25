@@ -21,6 +21,8 @@
  *  https://www.R-project.org/Licenses/
  */
 
+#define USING_DYNTRACE
+
 #ifndef R_R_H
 #define R_R_H
 
