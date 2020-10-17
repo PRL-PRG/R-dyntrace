@@ -11,6 +11,7 @@
 dyntracer_t* dyntrace_active_dyntracer = NULL;
 const char* dyntrace_active_dyntracer_callback_name = NULL;
 int dyntrace_garbage_collector_state = 0;
+int dyntrace_status = 0;
 
 //void dyntrace_status_initialize(int size) {
 //    dyntrace_tracing_status.index = 0;
@@ -200,6 +201,18 @@ SEXP dyntrace_trace_code(dyntracer_t* dyntracer, SEXP code, SEXP environment) {
 //-----------------------------------------------------------------------------
 // helpers
 //-----------------------------------------------------------------------------
+
+void dyntrace_enable() {
+    dyntrace_status = 1;
+}
+
+void dyntrace_disable() {
+    dyntrace_status = 0;
+}
+
+int dyntrace_is_enabled() {
+    return dyntrace_status;
+}
 
 int dyntrace_is_active() {
     return (dyntrace_active_dyntracer_callback_name != NULL);
