@@ -8,7 +8,8 @@ extern "C" {
 #endif
 
 #define DYNTRACE_PROBE_HEADER(callback_name)                               \
-    if (dyntrace_active_dyntracer != NULL &&                               \
+    if (dyntrace_is_enabled() &&                                           \
+        dyntrace_active_dyntracer != NULL &&                               \
         dyntrace_active_dyntracer->callback.callback_name != NULL) {       \
 //        if (dyntrace_active_dyntracer_callback_name != NULL) {             \
 //            dyntrace_log_error("[NESTED HOOK EXECUTION] - %s triggers %s", \
@@ -940,6 +941,10 @@ struct dyntracer_t {
     dyntracer_callback_t callback;
     void* data;
 };
+
+void dyntrace_enable();
+void dyntrace_disable();
+int dyntrace_is_enabled();
 
 dyntracer_t* dyntracer_create(void *data);
 void* dyntracer_destroy(dyntracer_t* dyntracer);
