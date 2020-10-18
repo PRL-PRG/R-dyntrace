@@ -1,5 +1,5 @@
-#ifndef __DYNTRACE_H__
-#define __DYNTRACE_H__
+#ifndef R_DYNTRACE_H
+#define R_DYNTRACE_H
 
 #include <Rinternals.h>
 
@@ -844,4 +844,4 @@ void NORET jump_to_top_ex(Rboolean, Rboolean, Rboolean, Rboolean, Rboolean);
 }
 #endif
 
-#endif /* __DYNTRACE_H__ */
+#endif /* R_DYNTRACE_H */

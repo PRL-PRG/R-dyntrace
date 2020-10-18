@@ -13,73 +13,6 @@ const char* dyntrace_active_dyntracer_callback_name = NULL;
 int dyntrace_garbage_collector_state = 0;
 int dyntrace_status = 0;
 
-//void dyntrace_status_initialize(int size) {
-//    dyntrace_tracing_status.index = 0;
-//    dyntrace_tracing_status.size = size;
-//    dyntrace_tracing_status.status_stack = malloc(size * sizeof(int));
-//}
-//
-//void dyntrace_status_finalize() {
-//    dyntrace_tracing_status.index = 0;
-//    dyntrace_tracing_status.size = 0;
-//    free(dyntrace_tracing_status.status_stack);
-//    dyntrace_tracing_status.status_stack = NULL;
-//}
-//
-//void dyntrace_status_push(dyntrace_tracing_status_t* dyntrace_tracing_status,
-//                          int status) {
-//    int index = dyntrace_tracing_status->index;
-//    int size = dyntrace_tracing_status->size;
-//
-//    if (dyntrace_tracing_status->status_stack == NULL) {
-//        return;
-//    }
-//
-//    if (index == size) {
-//        dyntrace_tracing_status->status_stack =
-//            realloc(dyntrace_tracing_status->status_stack, 2 * size);
-//        dyntrace_tracing_status->size *= 2;
-//    }
-//
-//    dyntrace_tracing_status->status_stack[index] = status;
-//    dyntrace_tracing_status->index += 1;
-//}
-//
-//void dyntrace_status_pop(dyntrace_tracing_status_t* dyntrace_tracing_status) {
-//    int index = dyntrace_tracing_status->index;
-//
-//    if (index == 0) {
-//        return;
-//    }
-//
-//    dyntrace_tracing_status->index -= 1;
-//}
-//
-//int dyntrace_status_peek(dyntrace_tracing_status_t* dyntrace_tracing_status) {
-//    int index = dyntrace_tracing_status->index;
-//    return dyntrace_tracing_status->status_stack[index - 1];
-//}
-//
-//void dyntrace_enable_tracing() {
-//    dyntrace_status_push(&dyntrace_tracing_status, 1);
-//}
-//
-//void dyntrace_disable_tracing() {
-//    dyntrace_status_push(&dyntrace_tracing_status, 0);
-//}
-//
-//void dyntrace_reinstate_tracing() {
-//    dyntrace_status_pop(&dyntrace_tracing_status);
-//}
-//
-//int dyntrace_is_tracing_enabled() {
-//    return dyntrace_status_peek(&dyntrace_tracing_status);
-//}
-//
-//int dyntrace_is_tracing_disabled() {
-//    return !dyntrace_is_tracing_enabled();
-//}
-
 #define DYNTRACE_PARSE_DATA_BUFFER_SIZE (1024 * 1024 * 8)
 #define DYNTRACE_PARSE_DATA_MAXLINES (10000)
 
@@ -115,39 +48,6 @@ static void deallocate_dyntrace_parse_data() {
     free(dyntrace_parse_data.buffer.data);
     UNPROTECT(1);
 }
-
-//SEXP do_dyntrace(SEXP call, SEXP op, SEXP args, SEXP rho) {
-//    SEXP r_dyntracer;
-//    SEXP code;
-//    SEXP environment;
-//    dyntracer_t* dyntracer = NULL;
-//
-//    if (length(args) != 3) {
-//        Rf_error("dyntrace expects three arguments.");
-//    }
-//
-//    r_dyntracer = eval(CAR(args), rho);
-//
-//    if (TYPEOF(r_dyntracer) != EXTPTRSXP) {
-//        Rf_error("first argument of dyntrace should be a dyntracer object.");
-//    }
-//
-//    dyntracer = dyntracer_from_sexp(r_dyntracer);
-//
-//    if (dyntracer == NULL) {
-//        Rf_error("dyntracer is NULL");
-//    }
-//
-//    code = CADR(args);
-//
-//    environment = eval(CADDR(args), rho);
-//
-//    if (TYPEOF(environment) != ENVSXP) {
-//        Rf_error("third argument of dyntrace should be an environment.");
-//    }
-//
-//    return dyntrace_trace_code(dyntracer, code, environment);
-//}
 
 SEXP dyntrace_trace_code(dyntracer_t* dyntracer, SEXP code, SEXP environment) {
     int eval_error = FALSE;
@@ -321,7 +221,7 @@ void* dyntracer_get_data(dyntracer_t* dyntracer) {
 }
 
 void dyntracer_remove_data(dyntracer_t* dyntracer) {
-    return dyntracer->data = NULL;
+    dyntracer->data = NULL;
 }
 
 #define DYNTRACE_CALLBACK_API(NAME, ...)                                                        \
