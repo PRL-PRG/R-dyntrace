@@ -454,6 +454,21 @@ int attribute_hidden framedepth(RCNTXT *cptr)
     return nframe;
 }
 
+int dyntrace_get_frame_depth() {
+    /* first find the context that sys.xxx needs to be evaluated in */
+    RCNTXT* cptr = R_GlobalContext;
+    SEXP t = cptr->sysparent;
+    while (cptr != R_ToplevelContext) {
+	if (cptr->callflag & CTXT_FUNCTION )
+	    if (cptr->cloenv == t)
+		break;
+	cptr = cptr->nextcontext;
+    }
+
+    return framedepth(cptr);
+}
+
+
 static SEXP getCallWithSrcref(RCNTXT *cptr)
 {
     SEXP result;
