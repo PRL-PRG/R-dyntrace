@@ -1100,7 +1100,7 @@ static void ReleaseLargeFreeVectors()
 	    SEXP next = NEXT_NODE(s);
 	    if (CHAR(s) != NULL) {
 		R_size_t size;
-#if defined(PROTECTCHECK) || defined(ENABLE_DYNTRACE)
+#if defined(PROTECTCHECK)
 		if (TYPEOF(s) == FREESXP)
 		    size = STDVEC_LENGTH(s);
 		else
@@ -1852,6 +1852,7 @@ static int RunGenCollect(R_size_t size_needed)
     FORWARD_NODE(R_StringHash);
     PROCESS_NODES();
 
+#if 0
 #ifdef ENABLE_DYNTRACE
     if (dyntrace_active_dyntracer != NULL) {
 #define SETOLDTYPE(s, t) SETLEVELS(s, t)
@@ -1915,7 +1916,7 @@ static int RunGenCollect(R_size_t size_needed)
         }
     }
 #endif
-
+#endif
 
 #ifdef PROTECTCHECK
     for(i=0; i< NUM_SMALL_NODE_CLASSES;i++){
