@@ -1227,7 +1227,7 @@ static SEXP findGlobalVarLoc(SEXP symbol)
     Rboolean canCache = TRUE;
     vl = R_GetGlobalCacheLoc(symbol);
     if (vl != R_UnboundValue) {
-	DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_LOOKUP(symbol, CAR(vl), R_GlobalEnv);
+	DYNTRACE_PROBE_ENVIRONMENT_VARIABLE_LOOKUP(symbol, BINDING_VALUE(vl), R_GlobalEnv);
 	return vl;
   }
     for (rho = R_GlobalEnv; rho != R_EmptyEnv; rho = ENCLOS(rho)) {
