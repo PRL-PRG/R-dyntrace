@@ -515,6 +515,11 @@ extern "C" {
    DYNTRACE TYPE DEFINITIONS
 ---------------------------------------------------------------------------- */
 
+struct dyntrace_result_t {
+    int error_code;
+    SEXP value;
+};
+
 enum dyntrace_dispatch_t {
     DYNTRACE_DISPATCH_NONE,
     DYNTRACE_DISPATCH_S3,
@@ -784,7 +789,7 @@ extern const char* dyntrace_active_dyntracer_callback_name;
 extern int dyntrace_garbage_collector_state;
 
     //SEXP do_dyntrace(SEXP call, SEXP op, SEXP args, SEXP rho);
-SEXP dyntrace_trace_code(dyntracer_t* dyntracer, SEXP code, SEXP environment);
+struct dyntrace_result_t dyntrace_trace_code(dyntracer_t* dyntracer, SEXP code, SEXP environment);
 dyntracer_t* dyntrace_get_active_dyntracer();
 int dyntrace_is_active();
 int dyntrace_dyntracer_is_active();
