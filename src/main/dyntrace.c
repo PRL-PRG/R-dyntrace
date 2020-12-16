@@ -49,9 +49,10 @@ static void deallocate_dyntrace_parse_data() {
     UNPROTECT(1);
 }
 
-SEXP dyntrace_trace_code(dyntracer_t* dyntracer, SEXP code, SEXP environment) {
-    int eval_error = FALSE;
-    SEXP result;
+struct dyntrace_result_t dyntrace_trace_code(dyntracer_t* dyntracer, SEXP code, SEXP environment) {
+    struct dyntrace_result_t result;
+    result.error_code = 0;
+    result.value = R_NilValue;
     dyntracer_t* dyntrace_previous_dyntracer = dyntrace_active_dyntracer;
 
     PROTECT(code);
@@ -71,15 +72,9 @@ SEXP dyntrace_trace_code(dyntracer_t* dyntracer, SEXP code, SEXP environment) {
 
     DYNTRACE_PROBE_DYNTRACE_ENTRY(code, environment);
 
-    PROTECT(result = R_tryEval(code, environment, &eval_error));
+    PROTECT(result.value = R_tryEval(code, environment, &result.error_code));
 
-    /* we want to return a sensible result for
-       evaluation of the code */
-    if (eval_error) {
-        result = R_NilValue;
-    }
-
-    DYNTRACE_PROBE_DYNTRACE_EXIT(code, environment, result, eval_error);
+    DYNTRACE_PROBE_DYNTRACE_EXIT(code, environment, result.value, result.error_code);
 
     //dyntrace_reinstate_tracing();
 
