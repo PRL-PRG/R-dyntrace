@@ -28,6 +28,7 @@
 #include <R_ext/RS.h> /* S4 bit */
 
 #include "duplicate.h"
+#include <Rdyntrace.h>
 
 /*  duplicate  -  object duplication  */
 
@@ -282,8 +283,10 @@ static SEXP duplicate1(SEXP s, Rboolean deep)
 	PROTECT(s); /* the methods should protect, but ... */
 	SEXP ans = ALTREP_DUPLICATE_EX(s, deep);
 	UNPROTECT(1);
-	if (ans != NULL)
-	    return ans;
+	    if (ans != NULL) {
+	        DYNTRACE_PROBE_OBJECT_DUPLICATE(s, ans, deep);
+	        return ans;
+      }
     }
 
     switch (TYPEOF(s)) {
@@ -368,6 +371,7 @@ static SEXP duplicate1(SEXP s, Rboolean deep)
 	SET_OBJECT(t, OBJECT(s));
 	(IS_S4_OBJECT(s) ? SET_S4_OBJECT(t) : UNSET_S4_OBJECT(t));
     }
+    DYNTRACE_PROBE_OBJECT_DUPLICATE(s, t, deep);
     return t;
 }
 
@@ -403,6 +407,8 @@ void copyVector(SEXP s, SEXP t)
     default:
 	UNIMPLEMENTED_TYPE("copyVector", s);
     }
+
+    DYNTRACE_PROBE_VECTOR_COPY(s, t);
 }
 
 void copyListMatrix(SEXP s, SEXP t, Rboolean byrow)
@@ -479,6 +485,7 @@ void copyMatrix(SEXP s, SEXP t, Rboolean byrow)
 	default:
 	    UNIMPLEMENTED_TYPE("copyMatrix", s);
 	}
+  DYNTRACE_PROBE_MATRIX_COPY(s, t);
     }
     else
 	copyVector(s, t);

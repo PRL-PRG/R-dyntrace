@@ -1182,7 +1182,10 @@ SEXP coerceVector(SEXP v, SEXPTYPE type)
     SEXP ans = R_NilValue;	/* -Wall */
     if (ALTREP(v)) {
 	ans = ALTREP_COERCE(v, type);
-	if (ans) return ans;
+	if (ans) {
+      DYNTRACE_PROBE_OBJECT_COERCE(v, ans, type);
+      return ans;
+  }
     }
 
     /* code to allow classes to extend ENVSXP, SYMSXP, etc */
@@ -1286,7 +1289,9 @@ SEXP coerceVector(SEXP v, SEXPTYPE type)
 		switch(TYPEOF(v)) {
 		case INTSXP:
 		case REALSXP:
-		    return R_deferred_coerceToString(v, NULL);
+		    ans = R_deferred_coerceToString(v, NULL);
+        DYNTRACE_PROBE_OBJECT_COERCE(v, ans, type);
+        return ans;
 		}
 	    ans = coerceToString(v);	    break;
 	case EXPRSXP:
@@ -1302,6 +1307,8 @@ SEXP coerceVector(SEXP v, SEXPTYPE type)
     default:
 	COERCE_ERROR;
     }
+
+    DYNTRACE_PROBE_OBJECT_COERCE(v, ans, type);
     return ans;
 }
 #undef COERCE_ERROR
