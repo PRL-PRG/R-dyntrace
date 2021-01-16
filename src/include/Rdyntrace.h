@@ -49,6 +49,42 @@ extern "C" {
     UNPROTECT(1);                                           \
     DYNTRACE_PROBE_FOOTER(deserialize_object);
 
+#define DYNTRACE_PROBE_OBJECT_COERCE(input, output, type)   \
+    DYNTRACE_PROBE_HEADER(object_coerce);                   \
+    PROTECT(input);                                         \
+    PROTECT(output);                                        \
+    dyntrace_active_dyntracer->callback.object_coerce(      \
+        dyntrace_active_dyntracer, input, output, type);    \
+    UNPROTECT(2);                                           \
+    DYNTRACE_PROBE_FOOTER(object_coerce);
+
+#define DYNTRACE_PROBE_OBJECT_DUPLICATE(input, output, deep)  \
+    DYNTRACE_PROBE_HEADER(object_duplicate);                  \
+    PROTECT(input);                                           \
+    PROTECT(output);                                          \
+    dyntrace_active_dyntracer->callback.object_duplicate(     \
+        dyntrace_active_dyntracer, input, output, deep);      \
+    UNPROTECT(2);                                             \
+    DYNTRACE_PROBE_FOOTER(object_duplicate);
+
+#define DYNTRACE_PROBE_VECTOR_COPY(input, output)     \
+    DYNTRACE_PROBE_HEADER(vector_copy);               \
+    PROTECT(input);                                   \
+    PROTECT(output);                                  \
+    dyntrace_active_dyntracer->callback.vector_copy(  \
+        dyntrace_active_dyntracer, input, output);    \
+    UNPROTECT(2);                                     \
+    DYNTRACE_PROBE_FOOTER(vector_copy);
+
+#define DYNTRACE_PROBE_MATRIX_COPY(input, output)    \
+    DYNTRACE_PROBE_HEADER(matrix_copy);              \
+    PROTECT(input);                                  \
+    PROTECT(output);                                 \
+    dyntrace_active_dyntracer->callback.matrix_copy( \
+        dyntrace_active_dyntracer, input, output);   \
+    UNPROTECT(2);                                    \
+    DYNTRACE_PROBE_FOOTER(matrix_copy);
+
 #define DYNTRACE_PROBE_CLOSURE_ARGUMENT_LIST_CREATION_ENTRY(                  \
     formals, actuals, parent_rho)                                             \
     DYNTRACE_PROBE_HEADER(closure_argument_list_creation_entry);              \
@@ -552,13 +588,32 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
           SEXP result,                                                         \
           int error)                                                           \
     MACRO(deserialize_object, dyntracer_t* dyntracer, SEXP object)             \
+    MACRO(object_coerce,                                                       \
+          dyntracer_t* dyntracer,                                              \
+          SEXP input,                                                          \
+          SEXP output,                                                         \
+          int type)                                                            \
+    MACRO(object_duplicate,                                                    \
+          dyntracer_t* dyntracer,                                              \
+          SEXP input,                                                          \
+          SEXP output,                                                         \
+          int deep)                                                            \
+    MACRO(vector_copy,                                                         \
+          dyntracer_t* dyntracer,                                              \
+          SEXP input,                                                          \
+          SEXP output)                                                         \
+    MACRO(matrix_copy,                                                         \
+          dyntracer_t* dyntracer,                                              \
+          SEXP input,                                                          \
+          SEXP output)                                                         \
     MACRO(closure_argument_list_creation_entry,                                \
           dyntracer_t* dyntracer,                                              \
           SEXP formals,                                                        \
           SEXP actuals,                                                        \
           SEXP parent_rho)                                                     \
-    MACRO(                                                                     \
-        closure_argument_list_creation_exit, dyntracer_t* dyntracer, SEXP rho) \
+    MACRO(closure_argument_list_creation_exit,                                 \
+          dyntracer_t* dyntracer,                                              \
+          SEXP rho)                                                            \
     MACRO(closure_entry,                                                       \
           dyntracer_t* dyntracer,                                              \
           const SEXP call,                                                     \
