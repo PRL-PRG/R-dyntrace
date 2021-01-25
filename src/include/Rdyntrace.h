@@ -49,12 +49,12 @@ extern "C" {
     UNPROTECT(1);                                           \
     DYNTRACE_PROBE_FOOTER(deserialize_object);
 
-#define DYNTRACE_PROBE_OBJECT_COERCE(input, output, type)   \
+#define DYNTRACE_PROBE_OBJECT_COERCE(input, output)         \
     DYNTRACE_PROBE_HEADER(object_coerce);                   \
     PROTECT(input);                                         \
     PROTECT(output);                                        \
     dyntrace_active_dyntracer->callback.object_coerce(      \
-        dyntrace_active_dyntracer, input, output, type);    \
+        dyntrace_active_dyntracer, input, output);          \
     UNPROTECT(2);                                           \
     DYNTRACE_PROBE_FOOTER(object_coerce);
 
@@ -591,8 +591,7 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
     MACRO(object_coerce,                                                       \
           dyntracer_t* dyntracer,                                              \
           SEXP input,                                                          \
-          SEXP output,                                                         \
-          int type)                                                            \
+          SEXP output)                                                         \
     MACRO(object_duplicate,                                                    \
           dyntracer_t* dyntracer,                                              \
           SEXP input,                                                          \
