@@ -1183,7 +1183,7 @@ SEXP coerceVector(SEXP v, SEXPTYPE type)
     if (ALTREP(v)) {
 	ans = ALTREP_COERCE(v, type);
 	if (ans) {
-      DYNTRACE_PROBE_OBJECT_COERCE(v, ans, type);
+      DYNTRACE_PROBE_OBJECT_COERCE(v, ans);
       return ans;
   }
     }
@@ -1290,7 +1290,7 @@ SEXP coerceVector(SEXP v, SEXPTYPE type)
 		case INTSXP:
 		case REALSXP:
 		    ans = R_deferred_coerceToString(v, NULL);
-        DYNTRACE_PROBE_OBJECT_COERCE(v, ans, type);
+        DYNTRACE_PROBE_OBJECT_COERCE(v, ans);
         return ans;
 		}
 	    ans = coerceToString(v);	    break;
@@ -1308,7 +1308,7 @@ SEXP coerceVector(SEXP v, SEXPTYPE type)
 	COERCE_ERROR;
     }
 
-    DYNTRACE_PROBE_OBJECT_COERCE(v, ans, type);
+    DYNTRACE_PROBE_OBJECT_COERCE(v, ans);
     return ans;
 }
 #undef COERCE_ERROR
