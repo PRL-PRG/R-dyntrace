@@ -32,6 +32,8 @@
 
 #include <R_ext/RS.h> /* for Memzero */
 
+#include <Rdyntrace.h>
+
 attribute_hidden
 R_xlen_t asVecSize(SEXP x)
 {
@@ -96,7 +98,9 @@ SEXP attribute_hidden do_delayed(SEXP call, SEXP op, SEXP args, SEXP rho)
     if (!isEnvironment(aenv))
 	error(_("invalid '%s' argument"), "assign.env");
 
-    defineVar(name, mkPROMISE(expr, eenv), aenv);
+    SEXP prom = mkPROMISE(expr, eenv);
+    defineVar(name, prom, aenv);
+    DYNTRACE_PROBE_DELAYED_ASSIGN(name, prom, aenv);
     return R_NilValue;
 }
 
