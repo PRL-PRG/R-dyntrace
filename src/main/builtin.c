@@ -128,7 +128,7 @@ SEXP attribute_hidden do_makelazy(SEXP call, SEXP op, SEXP args, SEXP rho)
 	SETCAR(CDR(expr0), val);
   SEXP prom = mkPROMISE(expr0, eenv);
 	defineVar(name, prom, aenv);
-  DYNTRACE_PROBE_MAKE_LAZY(name, prom, aenv);
+  DYNTRACE_PROBE_LAZY_LOAD(name, prom, aenv);
 	UNPROTECT(2);
     }
     return R_NilValue;
