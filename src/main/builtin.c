@@ -100,7 +100,7 @@ SEXP attribute_hidden do_delayed(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     SEXP prom = mkPROMISE(expr, eenv);
     defineVar(name, prom, aenv);
-    DYNTRACE_PROBE_DELAYED_ASSIGN(name, prom, aenv);
+    DYNTRACE_PROBE_PROMISE_DELAYED_ASSIGN(name, prom, aenv);
     return R_NilValue;
 }
 
@@ -128,7 +128,7 @@ SEXP attribute_hidden do_makelazy(SEXP call, SEXP op, SEXP args, SEXP rho)
 	SETCAR(CDR(expr0), val);
   SEXP prom = mkPROMISE(expr0, eenv);
 	defineVar(name, prom, aenv);
-  DYNTRACE_PROBE_LAZY_LOAD(name, prom, aenv);
+  DYNTRACE_PROBE_PROMISE_LAZY_LOAD(name, prom, aenv);
 	UNPROTECT(2);
     }
     return R_NilValue;

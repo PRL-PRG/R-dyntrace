@@ -203,31 +203,31 @@ extern "C" {
     UNPROTECT(4);                                        \
     DYNTRACE_PROBE_FOOTER(substitute_call);
 
-#define DYNTRACE_PROBE_DELAYED_ASSIGN(name, promise, rho) \
-    DYNTRACE_PROBE_HEADER(delayed_assign);                \
+#define DYNTRACE_PROBE_PROMISE_DELAYED_ASSIGN(name, promise, rho) \
+    DYNTRACE_PROBE_HEADER(promise_delayed_assign);                \
     PROTECT(name);                                        \
     PROTECT(promise);                                     \
     PROTECT(rho);                                         \
-    dyntrace_active_dyntracer->callback.delayed_assign(   \
+    dyntrace_active_dyntracer->callback.promise_delayed_assign(   \
         dyntrace_active_dyntracer,                        \
         name,                                             \
         promise,                                          \
         rho);                                             \
     UNPROTECT(3);                                         \
-    DYNTRACE_PROBE_FOOTER(delayed_assign);
+    DYNTRACE_PROBE_FOOTER(promise_delayed_assign);
 
-#define DYNTRACE_PROBE_LAZY_LOAD(name, promise, rho)      \
-    DYNTRACE_PROBE_HEADER(lazy_load);                     \
+#define DYNTRACE_PROBE_PROMISE_LAZY_LOAD(name, promise, rho)      \
+    DYNTRACE_PROBE_HEADER(promise_lazy_load);                     \
     PROTECT(name);                                        \
     PROTECT(promise);                                     \
     PROTECT(rho);                                         \
-    dyntrace_active_dyntracer->callback.lazy_load(        \
+    dyntrace_active_dyntracer->callback.promise_lazy_load(        \
         dyntrace_active_dyntracer,                        \
         name,                                             \
         promise,                                          \
         rho);                                             \
     UNPROTECT(3);                                         \
-    DYNTRACE_PROBE_FOOTER(lazy_load);
+    DYNTRACE_PROBE_FOOTER(promise_lazy_load);
 
 #define DYNTRACE_PROBE_ASSIGNMENT_CALL(                        \
     call, op, assignment_type, lhs, rhs, assign_env, eval_env) \
@@ -720,12 +720,12 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
           const SEXP environment,                                              \
           const SEXP rho,                                                      \
           const SEXP return_value)                                             \
-    MACRO(delayed_assign,                                                      \
+    MACRO(promise_delayed_assign,                                                      \
           dyntracer_t* dyntracer,                                              \
           const SEXP name,                                                     \
           const SEXP promise,                                                  \
           const SEXP rho)                                                      \
-    MACRO(lazy_load,                                                           \
+    MACRO(promise_lazy_load,                                                           \
           dyntracer_t* dyntracer,                                              \
           const SEXP name,                                                     \
           const SEXP promise,                                                  \
