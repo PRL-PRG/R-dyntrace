@@ -1590,6 +1590,7 @@ SEXP findFun3(SEXP symbol, SEXP rho, SEXP call)
 #endif
 	if (vl != R_UnboundValue) {
 	    if (TYPEOF(vl) == PROMSXP) {
+          DYNTRACE_PROBE_PROMISE_CONTEXT_SENSITIVE_LOOKUP(symbol, vl, rho);
 		SEXP pv = PRVALUE(vl);
 		if (pv != R_UnboundValue)
 		    vl = pv;
