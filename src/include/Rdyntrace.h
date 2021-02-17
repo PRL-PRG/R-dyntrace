@@ -761,11 +761,11 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
     MACRO(gc_exit, dyntracer_t* dyntracer, int gc_count)                       \
     MACRO(gc_unmark, dyntracer_t* dyntracer, const SEXP object)                \
     MACRO(gc_allocate, dyntracer_t* dyntracer, const SEXP object)              \
-    MACRO(context_entry, dyntracer_t* dyntracer, const void* context)          \
-    MACRO(context_exit, dyntracer_t* dyntracer, const void* context)           \
+    MACRO(context_entry, dyntracer_t* dyntracer, void* context)                \
+    MACRO(context_exit, dyntracer_t* dyntracer, void* context)                 \
     MACRO(context_jump,                                                        \
           dyntracer_t* dyntracer,                                              \
-          const void* context,                                                 \
+          void* context,                                                       \
           const SEXP return_value,                                             \
           int restart)                                                         \
     MACRO(call_handler_entry, dyntracer_t* dyntracer, void* context, SEXP r_expression, SEXP r_environment) \
