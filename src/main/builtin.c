@@ -126,7 +126,9 @@ SEXP attribute_hidden do_makelazy(SEXP call, SEXP op, SEXP args, SEXP rho)
 	PROTECT(val = eval(VECTOR_ELT(values, i), eenv));
 	PROTECT(expr0 = duplicate(expr));
 	SETCAR(CDR(expr0), val);
-	defineVar(name, mkPROMISE(expr0, eenv), aenv);
+  SEXP prom = mkPROMISE(expr0, eenv);
+	defineVar(name, prom, aenv);
+  DYNTRACE_PROBE_MAKE_LAZY(name, prom, aenv);
 	UNPROTECT(2);
     }
     return R_NilValue;
