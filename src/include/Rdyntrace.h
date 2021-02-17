@@ -566,6 +566,18 @@ extern "C" {
     UNPROTECT(2);                                                    \
     DYNTRACE_PROBE_FOOTER(environment_variable_exists);
 
+#define DYNTRACE_PROBE_PROMISE_CONTEXT_SENSITIVE_LOOKUP(                     \
+    symbol, promise, rho)                                                    \
+    DYNTRACE_PROBE_HEADER(promise_context_sensitive_lookup);                 \
+    PROTECT(symbol);                                                         \
+    PROTECT(promise);                                                        \
+    PROTECT(rho);                                                            \
+    dyntrace_active_dyntracer->callback                                      \
+        .promise_context_sensitive_lookup(                                   \
+            dyntrace_active_dyntracer, symbol, promise, rho);                \
+    UNPROTECT(3);                                                            \
+    DYNTRACE_PROBE_FOOTER(promise_context_sensitive_lookup);
+
 #define DYNTRACE_PROBE_ENVIRONMENT_CONTEXT_SENSITIVE_PROMISE_EVAL_ENTRY(     \
     symbol, promise, rho)                                                    \
     DYNTRACE_PROBE_HEADER(environment_context_sensitive_promise_eval_entry); \
@@ -830,6 +842,11 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
     MACRO(environment_variable_exists,                                         \
           dyntracer_t* dyntracer,                                              \
           const SEXP symbol,                                                   \
+          SEXP rho)                                                            \
+    MACRO(promise_context_sensitive_lookup,                                    \
+          dyntracer_t* dyntracer,                                              \
+          const SEXP symbol,                                                   \
+          SEXP promise,                                                        \
           SEXP rho)                                                            \
     MACRO(environment_context_sensitive_promise_eval_entry,                    \
           dyntracer_t* dyntracer,                                              \
