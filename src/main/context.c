@@ -153,7 +153,9 @@ void attribute_hidden R_run_onexits(RCNTXT *cptr)
 	    R_CheckStack();
 	    for (; s != R_NilValue; s = CDR(s)) {
 		c->conexit = CDR(s);
+    DYNTRACE_PROBE_CALL_HANDLER_ENTRY(c, CAR(s), c->cloenv);
 		eval(CAR(s), c->cloenv);
+    DYNTRACE_PROBE_CALL_HANDLER_EXIT(c, CAR(s), c->cloenv);
 	    }
 	    UNPROTECT(1);
 	    R_ExitContext = savecontext;
@@ -305,7 +307,9 @@ void endcontext(RCNTXT * cptr)
 	    INCREMENT_LINKS(cptr->returnValue);
 	for (; s != R_NilValue; s = CDR(s)) {
 	    cptr->conexit = CDR(s);
+      DYNTRACE_PROBE_CALL_HANDLER_ENTRY(cptr, CAR(s), cptr->cloenv);
 	    eval(CAR(s), cptr->cloenv);
+      DYNTRACE_PROBE_CALL_HANDLER_EXIT(cptr, CAR(s), cptr->cloenv);
 	}
 	if (cptr->returnValue) // why is this needed???
 	    DECREMENT_LINKS(cptr->returnValue);

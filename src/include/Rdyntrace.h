@@ -358,6 +358,24 @@ extern "C" {
         dyntrace_active_dyntracer, context);          \
     DYNTRACE_PROBE_FOOTER(context_end);
 
+#define DYNTRACE_PROBE_CALL_HANDLER_ENTRY(context, expr, env) \
+    DYNTRACE_PROBE_HEADER(call_handler_entry);                \
+    PROTECT(expr);                                            \
+    PROTECT(env);                                             \
+    dyntrace_active_dyntracer->callback.call_handler_entry(   \
+        dyntrace_active_dyntracer, context, expr, env);       \
+        UNPROTECT(2);                                         \
+    DYNTRACE_PROBE_FOOTER(call_handler_entry);
+
+#define DYNTRACE_PROBE_CALL_HANDLER_EXIT(context, expr, env) \
+    DYNTRACE_PROBE_HEADER(call_handler_exit);                \
+    PROTECT(expr);                                           \
+    PROTECT(env);                                            \
+    dyntrace_active_dyntracer->callback.call_handler_exit(   \
+        dyntrace_active_dyntracer, context, expr, env);      \
+    UNPROTECT(2);                                            \
+    DYNTRACE_PROBE_FOOTER(call_handler_exit);
+
 #define DYNTRACE_PROBE_CONTEXT_JUMP(context, return_value, restart) \
     DYNTRACE_PROBE_HEADER(context_jump);                            \
     PROTECT(return_value);                                          \
@@ -714,6 +732,8 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
           const void* context,                                                 \
           const SEXP return_value,                                             \
           int restart)                                                         \
+    MACRO(call_handler_entry, dyntracer_t* dyntracer, void* context, SEXP r_expression, SEXP r_environment) \
+    MACRO(call_handler_exit, dyntracer_t* dyntracer, void* context, SEXP r_expression, SEXP r_environment)  \
     MACRO(S3_generic_entry,                                                    \
           dyntracer_t* dyntracer,                                              \
           const char* generic,                                                 \
