@@ -216,6 +216,19 @@ extern "C" {
     UNPROTECT(3);                                         \
     DYNTRACE_PROBE_FOOTER(delayed_assign);
 
+#define DYNTRACE_PROBE_MAKE_LAZY(name, promise, rho)      \
+    DYNTRACE_PROBE_HEADER(make_lazy);                     \
+    PROTECT(name);                                        \
+    PROTECT(promise);                                     \
+    PROTECT(rho);                                         \
+    dyntrace_active_dyntracer->callback.make_lazy(        \
+        dyntrace_active_dyntracer,                        \
+        name,                                             \
+        promise,                                          \
+        rho);                                             \
+    UNPROTECT(3);                                         \
+    DYNTRACE_PROBE_FOOTER(make_lazy);
+
 #define DYNTRACE_PROBE_ASSIGNMENT_CALL(                        \
     call, op, assignment_type, lhs, rhs, assign_env, eval_env) \
     DYNTRACE_PROBE_HEADER(assignment_call);                    \
@@ -696,6 +709,11 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
           const SEXP rho,                                                      \
           const SEXP return_value)                                             \
     MACRO(delayed_assign,                                                      \
+          dyntracer_t* dyntracer,                                              \
+          const SEXP name,                                                     \
+          const SEXP promise,                                                  \
+          const SEXP rho)                                                      \
+    MACRO(make_lazy,                                                           \
           dyntracer_t* dyntracer,                                              \
           const SEXP name,                                                     \
           const SEXP promise,                                                  \
