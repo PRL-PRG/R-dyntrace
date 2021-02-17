@@ -167,6 +167,11 @@ SEXP dyntrace_get_promise_value(SEXP promise) {
     return (promise)->u.promsxp.value;
 }
 
+/* TODO: check if FUNTAB type can be used instead */
+void* dyntrace_get_funtab() {
+    return R_FunTab;
+}
+
 int dyntrace_get_c_function_argument_evaluation(SEXP op) {
     int offset = dyntrace_get_primitive_offset(op);
     return (R_FunTab[offset].eval) % 10;
