@@ -11,13 +11,13 @@ extern "C" {
     if (dyntrace_is_enabled() &&                                           \
         dyntrace_active_dyntracer != NULL &&                               \
         dyntrace_active_dyntracer->callback.callback_name != NULL) {       \
-//        if (dyntrace_active_dyntracer_callback_name != NULL) {             \
-//            dyntrace_log_error("[NESTED HOOK EXECUTION] - %s triggers %s", \
-//                               dyntrace_active_dyntracer_callback_name,    \
-//                               #callback_name);                            \
-//        }                                                                  \
-//        dyntrace_active_dyntracer_callback_name = #callback_name;
-
+/*      if (dyntrace_active_dyntracer_callback_name != NULL) {    \
+            dyntrace_log_error("[NESTED HOOK EXECUTION] - %s triggers %s", \
+                               dyntrace_active_dyntracer_callback_name,    \
+                               #callback_name);                            \
+        }                                                                  \
+        dyntrace_active_dyntracer_callback_name = #callback_name;
+*/
 #define DYNTRACE_PROBE_FOOTER(callback_name)        \
     dyntrace_active_dyntracer_callback_name = NULL; \
     }
@@ -356,13 +356,11 @@ extern "C" {
                                                 gc_count);                 \
     DYNTRACE_PROBE_FOOTER(gc_exit);
 
-#define DYNTRACE_PROBE_GC_UNMARK(object)                                     \
-    DYNTRACE_PROBE_HEADER(gc_unmark);                                        \
-    PROTECT(object);                                                         \
-    dyntrace_active_dyntracer->callback.gc_unmark(dyntrace_active_dyntracer, \
-                                                  object);                   \
-    UNPROTECT(1);                                                            \
-    DYNTRACE_PROBE_FOOTER(gc_unmark);
+#define DYNTRACE_PROBE_GC_DEALLOCATE(object)                                     \
+    DYNTRACE_PROBE_HEADER(gc_deallocate);                                        \
+    dyntrace_active_dyntracer->callback.gc_deallocate(dyntrace_active_dyntracer, \
+                                                  object);                       \
+    DYNTRACE_PROBE_FOOTER(gc_deallocate);
 
 #define DYNTRACE_PROBE_GC_ALLOCATE(object)                                     \
     DYNTRACE_PROBE_HEADER(gc_allocate);                                        \
@@ -771,7 +769,7 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
           SEXP return_value)                                                   \
     MACRO(gc_entry, dyntracer_t* dyntracer, const size_t size_needed)          \
     MACRO(gc_exit, dyntracer_t* dyntracer, int gc_count)                       \
-    MACRO(gc_unmark, dyntracer_t* dyntracer, const SEXP object)                \
+    MACRO(gc_deallocate, dyntracer_t* dyntracer, const SEXP object)            \
     MACRO(gc_allocate, dyntracer_t* dyntracer, const SEXP object)              \
     MACRO(context_entry, dyntracer_t* dyntracer, void* context)                \
     MACRO(context_exit, dyntracer_t* dyntracer, void* context)                 \

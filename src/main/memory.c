@@ -29,7 +29,7 @@
 
 #define USE_RINTERNALS
 #define COMPILING_MEMORY_C
-
+#define PROTECTCHECK
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -1685,7 +1685,6 @@ static int RunGenCollect(R_size_t size_needed)
 		SEXP next = NEXT_NODE(s);
 		if (gen < NUM_OLD_GENERATIONS - 1)
 		    SET_NODE_GENERATION(s, gen + 1);
-    DYNTRACE_PROBE_GC_UNMARK(s);
 		UNMARK_NODE(s);
 		s = next;
 	    }
@@ -1853,6 +1852,7 @@ static int RunGenCollect(R_size_t size_needed)
     FORWARD_NODE(R_StringHash);
     PROCESS_NODES();
 
+
 #ifdef PROTECTCHECK
     for(i=0; i< NUM_SMALL_NODE_CLASSES;i++){
 	s = NEXT_NODE(R_GenHeap[i].New);
@@ -1860,6 +1860,7 @@ static int RunGenCollect(R_size_t size_needed)
 	    SEXP next = NEXT_NODE(s);
 	    if (TYPEOF(s) != NEWSXP) {
 		if (TYPEOF(s) != FREESXP) {
+        DYNTRACE_PROBE_GC_DEALLOCATE(s);
 		    SETOLDTYPE(s, TYPEOF(s));
 		    SET_TYPEOF(s, FREESXP);
 		}
@@ -1875,6 +1876,7 @@ static int RunGenCollect(R_size_t size_needed)
 	    SEXP next = NEXT_NODE(s);
 	    if (TYPEOF(s) != NEWSXP) {
 		if (TYPEOF(s) != FREESXP) {
+        DYNTRACE_PROBE_GC_DEALLOCATE(s);
 		    /**** could also leave this alone and restore the old
 			  node type in ReleaseLargeFreeVectors before
 			  calculating size */
