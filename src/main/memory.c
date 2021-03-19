@@ -1860,7 +1860,7 @@ static int RunGenCollect(R_size_t size_needed)
 	    SEXP next = NEXT_NODE(s);
 	    if (TYPEOF(s) != NEWSXP) {
 		if (TYPEOF(s) != FREESXP) {
-        DYNTRACE_PROBE_GC_DEALLOCATE(s);
+        DYNTRACE_PROBE_GC_UNMARK(s);
 		    SETOLDTYPE(s, TYPEOF(s));
 		    SET_TYPEOF(s, FREESXP);
 		}
@@ -1876,7 +1876,7 @@ static int RunGenCollect(R_size_t size_needed)
 	    SEXP next = NEXT_NODE(s);
 	    if (TYPEOF(s) != NEWSXP) {
 		if (TYPEOF(s) != FREESXP) {
-        DYNTRACE_PROBE_GC_DEALLOCATE(s);
+        DYNTRACE_PROBE_GC_UNMARK(s);
 		    /**** could also leave this alone and restore the old
 			  node type in ReleaseLargeFreeVectors before
 			  calculating size */

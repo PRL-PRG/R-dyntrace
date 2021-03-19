@@ -356,11 +356,11 @@ extern "C" {
                                                 gc_count);                 \
     DYNTRACE_PROBE_FOOTER(gc_exit);
 
-#define DYNTRACE_PROBE_GC_DEALLOCATE(object)                                     \
-    DYNTRACE_PROBE_HEADER(gc_deallocate);                                        \
-    dyntrace_active_dyntracer->callback.gc_deallocate(dyntrace_active_dyntracer, \
-                                                  object);                       \
-    DYNTRACE_PROBE_FOOTER(gc_deallocate);
+#define DYNTRACE_PROBE_GC_UNMARK(object)                                     \
+    DYNTRACE_PROBE_HEADER(gc_unmark);                                        \
+    dyntrace_active_dyntracer->callback.gc_unmark(dyntrace_active_dyntracer, \
+                                                  object);                   \
+    DYNTRACE_PROBE_FOOTER(gc_unmark);
 
 #define DYNTRACE_PROBE_GC_ALLOCATE(object)                                     \
     DYNTRACE_PROBE_HEADER(gc_allocate);                                        \
@@ -718,12 +718,12 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
           const SEXP environment,                                              \
           const SEXP rho,                                                      \
           const SEXP return_value)                                             \
-    MACRO(promise_delayed_assign,                                                      \
+    MACRO(promise_delayed_assign,                                              \
           dyntracer_t* dyntracer,                                              \
           const SEXP name,                                                     \
           const SEXP promise,                                                  \
           const SEXP rho)                                                      \
-    MACRO(promise_lazy_load,                                                           \
+    MACRO(promise_lazy_load,                                                   \
           dyntracer_t* dyntracer,                                              \
           const SEXP name,                                                     \
           const SEXP promise,                                                  \
@@ -769,7 +769,7 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
           SEXP return_value)                                                   \
     MACRO(gc_entry, dyntracer_t* dyntracer, const size_t size_needed)          \
     MACRO(gc_exit, dyntracer_t* dyntracer, int gc_count)                       \
-    MACRO(gc_deallocate, dyntracer_t* dyntracer, const SEXP object)            \
+    MACRO(gc_unmark, dyntracer_t* dyntracer, const SEXP object)                \
     MACRO(gc_allocate, dyntracer_t* dyntracer, const SEXP object)              \
     MACRO(context_entry, dyntracer_t* dyntracer, void* context)                \
     MACRO(context_exit, dyntracer_t* dyntracer, void* context)                 \
