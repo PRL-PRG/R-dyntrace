@@ -1590,15 +1590,14 @@ SEXP findFun3(SEXP symbol, SEXP rho, SEXP call)
 #endif
 	if (vl != R_UnboundValue) {
 	    if (TYPEOF(vl) == PROMSXP) {
-          DYNTRACE_PROBE_PROMISE_CONTEXT_SENSITIVE_LOOKUP(symbol, vl, rho);
+          DYNTRACE_PROBE_ENVIRONMENT_FUNCTION_CONTEXT_PROMISE_LOOKUP(symbol, vl, rho);
 		SEXP pv = PRVALUE(vl);
 		if (pv != R_UnboundValue)
 		    vl = pv;
 		else {
 		    PROTECT(vl);
-        DYNTRACE_PROBE_ENVIRONMENT_CONTEXT_SENSITIVE_PROMISE_EVAL_ENTRY(symbol, vl, rho);
+        DYNTRACE_PROBE_ENVIRONMENT_FUNCTION_CONTEXT_PROMISE_FORCE(symbol, vl, rho);
 		    SEXP vl2 = eval(vl, rho);
-        DYNTRACE_PROBE_ENVIRONMENT_CONTEXT_SENSITIVE_PROMISE_EVAL_EXIT(symbol, vl, vl2, rho);
 		    UNPROTECT(1);
         vl = vl2;
 		}
