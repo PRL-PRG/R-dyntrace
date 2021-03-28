@@ -112,6 +112,22 @@
 #include <Internal.h>
 #include <Rdyntrace.h>
 
+SEXP dyntrace_context_get_promargs(void *context) {
+    return ((RCNTXT*) context) -> promargs;
+}
+
+SEXP dyntrace_context_get_cloenv(void *context) {
+    return ((RCNTXT*) context) -> cloenv;
+}
+
+SEXP dyntrace_context_get_callfun(void *context) {
+    return ((RCNTXT*) context) -> callfun;
+}
+
+SEXP dyntrace_context_get_call(void *context) {
+    return ((RCNTXT*) context) -> call;
+}
+
 /* R_run_onexits - runs the conexit/cend code for all contexts from
    R_GlobalContext down to but not including the argument context.
    This routine does not stop at a CTXT_TOPLEVEL--the code that

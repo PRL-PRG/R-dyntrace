@@ -895,6 +895,10 @@ int dyntrace_get_primitive_offset(SEXP op);
 const char* const dyntrace_get_c_function_name(SEXP op);
 SEXP* dyntrace_get_symbol_table();
 int dyntrace_get_frame_depth();
+SEXP dyntrace_context_get_promargs(void *context);
+SEXP dyntrace_context_get_cloenv(void *context);
+SEXP dyntrace_context_get_callfun(void *context);
+SEXP dyntrace_context_get_call(void *context);
 
 void(SET_PRENV_UNPROBED)(SEXP x, SEXP v);
 void(SET_PRVALUE_UNPROBED)(SEXP x, SEXP v);
