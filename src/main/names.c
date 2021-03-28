@@ -1384,7 +1384,23 @@ SEXP attribute_hidden do_internal(SEXP call, SEXP op, SEXP args, SEXP env)
     PROTECT(args);
     flag = PRIMPRINT(INTERNAL(fun));
     R_Visible = flag != 1;
+
+    if(TYPEOF(INTERNAL(fun)) == BUILTINSXP) {
+        DYNTRACE_PROBE_BUILTIN_ENTRY(s, INTERNAL(fun), args, env, DYNTRACE_DISPATCH_NONE);
+    }
+    else {
+        DYNTRACE_PROBE_SPECIAL_ENTRY(s, INTERNAL(fun), args, env, DYNTRACE_DISPATCH_NONE);
+    }
+
     ans = PRIMFUN(INTERNAL(fun)) (s, INTERNAL(fun), args, env);
+
+    if(TYPEOF(INTERNAL(fun)) == BUILTINSXP) {
+        DYNTRACE_PROBE_BUILTIN_EXIT(s, INTERNAL(fun), args, env, DYNTRACE_DISPATCH_NONE, ans);
+    }
+    else {
+        DYNTRACE_PROBE_SPECIAL_EXIT(s, INTERNAL(fun), args, env, DYNTRACE_DISPATCH_NONE, ans);
+    }
+
     /* This resetting of R_Visible = FALSE was to fix PR#7397,
        now fixed in GEText */
     if (flag < 2) R_Visible = flag != 1;
