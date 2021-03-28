@@ -821,7 +821,7 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
           dyntracer_t* dyntracer,                                              \
           const SEXP symbol,                                                   \
           SEXP promise,                                                        \
-          SEXP rho);
+          SEXP rho)
 
 
 #define DYNTRACE_CALLBACK_TYPEDEF(NAME, ...) typedef void (*NAME##_callback_t)(__VA_ARGS__);
