@@ -1589,17 +1589,13 @@ SEXP findFun3(SEXP symbol, SEXP rho, SEXP call)
 	vl = findVarInFrame3(rho, symbol, TRUE);
 #endif
 	if (vl != R_UnboundValue) {
+      DYNTRACE_PROBE_ENVIRONMENT_FUNCTION_CONTEXT_LOOKUP(symbol, vl, rho);
 	    if (TYPEOF(vl) == PROMSXP) {
-          DYNTRACE_PROBE_ENVIRONMENT_FUNCTION_CONTEXT_PROMISE_LOOKUP(symbol, vl, rho);
 		SEXP pv = PRVALUE(vl);
 		if (pv != R_UnboundValue)
 		    vl = pv;
 		else {
-		    PROTECT(vl);
-        DYNTRACE_PROBE_ENVIRONMENT_FUNCTION_CONTEXT_PROMISE_FORCE(symbol, vl, rho);
-		    SEXP vl2 = eval(vl, rho);
-		    UNPROTECT(1);
-        vl = vl2;
+		    vl = eval(vl, rho);
 		}
 	    }
 	    if (TYPEOF(vl) == CLOSXP || TYPEOF(vl) == BUILTINSXP ||

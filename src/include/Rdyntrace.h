@@ -564,29 +564,18 @@ extern "C" {
     UNPROTECT(2);                                                    \
     DYNTRACE_PROBE_FOOTER(environment_variable_exists);
 
-#define DYNTRACE_PROBE_ENVIRONMENT_FUNCTION_CONTEXT_PROMISE_LOOKUP(          \
-    symbol, promise, rho)                                                    \
-    DYNTRACE_PROBE_HEADER(environment_function_context_promise_lookup);      \
+#define DYNTRACE_PROBE_ENVIRONMENT_FUNCTION_CONTEXT_LOOKUP(                  \
+    symbol, value, rho)                                                      \
+    DYNTRACE_PROBE_HEADER(environment_function_context_lookup);              \
     PROTECT(symbol);                                                         \
-    PROTECT(promise);                                                        \
+    PROTECT(value);                                                          \
     PROTECT(rho);                                                            \
     dyntrace_active_dyntracer->callback                                      \
-    .environment_function_context_promise_lookup(                            \
-            dyntrace_active_dyntracer, symbol, promise, rho);                \
+    .environment_function_context_lookup(                                    \
+            dyntrace_active_dyntracer, symbol, value, rho);                  \
     UNPROTECT(3);                                                            \
-    DYNTRACE_PROBE_FOOTER(environment_function_context_promise_lookup);
+    DYNTRACE_PROBE_FOOTER(environment_function_context_lookup);
 
-#define DYNTRACE_PROBE_ENVIRONMENT_FUNCTION_CONTEXT_PROMISE_FORCE(           \
-    symbol, promise, rho)                                                    \
-    DYNTRACE_PROBE_HEADER(environment_function_context_promise_force);       \
-    PROTECT(symbol);                                                         \
-    PROTECT(promise);                                                        \
-    PROTECT(rho);                                                            \
-    dyntrace_active_dyntracer->callback                                      \
-    .environment_function_context_promise_force(                             \
-            dyntrace_active_dyntracer, symbol, promise, rho);                \
-    UNPROTECT(3);                                                            \
-    DYNTRACE_PROBE_FOOTER(environment_function_context_promise_force);
 
 /* ----------------------------------------------------------------------------
    DYNTRACE TYPE DEFINITIONS
@@ -828,16 +817,11 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
           dyntracer_t* dyntracer,                                              \
           const SEXP symbol,                                                   \
           SEXP rho)                                                            \
-    MACRO(environment_function_context_promise_lookup,                         \
+    MACRO(environment_function_context_lookup,                                 \
           dyntracer_t* dyntracer,                                              \
           const SEXP symbol,                                                   \
           SEXP promise,                                                        \
-          SEXP rho)                                                            \
-    MACRO(environment_function_context_promise_force,                          \
-          dyntracer_t* dyntracer,                                              \
-          const SEXP symbol,                                                   \
-          SEXP promise,                                                        \
-          SEXP rho)
+          SEXP rho);
 
 
 #define DYNTRACE_CALLBACK_TYPEDEF(NAME, ...) typedef void (*NAME##_callback_t)(__VA_ARGS__);
