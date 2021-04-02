@@ -33,6 +33,7 @@
 #include <R_ext/Print.h>
 #include <stdarg.h>
 
+#include <Rdyntrace.h>
 /* eval() sets R_Visible = TRUE. Thas may not be wanted when eval() is
    used in C code. This is a version that saves/restores R_Visible.
    This should probably be moved to eval.c, be make public, and used
@@ -727,6 +728,7 @@ verrorcall_dflt(SEXP call, const char *format, va_list ap)
 	REprintf(_("Error: no more error handlers available "
 		   "(recursive errors?); invoking 'abort' restart\n"));
 	R_Expressions = R_Expressions_keep;
+  DYNTRACE_PROBE_ERROR(call, format, ap)
 	jump_to_top_ex(FALSE, FALSE, FALSE, FALSE, FALSE);
     }
 
@@ -834,6 +836,7 @@ verrorcall_dflt(SEXP call, const char *format, va_list ap)
 	PrintWarnings();
     }
 
+    DYNTRACE_PROBE_ERROR(call, format, ap)
     jump_to_top_ex(TRUE, TRUE, TRUE, TRUE, FALSE);
 
     /* not reached */

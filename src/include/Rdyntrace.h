@@ -576,6 +576,12 @@ extern "C" {
     UNPROTECT(3);                                                            \
     DYNTRACE_PROBE_FOOTER(environment_function_context_lookup);
 
+#define DYNTRACE_PROBE_ERROR(call, format, ap)                \
+    DYNTRACE_PROBE_HEADER(error);                             \
+    dyntrace_active_dyntracer->callback                       \
+    .error(dyntrace_active_dyntracer, call, format, ap);      \
+    DYNTRACE_PROBE_FOOTER(error);
+
 
 /* ----------------------------------------------------------------------------
    DYNTRACE TYPE DEFINITIONS
@@ -821,7 +827,12 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
           dyntracer_t* dyntracer,                                              \
           const SEXP symbol,                                                   \
           SEXP promise,                                                        \
-          SEXP rho)
+          SEXP rho)                                                            \
+    MACRO(error,                                                               \
+          dyntracer_t* dyntracer,                                              \
+          SEXP call,                                                           \
+          const char* format,                                                  \
+          va_list ap)
 
 
 #define DYNTRACE_CALLBACK_TYPEDEF(NAME, ...) typedef void (*NAME##_callback_t)(__VA_ARGS__);
