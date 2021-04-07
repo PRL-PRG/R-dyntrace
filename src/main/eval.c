@@ -2714,6 +2714,11 @@ static void tmp_cleanup(void *data)
     unbindVar(R_TmpvalSymbol, (SEXP) data);
 }
 
+SEXP dyntrace_get_replace_funs_table() {
+    return R_ReplaceFunsTable;
+}
+
+
 /* This macro stores the current assignment target in the saved
    binding location. It duplicates if necessary to make sure
    replacement functions are always called with a target with NAMED ==
