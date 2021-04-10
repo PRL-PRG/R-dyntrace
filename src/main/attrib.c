@@ -682,6 +682,9 @@ static SEXP s_dot_S3Class = 0;
 
 static SEXP R_S4_extends_table = 0;
 
+SEXP dyntrace_get_s4_extends_table() {
+    return R_S4_extends_table;
+}
 
 static SEXP cache_class(const char *class, SEXP klass)
 {
