@@ -912,6 +912,7 @@ SEXP dyntrace_context_get_cloenv(void *context);
 SEXP dyntrace_context_get_callfun(void *context);
 SEXP dyntrace_context_get_call(void *context);
 SEXP dyntrace_get_replace_funs_table();
+SEXP dyntrace_get_s4_extends_table();
 
 void(SET_PRENV_UNPROBED)(SEXP x, SEXP v);
 void(SET_PRVALUE_UNPROBED)(SEXP x, SEXP v);
