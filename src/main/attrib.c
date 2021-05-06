@@ -26,6 +26,8 @@
 #include <Internal.h>
 #include <Rmath.h>
 
+#include <Rdyntrace.h>
+
 static SEXP installAttrib(SEXP, SEXP, SEXP);
 static SEXP removeAttrib(SEXP, SEXP);
 
@@ -354,6 +356,8 @@ static SEXP installAttrib(SEXP vec, SEXP name, SEXP val)
 	    if (MAYBE_REFERENCED(val) && val != CAR(s))
 		val = R_FixupRHS(vec, val);
 	    SETCAR(s, val);
+
+      DYNTRACE_PROBE_ATTRIBUTE_SET(vec, name, val);
 	    return val;
 	}
 	t = s; // record last attribute, if any
@@ -368,6 +372,9 @@ static SEXP installAttrib(SEXP vec, SEXP name, SEXP val)
     SET_TAG(s, name);
     if (ATTRIB(vec) == R_NilValue) SET_ATTRIB(vec, s); else SETCDR(t, s);
     UNPROTECT(3);
+
+    DYNTRACE_PROBE_ATTRIBUTE_SET(vec, name, val);
+
     return val;
 }
 

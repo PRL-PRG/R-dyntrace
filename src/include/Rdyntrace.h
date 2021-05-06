@@ -582,6 +582,15 @@ extern "C" {
     .error(dyntrace_active_dyntracer, call, format, ap);      \
     DYNTRACE_PROBE_FOOTER(error);
 
+#define DYNTRACE_PROBE_ATTRIBUTE_SET(object, name, value)            \
+    DYNTRACE_PROBE_HEADER(attribute_set);                            \
+    PROTECT(object);                                                 \
+    PROTECT(name);                                                   \
+    PROTECT(value);                                                  \
+    dyntrace_active_dyntracer->callback                              \
+    .attribute_set(dyntrace_active_dyntracer, object, name, value);  \
+    UNPROTECT(3);                                                    \
+    DYNTRACE_PROBE_FOOTER(attribute_set);
 
 /* ----------------------------------------------------------------------------
    DYNTRACE TYPE DEFINITIONS
@@ -832,7 +841,12 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
           dyntracer_t* dyntracer,                                              \
           SEXP call,                                                           \
           const char* format,                                                  \
-          va_list ap)
+          va_list ap)                                                          \
+    MACRO(attribute_set,                                                       \
+          dyntracer_t* dyntracer,                                              \
+          SEXP object,                                                         \
+          SEXP name,                                                           \
+          SEXP value)
 
 
 #define DYNTRACE_CALLBACK_TYPEDEF(NAME, ...) typedef void (*NAME##_callback_t)(__VA_ARGS__);
