@@ -470,9 +470,9 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
     cptr = R_GlobalContext;
     op = cptr->callfun;
 
-    DYNTRACE_PROBE_S3_GENERIC_ENTRY(generic, op, obj);
-
     PROTECT(klass = R_data_class2(obj));
+
+    DYNTRACE_PROBE_USEMETHOD_ENTRY(generic, klass, obj, call, args, rho);
 
     nclass = length(klass);
     for (i = 0; i < nclass; i++) {
@@ -497,7 +497,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 	    }
 	    UNPROTECT(2); /* klass, sxp */
 
-      DYNTRACE_PROBE_S3_GENERIC_EXIT(generic, op, obj, *ans);
+      DYNTRACE_PROBE_USEMETHOD_EXIT(generic, klass, obj, call, args, rho, *ans);
 
 	    return 1;
 	}
@@ -509,14 +509,14 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 			      rho, callrho, defrho);
 	UNPROTECT(2); /* klass, sxp */
 
-  DYNTRACE_PROBE_S3_GENERIC_EXIT(generic, op, obj, *ans);
+  DYNTRACE_PROBE_USEMETHOD_EXIT(generic, klass, obj, call, args, rho, *ans);
 
 	return 1;
     }
     UNPROTECT(2); /* klass, sxp */
     cptr->callflag = CTXT_RETURN;
 
-    DYNTRACE_PROBE_S3_GENERIC_EXIT(generic, op, obj, NULL);
+    DYNTRACE_PROBE_USEMETHOD_EXIT(generic, klass, obj, call, args, rho, NULL);
 
     return 0;
 }

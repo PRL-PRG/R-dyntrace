@@ -408,25 +408,30 @@ extern "C" {
     UNPROTECT(1);                                                   \
     DYNTRACE_PROBE_FOOTER(context_jump);
 
-#define DYNTRACE_PROBE_S3_GENERIC_ENTRY(generic, generic_method, object) \
-    DYNTRACE_PROBE_HEADER(S3_generic_entry);                             \
-    PROTECT(generic_method);                                             \
-    PROTECT(object);                                                     \
-    dyntrace_active_dyntracer->callback.S3_generic_entry(                \
-        dyntrace_active_dyntracer, generic, generic_method, object);     \
-    UNPROTECT(2);                                                        \
-    DYNTRACE_PROBE_FOOTER(S3_generic_entry);
+#define DYNTRACE_PROBE_USEMETHOD_ENTRY(generic, klass, obj, call, args, rho) \
+    DYNTRACE_PROBE_HEADER(usemethod_entry);                                  \
+    PROTECT(klass);                                                          \
+    PROTECT(obj);                                                            \
+    PROTECT(call);                                                           \
+    PROTECT(args);                                                           \
+    PROTECT(rho);                                                            \
+    dyntrace_active_dyntracer->callback.usemethod_entry(                     \
+        dyntrace_active_dyntracer, generic, klass, obj, call, args, rho);    \
+    UNPROTECT(5);                                                            \
+    DYNTRACE_PROBE_FOOTER(usemethod_entry);
 
-#define DYNTRACE_PROBE_S3_GENERIC_EXIT(                                      \
-    generic, generic_method, object, retval)                                 \
-    DYNTRACE_PROBE_HEADER(S3_generic_exit);                                  \
-    PROTECT(generic_method);                                                 \
-    PROTECT(object);                                                         \
-    PROTECT(retval);                                                         \
-    dyntrace_active_dyntracer->callback.S3_generic_exit(                     \
-        dyntrace_active_dyntracer, generic, generic_method, object, retval); \
-    UNPROTECT(3);                                                            \
-    DYNTRACE_PROBE_FOOTER(S3_generic_exit);
+#define DYNTRACE_PROBE_USEMETHOD_EXIT(generic, klass, obj, call, args, rho, ans)  \
+    DYNTRACE_PROBE_HEADER(usemethod_exit);                                        \
+    PROTECT(klass);                                                               \
+    PROTECT(obj);                                                                 \
+    PROTECT(call);                                                                \
+    PROTECT(args);                                                                \
+    PROTECT(rho);                                                                 \
+    if(ans != NULL) PROTECT(ans);                                                 \
+    dyntrace_active_dyntracer->callback.usemethod_exit(                           \
+        dyntrace_active_dyntracer, generic, klass, obj, call, args, rho, ans);    \
+    UNPROTECT(5 + ans != NULL);                                                   \
+    DYNTRACE_PROBE_FOOTER(usemethod_exit);
 
 #define DYNTRACE_PROBE_S3_DISPATCH_ENTRY(                   \
     generic, cls, generic_method, specific_method, objects) \
@@ -769,19 +774,33 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
           void* context,                                                       \
           const SEXP return_value,                                             \
           int restart)                                                         \
-    MACRO(call_handler_entry, dyntracer_t* dyntracer, void* context, SEXP r_expression, SEXP r_environment) \
-    MACRO(call_handler_exit, dyntracer_t* dyntracer, void* context, SEXP r_expression, SEXP r_environment)  \
-    MACRO(S3_generic_entry,                                                    \
+    MACRO(call_handler_entry,                                                  \
+          dyntracer_t* dyntracer,                                              \
+          void* context,                                                       \
+          SEXP r_expression,                                                   \
+          SEXP r_environment)                                                  \
+    MACRO(call_handler_exit,                                                   \
+          dyntracer_t* dyntracer,                                              \
+          void* context,                                                       \
+          SEXP r_expression,                                                   \
+          SEXP r_environment)                                                  \
+    MACRO(usemethod_entry,                                                     \
           dyntracer_t* dyntracer,                                              \
           const char* generic,                                                 \
-          const SEXP generic_method,                                           \
-          const SEXP object)                                                   \
-    MACRO(S3_generic_exit,                                                     \
+          SEXP klass,                                                          \
+          SEXP obj,                                                            \
+          SEXP call,                                                           \
+          SEXP args,                                                           \
+          SEXP rho)                                                            \
+    MACRO(usemethod_exit,                                                      \
           dyntracer_t* dyntracer,                                              \
           const char* generic,                                                 \
-          const SEXP generic_method,                                           \
-          const SEXP object,                                                   \
-          const SEXP retval)                                                   \
+          SEXP klass,                                                          \
+          SEXP obj,                                                            \
+          SEXP call,                                                           \
+          SEXP args,                                                           \
+          SEXP rho,                                                            \
+          SEXP ans)                                                            \
     MACRO(S3_dispatch_entry,                                                   \
           dyntracer_t* dyntracer,                                              \
           const char* generic,                                                 \
