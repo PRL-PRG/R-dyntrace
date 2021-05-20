@@ -1,67 +1,653 @@
-################################################################################
-## Ruby
-################################################################################
+## C GITIGNORES
 
-*.gem
-*.rbc
-/.config
-/coverage/
-/InstalledFiles
-/pkg/
-/spec/reports/
-/spec/examples.txt
-/test/tmp/
-/test/version_tmp/
-/tmp/
+# Prerequisites
+*.d
 
-# Used by dotenv library to load environment variables.
-# .env
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
 
-# Ignore Byebug command history file.
-.byebug_history
+# Linker output
+*.ilk
+*.map
+*.exp
 
-## Specific to RubyMotion:
-.dat*
-.repl_history
-build/
-*.bridgesupport
-build-iPhoneOS/
-build-iPhoneSimulator/
+# Precompiled Headers
+*.gch
+*.pch
 
-## Specific to RubyMotion (use of CocoaPods):
-#
-# We recommend against adding the Pods directory to your .gitignore. However
-# you should judge for yourself, the pros and cons are mentioned at:
-# https://guides.cocoapods.org/using/using-cocoapods.html#should-i-check-the-pods-directory-into-source-control
-#
-# vendor/Pods/
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
 
-## Documentation cache and generated files:
-/.yardoc/
-/_yardoc/
-/doc/
-/rdoc/
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
 
-## Environment normalization:
-/.bundle/
-/vendor/bundle
-/lib/bundler/man/
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
 
-# for a library or gem, you might want to ignore these files since the code is
-# intended to run in multiple environments; otherwise, check them in:
-# Gemfile.lock
-# .ruby-version
-# .ruby-gemset
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
 
-# unless supporting rvm < 1.11.0 or doing something fancy, ignore this:
-.rvmrc
+# Kernel Module Compile Results
+*.mod*
+*.cmd
+.tmp_versions/
+modules.order
+Module.symvers
+Mkfile.old
+dkms.conf
+
+## C++ GITIGNORES
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+## R GITIGNORES
+
+# History files
+.Rhistory
+.Rapp.history
+
+# Session Data files
+.RData
+
+# Example code in package build process
+*-Ex.R
+
+# Output files from R CMD build
+/*.tar.gz
+
+# Output files from R CMD check
+/*.Rcheck/
+
+# RStudio files
+.Rproj.user/
+
+# produced vignettes
+vignettes/*.html
+vignettes/*.pdf
+
+# OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
+.httr-oauth
+
+# knitr and R markdown default cache directories
+/*_cache/
+/cache/
+
+# Temporary files created by R markdown
+*.utf8.md
+*.knit.md
+
+# Shiny token, see https://shiny.rstudio.com/articles/shinyapps.html
+rsconnect/
+
+## Autotools GITIGNORE
+# http://www.gnu.org/software/automake
+
+Makefile.in
+/ar-lib
+/mdate-sh
+/py-compile
+/test-driver
+/ylwrap
+
+# http://www.gnu.org/software/autoconf
+
+/autom4te.cache
+/autoscan.log
+/autoscan-*.log
+/aclocal.m4
+/compile
+/config.guess
+/config.h.in
+/config.sub
+/configure
+/configure.scan
+/depcomp
+/install-sh
+/missing
+/stamp-h1
+
+# https://www.gnu.org/software/libtool/
+
+/ltmain.sh
+
+# http://www.gnu.org/software/texinfo
+
+/texinfo.tex
+
+# http://www.gnu.org/software/m4/
+
+m4/libtool.m4
+m4/ltoptions.m4
+m4/ltsugar.m4
+m4/ltversion.m4
+m4/lt~obsolete.m4
+autom4te.cache
 
 
-################################################################################
-## Jekyll
-################################################################################
+## EXTRA GITIGNORES
 
-_site/
-.sass-cache/
-.jekyll-cache/
-.jekyll-metadata
+Makeconf
+Makefile
+Makefile.bak
+Makefrag.cc
+Makefrag.cc_lo
+Makefrag.cxx
+Makefrag.m
+bin/
+config.log
+config.status
+doc/Makefile
+doc/html/Makefile
+doc/html/index.html
+doc/manual/Makefile
+etc/Makeconf
+etc/Makefile
+etc/Renviron
+etc/javaconf
+etc/ldpaths
+include/
+libtool
+m4/Makefile
+po/Makefile
+share/Makefile
+src/Makefile
+src/appl/Makefile
+src/extra/Makefile
+src/extra/blas/Makefile
+src/extra/intl/Makefile
+src/extra/tre/Makedeps
+src/extra/tre/Makefile
+src/extra/tzone/Makefile
+src/extra/xdr/Makefile
+src/extra/intl/Makedeps
+src/extra/intl/charset.alias
+src/extra/intl/charsetalias.h
+src/extra/intl/libgnuintl.h
+src/include/Makefile
+src/include/R.ts
+src/include/R_ext/Altrep.ts
+src/include/R_ext/Applic.ts
+src/include/R_ext/Arith.ts
+src/include/R_ext/BLAS.ts
+src/include/R_ext/Boolean.ts
+src/include/R_ext/Callbacks.ts
+src/include/R_ext/Complex.ts
+src/include/R_ext/Connections.ts
+src/include/R_ext/Constants.ts
+src/include/R_ext/Error.ts
+src/include/R_ext/GetX11Image.ts
+src/include/R_ext/GraphicsDevice.ts
+src/include/R_ext/GraphicsEngine.ts
+src/include/R_ext/Itermacros.ts
+src/include/R_ext/Lapack.ts
+src/include/R_ext/Linpack.ts
+src/include/R_ext/Makefile
+src/include/R_ext/MathThreads.ts
+src/include/R_ext/Memory.ts
+src/include/R_ext/Parse.ts
+src/include/R_ext/Print.ts
+src/include/R_ext/PrtUtil.ts
+src/include/R_ext/QuartzDevice.ts
+src/include/R_ext/R-ftp-http.ts
+src/include/R_ext/RS.ts
+src/include/R_ext/RStartup.ts
+src/include/R_ext/Rallocators.ts
+src/include/R_ext/Random.ts
+src/include/R_ext/Rdynload.ts
+src/include/R_ext/Riconv.ts
+src/include/R_ext/Utils.ts
+src/include/R_ext/Visibility.ts
+src/include/R_ext/eventloop.ts
+src/include/R_ext/libextern.ts
+src/include/R_ext/stamp-R
+src/include/R_ext/stats_package.ts
+src/include/R_ext/stats_stubs.ts
+src/include/Rconfig.h
+src/include/Rconfig.tsa
+src/include/Rdefines.ts
+src/include/Rembedded.ts
+src/include/Rinterface.ts
+src/include/Rinternals.ts
+src/include/Rmath.h
+src/include/Rmath.h0
+src/include/Rmath.tsa
+src/include/Rversion.h
+src/include/Rversion.tsa
+src/include/S.ts
+src/include/config.h
+src/include/stamp-R
+src/include/stamp-h
+src/library/Makefile
+src/library/Recommended/Makefile
+src/library/base/DESCRIPTION
+src/library/base/Makefile
+src/library/compiler/DESCRIPTION
+src/library/compiler/Makefile
+src/library/datasets/DESCRIPTION
+src/library/datasets/Makefile
+src/library/grDevices/DESCRIPTION
+src/library/grDevices/Makefile
+src/library/grDevices/src/Makefile
+src/library/grDevices/src/cairo/Makefile
+src/library/graphics/DESCRIPTION
+src/library/graphics/Makefile
+src/library/graphics/src/Makefile
+src/library/grid/DESCRIPTION
+src/library/grid/Makefile
+src/library/grid/src/Makefile
+src/library/methods/DESCRIPTION
+src/library/methods/Makefile
+src/library/methods/src/Makefile
+src/library/parallel/DESCRIPTION
+src/library/parallel/Makefile
+src/library/parallel/src/Makefile
+src/library/profile/Makefile
+src/library/splines/DESCRIPTION
+src/library/splines/Makefile
+src/library/splines/src/Makefile
+src/library/stats/DESCRIPTION
+src/library/stats/Makefile
+src/library/stats/src/Makefile
+src/library/stats4/DESCRIPTION
+src/library/stats4/Makefile
+src/library/tcltk/DESCRIPTION
+src/library/tcltk/Makefile
+src/library/tcltk/src/Makefile
+src/library/tools/DESCRIPTION
+src/library/tools/Makefile
+src/library/tools/src/Makefile
+src/library/translations/DESCRIPTION
+src/library/translations/Makefile
+src/library/utils/DESCRIPTION
+src/library/utils/Makefile
+src/library/utils/src/Makefile
+src/main/Makefile
+src/modules/Makefile
+src/modules/X11/Makefile
+src/modules/internet/Makefile
+src/modules/lapack/Makefile
+src/nmath/Makefile
+src/nmath/standalone/Makefile
+src/scripts/Makefile
+src/scripts/R.fe
+src/scripts/R.sh
+src/scripts/Rcmd
+src/scripts/f77_f2c
+src/scripts/javareconf
+src/scripts/mkinstalldirs
+src/scripts/pager
+src/scripts/rtags
+src/unix/Makefile
+src/unix/Rscript
+tests/Embedding/Makefile
+tests/Examples/Makefile
+tests/Makefile
+tools/Makefile
+library/
+src/appl/Makedeps
+src/library/base/all.R
+src/library/compiler/all.R
+src/library/tools/all.R
+src/library/tools/src/Makedeps
+src/main/Makedeps
+src/main/R.bin
+src/modules/X11/Makedeps
+src/modules/internet/Makedeps
+src/modules/lapack/Makedeps
+src/nmath/Makedeps
+src/unix/Makedeps
+doc/html/packages.html
+doc/manual/R-FAQ.html
+doc/manual/R-admin.html
+doc/manual/R-data.html
+doc/manual/R-exts.html
+doc/manual/R-intro.html
+doc/manual/R-ints.html
+doc/manual/R-lang.html
+doc/manual/stamp-images-html
+doc/manual/version.texi
+doc/NEWS.rds
+doc/NEWS.pdf
+doc/NEWS.2.rds
+doc/NEWS.3.rds
+doc/R.1
+stamp-java
+## files generated by ./configure --with-internal-tzcode
+share/zoneinfo/
+src/extra/tzone/Makedeps
+## files generated by make check and make check-all
+src/nmath/standalone/Makedeps
+src/nmath/standalone/bd0.c
+src/nmath/standalone/bessel_i.c
+src/nmath/standalone/bessel_j.c
+src/nmath/standalone/bessel_k.c
+src/nmath/standalone/bessel_y.c
+src/nmath/standalone/beta.c
+src/nmath/standalone/chebyshev.c
+src/nmath/standalone/check.log
+src/nmath/standalone/choose.c
+src/nmath/standalone/cospi.c
+src/nmath/standalone/d1mach.c
+src/nmath/standalone/dbeta.c
+src/nmath/standalone/dbinom.c
+src/nmath/standalone/dcauchy.c
+src/nmath/standalone/dchisq.c
+src/nmath/standalone/dexp.c
+src/nmath/standalone/df.c
+src/nmath/standalone/dgamma.c
+src/nmath/standalone/dgeom.c
+src/nmath/standalone/dhyper.c
+src/nmath/standalone/dlnorm.c
+src/nmath/standalone/dlogis.c
+src/nmath/standalone/dnbeta.c
+src/nmath/standalone/dnbinom.c
+src/nmath/standalone/dnchisq.c
+src/nmath/standalone/dnf.c
+src/nmath/standalone/dnorm.c
+src/nmath/standalone/dnt.c
+src/nmath/standalone/dpois.c
+src/nmath/standalone/dt.c
+src/nmath/standalone/dunif.c
+src/nmath/standalone/dweibull.c
+src/nmath/standalone/fmax2.c
+src/nmath/standalone/fmin2.c
+src/nmath/standalone/fprec.c
+src/nmath/standalone/fround.c
+src/nmath/standalone/fsign.c
+src/nmath/standalone/ftrunc.c
+src/nmath/standalone/gamma.c
+src/nmath/standalone/gamma_cody.c
+src/nmath/standalone/gammalims.c
+src/nmath/standalone/i1mach.c
+src/nmath/standalone/imax2.c
+src/nmath/standalone/imin2.c
+src/nmath/standalone/lbeta.c
+src/nmath/standalone/lgamma.c
+src/nmath/standalone/lgammacor.c
+src/nmath/standalone/log1p.c
+src/nmath/standalone/mlutils.c
+src/nmath/standalone/pbeta.c
+src/nmath/standalone/pbinom.c
+src/nmath/standalone/pcauchy.c
+src/nmath/standalone/pchisq.c
+src/nmath/standalone/pexp.c
+src/nmath/standalone/pf.c
+src/nmath/standalone/pgamma.c
+src/nmath/standalone/pgeom.c
+src/nmath/standalone/phyper.c
+src/nmath/standalone/plnorm.c
+src/nmath/standalone/plogis.c
+src/nmath/standalone/pnbeta.c
+src/nmath/standalone/pnbinom.c
+src/nmath/standalone/pnchisq.c
+src/nmath/standalone/pnf.c
+src/nmath/standalone/pnorm.c
+src/nmath/standalone/pnt.c
+src/nmath/standalone/polygamma.c
+src/nmath/standalone/ppois.c
+src/nmath/standalone/pt.c
+src/nmath/standalone/ptukey.c
+src/nmath/standalone/punif.c
+src/nmath/standalone/pweibull.c
+src/nmath/standalone/qbeta.c
+src/nmath/standalone/qbinom.c
+src/nmath/standalone/qcauchy.c
+src/nmath/standalone/qchisq.c
+src/nmath/standalone/qexp.c
+src/nmath/standalone/qf.c
+src/nmath/standalone/qgamma.c
+src/nmath/standalone/qgeom.c
+src/nmath/standalone/qhyper.c
+src/nmath/standalone/qlnorm.c
+src/nmath/standalone/qlogis.c
+src/nmath/standalone/qnbeta.c
+src/nmath/standalone/qnbinom.c
+src/nmath/standalone/qnchisq.c
+src/nmath/standalone/qnf.c
+src/nmath/standalone/qnorm.c
+src/nmath/standalone/qnt.c
+src/nmath/standalone/qpois.c
+src/nmath/standalone/qt.c
+src/nmath/standalone/qtukey.c
+src/nmath/standalone/qunif.c
+src/nmath/standalone/qweibull.c
+src/nmath/standalone/rbeta.c
+src/nmath/standalone/rbinom.c
+src/nmath/standalone/rcauchy.c
+src/nmath/standalone/rchisq.c
+src/nmath/standalone/rexp.c
+src/nmath/standalone/rf.c
+src/nmath/standalone/rgamma.c
+src/nmath/standalone/rgeom.c
+src/nmath/standalone/rhyper.c
+src/nmath/standalone/rlnorm.c
+src/nmath/standalone/rlogis.c
+src/nmath/standalone/rmultinom.c
+src/nmath/standalone/rnbinom.c
+src/nmath/standalone/rnchisq.c
+src/nmath/standalone/rnorm.c
+src/nmath/standalone/rpois.c
+src/nmath/standalone/rt.c
+src/nmath/standalone/runif.c
+src/nmath/standalone/rweibull.c
+src/nmath/standalone/sexp.c
+src/nmath/standalone/sign.c
+src/nmath/standalone/signrank.c
+src/nmath/standalone/snorm.c
+src/nmath/standalone/std_unif.c
+src/nmath/standalone/stirlerr.c
+src/nmath/standalone/toms708.c
+src/nmath/standalone/wilcox.c
+tests/CRANtools.Rout
+tests/Examples/base-Ex.R-cnt
+tests/Examples/base-Ex.Rout
+tests/Examples/base-Ex.Rout.prev
+tests/Examples/base-Ex.pdf
+tests/Examples/compiler-Ex.R-cnt
+tests/Examples/compiler-Ex.Rout
+tests/Examples/compiler-Ex.Rout.prev
+tests/Examples/compiler-Ex.pdf
+tests/Examples/datasets-Ex.R-cnt
+tests/Examples/datasets-Ex.Rout
+tests/Examples/datasets-Ex.Rout.prev
+tests/Examples/datasets-Ex.pdf
+tests/Examples/example-1_def.R
+tests/Examples/example-1_myA-noF.R
+tests/Examples/example-1_myA.R
+tests/Examples/grDevices-Ex.R-cnt
+tests/Examples/grDevices-Ex.Rout
+tests/Examples/grDevices-Ex.Rout.prev
+tests/Examples/grDevices-Ex.pdf
+tests/Examples/graphics-Ex.R-cnt
+tests/Examples/graphics-Ex.Rout
+tests/Examples/graphics-Ex.Rout.prev
+tests/Examples/graphics-Ex.pdf
+tests/Examples/grid-Ex.R-cnt
+tests/Examples/grid-Ex.Rout
+tests/Examples/grid-Ex.Rout.prev
+tests/Examples/grid-Ex.pdf
+tests/Examples/methods-Ex.R-cnt
+tests/Examples/methods-Ex.Rout
+tests/Examples/methods-Ex.Rout.prev
+tests/Examples/methods-Ex.pdf
+tests/Examples/parallel-Ex.R-cnt
+tests/Examples/parallel-Ex.Rout
+tests/Examples/parallel-Ex.Rout.prev
+tests/Examples/parallel-Ex.pdf
+tests/Examples/splines-Ex.R-cnt
+tests/Examples/splines-Ex.Rout
+tests/Examples/splines-Ex.Rout.prev
+tests/Examples/splines-Ex.pdf
+tests/Examples/stats-Ex.R-cnt
+tests/Examples/stats-Ex.Rout
+tests/Examples/stats-Ex.Rout.prev
+tests/Examples/stats-Ex.pdf
+tests/Examples/stats4-Ex.Rout
+tests/Examples/stats4-Ex.Rout.prev
+tests/Examples/stats4-Ex.pdf
+tests/Examples/tcltk-Ex.R-cnt
+tests/Examples/tcltk-Ex.Rout
+tests/Examples/tcltk-Ex.Rout.prev
+tests/Examples/tcltk-Ex.pdf
+tests/Examples/tools-Ex.R-cnt
+tests/Examples/tools-Ex.Rout
+tests/Examples/tools-Ex.Rout.prev
+tests/Examples/tools-Ex.pdf
+tests/Examples/utils-Ex.R-cnt
+tests/Examples/utils-Ex.Rout
+tests/Examples/utils-Ex.Rout.prev
+tests/Examples/utils-Ex.pdf
+tests/KernSmooth.Rcheck/
+tests/MASS.Rcheck/
+tests/Matrix.Rcheck/
+tests/PCRE.Rout
+tests/PkgC_1.0-0.tar.gz
+tests/R-intro.R
+tests/R-intro.Rout
+tests/RecPackages/
+tests/Rplots.pdf
+tests/any-all.Rout
+tests/arith-true.Rout
+tests/arith.Rout
+tests/array-subset.Rout
+tests/base.Rcheck/
+tests/boot.Rcheck/
+tests/class.Rcheck/
+tests/cluster.Rcheck/
+tests/codetools.Rcheck/
+tests/compiler.Rcheck/
+tests/complex.Rout
+tests/conditions.Rout
+tests/d-p-q-r-tests.Rout
+tests/datasets.Rcheck/
+tests/datasets.Rout
+tests/datetime.Rout
+tests/datetime2.Rout
+tests/demos.Rout
+tests/demos2.Rout
+tests/eval-etc-2.Rout
+tests/eval-etc.Rout
+tests/ex.gz
+tests/exNSS4_1.1.tar.gz
+tests/exSexpr_1.1.tar.gz
+tests/foreign.Rcheck/
+tests/grDevices.Rcheck/
+tests/graphics.Rcheck/
+tests/grid.Rcheck/
+tests/iec60559.Rout
+tests/internet.Rout
+tests/internet2.Rout
+tests/isas-tests.Rout
+tests/lapack.Rout
+tests/lattice.Rcheck/
+tests/libcurl.Rout
+tests/lm-tests.Rout
+tests/method-dispatch.Rout
+tests/methods.Rcheck/
+tests/mgcv.Rcheck/
+tests/myTst2/
+tests/nlme.Rcheck/
+tests/nnet.Rcheck/
+tests/no-segfault.R
+tests/no-segfault.Rout
+tests/ok-errors.Rout
+tests/p-qbeta-strict-tst.Rout
+tests/p-qbeta-strict-tst.pdf
+tests/p-r-random-tests.Rout
+tests/p-r-random-tests_seed
+tests/parallel.Rcheck/
+tests/pkgA_1.2.tar.gz
+tests/pkgB_1.0.tar.gz
+tests/pkgD_2.1.2.tar.gz
+tests/primitives.Rout
+tests/print-tests.Rout
+tests/r-strict-tst.Rout
+tests/reg-BLAS.Rout
+tests/reg-IO.Rout
+tests/reg-IO2.Rout
+tests/reg-S4-examples.Rout
+tests/reg-S4.Rout
+tests/reg-examples-1.pdf
+tests/reg-examples-2.pdf
+tests/reg-examples-3.pdf
+tests/reg-examples1.Rout
+tests/reg-examples2.Rout
+tests/reg-examples3.Rout
+tests/reg-packages.Rout
+tests/reg-plot-latin1.Rout
+tests/reg-plot-latin1.pdf
+tests/reg-plot.Rout
+tests/reg-plot.pdf
+tests/reg-tests-1a.Rout
+tests/reg-tests-1a.pdf
+tests/reg-tests-1b.Rout
+tests/reg-tests-1b.pdf
+tests/reg-tests-1c.Rout
+tests/reg-tests-1c.pdf
+tests/reg-tests-1d.Rout
+tests/reg-tests-1d.pdf
+tests/reg-tests-2.Rout
+tests/reg-tests-2.pdf
+tests/reg-tests-3.Rout
+tests/reg-tests-3.pdf
+tests/rpart.Rcheck/
+tests/simple-true.Rout
+tests/spatial.Rcheck/
+tests/splines.Rcheck/
+tests/stats.Rcheck/
+tests/stats4.Rcheck/
+tests/survival.Rcheck/
+tests/tcltk.Rcheck/
+tests/timezone.Rout
+tests/tools.Rcheck/
+tests/utf8-regex.Rout
+tests/utils.Rcheck/
+tests/ver20.Rd
