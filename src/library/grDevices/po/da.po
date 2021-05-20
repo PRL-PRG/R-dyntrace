@@ -1,0 +1,856 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR The R Foundation
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+msgid ""
+msgstr ""
+"Project-Id-Version: R 3.0.0\n"
+"Report-Msgid-Bugs-To: bugs.r-project.org\n"
+"POT-Creation-Date: 2021-02-01 13:58+0000\n"
+"PO-Revision-Date: 2011-11-29 09:07+0200\n"
+"Last-Translator: Joe <joedalton2@yahoo.dk>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: da\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Pootle 2.1.6\n"
+
+#: axis_scales.c:37 axis_scales.c:38 axis_scales.c:56
+#, c-format
+msgid "'%s' must be numeric of length %d"
+msgstr "'%s' skal være numerisk med længden %d"
+
+#: colors.c:69
+#, c-format
+msgid "color intensity %s, not in [0,1]"
+msgstr ""
+
+#: colors.c:71
+#, c-format
+msgid "color intensity %g, not in [0,1]"
+msgstr ""
+
+#: colors.c:78
+#, c-format
+msgid "color intensity %s, not in 0:255"
+msgstr ""
+
+#: colors.c:80
+#, c-format
+msgid "color intensity %d, not in 0:255"
+msgstr ""
+
+#: colors.c:87
+#, c-format
+msgid "alpha level %s, not in [0,1]"
+msgstr ""
+
+#: colors.c:89
+#, c-format
+msgid "alpha level %g, not in [0,1]"
+msgstr ""
+
+#: colors.c:96
+#, c-format
+msgid "alpha level %s, not in 0:255"
+msgstr ""
+
+#: colors.c:98
+#, c-format
+msgid "alpha level %d, not in 0:255"
+msgstr ""
+
+#: colors.c:113
+msgid "inputs must be finite"
+msgstr ""
+
+#: colors.c:128
+msgid "bad hsv to rgb color conversion"
+msgstr ""
+
+#: colors.c:220 colors.c:234
+msgid "invalid hsv color"
+msgstr ""
+
+#: colors.c:346 colors.c:366
+msgid "invalid hcl color"
+msgstr ""
+
+#: colors.c:398
+#, fuzzy
+msgid "invalid value of 'maxColorValue'"
+msgstr "ugyldig værdi for '%s'"
+
+#: colors.c:426
+#, fuzzy
+msgid "invalid 'names' vector"
+msgstr "ugyldigt 'fil'-argument"
+
+#: colors.c:485 colors.c:494
+msgid "invalid gray level, must be in [0,1]."
+msgstr ""
+
+#: colors.c:550
+#, fuzzy, c-format
+msgid "invalid '%s' value"
+msgstr "ugyldigt 'fil'-argument"
+
+#: colors.c:1337
+msgid "invalid hex digit in 'color' or 'lty'"
+msgstr ""
+
+#: colors.c:1347 colors.c:1357
+#, fuzzy
+msgid "invalid RGB specification"
+msgstr "Ugyldig skriftspecifikation"
+
+#: colors.c:1390
+#, fuzzy, c-format
+msgid "invalid color name '%s'"
+msgstr "ugyldig streng i '%s'"
+
+#: colors.c:1440 colors.c:1449
+#, fuzzy, c-format
+msgid "invalid color specification \"%s\""
+msgstr "Ugyldig skriftspecifikation"
+
+#: colors.c:1477
+msgid "supplied color is neither numeric nor character"
+msgstr ""
+
+#: colors.c:1481
+#, c-format
+msgid "numerical color values must be >= 0, found %d"
+msgstr ""
+
+#: colors.c:1492
+#, fuzzy
+msgid "invalid argument type"
+msgstr "ugyldigt 'fil'-argument"
+
+#: colors.c:1503
+msgid "unknown palette (need >= 2 colors)"
+msgstr ""
+
+#: colors.c:1507 colors.c:1529
+#, c-format
+msgid "maximum number of colors is %d"
+msgstr ""
+
+#: devPS.c:562
+#, c-format
+msgid "afm file '%s' could not be opened"
+msgstr "afm-fil '%s' kunne ikke åbnes"
+
+#: devPS.c:630
+msgid "unknown AFM entity encountered"
+msgstr "mødte ukendt AFM-entitet"
+
+#: devPS.c:746 devPS.c:749 devPS.c:4480 devPS.c:9246 devPicTeX.c:477
+#: devPicTeX.c:479
+#, c-format
+msgid "invalid string in '%s'"
+msgstr "ugyldig streng i '%s'"
+
+#: devPS.c:780
+#, c-format
+msgid "font width unknown for character 0x%x"
+msgstr "skriftbredde ukendt for tegn 0x%x"
+
+#: devPS.c:838
+#, c-format
+msgid "unknown encoding '%s' in 'PostScriptMetricInfo'"
+msgstr "ukendt kodning '%s' i 'PostScriptMetricInfo'"
+
+#: devPS.c:854 devPS.c:865
+#, c-format
+msgid "font metrics unknown for Unicode character U+%04x"
+msgstr "måleenhed for skrifttype er ukendt for Unicodetegn U+%04x"
+
+#: devPS.c:873
+#, c-format
+msgid "font metrics unknown for character 0x%x"
+msgstr "måleenhed for skrifttype er ukendt for tegn 0x%x"
+
+#: devPS.c:887
+#, c-format
+msgid ""
+"invalid character (%04x) sent to 'PostScriptCIDMetricInfo' in a single-byte "
+"locale"
+msgstr ""
+"ugyldigt tegn (%04x) sendt til PostScriptCIDMetricInfo i en enkelt-byte "
+"lokalitet"
+
+#: devPS.c:895
+msgid ""
+"invalid character sent to 'PostScriptCIDMetricInfo' in a single-byte locale"
+msgstr ""
+"ugyldigt tegn sendt til PostScriptCIDMetricInfo i en enkelt-byte lokalitet"
+
+#: devPS.c:1007
+msgid "failed to allocate CID font info"
+msgstr "kunne ikke allokere CID-skriftinfo"
+
+#: devPS.c:1023
+msgid "failed to allocate Type 1 font info"
+msgstr "kunne ikke allokere Type 1-skriftinfo"
+
+#: devPS.c:1043
+msgid "failed to allocate encoding info"
+msgstr "kunne ikke allokere kodningsinfo"
+
+#: devPS.c:1061
+msgid "failed to allocate CID font family"
+msgstr "kunne ikke allokere CID-skriftfamilie"
+
+#: devPS.c:1074
+msgid "failed to allocate Type 1 font family"
+msgstr "kunne ikke allokere Type 1-skriftfamilie"
+
+#: devPS.c:1113 devPS.c:1124
+msgid "failed to allocate font list"
+msgstr "kunne ikke allokere skriftliste"
+
+#: devPS.c:1175
+msgid "failed to allocated encoding list"
+msgstr "kunne ikke allokere kodningsliste"
+
+#: devPS.c:1324
+msgid "truncated string which was too long for copy"
+msgstr "forkortet streng som var for lang for kopiering"
+
+#: devPS.c:1364
+#, c-format
+msgid "failed to load encoding file '%s'"
+msgstr "kunne ikke indlæse kodningsfil '%s'"
+
+#: devPS.c:1463 devPS.c:1496
+#, fuzzy
+msgid "invalid font name or more than one font name"
+msgstr "Ugyldigt skriftnavn eller mere end et skriftnavn"
+
+#: devPS.c:1617 devPS.c:1652
+#, fuzzy, c-format
+msgid "font family '%s' not found in PostScript font database"
+msgstr "skriftfamilie ikke fundet i PostScript-skriftdatabasen"
+
+#: devPS.c:1736 devPS.c:1818 devPS.c:1845
+#, fuzzy, c-format
+msgid "font encoding for family '%s' not found in font database"
+msgstr "skriftkodning ikke fundet i skriftdatabasen"
+
+#: devPS.c:1763 devPS.c:1790
+#, fuzzy, c-format
+msgid "font CMap for family '%s' not found in font database"
+msgstr "skrift-CMAP ikke fundet i skriftdatabasen"
+
+#: devPS.c:1985 devPS.c:2065 devPS.c:2133
+#, c-format
+msgid "cannot load afm file '%s'"
+msgstr "kan ikke indlæse afm-fil '%s'"
+
+#: devPS.c:2421
+#, fuzzy
+msgid "corrupt loaded encodings;  encoding not recorded"
+msgstr "Ødelagte indlæste kodninger;  kodning ikke optaget"
+
+#: devPS.c:2432
+#, fuzzy
+msgid "failed to record device encoding"
+msgstr "Kunne ikke optage enhedskodning"
+
+#: devPS.c:2603
+#, fuzzy
+msgid "object '.ps.prolog' is not a character vector"
+msgstr "Object.ps.prolog er ikke en tegnvektor"
+
+#: devPS.c:2678 devPS.c:7547 devWindows.c:807
+#, fuzzy
+msgid "invalid line end"
+msgstr "Ugyldig linjeafslutning"
+
+#: devPS.c:2697 devPS.c:7567 devWindows.c:820
+#, fuzzy
+msgid "invalid line join"
+msgstr "Ugyldig linjeforbindelse"
+
+# http://en.wikipedia.org/wiki/Miter_joint
+# må være gering på dansk
+# http://www.denstoredanske.dk/It,_teknik_og_naturvidenskab/Teknik/Boring,_s%C3%A6nkning_og_rivning/gering
+#: devPS.c:2705
+#, fuzzy
+msgid "invalid line mitre"
+msgstr "Ugyldig linjegering"
+
+#: devPS.c:2910 devPS.c:3830 devPS.c:4278 devPS.c:4305 devPS.c:5349
+#: devPS.c:9096 devPS.c:9141
+#, c-format
+msgid "attempt to use invalid font %d replaced by font 1"
+msgstr "forsøg på at bruge ugyldig skrifttype %d erstattet af skrifttype 1"
+
+#: devPS.c:3138 devPS.c:4804 devPS.c:6933
+#, c-format
+msgid "filename too long in %s()"
+msgstr "filnavn er for langt i %s()"
+
+#: devPS.c:3144 devPS.c:4810 devPS.c:6939
+#, c-format
+msgid "memory allocation problem in %s()"
+msgstr "allokeringsproblem for hukommelsen i %s()"
+
+#: devPS.c:3162 devPS.c:7003
+#, c-format
+msgid "encoding path is too long in %s()"
+msgstr "kodningssti er for lang i %s()"
+
+#: devPS.c:3176 devPS.c:4850
+#, c-format
+msgid "failed to load encoding file in %s()"
+msgstr "kunne ikke indlæse kodningsfil i %s()"
+
+#: devPS.c:3221 devPS.c:3284 devPS.c:7062 devPS.c:7118 devPS.c:8976
+#, fuzzy
+msgid "invalid font type"
+msgstr "Ugyldig skrifttype"
+
+#: devPS.c:3245
+#, fuzzy
+msgid "failed to initialise default PostScript font"
+msgstr "Kunne ikke initialisere standardskriften for PostScript"
+
+#: devPS.c:3311
+#, fuzzy
+msgid "failed to initialise additional PostScript fonts"
+msgstr "Kunne ikke initialisere yderligere PostScript-skrifter"
+
+#: devPS.c:3327
+msgid "invalid foreground/background color (postscript)"
+msgstr "ugyldig forgrund- eller baggrundsfarve (postscript)"
+
+#: devPS.c:3332
+msgid "'command' is too long"
+msgstr "'kommando' er for lang"
+
+#: devPS.c:3337
+#, fuzzy
+msgid "'postscript(print.it=TRUE)' used with an empty 'print' command"
+msgstr "postscript(print.it=TRUE) brugt med en tom print-kommando"
+
+#: devPS.c:3388
+#, c-format
+msgid "invalid page type '%s' (postscript)"
+msgstr "ugyldig sidetype '%s' (postscript)"
+
+#: devPS.c:3510 devPS.c:4648 devWindows.c:2356
+msgid ""
+"semi-transparency is not supported on this device: reported only once per "
+"page"
+msgstr ""
+"semitransparens er ikke understøttet på denne enhed: kun rapporteret en gang "
+"per side"
+
+#: devPS.c:3621 devPS.c:3632
+#, c-format
+msgid "cannot open 'postscript' pipe to '%s'"
+msgstr "kan ikke åbne postscript-datakanal til '%s'"
+
+#: devPS.c:3643 devPS.c:5067 devPS.c:5080 devPS.c:8270 qdPDF.c:98
+#, c-format
+msgid "cannot open file '%s'"
+msgstr "kan ikke åbne fil '%s'"
+
+#: devPS.c:3771 devPS.c:3786
+#, c-format
+msgid ""
+"error from postscript() in running:\n"
+"    %s"
+msgstr ""
+"fejl fra postscript() under kørsel af:\n"
+"    %s"
+
+#: devPS.c:3818
+#, fuzzy, c-format
+msgid "CID family '%s' not included in postscript() device"
+msgstr "CID-familie '%s' er ikke inkluderet i PostScript-enhed"
+
+# 91%
+#: devPS.c:3836 devPS.c:3847 devPS.c:4285 devPS.c:4315 devPS.c:4420
+#, fuzzy, c-format
+msgid "family '%s' not included in postscript() device"
+msgstr "familie '%s' er ikke inkluderet i PostScript-enhed"
+
+#: devPS.c:4360
+#, c-format
+msgid "unknown encoding '%s' in 'mbcsToSbcs'"
+msgstr "ukendt kodning '%s' i 'mbcsToSbcs'"
+
+#: devPS.c:4370
+#, c-format
+msgid "conversion failure on '%s' in 'mbcsToSbcs': dot substituted for <%02x>"
+msgstr "konverteringsfejl på '%s' i 'mbcsToSbcs': punktum erstattet for <%02x>"
+
+#: devPS.c:4448
+#, c-format
+msgid "failed open converter to encoding '%s'"
+msgstr "fejlede åbn af omdannelsesprogram for kodning af '%s'"
+
+#: devPS.c:4466 devPS.c:5394 devPS.c:9231
+#, c-format
+msgid "failed in text conversion to encoding '%s'"
+msgstr "fejlede i tekstomdannelse til kodning '%s'"
+
+#: devPS.c:4662
+#, fuzzy
+msgid "ran out of colors in xfig()"
+msgstr "løb ud af farver i xfig()"
+
+#: devPS.c:4691
+#, c-format
+msgid "unimplemented line texture %08x: using Dash-double-dotted"
+msgstr "uimplementeret linjetekstur %08x: bruger Bindestreg-dobbelt-prikket"
+
+#: devPS.c:4763
+#, c-format
+msgid "unknown postscript font family '%s', using Helvetica"
+msgstr "ukendt postscript-skriftfamilie '%s', bruger Helvetica"
+
+# 81%
+#: devPS.c:4835
+msgid "invalid foreground/background color (xfig)"
+msgstr "ugyldig forgrund- eller baggrundsfarve (xfig)"
+
+#: devPS.c:4868
+#, fuzzy
+msgid "only Type 1 fonts supported for XFig"
+msgstr "Kun Type 1-skrifter understøttet for XFig"
+
+# 79%
+#: devPS.c:4881
+#, fuzzy
+msgid "failed to initialise default XFig font"
+msgstr "Kunne ikke initialisere standardskriften for XFig"
+
+#: devPS.c:4918
+#, c-format
+msgid "invalid page type '%s' (xfig)"
+msgstr "ugyldig sidetype '%s' (xfig)"
+
+#: devPS.c:4926
+#, c-format
+msgid "xfig(%s, onefile=FALSE) will only return the last plot"
+msgstr "xfig(%s, onefile=FALSE) vil kun returnere det sidste plot"
+
+#: devPS.c:5059
+msgid "empty file name"
+msgstr "tomt filnavn"
+
+#: devPS.c:5126 devPS.c:5178 devPS.c:6757 devPS.c:6801 devPS.c:8331
+msgid "write failed"
+msgstr "skrivning fejlede"
+
+#: devPS.c:5383
+#, c-format
+msgid "unable to use encoding '%s'"
+msgstr "kan ikke bruge kodning '%s'"
+
+#: devPS.c:5706
+msgid "failed to increase definition string (shut down PDF device)"
+msgstr ""
+
+#: devPS.c:5748
+#, fuzzy
+msgid "failed to increase 'maxDefns'"
+msgstr "kan ikke øge 'maxRaster'"
+
+#: devPS.c:6645 devPS.c:6648
+msgid "failed to increase 'maxRaster'"
+msgstr "kan ikke øge 'maxRaster'"
+
+#: devPS.c:6660
+#, fuzzy
+msgid "unable to allocate raster image"
+msgstr "Kan ikke allokere raster-billede"
+
+# 77%
+#: devPS.c:6861
+#, fuzzy
+msgid "corrupt loaded encodings;  font not added"
+msgstr "Ødelagte indlæste kodninger;  skrift ikke tilføjet"
+
+#: devPS.c:6871
+#, fuzzy
+msgid "failed to record device encoding; font not added"
+msgstr "Kunne ikke optage enhedskodning: skrifttype ikke tilføjet"
+
+#: devPS.c:6989
+msgid "increasing the PDF version to 1.2"
+msgstr "øger PDF-versionen til 1.2"
+
+#: devPS.c:7019
+msgid "failed to load default encoding"
+msgstr "kunne ikke indlæse standardkodning"
+
+# 79%
+#: devPS.c:7086
+#, fuzzy
+msgid "failed to initialise default PDF font"
+msgstr "Kunne ikke initialisere standardskriften for PDF"
+
+# 81%
+#: devPS.c:7141
+#, fuzzy
+msgid "failed to initialise additional PDF fonts"
+msgstr "Kunne ikke initialisere yderligere PDF-skrifter"
+
+# 75%
+#: devPS.c:7154
+msgid "failed to allocate rasters"
+msgstr "kunne ikke allokere rastere"
+
+#: devPS.c:7161
+msgid "failed to allocate masks"
+msgstr "kunne ikke allokere masker"
+
+#: devPS.c:7170
+#, fuzzy
+msgid "failed to allocate definitions"
+msgstr "kunne ikke allokere skriftliste"
+
+#: devPS.c:7239
+#, c-format
+msgid "invalid paper type '%s' (pdf)"
+msgstr "ugyldig papirtype '%s' (pdf)"
+
+# 81%
+#: devPS.c:7263
+msgid "invalid foreground/background color (pdf)"
+msgstr "ugyldig forgrund- eller baggrundsfarve (pdf)"
+
+#: devPS.c:7371
+#, fuzzy
+msgid "invalid 'alpha' value in PDF"
+msgstr "Ugyldig alfaværdi i PDF"
+
+#: devPS.c:7396
+msgid "increasing the PDF version to 1.4"
+msgstr "øger PDF-versionen til 1.4"
+
+#: devPS.c:7440 devPS.c:7488
+msgid "unknown 'colormodel', using 'srgb'"
+msgstr "ukendt 'colormodel', bruger 'srgb'"
+
+#: devPS.c:7733
+#, fuzzy
+msgid "failed to load sRGB colorspace file"
+msgstr "Kunne ikke indlæse sRGB-farverumsfil"
+
+#: devPS.c:8040
+#, fuzzy
+msgid "corrupt encodings in PDF device"
+msgstr "Ødelagte kodninger i PDF-enhed"
+
+#: devPS.c:8121
+msgid "increasing the PDF version to 1.3"
+msgstr "øger PDF-versionen til 1.3"
+
+#: devPS.c:8254
+#, fuzzy, c-format
+msgid "cannot open 'pdf' pipe to '%s'"
+msgstr "kan ikke åbne postscript-datakanal til '%s'"
+
+#: devPS.c:8260
+msgid "file = \"|cmd\" implies 'onefile = TRUE'"
+msgstr ""
+
+#: devPS.c:8404
+#, c-format
+msgid ""
+"cannot open 'pdf' file argument '%s'\n"
+"  please shut down the PDF device"
+msgstr ""
+"kan ikke åbne 'pdf-filargument' '%s'\n"
+"  luk venligst PDF-enheden ned"
+
+#: devPS.c:8424
+#, c-format
+msgid ""
+"Cannot open temporary file '%s' for compression (reason: %s); compression "
+"has been turned off for this device"
+msgstr ""
+
+#: devPS.c:9001 devPS.c:9363 devPS.c:9410
+#, fuzzy
+msgid "failed to find or load PDF font"
+msgstr "Kunne ikke finde eller indlæse PDF-skrift"
+
+#: devPS.c:9185 devPS.c:9318
+#, fuzzy
+msgid "failed to find or load PDF CID font"
+msgstr "Kunne ikke finde eller indlæse PDF CID-skrift"
+
+#: devPS.c:9593 devPS.c:9597 devPS.c:9758 devPS.c:9762
+#, c-format
+msgid "invalid 'family' parameter in %s"
+msgstr "ugyldigt 'family'-parameter i %s"
+
+#: devPS.c:9615 devPS.c:9774
+#, c-format
+msgid "invalid 'fonts' parameter in %s"
+msgstr "ugyldigt 'fonts'-parameter i %s"
+
+#: devPS.c:9621 devPS.c:9784 devPS.c:9787 devWindows.c:3688 devWindows.c:3692
+#: devWindows.c:3700 devWindows.c:3711 devWindows.c:3717 devWindows.c:3724
+#: devWindows.c:3731 devWindows.c:3735
+#, c-format
+msgid "invalid value of '%s'"
+msgstr "ugyldig værdi for '%s'"
+
+# 85%
+#: devPS.c:9634 devPS.c:9701 devPS.c:9801 devPicTeX.c:775 devWindows.c:3778
+#, c-format
+msgid "unable to start %s() device"
+msgstr "kan ikke starte %s()-enhed"
+
+#: devQuartz.c:665
+#, c-format
+msgid "font \"%s\" could not be found for family \"%s\""
+msgstr "skrifttype »%s« kunne ikke findes for familie »%s«"
+
+#: devQuartz.c:683
+msgid "font family name is too long"
+msgstr "skriftfamilienavnet er for langt"
+
+#: devQuartz.c:723
+#, c-format
+msgid "no font could be found for family \"%s\""
+msgstr "ingen skrift kunne findes for familie »%s«"
+
+#: devQuartz.c:1407
+msgid "invalid 'file' argument"
+msgstr "ugyldigt 'fil'-argument"
+
+#: devQuartz.c:1434
+#, fuzzy
+msgid "invalid quartz() device size"
+msgstr "ugyldig Quartz-enhedsstørrelse"
+
+#: devQuartz.c:1462
+#, fuzzy
+msgid "unable to create device description"
+msgstr "Kan ikke oprette enhedsbeskrivelse."
+
+#: devQuartz.c:1512
+#, fuzzy
+msgid ""
+"unable to create quartz() device target, given type may not be supported"
+msgstr ""
+"Kan ikke oprette Quartz-enhedsmål, angivet type er måske ikke understøttet."
+
+#: devQuartz.c:1642
+msgid "Quartz device is not available on this platform"
+msgstr "Quartz-enhed er ikke tilgængelig på denne platform"
+
+#: devWindows.c:364 devWindows.c:410 devWindows.c:481
+msgid "Not enough memory to copy graphics window"
+msgstr "Ikke nok hukommelse til at kopiere grafikvindue"
+
+#: devWindows.c:369 devWindows.c:415 devWindows.c:486
+msgid "No device available to copy graphics window"
+msgstr "Ingen enhed tilgængelig til at kopiere grafikvindue"
+
+#: devWindows.c:419 devWindows.c:490
+#, c-format
+msgid "'%%' is not allowed in file name"
+msgstr "'%%' er ikke tilladt i filnavnet"
+
+#: devWindows.c:627
+#, fuzzy
+msgid "invalid font specification"
+msgstr "Ugyldig skriftspecifikation"
+
+# 77%
+#: devWindows.c:666
+#, fuzzy
+msgid "font family not found in Windows font database"
+msgstr "Skriftfamilie ikke fundet i Windows-skriftdatabasen"
+
+#: devWindows.c:1097
+msgid "plot history seems corrupted"
+msgstr "plot-historik ser ud til at være ødelagt"
+
+#: devWindows.c:1104
+msgid "no plot history!"
+msgstr "ingen plot-historik!"
+
+# 83%
+#: devWindows.c:1822
+#, c-format
+msgid "filename too long in %s() call"
+msgstr "filnavn er for langt i %s()-kald"
+
+#: devWindows.c:1827 devWindows.c:1862 devWindows.c:1892
+#, c-format
+msgid "'width=%d, height=%d' are unlikely values in pixels"
+msgstr "'bredde=%d, højde=%d' er usandsynlige værdier i billedpunkter"
+
+#: devWindows.c:1835 devWindows.c:1840 devWindows.c:1865 devWindows.c:1870
+#: devWindows.c:1895 devWindows.c:1900
+#, fuzzy
+msgid "unable to allocate bitmap"
+msgstr "Kan ikke allokere bitmap"
+
+#: devWindows.c:1846 devWindows.c:1876 devWindows.c:2196
+#, fuzzy, c-format
+msgid "unable to open file '%s' for writing"
+msgstr "Kan ikke åbne fil '%s' for skrivning"
+
+#: devWindows.c:1859
+msgid "filename too long in jpeg() call"
+msgstr "filnavn for langt i jpeg()-kald"
+
+#: devWindows.c:1889
+msgid "filename too long in tiff() call"
+msgstr "filnavn for langt i tiff()-kald"
+
+#: devWindows.c:1921
+msgid "filename too long in win.metafile() call"
+msgstr "filnavn for langt i win.metafile()-kald"
+
+#: devWindows.c:1931
+#, fuzzy, c-format
+msgid "unable to open metafile '%s' for writing"
+msgstr "Kan ikke åben metafil '%s' for skrivning"
+
+#: devWindows.c:1933
+#, fuzzy
+msgid "unable to open clipboard to write metafile"
+msgstr "Kan ikke åbne udklipsholder for at skrive metafil"
+
+#: devWindows.c:2144
+msgid "Insufficient memory for resize. Killing device"
+msgstr "Ikke nok hukommelse for ændring af størrelse. Dræber enhed"
+
+#: devWindows.c:2152
+msgid "Insufficient memory for resize. Disabling alpha blending"
+msgstr "Ikke nok hukommelse for at ændre størrelse. Deaktiverer alfablanding"
+
+#: devWindows.c:2181
+#, fuzzy
+msgid "a clipboard metafile can store only one figure."
+msgstr "En metafil for udklipsholderen kan kun lagre en figur."
+
+# 76%
+#: devWindows.c:2187
+#, c-format
+msgid "metafile '%s' could not be created"
+msgstr "metafilfil '%s' kunne ikke oprettes"
+
+#: devWindows.c:3127 devWindows.c:3802
+msgid "R Graphics"
+msgstr "R-grafik"
+
+#: devWindows.c:3141
+msgid "attempt to use the locator after dev.hold()"
+msgstr "forsøg på at bruge afgrænseren efter dev.hold()"
+
+#: devWindows.c:3172
+msgid "graphics device closed during call to locator or identify"
+msgstr ""
+
+#: devWindows.c:3438
+msgid "option 'windowsTimeouts' should be integer"
+msgstr "tilvalg 'windows Timeouts' skal være et heltal"
+
+#: devWindows.c:3460
+msgid "invalid device number in 'savePlot'"
+msgstr "ugyldigt enhedstal i 'savePlot'"
+
+#: devWindows.c:3462
+msgid "invalid device in 'savePlot'"
+msgstr "ugyldig enhed i 'savePlot'"
+
+#: devWindows.c:3465
+#, fuzzy
+msgid "invalid filename argument in 'savePlot'"
+msgstr "ugyldigt filnavnsargument i savePlot"
+
+#: devWindows.c:3470
+msgid "invalid type argument in 'savePlot'"
+msgstr "ugyldigt typeargument i 'savePlot'"
+
+#: devWindows.c:3497
+msgid "unknown type in savePlot"
+msgstr "ukendt type i savePlot"
+
+#: devWindows.c:3542 devWindows.c:3574 devWindows.c:3602 devWindows.c:3633
+#: devWindows.c:3654
+msgid "processing of the plot ran out of memory"
+msgstr "behandlingem af plottet løb tør for hukommelse"
+
+#: devWindows.c:3618
+msgid "Impossible to open "
+msgstr "Umulig at åbne "
+
+#: devWindows.c:3683
+msgid "invalid 'width' or 'height'"
+msgstr "ugyldig 'bredde' eller 'højde'"
+
+#: devices.c:51
+msgid "argument must have positive length"
+msgstr ""
+
+#: devices.c:60
+#, fuzzy
+msgid "invalid argument"
+msgstr "ugyldigt 'fil'-argument"
+
+#: devices.c:89 devices.c:97 devices.c:105
+msgid "NA argument is invalid"
+msgstr ""
+
+#: qdBitmap.c:79
+#, c-format
+msgid "QuartzBitmap_Output - unable to open file '%s'"
+msgstr "QuartzBitmap_Output - kan ikke åbne fil '%s'"
+
+#: qdBitmap.c:94
+#, fuzzy
+msgid "not a supported scheme, no image data written"
+msgstr "Ikke et understøttet skema, ingen billeddata skrevet"
+
+#: stubs.c:104
+#, fuzzy, c-format
+msgid "invalid '%s' argument"
+msgstr "ugyldigt 'fil'-argument"
+
+#~ msgid "Impossible to load Rbitmap.dll"
+#~ msgstr "Umuligt at indlæse Rbitmap.dll"
+
+#~ msgid "Invalid line end"
+#~ msgstr "Ugyldig linjeafslutning"
+
+#~ msgid "Invalid line join"
+#~ msgstr "Ugyldig linjeforbindelse"
+
+#~ msgid "Unable to load Rbitmap.dll"
+#~ msgstr "Kan ikke indlæse Rbitmap.dll"
+
+#~ msgid "Unable to load winCairo.dll: was it built?"
+#~ msgstr "Kan ikke indlæse winCairo.dll: blev den bygget?"
+
+#~ msgid "FontBBox could not be parsed"
+#~ msgstr "FontBBox kunne ikke fortolkes"
+
+#~ msgid "CharInfo could not be parsed"
+#~ msgstr "Tegninfo kunne ikke fortolkes"
+
+#~ msgid "unable to start NULL device"
+#~ msgstr "kan ikke starte NULL-enhed"
+
+#~ msgid "printing via file = \"\" is not implemented in this version"
+#~ msgstr "udskriver via fil = \"\" er ikke implementeret i denne version"
+
+#~ msgid "file = \"|cmd\" is not implemented in this version"
+#~ msgstr "fil = \"|cmd\" er ikke implementeret i denne version"
