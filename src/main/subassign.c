@@ -88,7 +88,7 @@
 #include <Internal.h>
 #include <R_ext/RS.h> /* for test of S4 objects */
 #include <R_ext/Itermacros.h>
-
+#include <Rdyntrace.h>
 /* The SET_STDVEC_LENGTH macro is used to modify the length of
    growable vectors. This would need to change to allow ALTREP vectors to
    grow in place.
@@ -1789,6 +1789,7 @@ do_subassign2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    error(_("wrong args for environment subassignment"));
 	defineVar(installTrChar(STRING_ELT(CAR(subs), 0)), y, x);
 	UNPROTECT(3); /* x, args, y */
+  DYNTRACE_PROBE_SUBASSIGN(call, x, subs, y)
 	return(S4 ? xOrig : x);
     }
 
@@ -2130,12 +2131,14 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
 		RAISE_NAMED(CDR(x), NAMED(x));
 		SETCAR(x, R_NilValue); // decrements REFCNT
 		x = CDR(x);
+    DYNTRACE_PROBE_SUBASSIGN(call, x, nlist, val)
 	    }
 	    else {
 		/* Here we need to check for cycles*/
 		if (MAYBE_REFERENCED(val) && CAR(x) != val)
 		    REPROTECT(val = R_FixupRHS(x, val), pvalidx);
 		SETCAR(x, val);
+    DYNTRACE_PROBE_SUBASSIGN(call, x, nlist, val)
 	    }
 	}
 	else {
@@ -2151,6 +2154,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
 			    REPROTECT(val = R_FixupRHS(x, val), pvalidx);
 			SETCAR(CDR(t), val);
 		    }
+        DYNTRACE_PROBE_SUBASSIGN(call, x, nlist, val)
 		    break;
 		}
 		else if (CDR(t) == R_NilValue && val != R_NilValue) {
@@ -2158,6 +2162,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
 		    SET_TAG(CDR(t), nlist);
 		    if (MAYBE_REFERENCED(val)) ENSURE_NAMEDMAX(val);
 		    SETCADR(t, val);
+        DYNTRACE_PROBE_SUBASSIGN(call, x, nlist, val)
 		    break;
 		}
 	}
@@ -2166,12 +2171,14 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
 	    if (MAYBE_REFERENCED(val)) ENSURE_NAMEDMAX(val);
 	    SETCAR(x, val);
 	    SET_TAG(x, nlist);
+      DYNTRACE_PROBE_SUBASSIGN(call, x, nlist, val)
 	}
     }
     /* cannot use isEnvironment since we do not want NULL here */
     else if( TYPEOF(x) == ENVSXP ) {
 	defineVar(nlist, val, x);
 	INCREMENT_NAMED(val);
+  DYNTRACE_PROBE_SUBASSIGN(call, x, nlist, val)
     }
     else if( TYPEOF(x) == SYMSXP || /* Used to 'work' in R < 2.8.0 */
 	     TYPEOF(x) == CLOSXP ||
@@ -2221,6 +2228,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
 		    copyMostAttrib(x, ans);
 		    UNPROTECT(2);
 		    x = ans;
+        DYNTRACE_PROBE_SUBASSIGN(call, x, nlist, val)
 		}
 		/* else x is unchanged */
 	    }
@@ -2243,6 +2251,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
 		if (MAYBE_REFERENCED(val) && VECTOR_ELT(x, imatch) != val)
 		    REPROTECT(val = R_FixupRHS(x, val), pvalidx);
 		SET_VECTOR_ELT(x, imatch, val);
+    DYNTRACE_PROBE_SUBASSIGN(call, x, nlist, val)
 	    }
 	    else {
 		/* We are introducing a new element (=> *no* duplication) */
@@ -2270,6 +2279,7 @@ SEXP R_subassign3_dflt(SEXP call, SEXP x, SEXP nlist, SEXP val)
 		copyMostAttrib(x, ans);
 		UNPROTECT(2);
 		x = ans;
+    DYNTRACE_PROBE_SUBASSIGN(call, x, nlist, val)
 	    }
 	}
     }
