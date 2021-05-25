@@ -472,7 +472,7 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 
     PROTECT(klass = R_data_class2(obj));
 
-    DYNTRACE_PROBE_USEMETHOD_ENTRY(generic, klass, obj, call, args, rho);
+    DYNTRACE_PROBE_USE_METHOD_ENTRY(generic, klass, obj, call, args, rho);
 
     nclass = length(klass);
     for (i = 0; i < nclass; i++) {
@@ -486,37 +486,43 @@ int usemethod(const char *generic, SEXP obj, SEXP call, SEXP args,
 		continue; /* kludge because sort.list is not a method */
 	    PROTECT(sxp);
 	    if (i > 0) {
+
 		SEXP dotClass = PROTECT(stringSuffix(klass, i));
 		setAttrib(dotClass, R_PreviousSymbol, klass);
+
 		*ans = dispatchMethod(op, sxp, dotClass, cptr, method, generic,
 				      rho, callrho, defrho);
+
 		UNPROTECT(1); /* dotClass */
 	    } else {
+
 		*ans = dispatchMethod(op, sxp, klass, cptr, method, generic,
 				      rho, callrho, defrho);
+
 	    }
 	    UNPROTECT(2); /* klass, sxp */
 
-      DYNTRACE_PROBE_USEMETHOD_EXIT(generic, klass, obj, call, args, rho, *ans);
-
+      DYNTRACE_PROBE_USE_METHOD_EXIT(generic, klass, obj, call, args, rho, *ans);
 	    return 1;
 	}
     }
     method = installS3Signature(generic, "default");
     PROTECT(sxp = R_LookupMethod(method, rho, callrho, defrho));
     if (isFunction(sxp)) {
-	*ans = dispatchMethod(op, sxp, R_NilValue, cptr, method, generic,
-			      rho, callrho, defrho);
-	UNPROTECT(2); /* klass, sxp */
 
-  DYNTRACE_PROBE_USEMETHOD_EXIT(generic, klass, obj, call, args, rho, *ans);
+  *ans = dispatchMethod(op, sxp, R_NilValue, cptr, method, generic,
+			      rho, callrho, defrho);
+
+  UNPROTECT(2); /* klass, sxp */
+
+    DYNTRACE_PROBE_USE_METHOD_EXIT(generic, klass, obj, call, args, rho, *ans);
 
 	return 1;
     }
     UNPROTECT(2); /* klass, sxp */
     cptr->callflag = CTXT_RETURN;
 
-    DYNTRACE_PROBE_USEMETHOD_EXIT(generic, klass, obj, call, args, rho, NULL);
+    DYNTRACE_PROBE_USE_METHOD_EXIT(generic, klass, obj, call, args, rho, NULL);
 
     return 0;
 }

@@ -408,30 +408,30 @@ extern "C" {
     UNPROTECT(1);                                                   \
     DYNTRACE_PROBE_FOOTER(context_jump);
 
-#define DYNTRACE_PROBE_USEMETHOD_ENTRY(generic, klass, obj, call, args, rho) \
-    DYNTRACE_PROBE_HEADER(usemethod_entry);                                  \
-    PROTECT(klass);                                                          \
+#define DYNTRACE_PROBE_USE_METHOD_ENTRY(generic, klass, obj, call, args, rho) \
+    DYNTRACE_PROBE_HEADER(use_method_entry);                                  \
+    PROTECT(klass);                                                       \
     PROTECT(obj);                                                            \
     PROTECT(call);                                                           \
     PROTECT(args);                                                           \
     PROTECT(rho);                                                            \
-    dyntrace_active_dyntracer->callback.usemethod_entry(                     \
+    dyntrace_active_dyntracer->callback.use_method_entry(                     \
         dyntrace_active_dyntracer, generic, klass, obj, call, args, rho);    \
     UNPROTECT(5);                                                            \
-    DYNTRACE_PROBE_FOOTER(usemethod_entry);
+    DYNTRACE_PROBE_FOOTER(use_method_entry);
 
-#define DYNTRACE_PROBE_USEMETHOD_EXIT(generic, klass, obj, call, args, rho, ans)  \
-    DYNTRACE_PROBE_HEADER(usemethod_exit);                                        \
-    PROTECT(klass);                                                               \
+#define DYNTRACE_PROBE_USE_METHOD_EXIT(generic, klass, obj, call, args, rho, ans)  \
+    DYNTRACE_PROBE_HEADER(use_method_exit);                                        \
+    PROTECT(klass);                                                                 \
     PROTECT(obj);                                                                 \
     PROTECT(call);                                                                \
     PROTECT(args);                                                                \
     PROTECT(rho);                                                                 \
     if(ans != NULL) PROTECT(ans);                                                 \
-    dyntrace_active_dyntracer->callback.usemethod_exit(                           \
+    dyntrace_active_dyntracer->callback.use_method_exit(                           \
         dyntrace_active_dyntracer, generic, klass, obj, call, args, rho, ans);    \
-    UNPROTECT(5 + ans != NULL);                                                   \
-    DYNTRACE_PROBE_FOOTER(usemethod_exit);
+    UNPROTECT(5 + (ans != NULL));                                       \
+    DYNTRACE_PROBE_FOOTER(use_method_exit);
 
 #define DYNTRACE_PROBE_S3_DISPATCH_ENTRY(                   \
     generic, cls, generic_method, specific_method, objects) \
@@ -784,7 +784,7 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
           void* context,                                                       \
           SEXP r_expression,                                                   \
           SEXP r_environment)                                                  \
-    MACRO(usemethod_entry,                                                     \
+    MACRO(use_method_entry,                                                    \
           dyntracer_t* dyntracer,                                              \
           const char* generic,                                                 \
           SEXP klass,                                                          \
@@ -792,7 +792,7 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
           SEXP call,                                                           \
           SEXP args,                                                           \
           SEXP rho)                                                            \
-    MACRO(usemethod_exit,                                                      \
+    MACRO(use_method_exit,                                                     \
           dyntracer_t* dyntracer,                                              \
           const char* generic,                                                 \
           SEXP klass,                                                          \
