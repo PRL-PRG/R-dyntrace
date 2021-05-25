@@ -209,6 +209,10 @@ Rboolean R_envHasNoSpecialSymbols (SEXP env)
 
 #define IS_HASHED(x)	     (HASHTAB(x) != R_NilValue)
 
+int dyntrace_environment_is_hashed(SEXP env) {
+    return IS_HASHED(env);
+}
+
 /*----------------------------------------------------------------------
 
   String Hashing

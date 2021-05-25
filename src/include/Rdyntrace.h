@@ -939,7 +939,7 @@ int dyntrace_get_primitive_offset(SEXP op);
 const char* const dyntrace_get_c_function_name(SEXP op);
 SEXP* dyntrace_get_symbol_table();
 int dyntrace_get_frame_depth();
-
+int dyntrace_environment_is_hashed(SEXP env);
 SEXP dyntrace_context_get_promargs(void *context);
 SEXP dyntrace_context_get_cloenv(void *context);
 SEXP dyntrace_context_get_callfun(void *context);
