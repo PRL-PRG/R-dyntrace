@@ -597,16 +597,27 @@ extern "C" {
     UNPROTECT(3);                                                    \
     DYNTRACE_PROBE_FOOTER(attribute_set);
 
-#define DYNTRACE_PROBE_SUBASSIGN(call, x, sub, y)                   \
+#define DYNTRACE_PROBE_SUBASSIGN(call, x, index, y)                 \
     DYNTRACE_PROBE_HEADER(subassign);                               \
     PROTECT(call);                                                  \
     PROTECT(x);                                                     \
-    PROTECT(sub);                                                   \
+    PROTECT(index);                                                 \
     PROTECT(y);                                                     \
     dyntrace_active_dyntracer->callback                             \
-    .subassign(dyntrace_active_dyntracer, call, x, sub, y);         \
+    .subassign(dyntrace_active_dyntracer, call, x, index, y);       \
     UNPROTECT(4);                                                   \
     DYNTRACE_PROBE_FOOTER(subassign);
+
+#define DYNTRACE_PROBE_SUBSET(call, x, index, result)             \
+    DYNTRACE_PROBE_HEADER(subset);                                \
+    PROTECT(call);                                                \
+    PROTECT(x);                                                   \
+    PROTECT(index);                                               \
+    PROTECT(result);                                              \
+    dyntrace_active_dyntracer->callback                           \
+    .subset(dyntrace_active_dyntracer, call, x, index, result);   \
+    UNPROTECT(4);                                                 \
+    DYNTRACE_PROBE_FOOTER(subset);
 
 /* ----------------------------------------------------------------------------
    DYNTRACE TYPE DEFINITIONS
@@ -881,8 +892,14 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
           dyntracer_t* dyntracer,                                              \
           SEXP call,                                                           \
           SEXP x,                                                              \
-          SEXP sub,                                                            \
-          SEXP y)
+          SEXP index,                                                          \
+          SEXP y)                                                              \
+    MACRO(subset,                                                              \
+          dyntracer_t* dyntracer,                                              \
+          SEXP call,                                                           \
+          SEXP x,                                                              \
+          SEXP index,                                                          \
+          SEXP result)
 
 
 #define DYNTRACE_CALLBACK_TYPEDEF(NAME, ...) typedef void (*NAME##_callback_t)(__VA_ARGS__);

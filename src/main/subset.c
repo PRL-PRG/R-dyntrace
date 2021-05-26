@@ -40,6 +40,7 @@
 
 #include <Defn.h>
 #include <Internal.h>
+#include <Rdyntrace.h>
 
 /* JMC convinced MM that this was not a good idea: */
 #undef _S4_subsettable
@@ -978,6 +979,7 @@ SEXP attribute_hidden do_subset2_dflt(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    return(R_NilValue);
 	if (NAMED(ans))
 	    ENSURE_NAMEDMAX(ans);
+  DYNTRACE_PROBE_SUBSET(call, x, subs, ans)
 	return ans;
     }
 
@@ -1261,6 +1263,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP call)
 		y = CAR(y);
 		RAISE_NAMED(y, NAMED(x));
 		UNPROTECT(2); /* input, x */
+    DYNTRACE_PROBE_SUBSET(call, x, input, y)
 		return y;
 	    case PARTIAL_MATCH:
 		havematch++;
@@ -1292,6 +1295,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP call)
 	    y = CAR(xmatch);
 	    RAISE_NAMED(y, NAMED(x));
 	    UNPROTECT(2); /* input, x */
+      DYNTRACE_PROBE_SUBSET(call, x, input, y)
 	    return y;
 	}
 	UNPROTECT(2); /* input, x */
@@ -1310,6 +1314,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP call)
 		y = VECTOR_ELT(x, i);
 		RAISE_NAMED(y, NAMED(x));
 		UNPROTECT(2); /* input, x */
+    DYNTRACE_PROBE_SUBSET(call, x, input, y)
 		return y;
 	    case PARTIAL_MATCH:
 		havematch++;
@@ -1350,6 +1355,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP call)
 	    y = VECTOR_ELT(x, imatch);
 	    RAISE_NAMED(y, NAMED(x));
 	    UNPROTECT(2); /* input, x */
+      DYNTRACE_PROBE_SUBSET(call, x, input, y)
 	    return y;
 	}
 	UNPROTECT(2); /* input, x */
@@ -1367,6 +1373,7 @@ SEXP attribute_hidden R_subset3_dflt(SEXP x, SEXP input, SEXP call)
 	    if (NAMED(y))
 		ENSURE_NAMEDMAX(y);
 	    else RAISE_NAMED(y, NAMED(x));
+      DYNTRACE_PROBE_SUBSET(call, x, input, y)
 	    return(y);
 	}
 	return R_NilValue;
