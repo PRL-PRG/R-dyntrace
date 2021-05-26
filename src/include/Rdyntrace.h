@@ -588,6 +588,15 @@ extern "C" {
     UNPROTECT(2);                                                    \
     DYNTRACE_PROBE_FOOTER(environment_variable_exists);
 
+#define DYNTRACE_PROBE_ENVIRONMENT_LS(rho, all, sorted, result) \
+    DYNTRACE_PROBE_HEADER(environment_ls);                      \
+    PROTECT(rho);                                               \
+    PROTECT(result);                                            \
+    dyntrace_active_dyntracer->callback.environment_ls(         \
+        dyntrace_active_dyntracer, rho, all, sorted, result);   \
+    UNPROTECT(2);                                               \
+    DYNTRACE_PROBE_FOOTER(environment_ls);
+
 #define DYNTRACE_PROBE_ENVIRONMENT_FUNCTION_CONTEXT_LOOKUP(                  \
     symbol, value, rho)                                                      \
     DYNTRACE_PROBE_HEADER(environment_function_context_lookup);              \
@@ -901,6 +910,12 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
           dyntracer_t* dyntracer,                                              \
           const SEXP symbol,                                                   \
           SEXP rho)                                                            \
+    MACRO(environment_ls,                                                      \
+          dyntracer_t* dyntracer,                                              \
+          SEXP rho,                                                            \
+          Rboolean all,                                                        \
+          Rboolean sorted,                                                     \
+          SEXP result)                                                         \
     MACRO(environment_function_context_lookup,                                 \
           dyntracer_t* dyntracer,                                              \
           const SEXP symbol,                                                   \

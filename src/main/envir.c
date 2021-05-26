@@ -2983,6 +2983,7 @@ SEXP R_lsInternal3(SEXP env, Rboolean all, Rboolean sorted)
 
     if(sorted) sortVector(ans, FALSE);
     UNPROTECT(1);
+    DYNTRACE_PROBE_ENVIRONMENT_LS(env, all, sorted, ans)
     return ans;
 }
 
