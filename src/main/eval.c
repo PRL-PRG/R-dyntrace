@@ -3387,8 +3387,12 @@ SEXP attribute_hidden do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
 	PROTECT(expr);
 	begincontext(&cntxt, CTXT_RETURN, R_GlobalContext->call,
 	             env, rho, args, op);
-	if (!SETJMP(cntxt.cjmpbuf))
-	    expr = eval(expr, env);
+	if (!SETJMP(cntxt.cjmpbuf)) {
+      DYNTRACE_PROBE_EVAL_CALL_ENTRY(expr, env)
+	    SEXP res = eval(expr, env);
+      DYNTRACE_PROBE_EVAL_CALL_EXIT(expr, env, res)
+      expr = res;
+  }
 	else {
 	    expr = R_ReturnedValue;
 	    if (expr == R_RestartToken) {
@@ -3411,7 +3415,9 @@ SEXP attribute_hidden do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
 	    int n = LENGTH(expr);
 	    for(int i = 0 ; i < n ; i++) {
 		R_Srcref = getSrcref(srcrefs, i);
+    DYNTRACE_PROBE_EVAL_CALL_ENTRY(VECTOR_ELT(expr, i), env)
 		tmp = eval(VECTOR_ELT(expr, i), env);
+    DYNTRACE_PROBE_EVAL_CALL_EXIT(VECTOR_ELT(expr, i), env, tmp)
 	    }
 	} else {
 	    tmp = R_ReturnedValue;
@@ -3427,7 +3433,10 @@ SEXP attribute_hidden do_eval(SEXP call, SEXP op, SEXP args, SEXP rho)
 	expr = tmp;
     }
     else if( TYPEOF(expr) == PROMSXP ) {
-	expr = eval(expr, rho);
+        DYNTRACE_PROBE_EVAL_CALL_ENTRY(expr, rho)
+	SEXP res = eval(expr, rho);
+        DYNTRACE_PROBE_EVAL_CALL_EXIT(expr, rho, res)
+        expr = res;
     } /* else expr is returned unchanged */
     UNPROTECT(1);
     return expr;

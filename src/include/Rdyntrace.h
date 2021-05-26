@@ -344,6 +344,25 @@ extern "C" {
     UNPROTECT(3);                                                  \
     DYNTRACE_PROBE_FOOTER(eval_exit);
 
+#define DYNTRACE_PROBE_EVAL_CALL_ENTRY(expression, rho)  \
+    DYNTRACE_PROBE_HEADER(eval_call_entry);              \
+    PROTECT(expression);                                 \
+    PROTECT(rho);                                        \
+    dyntrace_active_dyntracer->callback.eval_call_entry( \
+        dyntrace_active_dyntracer, expression, rho);     \
+    UNPROTECT(2);                                        \
+    DYNTRACE_PROBE_FOOTER(eval_call_entry);
+
+#define DYNTRACE_PROBE_EVAL_CALL_EXIT(expression, rho, return_value) \
+    DYNTRACE_PROBE_HEADER(eval_call_exit);                           \
+    PROTECT(expression);                                             \
+    PROTECT(rho);                                                    \
+    PROTECT(return_value);                                           \
+    dyntrace_active_dyntracer->callback.eval_call_exit(              \
+        dyntrace_active_dyntracer, expression, rho, return_value);   \
+    UNPROTECT(3);                                                    \
+    DYNTRACE_PROBE_FOOTER(eval_call_exit);
+
 #define DYNTRACE_PROBE_GC_ENTRY(size_needed)                                \
     DYNTRACE_PROBE_HEADER(gc_entry);                                        \
     dyntrace_active_dyntracer->callback.gc_entry(dyntrace_active_dyntracer, \
@@ -781,6 +800,15 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
           const SEXP expression,                                               \
           const SEXP rho)                                                      \
     MACRO(eval_exit,                                                           \
+          dyntracer_t* dyntracer,                                              \
+          const SEXP expression,                                               \
+          const SEXP rho,                                                      \
+          SEXP return_value)                                                   \
+    MACRO(eval_call_entry,                                                     \
+          dyntracer_t* dyntracer,                                              \
+          const SEXP expression,                                               \
+          const SEXP rho)                                                      \
+    MACRO(eval_call_exit,                                                      \
           dyntracer_t* dyntracer,                                              \
           const SEXP expression,                                               \
           const SEXP rho,                                                      \
