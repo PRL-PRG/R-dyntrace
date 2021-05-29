@@ -1952,3 +1952,7 @@ R_getS4DataSlot(SEXP obj, SEXPTYPE type)
   else
      return R_NilValue;
 }
+
+SEXP dyntrace_get_s4_data_slot(SEXP object, SEXPTYPE type) {
+    return R_getS4DataSlot(object, type);
+}
