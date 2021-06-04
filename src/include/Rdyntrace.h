@@ -187,22 +187,6 @@ extern "C" {
     UNPROTECT(5);                                     \
     DYNTRACE_PROBE_FOOTER(special_exit);
 
-#define DYNTRACE_PROBE_SUBSTITUTE_CALL(                  \
-    expression, environment, rho, return_value)          \
-    DYNTRACE_PROBE_HEADER(substitute_call);              \
-    PROTECT(expression);                                 \
-    PROTECT(environment);                                \
-    PROTECT(rho);                                        \
-    PROTECT(return_value);                               \
-    dyntrace_active_dyntracer->callback.substitute_call( \
-        dyntrace_active_dyntracer,                       \
-        expression,                                      \
-        environment,                                     \
-        rho,                                             \
-        return_value);                                   \
-    UNPROTECT(4);                                        \
-    DYNTRACE_PROBE_FOOTER(substitute_call);
-
 #define DYNTRACE_PROBE_PROMISE_DELAYED_ASSIGN(name, promise, rho) \
     DYNTRACE_PROBE_HEADER(promise_delayed_assign);                \
     PROTECT(name);                                        \
@@ -362,6 +346,25 @@ extern "C" {
         dyntrace_active_dyntracer, expression, rho, return_value);   \
     UNPROTECT(3);                                                    \
     DYNTRACE_PROBE_FOOTER(eval_call_exit);
+
+#define DYNTRACE_PROBE_SUBSTITUTE_CALL_ENTRY(expression, rho)        \
+    DYNTRACE_PROBE_HEADER(substitute_call_entry);                    \
+    PROTECT(expression);                                             \
+    PROTECT(rho);                                                    \
+    dyntrace_active_dyntracer->callback.substitute_call_entry(       \
+        dyntrace_active_dyntracer, expression, rho);                 \
+    UNPROTECT(2);                                                    \
+    DYNTRACE_PROBE_FOOTER(substitute_call_entry);
+
+#define DYNTRACE_PROBE_SUBSTITUTE_CALL_EXIT(expression, rho, return_value) \
+    DYNTRACE_PROBE_HEADER(substitute_call_exit);                           \
+    PROTECT(expression);                                                   \
+    PROTECT(rho);                                                          \
+    PROTECT(return_value);                                                 \
+    dyntrace_active_dyntracer->callback.substitute_call_exit(              \
+        dyntrace_active_dyntracer, expression, rho, return_value);         \
+    UNPROTECT(3);                                                          \
+    DYNTRACE_PROBE_FOOTER(substitute_call_exit);
 
 #define DYNTRACE_PROBE_GC_ENTRY(size_needed)                                \
     DYNTRACE_PROBE_HEADER(gc_entry);                                        \
@@ -758,12 +761,6 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
           const SEXP rho,                                                      \
           dyntrace_dispatch_t dispatch,                                        \
           const SEXP return_value)                                             \
-    MACRO(substitute_call,                                                     \
-          dyntracer_t* dyntracer,                                              \
-          const SEXP expression,                                               \
-          const SEXP environment,                                              \
-          const SEXP rho,                                                      \
-          const SEXP return_value)                                             \
     MACRO(promise_delayed_assign,                                              \
           dyntracer_t* dyntracer,                                              \
           const SEXP name,                                                     \
@@ -818,6 +815,15 @@ typedef struct dyntracer_callback_t dyntracer_callback_t;
           const SEXP expression,                                               \
           const SEXP rho)                                                      \
     MACRO(eval_call_exit,                                                      \
+          dyntracer_t* dyntracer,                                              \
+          const SEXP expression,                                               \
+          const SEXP rho,                                                      \
+          SEXP return_value)                                                   \
+    MACRO(substitute_call_entry,                                               \
+          dyntracer_t* dyntracer,                                              \
+          const SEXP expression,                                               \
+          const SEXP rho)                                                      \
+    MACRO(substitute_call_exit,                                                \
           dyntracer_t* dyntracer,                                              \
           const SEXP expression,                                               \
           const SEXP rho,                                                      \

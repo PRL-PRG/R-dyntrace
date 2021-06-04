@@ -2848,8 +2848,9 @@ SEXP attribute_hidden do_substitute(SEXP call, SEXP op, SEXP args, SEXP rho)
 
     PROTECT(env);
     PROTECT(t = CONS(duplicate(CAR(argList)), R_NilValue));
+    DYNTRACE_PROBE_SUBSTITUTE_CALL_ENTRY(CAR(argList), env);
     s = substituteList(t, env);
-    DYNTRACE_PROBE_SUBSTITUTE_CALL(CAR(argList), env, rho, CAR(s));
+    DYNTRACE_PROBE_SUBSTITUTE_CALL_EXIT(CAR(argList), env, CAR(s));
     UNPROTECT(3);
     return CAR(s);
 }
